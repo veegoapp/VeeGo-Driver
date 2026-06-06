@@ -62,7 +62,7 @@ type BackendTrip = {
   totalSeats: number;
   price: number;
   status: string;
-  bookings?: { id: string; passengerName?: string; passengerPhone?: string }[];
+  bookings?: { id: string; passengerName?: string; passengerPhone?: string; passengerAvatar?: string }[];
 };
 
 type BackendStation = {
@@ -252,7 +252,7 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
         bookings.map((b, i) => ({
           id: b.id,
           name: b.passengerName ?? `Passenger ${i + 1}`,
-          avatar: `https://i.pravatar.cc/100?u=${b.id}`,
+          avatar: b.passengerAvatar ?? '',
           phone: b.passengerPhone ?? '—',
           ticket: b.id.slice(0, 8).toUpperCase(),
           checkedIn: false,

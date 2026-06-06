@@ -67,7 +67,6 @@ export default function EarningsScreen() {
   const MAX = weekEarnings.length ? Math.max(...weekEarnings.map(d => parseFloat(String(d.amount)))) : 1;
 
   const barAnims = useRef(Array.from({ length: 7 }, () => new Animated.Value(0))).current;
-  const promoAnims = useRef([new Animated.Value(0), new Animated.Value(0)]).current;
   const heroAnim = useRef(new Animated.Value(0)).current;
 
   const isLoading = weeklyLoading || summaryLoading;
@@ -80,7 +79,6 @@ export default function EarningsScreen() {
       Animated.stagger(50, weekEarnings.map((d, i) =>
         Animated.spring(barAnims[i], { toValue: parseFloat(String(d.amount)) / MAX, useNativeDriver: false, stiffness: 200 })
       )),
-      ...promoAnims.map((a, i) => Animated.timing(a, { toValue: [68, 33][i] / 100, duration: 800, delay: 200 + i * 100, useNativeDriver: false })),
     ]).start();
   }, [weekEarnings.length]);
 
@@ -129,7 +127,6 @@ export default function EarningsScreen() {
                 <Text style={[styles.heroAmount, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>{WEEK_TOTAL.toFixed(2)}</Text>
                 <Text style={[styles.heroCurrency, { color: colors.primaryForeground + 'CC', fontFamily: 'Inter_700Bold' }]}>DT</Text>
               </View>
-              <Text style={[styles.heroChange, { color: colors.primaryForeground + 'E6', fontFamily: 'Inter_600SemiBold', textAlign: TA }]}>+18% vs last week</Text>
 
               <View style={[styles.barChart, { flexDirection: R }]}>
                 {weekEarnings.map((d, i) => (
@@ -160,10 +157,9 @@ export default function EarningsScreen() {
         </GlassView>
 
         <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.active_promotions}</Text>
-        <View style={{ gap: 8 }}>
-          <PromoCard title="Weekend boost" subtitle="Earn +25% on Sat & Sun" progress={68} anim={promoAnims[0]} colors={colors} isRTL={isRTL} />
-          <PromoCard title="3 trips before 11 AM" subtitle="Bonus: 15 DT · 1 of 3 done" progress={33} anim={promoAnims[1]} colors={colors} isRTL={isRTL} />
-        </View>
+        <GlassView style={{ padding: 20, alignItems: 'center' }} borderRadius={20}>
+          <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 14 }}>No active promotions</Text>
+        </GlassView>
 
         <Pressable onPress={() => router.push('/ratings')} style={({ pressed }) => [{ transform: [{ scale: pressed ? 0.98 : 1 }], marginTop: 20 }]}>
           <GlassView style={[styles.levelCard, { flexDirection: R }]} borderRadius={20}>
@@ -172,7 +168,7 @@ export default function EarningsScreen() {
             </LinearGradient>
             <View style={{ flex: 1 }}>
               <Text style={[styles.levelTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{driverData?.level ?? '—'} {t.driver_suffix}</Text>
-              <Text style={[styles.levelSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>12 more trips to reach Platinum</Text>
+              <Text style={[styles.levelSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>Tap to view ratings &amp; reviews</Text>
             </View>
             <ChevronRight size={20} color={colors.mutedForeground} strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
           </GlassView>
@@ -195,30 +191,6 @@ function EarningsRow({ icon, label, value, accent, bold, colors, isRTL }: { icon
       <Text style={[styles.rowLabel, { color: bold ? colors.foreground : colors.mutedForeground, fontFamily: bold ? 'Inter_700Bold' : 'Inter_400Regular', flex: 1, textAlign: TA }]}>{label}</Text>
       <Text style={[styles.rowValue, { color: accent ? colors.primary : colors.foreground, fontFamily: 'Inter_700Bold', fontSize: bold ? 16 : 14 }]}>{value}</Text>
     </View>
-  );
-}
-
-function PromoCard({ title, subtitle, progress, anim, colors, isRTL }: { title: string; subtitle: string; progress: number; anim: Animated.Value; colors: ReturnType<typeof useColors>; isRTL: boolean }) {
-  const R = isRTL ? 'row-reverse' as const : 'row' as const;
-  const TA = isRTL ? 'right' as const : 'left' as const;
-  return (
-    <GlassView style={styles.promoCard} borderRadius={20}>
-      <View style={[styles.promoHeader, { flexDirection: R }]}>
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.promoTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{title}</Text>
-          <Text style={[styles.promoSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>{subtitle}</Text>
-        </View>
-        <Text style={[styles.promoPct, { color: colors.primary, fontFamily: 'Inter_700Bold' }]}>{progress}%</Text>
-      </View>
-      <View style={[styles.promoTrack, { backgroundColor: colors.secondary }]}>
-        <Animated.View style={[styles.promoFill, {
-          width: anim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
-          alignSelf: isRTL ? 'flex-end' : 'flex-start',
-        }]}>
-          <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ flex: 1 }} />
-        </Animated.View>
-      </View>
-    </GlassView>
   );
 }
 
@@ -250,13 +222,6 @@ const styles = StyleSheet.create({
   rowLabel: { fontSize: 14 },
   rowValue: { fontSize: 14 },
   divider: { height: 1, marginVertical: 4 },
-  promoCard: { padding: 16 },
-  promoHeader: { alignItems: 'center', justifyContent: 'space-between' },
-  promoTitle: { fontSize: 14 },
-  promoSub: { fontSize: 12, marginTop: 2 },
-  promoPct: { fontSize: 12 },
-  promoTrack: { height: 6, borderRadius: 3, marginTop: 8, overflow: 'hidden' },
-  promoFill: { height: '100%', borderRadius: 3, overflow: 'hidden' },
   levelCard: { alignItems: 'center', gap: 12, padding: 16 },
   levelIcon: { width: 48, height: 48, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   levelTitle: { fontSize: 14 },

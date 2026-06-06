@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Check, ChevronUp, MessageCircle, Navigation, Phone, Shield, Star } from 'lucide-react-native';
+import { Check, ChevronUp, Clock, MessageCircle, Navigation, Phone, Shield, Star } from 'lucide-react-native';
 import React, { useRef, useEffect, useState } from 'react';
 import { Animated, Image, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import { MapBackdrop } from '@/components/MapBackdrop';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
+import { useWaitingCharge } from '@/hooks/useWaitingCharge';
 import { endpoints } from '@/lib/api';
 
 type Phase = 'to_pickup' | 'arrived' | 'in_trip' | 'completed';
@@ -21,7 +22,7 @@ const PHASE_COPY: Record<Phase, { label: string; cta: string; next: Phase }> = {
 
 type RideData = {
   id: string;
-  rider: { name: string; rating: number; avatar: string };
+  rider: { name: string; rating: number; avatar: string; phone?: string };
   pickup: { address: string; distance: string; eta: string };
   dropoff: { address: string; distance: string };
   fare: number;
@@ -33,6 +34,8 @@ type RideData = {
   dropoffLatitude?: number;
   dropoffLongitude?: number;
 };
+
+type DriverData = { id: string };
 
 export default function RideScreen() {
   const colors = useColors();
@@ -49,6 +52,14 @@ export default function RideScreen() {
     queryFn: () => endpoints.rides.getById(rideId ?? ''),
     enabled: !!rideId,
   });
+
+  const { data: driverRaw } = useQuery({
+    queryKey: ['driver'],
+    queryFn: endpoints.driver.me,
+  });
+
+  const driverData = driverRaw as DriverData | undefined;
+  const waitingCharge = useWaitingCharge(driverData?.id, rideId);
 
   useEffect(() => {
     if (!rideRaw || hasRecovered.current) return;
@@ -87,6 +98,7 @@ export default function RideScreen() {
   const sheetAnim = useRef(new Animated.Value(100)).current;
   const completedAnim = useRef(new Animated.Value(0)).current;
   const checkScale = useRef(new Animated.Value(0.5)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     Animated.spring(sheetAnim, { toValue: 0, stiffness: 200, damping: 20, useNativeDriver: true }).start();
@@ -100,6 +112,19 @@ export default function RideScreen() {
       ]).start();
     }
   }, [phase]);
+
+  // Pulse animation for the waiting charge ticker
+  useEffect(() => {
+    if (!waitingCharge || waitingCharge.capped) return;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 0.7, duration: 700, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [!!waitingCharge, waitingCharge?.capped]);
 
   const handleNext = async () => {
     if (phase === 'completed') {
@@ -155,16 +180,6 @@ export default function RideScreen() {
             </View>
           </GlassView>
         </View>
-
-        {phase !== 'completed' && (
-          <View style={styles.dirHint}>
-            <GlassView style={styles.dirHintInner} borderRadius={12}>
-              <Text style={[{ color: colors.primary, fontFamily: 'Inter_700Bold', fontSize: 13 }]}>In 220m</Text>
-              <Text style={[{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13 }]}> turn right onto </Text>
-              <Text style={[{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: 13 }]} numberOfLines={1}>Rue de la Liberté</Text>
-            </GlassView>
-          </View>
-        )}
       </View>
 
       {phase === 'completed' && (
@@ -175,7 +190,6 @@ export default function RideScreen() {
             </LinearGradient>
           </Animated.View>
           <Text style={[styles.completedTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>Trip completed!</Text>
-          {/* FIX #4: parseFloat — backend returns fare as string */}
           <Text style={[styles.fareEarned, { color: colors.primary, fontFamily: 'Inter_700Bold' }]}>+{parseFloat(String(r?.fare ?? 0)).toFixed(2)} DT</Text>
           <Text style={[styles.fareNote, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>Added to today's earnings</Text>
 
@@ -204,12 +218,11 @@ export default function RideScreen() {
             <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
 
             <View style={styles.riderRow}>
-              <Image source={{ uri: r?.rider.avatar ?? 'https://i.pravatar.cc/100?img=47' }} style={styles.riderAvatar} />
+              <Image source={{ uri: r?.rider.avatar || undefined }} style={styles.riderAvatar} />
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={[styles.riderName, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]} numberOfLines={1}>{r?.rider.name ?? '—'}</Text>
                 <View style={styles.riderMeta}>
                   <Star size={12} color={colors.accent} fill={colors.accent} strokeWidth={2} />
-                  {/* FIX #4: parseFloat — backend returns fare and rating as strings */}
                   <Text style={[styles.riderMetaText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
                     {r?.rider.rating != null ? parseFloat(String(r.rider.rating)).toFixed(1) : '—'} · {r?.payment ?? '—'} · {parseFloat(String(r?.fare ?? 0)).toFixed(2)} DT
                   </Text>
@@ -233,6 +246,30 @@ export default function RideScreen() {
                 <Phone size={20} color={colors.primary} strokeWidth={2} />
               </Pressable>
             </View>
+
+            {/* Waiting charge ticker — visible only in 'arrived' phase */}
+            {phase === 'arrived' && waitingCharge != null && (
+              <Animated.View
+                style={[
+                  styles.waitingTicker,
+                  {
+                    backgroundColor: waitingCharge.capped ? colors.secondary : '#D5B23D18',
+                    borderColor: waitingCharge.capped ? colors.border : '#D5B23D55',
+                    opacity: waitingCharge.capped ? 1 : pulseAnim,
+                  },
+                ]}
+              >
+                <Clock size={13} color={waitingCharge.capped ? colors.mutedForeground : '#D5B23D'} strokeWidth={2.5} />
+                <Text style={[styles.waitingTickerText, { color: waitingCharge.capped ? colors.mutedForeground : '#D5B23D', fontFamily: 'Inter_700Bold' }]}>
+                  Waiting fee: +{waitingCharge.amount.toFixed(2)} DT · {waitingCharge.minutes} min
+                </Text>
+                {waitingCharge.capped && (
+                  <View style={styles.cappedBadge}>
+                    <Text style={[styles.cappedText, { fontFamily: 'Inter_700Bold' }]}>CAPPED</Text>
+                  </View>
+                )}
+              </Animated.View>
+            )}
 
             <Text style={[styles.phaseLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>{p.label}</Text>
 
@@ -262,8 +299,6 @@ const styles = StyleSheet.create({
   navIcon: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   navEta: { fontSize: 10, letterSpacing: 2, textTransform: 'uppercase' },
   navAddress: { fontSize: 16, marginTop: 2 },
-  dirHint: { paddingHorizontal: 16, marginTop: 8 },
-  dirHintInner: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10 },
   completedOverlay: { position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, zIndex: 20 },
   checkCircle: { width: 96, height: 96, borderRadius: 48, overflow: 'hidden', elevation: 8, shadowColor: '#2d2d42', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 16 },
   checkCircleGrad: { flex: 1, alignItems: 'center', justifyContent: 'center' },
@@ -280,11 +315,19 @@ const styles = StyleSheet.create({
   sheetCard: { padding: 20 },
   sheetHandle: { width: 48, height: 6, borderRadius: 3, alignSelf: 'center', marginBottom: 16 },
   riderRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  riderAvatar: { width: 48, height: 48, borderRadius: 24 },
+  riderAvatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#e5e5ea' },
   riderName: { fontSize: 16 },
   riderMeta: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   riderMetaText: { fontSize: 12 },
   actionBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  waitingTicker: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    marginTop: 14, paddingHorizontal: 12, paddingVertical: 8,
+    borderRadius: 12, borderWidth: 1,
+  },
+  waitingTickerText: { fontSize: 13, flex: 1 },
+  cappedBadge: { backgroundColor: '#ef444422', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+  cappedText: { fontSize: 9, color: '#ef4444', letterSpacing: 0.8 },
   phaseLabel: { fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase', marginTop: 16 },
   ctaBtn: { marginTop: 12, borderRadius: 16, overflow: 'hidden', elevation: 8, shadowColor: '#2d2d42', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 12 },
   ctaBtnGrad: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },

@@ -29,8 +29,8 @@ export default function VehicleScreen() {
     { label: 'Year', value: v?.year ? String(v.year) : '—' },
     { label: 'Color', value: v?.color ?? '—' },
     { label: 'License plate', value: v?.plate ?? '—' },
-    { label: 'Inspection', value: 'Valid · 09/2026' },
-    { label: 'Insurance', value: 'Valid · 01/2026' },
+    { label: 'Inspection', value: '—' },
+    { label: 'Insurance', value: '—' },
   ];
 
   if (isLoading) {

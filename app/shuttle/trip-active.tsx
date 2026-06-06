@@ -29,10 +29,8 @@ export default function ShuttleTripActiveScreen() {
     if (!currentStop) return;
     cardAnim.setValue(0);
     try {
-      await endpoints.shuttle.boardStop(
-        currentStop.id,
-        passengers.filter(p => p.checkedIn).map(p => p.id)
-      );
+      const checkedIds = passengers.filter(p => p.checkedIn).map(p => p.id);
+      await Promise.allSettled(checkedIds.map(id => endpoints.shuttle.boardBooking(id)));
     } catch {
       // best-effort
     }

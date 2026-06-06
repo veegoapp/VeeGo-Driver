@@ -326,7 +326,7 @@ export default function HomeScreen() {
           <Pressable onPress={() => router.push('/(tabs)/profile')} style={styles.avatarPill}>
             <GlassView style={styles.avatarPillGlass} borderRadius={24}>
               <View style={[styles.avatarPillInner, { flexDirection: R }]}>
-                <Image source={{ uri: driverData?.avatar ?? 'https://i.pravatar.cc/200?img=12' }} style={[styles.avatar, { borderColor: colors.primary + '66' }]} />
+                <Image source={driverData?.avatar ? { uri: driverData.avatar } : undefined} style={[styles.avatar, { borderColor: colors.primary + '66' }]} />
                 <View>
                   <Text style={[styles.hiText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>{t.hi}, {(driverData?.name ?? '—').split(' ')[0]}</Text>
                   <View style={[styles.ratingRow, { flexDirection: R }]}>
