@@ -1,0 +1,85 @@
+CRITICAL ARCHITECTURE ISSUE — SERVICE CONTROL AUTH LIFECYCLE
+
+We discovered a systemic issue in the Driver App affecting service control reliability.
+
+Root Problem:
+ServiceControlProvider (and service control logic) is executing before authentication is fully established.
+
+This causes:
+- GET /api/services/control → 401 Unauthorized
+- Socket authentication failure
+- services state remaining empty {}
+- incorrect service availability (services appear enabled when they are not)
+
+----------------------------------------------------
+REQUIRED FIX (AUTH-AWARE INITIALIZATION)
+----------------------------------------------------
+
+1 — DO NOT initialize service control before authentication
+
+ServiceControlProvider must NOT:
+- call GET /api/services/control
+- connect socket
+- initialize service state
+
+unless a valid authenticated session exists.
+
+----------------------------------------------------
+2 — AUTH DEPENDENCY RULE
+----------------------------------------------------
+Service control system must wait for:
+
+- veego_access_token (valid token exists)
+AND
+- authentication state confirmed (user is logged in)
+
+ONLY THEN:
+- fetch service control
+- connect socket
+- populate service state
+
+----------------------------------------------------
+3 — POST-LOGIN INITIALIZATION FLOW
+----------------------------------------------------
+After successful login:
+
+1. Confirm token exists
+2. Then:
+   - call GET /api/services/control
+   - initialize ServiceControlContext
+   - connect authenticated socket
+   - load service states
+
+----------------------------------------------------
+4 — LOGGING REQUIREMENT
+----------------------------------------------------
+Add explicit logs:
+
+- [Auth] token detected
+- [ServiceControl] fetching services after login
+- [ServiceControl] services loaded successfully
+- [Socket] authenticated connection established
+
+----------------------------------------------------
+5 — LOGOUT HANDLING
+----------------------------------------------------
+On logout:
+
+- clear service state
+- disconnect socket
+- stop all service control updates
+
+----------------------------------------------------
+CRITICAL RULE
+----------------------------------------------------
+Service Control must NEVER run in unauthenticated state.
+
+No fallback to empty {} is allowed.
+
+----------------------------------------------------
+EXPECTED RESULT
+----------------------------------------------------
+- No 401 errors on startup
+- Services load correctly after login only
+- Socket connects only when authenticated
+- Driver App always reflects real backend service state

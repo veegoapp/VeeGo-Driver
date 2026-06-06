@@ -102,44 +102,55 @@ function extractServiceList(data: unknown): ServiceControl[] {
 // ── Provider ──────────────────────────────────────────────────────────────
 
 export function ServiceControlProvider({ children }: { children: React.ReactNode }) {
-  const { token } = useAuth();
+  const { token, isLoading: authIsLoading } = useAuth();
   const [services, setServices] = useState<ServiceControl[]>([]);
   const [eligibilityRules, setEligibilityRules] = useState<EligibilityRule[]>([]);
-  // Start as true — we always fetch on mount when a token is present,
-  // so the UI must wait rather than defaulting all services to OPEN.
-  const [isLoading, setIsLoading] = useState(true);
+  // Start as false — we only start loading once auth is confirmed and token exists.
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const socketRef = useRef<Socket | null>(null);
 
   // ── Initial fetch ────────────────────────────────────────────────────
+  // CRITICAL: do NOT fetch until auth has fully resolved (authIsLoading === false).
+  // Fetching before auth is established causes 401 errors.
 
   useEffect(() => {
+    // Auth context is still resolving — wait, do nothing.
+    if (authIsLoading) return;
+
     if (!token) {
+      // Logged out — clear all service state.
       setServices([]);
       setEligibilityRules([]);
+      setIsLoading(false);
+      setError(null);
       return;
     }
+
+    console.log('[Auth] token detected');
+    console.log('[ServiceControl] fetching services after login');
     setIsLoading(true);
     setError(null);
 
     api.get<unknown>('/services/control')
       .then((data) => {
-        console.log('[ServiceControl] raw response:', JSON.stringify(data));
         const list = extractServiceList(data);
-        console.log('[ServiceControl] parsed', list.length, 'services:', list.map(s => `${s.serviceType}(enabled=${s.isEnabled},mode=${s.displayMode})`).join(', '));
+        console.log('[ServiceControl] services loaded successfully —', list.length, 'service(s):', list.map(s => `${s.serviceType}(enabled=${s.isEnabled},mode=${s.displayMode})`).join(', '));
         setServices(list);
       })
       .catch((err) => {
-        console.warn('[ServiceControl] fetch failed — defaulting to open:', err);
+        console.warn('[ServiceControl] fetch failed:', err);
         setError('Could not load service configuration.');
       })
       .finally(() => setIsLoading(false));
-  }, [token]);
+  }, [token, authIsLoading]);
 
   // ── Socket — real-time updates ────────────────────────────────────────
+  // CRITICAL: only connect socket after auth is fully established.
 
   useEffect(() => {
-    if (!token || !SOCKET_URL) return;
+    // Auth not resolved yet, or no token — do not connect.
+    if (authIsLoading || !token || !SOCKET_URL) return;
 
     const socket = io(SOCKET_URL, {
       path: '/api/socket.io',
@@ -149,6 +160,7 @@ export function ServiceControlProvider({ children }: { children: React.ReactNode
       reconnectionDelay: 1000,
     });
     socketRef.current = socket;
+    console.log('[Socket] authenticated connection established');
 
     // service:control:changed — may carry full array or single entry
     socket.on(SOCKET_EVENTS.SERVICE_CONTROL_CHANGED, (payload: unknown) => {
@@ -198,22 +210,21 @@ export function ServiceControlProvider({ children }: { children: React.ReactNode
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [token]);
+  }, [token, authIsLoading]);
 
   // ── Refresh — re-fetch from API for freshness on screen entry ────────
 
   const refresh = useCallback(async (): Promise<void> => {
-    if (!token) return;
+    if (authIsLoading || !token) return;
     try {
       const data = await api.get<unknown>('/services/control');
-      console.log('[ServiceControl] refresh raw response:', JSON.stringify(data));
       const list = extractServiceList(data);
-      console.log('[ServiceControl] refresh parsed', list.length, 'services');
+      console.log('[ServiceControl] services loaded successfully —', list.length, 'service(s) (refresh)');
       setServices(list);
     } catch (err) {
       console.warn('[ServiceControl] refresh failed — keeping existing state:', err);
     }
-  }, [token]);
+  }, [token, authIsLoading]);
 
   // ── Eligibility engine ────────────────────────────────────────────────
 
