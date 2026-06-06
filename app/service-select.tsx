@@ -1,6 +1,6 @@
 import {
   ArrowRight, Navigation, Car, Bike, Package, Bus, CheckCircle2,
-  Clock, WifiOff, Wrench, Star, AlertCircle,
+  Clock, WifiOff, Wrench, Star, AlertCircle, RefreshCw,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -70,9 +70,10 @@ function BlockedOverlay({ status }: { status: ServiceStatus }) {
 export default function ServiceSelectScreen() {
   const insets = useSafeAreaInsets();
   const { setServiceType } = useService();
-  const { getServiceStatus, isLoading: controlLoading } = useServiceControl();
+  const { getServiceStatus, isLoading: controlLoading, error: controlError, refresh } = useServiceControl();
   const [selected, setSelected] = useState<ServiceType | null>(null);
   const [driverSnapshot, setDriverSnapshot] = useState<DriverSnapshot | null>(null);
+  const [retrying, setRetrying] = useState(false);
 
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
   const botPad = Platform.OS === 'web' ? 34 : insets.bottom;
@@ -139,62 +140,86 @@ export default function ServiceSelectScreen() {
           <Text style={s.sub}>Select how you want to earn with VeeGo. You can change this later.</Text>
         </View>
 
+        {/* Loading state — block cards until we know actual status */}
         {controlLoading ? (
-          <View style={s.loadingRow}>
-            <ActivityIndicator size="small" color="#1e1e28" />
-            <Text style={s.loadingText}>Loading services…</Text>
+          <View style={s.stateBox}>
+            <ActivityIndicator size="large" color="#1e1e28" />
+            <Text style={s.stateTitle}>Checking services…</Text>
+            <Text style={s.stateSub}>Please wait while we load availability.</Text>
+          </View>
+        ) : controlError ? (
+          /* Error state — fetch failed, do NOT default to open */
+          <View style={s.stateBox}>
+            <WifiOff size={36} color="#e53935" />
+            <Text style={[s.stateTitle, { color: '#e53935' }]}>Could not load services</Text>
+            <Text style={s.stateSub}>
+              Unable to reach the server. Check your connection and try again.
+            </Text>
+            <TouchableOpacity
+              style={s.retryBtn}
+              onPress={async () => {
+                setRetrying(true);
+                await refresh();
+                setRetrying(false);
+              }}
+              disabled={retrying}
+              activeOpacity={0.8}
+            >
+              <RefreshCw size={15} color="white" />
+              <Text style={s.retryText}>{retrying ? 'Retrying…' : 'Retry'}</Text>
+            </TouchableOpacity>
           </View>
         ) : null}
 
-        <View style={s.grid}>
-          {visibleServices.map((svc) => {
-            const status = statusMap[svc.type];
-            const isSelected = selected === svc.type;
-            const isBlocked = !status.available;
-            const Icon = SERVICE_ICONS[svc.type];
+        {(!controlLoading && !controlError) ? (
+          <View style={s.grid}>
+            {visibleServices.map((svc) => {
+              const status = statusMap[svc.type];
+              const isSelected = selected === svc.type;
+              const isBlocked = !status.available;
+              const Icon = SERVICE_ICONS[svc.type];
 
-            return (
-              <TouchableOpacity
-                key={svc.type}
-                style={[
-                  s.card,
-                  isSelected && s.cardSelected,
-                  isBlocked && s.cardBlocked,
-                ]}
-                onPress={() => !isBlocked && setSelected(svc.type)}
-                activeOpacity={isBlocked ? 1 : 0.85}
-                disabled={isBlocked}
-              >
-                {/* Tag pill (Most popular / New / Coming Soon) */}
-                {svc.tag && !isBlocked && (
-                  <View style={s.tagPill}>
-                    <Text style={s.tagText}>{svc.tag}</Text>
+              return (
+                <TouchableOpacity
+                  key={svc.type}
+                  style={[
+                    s.card,
+                    isSelected && s.cardSelected,
+                    isBlocked && s.cardBlocked,
+                  ]}
+                  onPress={() => !isBlocked && setSelected(svc.type)}
+                  activeOpacity={isBlocked ? 1 : 0.85}
+                  disabled={isBlocked}
+                >
+                  {svc.tag && !isBlocked && (
+                    <View style={s.tagPill}>
+                      <Text style={s.tagText}>{svc.tag}</Text>
+                    </View>
+                  )}
+
+                  <View style={[s.iconBox, isSelected && s.iconBoxSelected, isBlocked && s.iconBoxBlocked]}>
+                    <Icon size={28} color={isSelected ? 'white' : isBlocked ? '#b0b0c0' : '#1e1e28'} />
                   </View>
-                )}
 
-                <View style={[s.iconBox, isSelected && s.iconBoxSelected, isBlocked && s.iconBoxBlocked]}>
-                  <Icon size={28} color={isSelected ? 'white' : isBlocked ? '#b0b0c0' : '#1e1e28'} />
-                </View>
+                  <Text style={[s.cardLabel, isSelected && s.cardLabelSelected, isBlocked && s.cardLabelBlocked]}>
+                    {svc.label}
+                  </Text>
+                  <Text style={[s.cardSub, isSelected && s.cardSubSelected, isBlocked && s.cardSubBlocked]}>
+                    {svc.sub}
+                  </Text>
 
-                <Text style={[s.cardLabel, isSelected && s.cardLabelSelected, isBlocked && s.cardLabelBlocked]}>
-                  {svc.label}
-                </Text>
-                <Text style={[s.cardSub, isSelected && s.cardSubSelected, isBlocked && s.cardSubBlocked]}>
-                  {svc.sub}
-                </Text>
+                  {isSelected && !isBlocked && (
+                    <View style={s.checkMark}>
+                      <CheckCircle2 size={20} color="#1e1e28" />
+                    </View>
+                  )}
 
-                {isSelected && !isBlocked && (
-                  <View style={s.checkMark}>
-                    <CheckCircle2 size={20} color="#1e1e28" />
-                  </View>
-                )}
-
-                {/* Blocked overlay */}
-                {isBlocked && <BlockedOverlay status={status} />}
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+                  {isBlocked && <BlockedOverlay status={status} />}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ) : null}
 
         {/* Ineligibility explanation for selected service */}
         {selected && selectedStatus && !selectedStatus.available && selectedStatus.ineligibilityReason && (
@@ -263,6 +288,43 @@ const s = StyleSheet.create({
   sub: { fontSize: 14, color: '#5e5e72', lineHeight: 20, fontFamily: 'Inter_400Regular' },
   loadingRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
   loadingText: { fontSize: 12, color: '#5e5e72', fontFamily: 'Inter_400Regular' },
+  stateBox: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    paddingVertical: 48,
+    paddingHorizontal: 16,
+  },
+  stateTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#1e1e28',
+    fontFamily: 'Inter_700Bold',
+    textAlign: 'center',
+  },
+  stateSub: {
+    fontSize: 13,
+    color: '#5e5e72',
+    fontFamily: 'Inter_400Regular',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  retryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#1e1e28',
+    borderRadius: 99,
+    paddingHorizontal: 22,
+    paddingVertical: 12,
+    marginTop: 4,
+  },
+  retryText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: 'white',
+    fontFamily: 'Inter_600SemiBold',
+  },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   card: {
     width: '47%',

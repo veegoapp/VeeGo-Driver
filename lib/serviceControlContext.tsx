@@ -77,13 +77,37 @@ const ServiceControlContext = createContext<ServiceControlContextValue>({
   refresh: async () => {},
 });
 
+// ── Response-shape normaliser ─────────────────────────────────────────────
+// Backends commonly wrap arrays under different keys. This tries all of them
+// so we work regardless of which envelope the backend uses.
+
+function extractServiceList(data: unknown): ServiceControl[] {
+  if (Array.isArray(data)) return data as ServiceControl[];
+
+  if (data && typeof data === 'object') {
+    const obj = data as Record<string, unknown>;
+
+    // Try every common envelope key
+    for (const key of ['services', 'data', 'serviceControls', 'controls', 'items', 'result']) {
+      if (Array.isArray(obj[key])) return obj[key] as ServiceControl[];
+    }
+
+    // Single object with serviceType field — wrap it
+    if (typeof obj.serviceType === 'string') return [obj as unknown as ServiceControl];
+  }
+
+  return [];
+}
+
 // ── Provider ──────────────────────────────────────────────────────────────
 
 export function ServiceControlProvider({ children }: { children: React.ReactNode }) {
   const { token } = useAuth();
   const [services, setServices] = useState<ServiceControl[]>([]);
   const [eligibilityRules, setEligibilityRules] = useState<EligibilityRule[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  // Start as true — we always fetch on mount when a token is present,
+  // so the UI must wait rather than defaulting all services to OPEN.
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const socketRef = useRef<Socket | null>(null);
 
@@ -100,9 +124,9 @@ export function ServiceControlProvider({ children }: { children: React.ReactNode
 
     api.get<unknown>('/services/control')
       .then((data) => {
-        const list: ServiceControl[] = Array.isArray(data)
-          ? (data as ServiceControl[])
-          : ((data as Record<string, unknown>)?.services as ServiceControl[] | undefined) ?? [];
+        console.log('[ServiceControl] raw response:', JSON.stringify(data));
+        const list = extractServiceList(data);
+        console.log('[ServiceControl] parsed', list.length, 'services:', list.map(s => `${s.serviceType}(enabled=${s.isEnabled},mode=${s.displayMode})`).join(', '));
         setServices(list);
       })
       .catch((err) => {
@@ -182,9 +206,9 @@ export function ServiceControlProvider({ children }: { children: React.ReactNode
     if (!token) return;
     try {
       const data = await api.get<unknown>('/services/control');
-      const list: ServiceControl[] = Array.isArray(data)
-        ? (data as ServiceControl[])
-        : ((data as Record<string, unknown>)?.services as ServiceControl[] | undefined) ?? [];
+      console.log('[ServiceControl] refresh raw response:', JSON.stringify(data));
+      const list = extractServiceList(data);
+      console.log('[ServiceControl] refresh parsed', list.length, 'services');
       setServices(list);
     } catch (err) {
       console.warn('[ServiceControl] refresh failed — keeping existing state:', err);
