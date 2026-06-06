@@ -1,0 +1,149 @@
+
+Perform a FULL APPLICATION AUDIT of the driver app.
+
+We need a complete structured report in markdown (.md format) that analyzes EVERY screen, hook, context, and service.
+
+---
+
+# OUTPUT FORMAT REQUIRED
+
+Generate a file:
+
+PROJECT_AUDIT_REPORT.md
+
+---
+
+# 1 — SCREEN BY SCREEN ANALYSIS
+
+For EACH screen:
+
+- app/(tabs)/index (Home)
+- app/(tabs)/trips
+- app/(tabs)/favorites
+- app/(tabs)/profile
+- app/(tabs)/lines
+- app/service-select
+- app/login
+- app/onboarding
+- app/(shuttle)
+
+For each screen, list:
+
+### Screen Name
+
+- UI Components used
+- API calls used (if any)
+- Backend endpoints (if any)
+- State sources (Context / AsyncStorage / Local state)
+- Navigation outputs
+- Any mocked/static data
+- Any dead or unused code
+
+---
+
+# 2 — BACKEND CONNECTION MAP
+
+List ALL API endpoints used in the app:
+
+For each endpoint:
+
+- Endpoint URL
+- File using it
+- Purpose
+- Response usage
+- Whether it is ACTIVE or UNUSED
+
+Mark status as:
+
+🟢 LIVE (used and working)
+🟡 PARTIAL (used but inconsistent)
+🔴 DEAD (not used or ignored)
+
+---
+
+# 3 — MOCK / HARDCODED DATA DETECTION
+
+Find and list:
+
+- Any static arrays
+- Fake trips / fake favorites / fake services
+- UI fallback data
+- Default placeholders used instead of backend
+
+Mark each:
+
+- file location
+- reason it is mock
+- impact level
+
+---
+
+# 4 — SERVICE SYSTEM ANALYSIS
+
+Analyze:
+
+- ServiceControlContext
+- Service selection flow
+- postAuthRouter
+- useServiceGuard
+
+Report:
+
+- where service state originates
+- where it is mutated
+- where it is consumed
+- any duplicate logic or conflicts
+
+---
+
+# 5 — NAVIGATION GRAPH
+
+Generate a flow map:
+
+- Login → where it goes
+- Signup → where it goes
+- Service-select → entry points
+- Profile → navigation paths
+- Dashboard entry
+
+Highlight:
+- illegal routes
+- duplicate entry points
+- broken navigation calls
+
+---
+
+# 6 — CRITICAL ISSUES SECTION
+
+List:
+
+- bugs causing wrong navigation
+- race conditions
+- missing guards
+- insecure flows
+- inconsistent state handling
+
+Rank severity:
+🔥 CRITICAL
+⚠️ HIGH
+ℹ️ LOW
+
+---
+
+# 7 — FINAL SUMMARY
+
+Give:
+
+- % backend connected vs mock
+- list of dead systems
+- list of duplicate logic systems
+- architectural recommendations
+
+---
+
+# IMPORTANT RULES
+
+- Do NOT guess
+- Only use real code analysis
+- If unsure → mark as UNKNOWN
+- Be strict and honest

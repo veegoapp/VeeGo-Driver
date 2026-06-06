@@ -6,3 +6,9 @@ id = "XwCroC0E28xEfRUuKOxfh"
 uri = "file://DRIVER_APP_AUDIT_REPORT.md"
 type = "text"
 title = "Driver App — Full System Audit Report"
+
+[[outputs]]
+id = "mYExp8bWHbY1918eEJ9e3"
+uri = "file://PROJECT_AUDIT_REPORT.md"
+type = "text"
+title = "VeeGo Driver App — Full Audit Report"
