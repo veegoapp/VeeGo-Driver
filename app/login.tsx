@@ -4,7 +4,6 @@
 
 import { Navigation, User, Mail, Phone, Lock, Eye, EyeOff, AlertCircle, ArrowLeft, ArrowRight, CreditCard } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -22,6 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '@/lib/i18nContext';
 import { useAuth } from '@/lib/authContext';
 import { endpoints, ApiError } from '@/lib/api';
+import { navigateAfterAuth } from '@/lib/postAuthRouter';
 
 type Tab = 'signin' | 'signup';
 
@@ -50,7 +50,7 @@ export default function LoginScreen() {
 
   const handleSignInSuccess = async (accessToken: string, refreshToken: string) => {
     await login(accessToken, refreshToken);
-    router.replace('/service-select');
+    await navigateAfterAuth();
   };
 
   return (
