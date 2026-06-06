@@ -48,6 +48,8 @@ export type ShuttleStop = {
   status: 'pending' | 'arrived' | 'completed';
 };
 
+export type VehicleType = 'HiAce' | 'Mini Bus' | 'Unknown';
+
 export type ShuttleLine = {
   id: string;
   tripId?: string;
@@ -60,6 +62,9 @@ export type ShuttleLine = {
   status: 'upcoming' | 'in-progress' | 'completed';
   passengers: number;
   capacity: number;
+  bookedSeats: number;
+  totalSeats: number;
+  vehicleType: VehicleType;
   assigned: boolean;
   stationCount: number;
   estimatedDuration: number;
@@ -109,6 +114,7 @@ type BackendTrip = {
   arrivalTime: string;
   availableSeats: number;
   totalSeats: number;
+  bookedSeats?: number;
   price: number;
   status: string;
   bookings?: { id: string; passengerName?: string; passengerPhone?: string; passengerAvatar?: string }[];
@@ -185,8 +191,15 @@ function mapRoute(route: BackendRoute): ShuttleRoute {
   };
 }
 
+function deriveVehicleType(totalSeats: number): VehicleType {
+  if (totalSeats === 14) return 'HiAce';
+  if (totalSeats === 28) return 'Mini Bus';
+  return 'Unknown';
+}
+
 function buildLine(route: BackendRoute, trip: BackendTrip | undefined): ShuttleLine {
-  const boarded = trip ? trip.totalSeats - trip.availableSeats : 0;
+  const total = trip?.totalSeats ?? 0;
+  const booked = trip?.bookedSeats ?? (trip ? total - trip.availableSeats : 0);
   return {
     id: String(route.id),
     tripId: trip ? String(trip.id) : undefined,
@@ -197,8 +210,11 @@ function buildLine(route: BackendRoute, trip: BackendTrip | undefined): ShuttleL
     departure: trip ? formatTime(trip.departureTime) : '—',
     arrival: trip ? formatTime(trip.arrivalTime) : '—',
     status: trip ? mapStatus(trip.status) : 'upcoming',
-    passengers: boarded,
-    capacity: trip?.totalSeats ?? 0,
+    passengers: booked,
+    capacity: total,
+    bookedSeats: booked,
+    totalSeats: total,
+    vehicleType: deriveVehicleType(total),
     assigned: !!trip,
     stationCount: route.stationCount ?? 0,
     estimatedDuration: route.estimatedDuration ?? 0,
@@ -223,6 +239,9 @@ type ShuttleContextType = {
   error: Error | null;
   nextStop: () => void;
   togglePassenger: (id: string) => void;
+  // Auto-cancel notification
+  tripCancelledBanner: string | null;
+  dismissTripCancelledBanner: () => void;
 };
 
 const ShuttleContext = createContext<ShuttleContextType>({
@@ -238,6 +257,8 @@ const ShuttleContext = createContext<ShuttleContextType>({
   error: null,
   nextStop: () => {},
   togglePassenger: () => {},
+  tripCancelledBanner: null,
+  dismissTripCancelledBanner: () => {},
 });
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
@@ -247,6 +268,7 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
   const { socket } = useSocket();
   const [currentStopIndex, setCurrentStopIndex] = useState(0);
   const [passengers, setPassengers] = useState<BoardingPassenger[]>([]);
+  const [tripCancelledBanner, setTripCancelledBanner] = useState<string | null>(null);
 
   // ── Queries ──────────────────────────────────────────────────────────────
 
@@ -372,26 +394,22 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
     }
   }, [tripDetailRaw]);
 
-  // ── Socket: shuttle booking events ───────────────────────────────────────
+  // ── Socket: shuttle trip events ───────────────────────────────────────────
 
   useEffect(() => {
     if (!socket) return;
 
-    const invalidate = () => {
-      queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
+    const handleAutoCancelled = (data?: { tripId?: string | number; routeName?: string }) => {
+      const name = data?.routeName ?? 'A trip';
+      setTripCancelledBanner(`${name} was automatically cancelled — minimum bookings not reached.`);
+      queryClient.invalidateQueries({ queryKey: ['shuttle-driver-trips'] });
       queryClient.invalidateQueries({ queryKey: ['shuttle-lines'] });
     };
 
-    socket.on(SOCKET_EVENTS.SHUTTLE_BOOKING_CREATED, invalidate);
-    socket.on(SOCKET_EVENTS.SHUTTLE_BOOKING_CANCELLED, invalidate);
-    socket.on(SOCKET_EVENTS.SHUTTLE_RENEWAL_CONFIRMED, invalidate);
-    socket.on(SOCKET_EVENTS.SHUTTLE_BOOKING_REASSIGNED, invalidate);
+    socket.on(SOCKET_EVENTS.SHUTTLE_TRIP_AUTO_CANCELLED, handleAutoCancelled);
 
     return () => {
-      socket.off(SOCKET_EVENTS.SHUTTLE_BOOKING_CREATED, invalidate);
-      socket.off(SOCKET_EVENTS.SHUTTLE_BOOKING_CANCELLED, invalidate);
-      socket.off(SOCKET_EVENTS.SHUTTLE_RENEWAL_CONFIRMED, invalidate);
-      socket.off(SOCKET_EVENTS.SHUTTLE_BOOKING_REASSIGNED, invalidate);
+      socket.off(SOCKET_EVENTS.SHUTTLE_TRIP_AUTO_CANCELLED, handleAutoCancelled);
     };
   }, [socket, queryClient]);
 
@@ -410,6 +428,8 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
+  const dismissTripCancelledBanner = () => setTripCancelledBanner(null);
+
   return (
     <ShuttleContext.Provider
       value={{
@@ -426,6 +446,8 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
         error: (routesError ?? bookingsError ?? tripsError ?? stationsError ?? detailError) as Error | null,
         nextStop,
         togglePassenger,
+        tripCancelledBanner,
+        dismissTripCancelledBanner,
       }}
     >
       {children}

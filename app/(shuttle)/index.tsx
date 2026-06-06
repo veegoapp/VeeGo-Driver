@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { AlertCircle, AlertTriangle, ArrowRight, Bell, GitBranch, MapPin, Navigation, Phone, RefreshCw, Users, Wifi, WifiOff } from 'lucide-react-native';
+import { AlertCircle, AlertTriangle, ArrowRight, Bell, GitBranch, MapPin, Navigation, Phone, RefreshCw, Users, Wifi, WifiOff, X } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -58,7 +58,7 @@ export default function ShuttleHomeScreen() {
   });
   const driverData = driverRaw as any;
 
-  const { activeLine, stops, currentStopIndex, allLines, renewalBooking, myBookings } = useShuttle();
+  const { activeLine, stops, currentStopIndex, allLines, renewalBooking, myBookings, tripCancelledBanner, dismissTripCancelledBanner } = useShuttle();
   const queryClient = useQueryClient();
   const currentStop = stops[currentStopIndex] ?? null;
   const nextStop = stops[currentStopIndex + 1] ?? null;
@@ -221,6 +221,19 @@ export default function ShuttleHomeScreen() {
           </Pressable>
         </View>
 
+        {/* Auto-cancelled trip banner */}
+        {!!tripCancelledBanner && (
+          <View style={[styles.cancelBanner, { backgroundColor: '#FEF2F2', borderColor: '#FCA5A5' }]}>
+            <AlertTriangle size={16} color="#DC2626" strokeWidth={2} />
+            <Text style={[styles.cancelBannerText, { color: '#DC2626', fontFamily: 'Inter_600SemiBold', flex: 1 }]}>
+              {tripCancelledBanner}
+            </Text>
+            <Pressable onPress={dismissTripCancelledBanner} hitSlop={8}>
+              <X size={16} color="#DC2626" strokeWidth={2} />
+            </Pressable>
+          </View>
+        )}
+
         {/* Renewal banner */}
         {renewalBooking && renewalCountdown !== 'Expired' && (
           <GlassView style={[styles.renewalCard, { borderColor: '#F59E0B55', borderWidth: 1 }]} borderRadius={16}>
@@ -287,6 +300,21 @@ export default function ShuttleHomeScreen() {
               <Text style={[styles.activeLineRoute, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
                 {activeLine.from} → {activeLine.to}
               </Text>
+              <View style={styles.seatRow}>
+                {activeLine.vehicleType !== 'Unknown' && (
+                  <View style={[styles.vehicleBadge, { backgroundColor: '#1e1e2815', borderColor: '#1e1e2830' }]}>
+                    <Text style={[styles.vehicleBadgeText, { color: '#2d2d42', fontFamily: 'Inter_700Bold' }]}>
+                      {activeLine.vehicleType}
+                    </Text>
+                  </View>
+                )}
+                <View style={[styles.seatBadge, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+                  <Users size={12} color={colors.mutedForeground} strokeWidth={2} />
+                  <Text style={[styles.seatBadgeText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
+                    {activeLine.bookedSeats} of {activeLine.totalSeats}
+                  </Text>
+                </View>
+              </View>
 
               <View style={styles.progressWrap}>
                 <View style={[styles.progressTrack, { backgroundColor: colors.secondary }]}>
@@ -461,4 +489,11 @@ const styles = StyleSheet.create({
   quickActionCard: { flex: 1, flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, paddingHorizontal: 6, gap: 8 },
   quickActionIcon: { width: 40, height: 40, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
   quickActionLabel: { fontSize: 11, textAlign: 'center' },
+  cancelBanner: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, marginTop: 12, borderRadius: 12, borderWidth: 1 },
+  cancelBannerText: { fontSize: 13, lineHeight: 18 },
+  seatRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
+  vehicleBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, borderWidth: 1 },
+  vehicleBadgeText: { fontSize: 11, letterSpacing: 0.5 },
+  seatBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, borderWidth: 1 },
+  seatBadgeText: { fontSize: 12 },
 });
