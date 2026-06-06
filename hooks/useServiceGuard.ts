@@ -3,13 +3,18 @@ import { router } from 'expo-router';
 import { useServiceControl, ServiceStatus } from '@/lib/serviceControlContext';
 import { useService, ServiceType } from '@/lib/serviceContext';
 
-// Modes that hard-block access — 'live' with driver ineligibility only
-// blocks the service-select screen, not the active service screen.
-const HARD_BLOCK_MODES = new Set(['coming_soon', 'unavailable', 'maintenance']);
+// Modes that hard-block access to the active service screen.
+// 'coming_soon' is intentionally excluded — it is already unselectable on
+// service-select, and should not block the guard if somehow reached.
+// Only 'unavailable' (isEnabled=false) and 'maintenance' cause a redirect.
+const HARD_BLOCK_MODES = new Set(['unavailable', 'maintenance']);
 
 function isHardBlocked(status: ServiceStatus): boolean {
+  // No backend config at all — block (config missing means unknown state).
   if (!status.visible) return true;
+  // Explicitly disabled or under maintenance — block.
   if (HARD_BLOCK_MODES.has(status.displayMode)) return true;
+  // 'live' (available or ineligible) and 'coming_soon' — do NOT block.
   return false;
 }
 

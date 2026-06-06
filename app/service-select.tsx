@@ -114,10 +114,13 @@ export default function ServiceSelectScreen() {
 
   const handleContinue = () => {
     if (controlLoading || controlError || !selected) return;
+    console.log('[SERVICE_SELECT_CLICK]', selected);
     const status = getServiceStatus(BACKEND_TYPE_MAP[selected], driverSnapshot);
     if (!status.available) return;
     setServiceType(selected);
-    router.replace(selected === 'SHUTTLE' ? '/(shuttle)' : '/(tabs)');
+    const route = selected === 'SHUTTLE' ? '/(shuttle)' : '/(tabs)';
+    console.log('[FINAL ROUTE DECISION]', selected, '→', route);
+    router.replace(route);
   };
 
   // Build status map using lowercase backend type keys so the lookup matches

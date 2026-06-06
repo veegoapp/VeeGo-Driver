@@ -102,6 +102,20 @@ const ServiceControlContext = createContext<ServiceControlContextValue>({
   refresh: async () => {},
 });
 
+// ── Frontend → backend serviceType normalisation ──────────────────────────
+// Frontend uses uppercase enum keys (CAR, MOTOR, SHUTTLE, DELIVERY).
+// Backend returns lowercase strings ('car', 'shuttle', 'delivery', 'scooter').
+// MOTOR is a special case — it maps to 'scooter' on the backend.
+
+const FRONTEND_TO_BACKEND_MAP: Record<string, string> = {
+  MOTOR: 'scooter',
+};
+
+function normalizeToBackendType(type: string): string {
+  const upper = type.toUpperCase();
+  return FRONTEND_TO_BACKEND_MAP[upper] ?? type.toLowerCase();
+}
+
 // ── Response-shape normaliser ─────────────────────────────────────────────
 
 function extractServiceList(data: unknown): ServiceControl[] {
@@ -295,7 +309,11 @@ export function ServiceControlProvider({ children }: { children: React.ReactNode
       // ── Layer 3: Config check ─────────────────────────────────────────
       // No backend config for this service — hide and block it.
       // FAIL-SECURE: missing config is never treated as "open".
-      const ctrl = services.find((s) => s.serviceType === serviceType);
+      // Normalise the caller's serviceType (e.g. 'SHUTTLE' → 'shuttle',
+      // 'MOTOR' → 'scooter') before comparing against backend strings.
+      const backendType = normalizeToBackendType(serviceType);
+      const ctrl = services.find((s) => s.serviceType.toLowerCase() === backendType);
+      console.log('[SERVICE_MATCH]', ctrl ?? `no match for "${backendType}" in`, services.map(s => s.serviceType));
       if (!ctrl) return CONFIG_BLOCKED;
 
       // ── Layer 4: Enabled check ────────────────────────────────────────
