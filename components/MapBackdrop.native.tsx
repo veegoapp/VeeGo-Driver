@@ -170,21 +170,45 @@ function buildHtml(
     // Route
     var routePts = [driver || pickup, pickup, dropoff].filter(Boolean);
     if (routePts.length >= 2) {
-      var coords = routePts.map(function(p) { return p; });
-      map.addSource('route', {
-        type: 'geojson',
-        data: { type: 'Feature', geometry: { type: 'LineString', coordinates: coords }, properties: {} }
-      });
-      map.addLayer({
-        id: 'route-casing', type: 'line', source: 'route',
-        layout: { 'line-join': 'round', 'line-cap': 'round' },
-        paint: { 'line-color': '#ffffff', 'line-width': 6, 'line-opacity': 0.4 }
-      });
-      map.addLayer({
-        id: 'route-line', type: 'line', source: 'route',
-        layout: { 'line-join': 'round', 'line-cap': 'round' },
-        paint: { 'line-color': '#6366f1', 'line-width': 3.5, 'line-opacity': 0.9 }
-      });
+      var straightCoords = routePts.map(function(p) { return p; });
+
+      function drawRoute(coords) {
+        if (map.getSource('route')) {
+          map.getSource('route').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: coords }, properties: {} });
+        } else {
+          map.addSource('route', {
+            type: 'geojson',
+            data: { type: 'Feature', geometry: { type: 'LineString', coordinates: coords }, properties: {} }
+          });
+          map.addLayer({
+            id: 'route-casing', type: 'line', source: 'route',
+            layout: { 'line-join': 'round', 'line-cap': 'round' },
+            paint: { 'line-color': '#ffffff', 'line-width': 6, 'line-opacity': 0.4 }
+          });
+          map.addLayer({
+            id: 'route-line', type: 'line', source: 'route',
+            layout: { 'line-join': 'round', 'line-cap': 'round' },
+            paint: { 'line-color': '#6366f1', 'line-width': 3.5, 'line-opacity': 0.9 }
+          });
+        }
+      }
+
+      // Draw straight-line fallback immediately, then upgrade with OSRM road route
+      drawRoute(straightCoords);
+
+      (function() {
+        var c = straightCoords.map(function(p) { return p[0] + ',' + p[1]; }).join(';');
+        fetch('https://router.project-osrm.org/route/v1/driving/' + c + '?overview=full&geometries=geojson', {
+          signal: AbortSignal.timeout(5000)
+        })
+          .then(function(res) { return res.ok ? res.json() : null; })
+          .then(function(data) {
+            if (data && data.code === 'Ok' && data.routes && data.routes.length) {
+              drawRoute(data.routes[0].geometry.coordinates);
+            }
+          })
+          .catch(function() {});
+      })();
     }
 
     // Fit bounds
