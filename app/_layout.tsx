@@ -39,7 +39,6 @@ function RootLayoutNav() {
     const inAuthScreen =
       segments[0] === 'login' ||
       segments[0] === 'language-select' ||
-      segments[0] === 'index' ||
       segments[0] === 'onboarding';
 
     if (!token && !inAuthScreen) {

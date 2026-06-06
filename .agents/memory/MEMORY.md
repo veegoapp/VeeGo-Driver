@@ -1,0 +1,2 @@
+- [Expo RN app structure](expo-structure.md) — frontend is a bare Expo app at the monorepo root (not a workspace package); web uses MapLibre, native uses react-native-maps
+- [Surge zone implementation](surge-zones.md) — SurgeZone type lives in both MapBackdrop files + useRideSocket; MapBackdrop.tsx re-exports from .web.tsx

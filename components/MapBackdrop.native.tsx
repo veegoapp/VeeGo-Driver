@@ -1,11 +1,20 @@
 import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
-import MapView, { Marker, Polyline, UrlTile } from 'react-native-maps';
+import MapView, { Circle, Marker, Polyline, UrlTile } from 'react-native-maps';
+
+export interface SurgeZone {
+  id: string;
+  latitude: number;
+  longitude: number;
+  radius: number;
+  multiplier: number;
+}
 
 export interface MapBackdropProps {
   pickup?: { latitude: number; longitude: number };
   dropoff?: { latitude: number; longitude: number };
   driverLocation?: { latitude: number; longitude: number };
+  surgeZones?: SurgeZone[];
 }
 
 const CAIRO = { latitude: 30.0444, longitude: 31.2357 };
@@ -20,7 +29,13 @@ function centroid(pts: Array<{ latitude: number; longitude: number }>) {
   };
 }
 
-export function MapBackdrop({ pickup, dropoff, driverLocation }: MapBackdropProps) {
+function surgeColors(multiplier: number): { fill: string; stroke: string } {
+  if (multiplier >= 2.0) return { fill: 'rgba(239,68,68,0.14)', stroke: 'rgba(239,68,68,0.6)' };
+  if (multiplier >= 1.5) return { fill: 'rgba(249,115,22,0.14)', stroke: 'rgba(249,115,22,0.6)' };
+  return { fill: 'rgba(213,178,61,0.13)', stroke: 'rgba(213,178,61,0.6)' };
+}
+
+export function MapBackdrop({ pickup, dropoff, driverLocation, surgeZones = [] }: MapBackdropProps) {
   const center = useMemo(() => {
     const pts = [pickup, dropoff, driverLocation].filter(
       (p): p is { latitude: number; longitude: number } => !!p
@@ -57,6 +72,21 @@ export function MapBackdrop({ pickup, dropoff, driverLocation }: MapBackdropProp
           maximumZ={19}
           flipY={false}
         />
+
+        {/* Surge zone circles */}
+        {surgeZones.map(z => {
+          const { fill, stroke } = surgeColors(z.multiplier);
+          return (
+            <Circle
+              key={z.id}
+              center={{ latitude: z.latitude, longitude: z.longitude }}
+              radius={z.radius}
+              fillColor={fill}
+              strokeColor={stroke}
+              strokeWidth={1.5}
+            />
+          );
+        })}
 
         {pickup && (
           <Marker coordinate={pickup} title="Pickup" pinColor="#22c55e" />

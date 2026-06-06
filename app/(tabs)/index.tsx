@@ -17,7 +17,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MapBackdrop } from '@/components/MapBackdrop';
+import { MapBackdrop, type SurgeZone } from '@/components/MapBackdrop';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
@@ -37,6 +37,7 @@ export default function HomeScreen() {
   // Task 1: GPS location tracking state
   const [locationError, setLocationError] = useState<string | null>(null);
   const [request, setRequest] = useState<RideRequest | null>(null);
+  const [surgeZones, setSurgeZones] = useState<SurgeZone[]>([]);
   const [countdown, setCountdown] = useState(12);
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
 
@@ -152,10 +153,15 @@ export default function HomeScreen() {
     dismissRequestRef.current?.();
   }, []);
 
+  const handleSurgeUpdated = useCallback((zones: SurgeZone[]) => {
+    setSurgeZones(zones);
+  }, []);
+
   const { connected: socketConnected } = useRideSocket({
     driverId: driverData?.id as string | undefined,
     onRideOffer: handleRideOffer,
     onOfferExpired: handleOfferExpired,
+    onSurgeUpdated: handleSurgeUpdated,
   });
 
   // FIX #6: was gated on `online` — spec requires registration immediately after login
@@ -284,7 +290,7 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <MapBackdrop />
+      <MapBackdrop surgeZones={surgeZones} />
 
       {/* Reconnecting banner */}
       <Animated.View
@@ -395,6 +401,18 @@ export default function HomeScreen() {
           </Animated.View>
         )}
       </View>
+
+      {/* Surge zone badge */}
+      {surgeZones.length > 0 && (
+        <View style={[styles.surgeBadge, { bottom: TAB_BAR_HEIGHT + (locationError ? 180 : 140) }]}>
+          <Text style={{ fontSize: 13, color: '#D5B23D' }}>⚡</Text>
+          <Text style={{ fontSize: 12, fontFamily: 'Inter_700Bold', color: '#D5B23D', letterSpacing: 0.3 }}>
+            {surgeZones.length === 1
+              ? `${surgeZones[0].multiplier.toFixed(1)}× surge zone`
+              : `${surgeZones.length} surge zones active`}
+          </Text>
+        </View>
+      )}
 
       {/* Task 1: location permission error banner */}
       {locationError && (
@@ -569,6 +587,7 @@ const styles = StyleSheet.create({
   demandText: { fontSize: 11, marginTop: 4, lineHeight: 16 },
   // Task 1: location error banner
   locationErrorBanner: { position: 'absolute', left: 20, right: 20, flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: 14, borderWidth: 1 },
+  surgeBadge: { position: 'absolute', alignSelf: 'center', left: 20, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(213,178,61,0.12)', borderWidth: 1, borderColor: 'rgba(213,178,61,0.45)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7 },
   locationErrorText: { flex: 1, fontSize: 12, lineHeight: 16 },
   onlineToggleWrap: { position: 'absolute', left: 0, right: 0, alignItems: 'center', gap: 12 },
   pulseContainer: { width: 80, height: 80, alignItems: 'center', justifyContent: 'center' },

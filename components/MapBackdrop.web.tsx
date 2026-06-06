@@ -3,10 +3,19 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import React, { useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+export interface SurgeZone {
+  id: string;
+  latitude: number;
+  longitude: number;
+  radius: number;
+  multiplier: number;
+}
+
 export interface MapBackdropProps {
   pickup?: { latitude: number; longitude: number };
   dropoff?: { latitude: number; longitude: number };
   driverLocation?: { latitude: number; longitude: number };
+  surgeZones?: SurgeZone[];
 }
 
 const DEFAULT_CENTER: [number, number] = [31.2357, 30.0444];
@@ -69,11 +78,47 @@ const DRIVER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="38" height="4
   <line x1="19" y1="32" x2="19" y2="44" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round"/>
 </svg>`;
 
-export function MapBackdrop({ pickup, dropoff, driverLocation }: MapBackdropProps) {
+function surgeColors(multiplier: number): { fill: string; stroke: string } {
+  if (multiplier >= 2.0) return { fill: 'rgba(239,68,68,0.14)', stroke: 'rgba(239,68,68,0.55)' };
+  if (multiplier >= 1.5) return { fill: 'rgba(249,115,22,0.14)', stroke: 'rgba(249,115,22,0.55)' };
+  return { fill: 'rgba(213,178,61,0.13)', stroke: 'rgba(213,178,61,0.55)' };
+}
+
+function geoCirclePolygon(lat: number, lng: number, radiusMeters: number, steps = 48): number[][] {
+  const coords: number[][] = [];
+  for (let i = 0; i <= steps; i++) {
+    const angle = (i / steps) * 2 * Math.PI;
+    const dx = radiusMeters * Math.cos(angle);
+    const dy = radiusMeters * Math.sin(angle);
+    const dLat = dy / 111320;
+    const dLng = dx / (111320 * Math.cos((lat * Math.PI) / 180));
+    coords.push([lng + dLng, lat + dLat]);
+  }
+  return coords;
+}
+
+function buildSurgeGeoJSON(zones: SurgeZone[]): GeoJSON.FeatureCollection {
+  return {
+    type: 'FeatureCollection',
+    features: zones.map((z) => ({
+      type: 'Feature' as const,
+      id: z.id,
+      properties: { multiplier: z.multiplier },
+      geometry: {
+        type: 'Polygon' as const,
+        coordinates: [geoCirclePolygon(z.latitude, z.longitude, z.radius)],
+      },
+    })),
+  };
+}
+
+export function MapBackdrop({ pickup, dropoff, driverLocation, surgeZones = [] }: MapBackdropProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const driverMarkerRef = useRef<maplibregl.Marker | null>(null);
   const lastLocUpdate = useRef(0);
+  const surgeReadyRef = useRef(false);
+  const surgeMarkersRef = useRef<maplibregl.Marker[]>([]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -96,6 +141,43 @@ export function MapBackdrop({ pickup, dropoff, driverLocation }: MapBackdropProp
     mapRef.current = map;
 
     map.on('load', async () => {
+      // ── Surge zone layers ─────────────────────────────────────────────
+      map.addSource('surge-zones', {
+        type: 'geojson',
+        data: buildSurgeGeoJSON([]),
+      });
+      map.addLayer({
+        id: 'surge-fill',
+        type: 'fill',
+        source: 'surge-zones',
+        paint: {
+          'fill-color': [
+            'interpolate', ['linear'], ['get', 'multiplier'],
+            1.0, 'rgba(213,178,61,0.13)',
+            1.5, 'rgba(249,115,22,0.14)',
+            2.0, 'rgba(239,68,68,0.14)',
+          ],
+          'fill-opacity': 1,
+        },
+      });
+      map.addLayer({
+        id: 'surge-stroke',
+        type: 'line',
+        source: 'surge-zones',
+        paint: {
+          'line-color': [
+            'interpolate', ['linear'], ['get', 'multiplier'],
+            1.0, 'rgba(213,178,61,0.6)',
+            1.5, 'rgba(249,115,22,0.6)',
+            2.0, 'rgba(239,68,68,0.6)',
+          ],
+          'line-width': 1.5,
+          'line-dasharray': [4, 3],
+        },
+      });
+      surgeReadyRef.current = true;
+
+      // ── Route markers ─────────────────────────────────────────────────
       if (pickup) {
         new maplibregl.Marker({ element: makeSvgEl(PICKUP_SVG), anchor: 'bottom' })
           .setLngLat([pickup.longitude, pickup.latitude])
@@ -155,11 +237,46 @@ export function MapBackdrop({ pickup, dropoff, driverLocation }: MapBackdropProp
     });
 
     return () => {
+      surgeReadyRef.current = false;
+      surgeMarkersRef.current.forEach(m => m.remove());
+      surgeMarkersRef.current = [];
       driverMarkerRef.current = null;
       map.remove();
       mapRef.current = null;
     };
   }, []);
+
+  // Update surge zone fills when zones change
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !surgeReadyRef.current) return;
+
+    const source = map.getSource('surge-zones') as maplibregl.GeoJSONSource | undefined;
+    if (!source) return;
+    source.setData(buildSurgeGeoJSON(surgeZones));
+
+    // Surge multiplier label markers
+    surgeMarkersRef.current.forEach(m => m.remove());
+    surgeMarkersRef.current = [];
+
+    surgeZones.forEach(z => {
+      const { stroke } = surgeColors(z.multiplier);
+      const el = document.createElement('div');
+      el.style.cssText = [
+        'display:flex', 'align-items:center', 'gap:3px',
+        'background:rgba(20,20,30,0.82)', 'backdrop-filter:blur(6px)',
+        'border-radius:20px', 'padding:3px 8px',
+        `border:1.5px solid ${stroke}`,
+        'pointer-events:none', 'white-space:nowrap',
+      ].join(';');
+      el.innerHTML = `<span style="font-size:11px;color:#D5B23D">⚡</span><span style="font-size:11px;font-weight:700;color:#fff;font-family:sans-serif">${z.multiplier.toFixed(1)}×</span>`;
+
+      const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+        .setLngLat([z.longitude, z.latitude])
+        .addTo(map);
+      surgeMarkersRef.current.push(marker);
+    });
+  }, [surgeZones]);
 
   useEffect(() => {
     const now = Date.now();

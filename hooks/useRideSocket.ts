@@ -33,6 +33,14 @@ export type WaitingCharge = {
   capped?: boolean;
 };
 
+export type SurgeZone = {
+  id: string;
+  latitude: number;
+  longitude: number;
+  radius: number;
+  multiplier: number;
+};
+
 type UseRideSocketOptions = {
   driverId: string | undefined;
   onRideOffer: (ride: RideRequest) => void;
@@ -42,6 +50,7 @@ type UseRideSocketOptions = {
   onCheckinRequired?: () => void;
   onCheckinRejected?: () => void;
   onSosTriggered?: (data: unknown) => void;
+  onSurgeUpdated?: (zones: SurgeZone[]) => void;
 };
 
 type UseRideSocketResult = {
@@ -57,6 +66,7 @@ export function useRideSocket({
   onCheckinRequired,
   onCheckinRejected,
   onSosTriggered,
+  onSurgeUpdated,
 }: UseRideSocketOptions): UseRideSocketResult {
   const socketRef = useRef<Socket | null>(null);
   const callbackRef = useRef(onRideOffer);
@@ -79,6 +89,9 @@ export function useRideSocket({
 
   const sosTriggedRef = useRef(onSosTriggered);
   sosTriggedRef.current = onSosTriggered;
+
+  const surgeUpdatedRef = useRef(onSurgeUpdated);
+  surgeUpdatedRef.current = onSurgeUpdated;
 
   const [connected, setConnected] = useState(false);
 
@@ -154,7 +167,17 @@ export function useRideSocket({
       });
 
       socket.on(SOCKET_EVENTS.SURGE_UPDATED, (data: unknown) => {
-        console.warn('[RideSocket] surge:updated', data);
+        let zones: SurgeZone[];
+        if (Array.isArray(data)) {
+          zones = data as SurgeZone[];
+        } else if (data && typeof data === 'object' && 'zones' in data) {
+          zones = (data as { zones: SurgeZone[] }).zones ?? [];
+        } else if (data && typeof data === 'object' && 'latitude' in data) {
+          zones = [data as SurgeZone];
+        } else {
+          zones = [];
+        }
+        surgeUpdatedRef.current?.(zones);
       });
 
       socket.on(SOCKET_EVENTS.SOS_TRIGGERED, (data: unknown) => {
