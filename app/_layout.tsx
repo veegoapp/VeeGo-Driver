@@ -15,6 +15,7 @@ import { I18nProvider } from '@/lib/i18nContext';
 import { ServiceProvider } from '@/lib/serviceContext';
 import { ServiceControlProvider } from '@/lib/serviceControlContext';
 import { AuthProvider, useAuth } from '@/lib/authContext';
+import { navigateAfterAuth } from '@/lib/postAuthRouter';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -29,24 +30,43 @@ const queryClient = new QueryClient({
   },
 });
 
+// Screens that only unauthenticated users should ever see.
+// Authenticated users landing on any of these are redirected to the dashboard.
+const PRE_AUTH_SCREENS = new Set(['login', 'language-select', 'onboarding', 'index']);
+
 function RootLayoutNav() {
   const { token, isLoading } = useAuth();
   const router = useRouter();
   const segments = useSegments();
 
   useEffect(() => {
+    // Wait until auth state is fully resolved before making any routing decision.
     if (isLoading) return;
 
-    const inAuthScreen =
-      segments[0] === 'login' ||
-      segments[0] === 'language-select' ||
-      segments[0] === 'onboarding';
+    // segments[0] is undefined at the root route "/" (app/index.tsx).
+    const currentScreen = segments[0] as string | undefined;
+    const inPreAuthZone = !currentScreen || PRE_AUTH_SCREENS.has(currentScreen);
 
-    if (!token && !inAuthScreen) {
-      queryClient.clear();
-      router.replace('/login');
+    if (!token) {
+      // Unauthenticated user on a protected screen → send to login.
+      if (!inPreAuthZone) {
+        console.log('[Bootstrap] no token on protected screen — redirecting to /login');
+        queryClient.clear();
+        router.replace('/login');
+      }
+      return;
+    }
+
+    // Authenticated user on a pre-auth screen (splash, onboarding, login) →
+    // skip all marketing/onboarding and go directly to the correct dashboard.
+    if (inPreAuthZone) {
+      console.log('[Bootstrap] token exists on pre-auth screen — routing to dashboard');
+      navigateAfterAuth();
     }
   }, [token, isLoading, segments]);
+
+  // Hold the stack while auth is resolving to prevent any flash of pre-auth screens.
+  if (isLoading) return null;
 
   return (
     <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>

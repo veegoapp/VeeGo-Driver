@@ -1,0 +1,44 @@
+You are working on a React Native Expo driver app with Expo Router.
+
+We have a critical architecture issue in the app startup and routing flow.
+
+CURRENT PROBLEM:
+- Authenticated users are NOT redirected directly to the dashboard on app cold start.
+- app/index.tsx always shows a marketing splash screen even if auth_token exists.
+- Users are forced to go through:
+  marketing → onboarding → login → dashboard
+  even if they are already logged in.
+- RootLayout (_layout.tsx) only handles unauthenticated redirect to /login, but does NOT handle authenticated redirect to the main app.
+- There is no "auth bootstrap routing layer" that decides initial route based on token state.
+
+GOAL:
+Implement a proper app bootstrap routing system so that:
+
+1. If auth_token exists → user MUST go directly to the main app (/(tabs) or /(shuttle))
+2. If auth_token does NOT exist → user goes to /login
+3. onboarding and marketing screens must NEVER appear for authenticated users
+4. app/index.tsx must NOT be the entry decision point for authenticated users anymore
+
+REQUIREMENTS:
+- Create or enhance a single source-of-truth auth bootstrap logic (recommended inside app/_layout.tsx or a dedicated bootstrap component).
+- Use authContext (or getToken from SecureStore) safely after loading state resolves.
+- Must respect isLoading state from authContext to avoid premature redirects.
+- Routing must happen ONLY after auth is fully resolved.
+- Keep Expo Router conventions intact (no hacks outside routing system).
+
+EXPECTED FLOW AFTER FIX:
+
+Cold start:
+- auth loading
+  → wait
+
+Then:
+- token EXISTS → go to /(tabs) OR /(shuttle)
+- token NOT EXISTS → go to /login
+
+IMPORTANT:
+- Remove reliance on app/index.tsx as a marketing entry point for authenticated users.
+- Ensure no authenticated user ever sees onboarding or marketing screens unless they explicitly logout.
+- Do NOT break existing service-select flow for first-time users.
+
+Deliver a clean, production-grade routing architecture fix.
