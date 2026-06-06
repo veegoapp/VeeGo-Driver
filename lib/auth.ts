@@ -73,3 +73,28 @@ export async function getRefreshToken(): Promise<string | null> {
 export async function deleteRefreshToken(): Promise<void> {
   await removeItem(REFRESH_TOKEN_KEY);
 }
+
+/**
+ * Decodes the JWT payload and returns the driver's user ID.
+ * Tries the standard fields: sub, id, userId, driverId, driver_id.
+ * Returns null if the token is absent, malformed, or contains no recognisable ID field.
+ *
+ * This is intentionally a local decode — no network call is made.
+ */
+export function getUserIdFromToken(token: string | null): string | null {
+  if (!token) return null;
+  try {
+    const parts = token.split('.');
+    if (parts.length < 2) return null;
+    // Base64url → standard base64, then pad to a multiple of 4
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64.padEnd(base64.length + (4 - (base64.length % 4)) % 4, '=');
+    const payload = JSON.parse(atob(padded)) as Record<string, unknown>;
+    const id = payload.sub ?? payload.id ?? payload.userId ?? payload.driverId ?? payload.driver_id;
+    if (typeof id === 'string' && id.length > 0) return id;
+    if (typeof id === 'number') return String(id);
+    return null;
+  } catch {
+    return null;
+  }
+}

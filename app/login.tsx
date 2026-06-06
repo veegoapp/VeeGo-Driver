@@ -50,7 +50,7 @@ export default function LoginScreen() {
 
   const handleSignInSuccess = async (accessToken: string, refreshToken: string) => {
     await login(accessToken, refreshToken);
-    await navigateAfterAuth();
+    await navigateAfterAuth(accessToken);
   };
 
   return (

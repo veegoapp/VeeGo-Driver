@@ -61,7 +61,7 @@ function RootLayoutNav() {
     // skip all marketing/onboarding and go directly to the correct dashboard.
     if (inPreAuthZone) {
       console.log('[Bootstrap] token exists on pre-auth screen — routing to dashboard');
-      navigateAfterAuth();
+      navigateAfterAuth(token);
     }
   }, [token, isLoading, segments]);
 
