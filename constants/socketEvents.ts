@@ -17,6 +17,13 @@ export const SOCKET_EVENTS = {
   // Server → Driver: check-in
   DRIVER_CHECKIN_REQUIRED:  "driver:checkin:required",
   DRIVER_CHECKIN_REJECTED:  "driver:checkin:rejected",
+  DRIVER_CHECKIN_APPROVED:  "driver:checkin:approved",
+
+  // Server → Driver: cooldown
+  DRIVER_COOLDOWN_CLEARED:  "driver:cooldown:cleared",
+
+  // Server → Driver: ride no longer available
+  RIDE_NO_LONGER_AVAILABLE: "ride:no_longer_available",
 
   // Server → Driver: service control
   SERVICE_CONTROL_CHANGED:  "service:control:changed",

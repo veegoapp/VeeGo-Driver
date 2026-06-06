@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useSocket } from '@/lib/socketContext';
 import { SOCKET_EVENTS } from '../constants/socketEvents';
 
@@ -33,10 +33,13 @@ type UseRideSocketOptions = {
   driverId: string | undefined;
   onRideOffer: (ride: RideRequest) => void;
   onOfferExpired?: (rideId: string) => void;
+  onRideNoLongerAvailable?: () => void;
   onWaitingChargeUpdated?: (charge: WaitingCharge) => void;
   onWaitingChargeCapped?: (charge: WaitingCharge) => void;
   onCheckinRequired?: () => void;
   onCheckinRejected?: () => void;
+  onCheckinApproved?: () => void;
+  onCooldownCleared?: () => void;
   onSosTriggered?: (data: unknown) => void;
   onSurgeUpdated?: (zones: SurgeZone[]) => void;
 };
@@ -49,10 +52,13 @@ export function useRideSocket({
   driverId,
   onRideOffer,
   onOfferExpired,
+  onRideNoLongerAvailable,
   onWaitingChargeUpdated,
   onWaitingChargeCapped,
   onCheckinRequired,
   onCheckinRejected,
+  onCheckinApproved,
+  onCooldownCleared,
   onSosTriggered,
   onSurgeUpdated,
 }: UseRideSocketOptions): UseRideSocketResult {
@@ -63,6 +69,8 @@ export function useRideSocket({
   callbackRef.current = onRideOffer;
   const offerExpiredRef = useRef(onOfferExpired);
   offerExpiredRef.current = onOfferExpired;
+  const rideNoLongerAvailableRef = useRef(onRideNoLongerAvailable);
+  rideNoLongerAvailableRef.current = onRideNoLongerAvailable;
   const waitingChargeUpdatedRef = useRef(onWaitingChargeUpdated);
   waitingChargeUpdatedRef.current = onWaitingChargeUpdated;
   const waitingChargeCappedRef = useRef(onWaitingChargeCapped);
@@ -71,6 +79,10 @@ export function useRideSocket({
   checkinRequiredRef.current = onCheckinRequired;
   const checkinRejectedRef = useRef(onCheckinRejected);
   checkinRejectedRef.current = onCheckinRejected;
+  const checkinApprovedRef = useRef(onCheckinApproved);
+  checkinApprovedRef.current = onCheckinApproved;
+  const cooldownClearedRef = useRef(onCooldownCleared);
+  cooldownClearedRef.current = onCooldownCleared;
   const sosTriggedRef = useRef(onSosTriggered);
   sosTriggedRef.current = onSosTriggered;
   const surgeUpdatedRef = useRef(onSurgeUpdated);
@@ -106,6 +118,10 @@ export function useRideSocket({
       offerExpiredRef.current?.(rideId);
     };
 
+    const handleRideNoLongerAvailable = () => {
+      rideNoLongerAvailableRef.current?.();
+    };
+
     const handleWaitingChargeUpdated = (charge: WaitingCharge) => {
       waitingChargeUpdatedRef.current?.(charge);
     };
@@ -120,6 +136,14 @@ export function useRideSocket({
 
     const handleCheckinRejected = () => {
       checkinRejectedRef.current?.();
+    };
+
+    const handleCheckinApproved = () => {
+      checkinApprovedRef.current?.();
+    };
+
+    const handleCooldownCleared = () => {
+      cooldownClearedRef.current?.();
     };
 
     const handleSurgeUpdated = (data: unknown) => {
@@ -143,20 +167,26 @@ export function useRideSocket({
 
     socket.on(SOCKET_EVENTS.RIDE_OFFER, handleRideOffer);
     socket.on(SOCKET_EVENTS.RIDE_OFFER_EXPIRED, handleOfferExpired);
+    socket.on(SOCKET_EVENTS.RIDE_NO_LONGER_AVAILABLE, handleRideNoLongerAvailable);
     socket.on(SOCKET_EVENTS.WAITING_CHARGE_UPDATED, handleWaitingChargeUpdated);
     socket.on(SOCKET_EVENTS.WAITING_CHARGE_CAPPED, handleWaitingChargeCapped);
     socket.on(SOCKET_EVENTS.DRIVER_CHECKIN_REQUIRED, handleCheckinRequired);
     socket.on(SOCKET_EVENTS.DRIVER_CHECKIN_REJECTED, handleCheckinRejected);
+    socket.on(SOCKET_EVENTS.DRIVER_CHECKIN_APPROVED, handleCheckinApproved);
+    socket.on(SOCKET_EVENTS.DRIVER_COOLDOWN_CLEARED, handleCooldownCleared);
     socket.on(SOCKET_EVENTS.SURGE_UPDATED, handleSurgeUpdated);
     socket.on(SOCKET_EVENTS.SOS_TRIGGERED, handleSosTriggered);
 
     return () => {
       socket.off(SOCKET_EVENTS.RIDE_OFFER, handleRideOffer);
       socket.off(SOCKET_EVENTS.RIDE_OFFER_EXPIRED, handleOfferExpired);
+      socket.off(SOCKET_EVENTS.RIDE_NO_LONGER_AVAILABLE, handleRideNoLongerAvailable);
       socket.off(SOCKET_EVENTS.WAITING_CHARGE_UPDATED, handleWaitingChargeUpdated);
       socket.off(SOCKET_EVENTS.WAITING_CHARGE_CAPPED, handleWaitingChargeCapped);
       socket.off(SOCKET_EVENTS.DRIVER_CHECKIN_REQUIRED, handleCheckinRequired);
       socket.off(SOCKET_EVENTS.DRIVER_CHECKIN_REJECTED, handleCheckinRejected);
+      socket.off(SOCKET_EVENTS.DRIVER_CHECKIN_APPROVED, handleCheckinApproved);
+      socket.off(SOCKET_EVENTS.DRIVER_COOLDOWN_CLEARED, handleCooldownCleared);
       socket.off(SOCKET_EVENTS.SURGE_UPDATED, handleSurgeUpdated);
       socket.off(SOCKET_EVENTS.SOS_TRIGGERED, handleSosTriggered);
     };

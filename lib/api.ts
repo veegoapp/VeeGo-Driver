@@ -153,12 +153,6 @@ export { ApiError };
 
 export const endpoints = {
   auth: {
-    sendOtp: (phone: string) =>
-      request<void>('POST', '/auth/send-otp', { phone }),
-    verifyOtp: (phone: string, otp: string) =>
-      request<{ accessToken: string; refreshToken: string; user: { role: string } }>(
-        'POST', '/auth/verify-otp', { phone, otp }
-      ),
     logout: () => request<void>('POST', '/driver/auth/logout'),
     driverLogin: (credential: string, password: string) =>
       request<{ accessToken: string; refreshToken: string; user: Record<string, unknown>; driver: Record<string, unknown> }>(
@@ -175,8 +169,11 @@ export const endpoints = {
     updateMe: (data: unknown) => api.patch('/driver/me', data),
     goOnline: () => api.patch('/driver/status/online'),
     goOffline: () => api.patch('/driver/status/offline'),
-    updateLocation: (data: { latitude: number; longitude: number; speed?: number; heading?: number; tripId?: string }) =>
-      api.patch('/driver/location', data),
+    updateLocation: (data: { latitude: number; longitude: number; speed?: number; heading?: number; tripId?: string | number }) =>
+      api.patch('/driver/location', {
+        ...data,
+        tripId: data.tripId != null ? Number(data.tripId) : undefined,
+      }),
     status: () => api.get('/driver/me/status'),
     vehicle: () => api.get('/driver/me/vehicle'),
     documents: () => api.get('/driver/me/documents'),
@@ -208,7 +205,7 @@ export const endpoints = {
     getById: (rideId: string) => api.get(`/rides/${rideId}`),
     accept: (rideId: string) => api.patch(`/driver/rides/${rideId}/accept`),
     arrived: (rideId: string) => api.patch(`/driver/rides/${rideId}/arrived`),
-    decline: (rideId: string) => api.post(`/driver/rides/${rideId}/decline`),
+    decline: (rideId: string) => api.patch(`/driver/rides/${rideId}/decline`),
     start: (rideId: string) => api.patch(`/driver/rides/${rideId}/start`),
     complete: (rideId: string) => api.patch(`/driver/rides/${rideId}/complete`),
     active: () => api.get('/driver/rides/active'),

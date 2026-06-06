@@ -1,15 +1,12 @@
-import { Camera, User, Mail, Calendar } from 'lucide-react-native';
+import { User } from 'lucide-react-native';
 import { ArrowLeft, ArrowRight } from 'lucide-react-native';
-import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Image,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -26,23 +23,7 @@ export default function RegisterInfoScreen() {
   const botPad = Platform.OS === 'web' ? 34 : insets.bottom;
 
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [dob, setDob] = useState('');
-  const [photo, setPhoto] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const pickPhoto = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      const lib = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (lib.status !== 'granted') return;
-      const result = await ImagePicker.launchImageLibraryAsync({ quality: 0.8, allowsEditing: true, aspect: [1, 1] });
-      if (!result.canceled && result.assets[0]) setPhoto(result.assets[0].uri);
-      return;
-    }
-    const result = await ImagePicker.launchCameraAsync({ quality: 0.8, allowsEditing: true, aspect: [1, 1] });
-    if (!result.canceled && result.assets[0]) setPhoto(result.assets[0].uri);
-  };
 
   const canContinue = name.trim().length > 1 && !isSubmitting;
 
@@ -52,8 +33,6 @@ export default function RegisterInfoScreen() {
     try {
       await endpoints.driver.updateMe({
         name: name.trim(),
-        email: email.trim() || undefined,
-        dateOfBirth: dob.trim() || undefined,
       });
       router.push('/documents');
     } catch {
@@ -85,49 +64,13 @@ export default function RegisterInfoScreen() {
             <Text style={s.sub}>We need a few details to verify your identity.</Text>
           </View>
 
-          <TouchableOpacity style={s.photoBox} onPress={pickPhoto} activeOpacity={0.85}>
-            {photo ? (
-              <Image source={{ uri: photo }} style={s.photoImg} />
-            ) : (
-              <View style={s.photoPlaceholder}>
-                <View style={s.photoIconBox}>
-                  <Camera size={28} color="#5e5e72" />
-                </View>
-                <Text style={s.photoLabel}>Profile photo</Text>
-                <Text style={s.photoHint}>Tap to take photo with camera</Text>
-              </View>
-            )}
-            {photo && (
-              <View style={s.photoEditBadge}>
-                <Camera size={14} color="white" />
-              </View>
-            )}
-          </TouchableOpacity>
-
           <View style={s.fields}>
             <Field
-              icon="user"
               label="Full name"
               value={name}
               onChangeText={setName}
               placeholder="Your full legal name"
               autoCapitalize="words"
-            />
-            <Field
-              icon="mail"
-              label="Email address"
-              value={email}
-              onChangeText={setEmail}
-              placeholder="you@example.com"
-              keyboardType="email-address"
-            />
-            <Field
-              icon="calendar"
-              label="Date of birth"
-              value={dob}
-              onChangeText={setDob}
-              placeholder="DD / MM / YYYY"
-              keyboardType="numeric"
             />
           </View>
         </ScrollView>
@@ -154,14 +97,8 @@ export default function RegisterInfoScreen() {
   );
 }
 
-const FIELD_ICONS: Record<string, React.ComponentType<{ size: number; color: string }>> = {
-  user: User,
-  mail: Mail,
-  calendar: Calendar,
-};
-
-function Field({ icon, label, value, onChangeText, placeholder, keyboardType, autoCapitalize }: {
-  icon: string; label: string; value: string; onChangeText: (v: string) => void;
+function Field({ label, value, onChangeText, placeholder, keyboardType, autoCapitalize }: {
+  label: string; value: string; onChangeText: (v: string) => void;
   placeholder: string; keyboardType?: any; autoCapitalize?: any;
 }) {
   return (
@@ -169,7 +106,7 @@ function Field({ icon, label, value, onChangeText, placeholder, keyboardType, au
       <Text style={s.fieldLabel}>{label}</Text>
       <View style={s.inputRow}>
         <View style={s.inputIcon}>
-          {(() => { const Icon = FIELD_ICONS[icon] ?? User; return <Icon size={16} color="#5e5e72" />; })()}
+          <User size={16} color="#5e5e72" />
         </View>
         <TextInput
           style={s.input}
@@ -198,28 +135,6 @@ const s = StyleSheet.create({
   step: { fontSize: 12, fontWeight: '600', color: '#5e5e72', letterSpacing: 1, textTransform: 'uppercase', fontFamily: 'Inter_600SemiBold' },
   title: { fontSize: 34, fontWeight: '700', color: '#1e1e28', letterSpacing: -1.2, lineHeight: 40, fontFamily: 'Inter_700Bold' },
   sub: { fontSize: 14, color: '#5e5e72', lineHeight: 20, fontFamily: 'Inter_400Regular' },
-  photoBox: {
-    alignSelf: 'center', width: 110, height: 110, borderRadius: 55,
-    marginBottom: 28, position: 'relative',
-  },
-  photoImg: { width: 110, height: 110, borderRadius: 55, borderWidth: 3, borderColor: '#1e1e28' },
-  photoPlaceholder: {
-    width: 110, height: 110, borderRadius: 55,
-    backgroundColor: '#f2f2f5', borderWidth: 2, borderColor: '#e5e5ea', borderStyle: 'dashed',
-    alignItems: 'center', justifyContent: 'center', gap: 4,
-  },
-  photoIconBox: {
-    width: 44, height: 44, borderRadius: 22, backgroundColor: 'white',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  photoLabel: { fontSize: 10, fontWeight: '700', color: '#1e1e28', textAlign: 'center', fontFamily: 'Inter_700Bold' },
-  photoHint: { fontSize: 9, color: '#5e5e72', textAlign: 'center', paddingHorizontal: 8 },
-  photoEditBadge: {
-    position: 'absolute', bottom: 4, right: 4,
-    width: 30, height: 30, borderRadius: 15, backgroundColor: '#1e1e28',
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, borderColor: 'white',
-  },
   fields: { gap: 16 },
   fieldWrap: { gap: 6 },
   fieldLabel: { fontSize: 12, fontWeight: '600', color: '#1e1e28', letterSpacing: 0.3, fontFamily: 'Inter_600SemiBold' },
