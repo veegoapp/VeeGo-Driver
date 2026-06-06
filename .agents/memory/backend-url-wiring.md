@@ -19,7 +19,7 @@ The single source of truth is the `BACKEND_URL` Replit secret.
 `EXPO_PUBLIC_*` vars are baked in at Metro bundle time. Without `--clear`, stale cache may serve the old URL even after `.env` changes.
 
 **Socket URL derivation:**
-`hooks/useRideSocket.ts` strips the trailing `/api` segment from `EXPO_PUBLIC_API_URL` to get the WebSocket root. If `BACKEND_URL` does not end with `/api`, the socket will connect to the wrong host.
+`hooks/useRideSocket.ts` and `lib/serviceControlContext.tsx` both strip the trailing `/api` segment from `EXPO_PUBLIC_API_URL` to get the WebSocket root. If `BACKEND_URL` does not end with `/api`, the socket will connect to the wrong host.
 
 **"Cannot reach the server" on login means:**
 - `ApiError(status=0)` — network-level failure (DNS, refused connection, timeout)

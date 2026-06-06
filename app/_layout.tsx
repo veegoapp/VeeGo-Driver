@@ -13,6 +13,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { I18nProvider } from '@/lib/i18nContext';
 import { ServiceProvider } from '@/lib/serviceContext';
+import { ServiceControlProvider } from '@/lib/serviceControlContext';
 import { AuthProvider, useAuth } from '@/lib/authContext';
 
 SplashScreen.preventAutoHideAsync();
@@ -109,7 +110,9 @@ export default function RootLayout() {
               <KeyboardProvider>
                 <I18nProvider>
                   <ServiceProvider>
-                    <RootLayoutNav />
+                    <ServiceControlProvider>
+                      <RootLayoutNav />
+                    </ServiceControlProvider>
                   </ServiceProvider>
                 </I18nProvider>
               </KeyboardProvider>

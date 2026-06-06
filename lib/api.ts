@@ -270,6 +270,11 @@ export const endpoints = {
     markRead: (id: string) => api.patch(`/notifications/${id}/read`),
   },
 
+  serviceControl: {
+    // GET /services/control — returns ServiceControl[] or { services: ServiceControl[] }
+    fetch: () => api.get('/services/control'),
+  },
+
   support: {
     // POST /support/tickets — spec §16
     // subject (required) + message (required) + type? + priority? + userId? + driverId?
