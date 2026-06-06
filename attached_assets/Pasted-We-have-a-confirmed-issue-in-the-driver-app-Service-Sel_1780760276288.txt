@@ -1,0 +1,65 @@
+We have a confirmed issue in the driver app Service Select screen.
+
+Backend is working correctly and returns valid data:
+
+- shuttle (displayMode: live)
+- car (displayMode: coming_soon)
+- delivery (displayMode: coming_soon)
+- scooter (displayMode: coming_soon)
+
+BUT the UI is incorrectly showing an empty Service Select screen.
+
+TASK:
+
+1 — VERIFY DATA FLOW FIRST
+- Confirm that Service Select screen is receiving the services array from ServiceControlContext or API hook
+- Add a debug log in the screen:
+  console.log('[SERVICE_SELECT] services:', services)
+
+2 — FIX CRITICAL BUG: DO NOT FILTER OUT coming_soon SERVICES
+- Remove any logic that hides services where:
+  - displayMode !== 'live'
+  - isEnabled === false (ONLY use this for disabling interaction, NOT hiding)
+- ALL services returned from backend must be rendered
+
+3 — UI RULES FOR SERVICE CARDS
+Each service MUST always be visible and rendered:
+
+- Show icon + name always
+- Under the service name, show a badge:
+  - If displayMode === 'live' → no badge or "Available"
+  - If displayMode === 'coming_soon' → show a badge under the name ONLY with text "Soon"
+  - Badge must NOT be beside icon — must be below the service name centered
+
+Layout requirement:
+[ICON]
+[Service Name]
+[Soon badge if applicable]
+
+4 — INTERACTION RULES
+- If displayMode === 'coming_soon':
+  - service is visible
+  - BUT disabled for selection (opacity reduced + cannot click)
+- If displayMode === 'live':
+  - fully selectable
+
+5 — FIX EMPTY SCREEN ISSUE
+- Ensure screen never renders empty if API returns services
+- If services array exists but UI shows empty:
+  - remove any "filter map reduce returning null" logic
+  - ensure direct map render:
+    services.map(service => <ServiceCard />)
+
+6 — ADD SAFETY FALLBACK
+If services array is empty:
+- show "No services available" fallback UI
+- BUT DO NOT hide valid backend data
+
+7 — FINAL GOAL
+- Service Select screen MUST show all services from backend
+- Coming soon services must appear with "Soon" badge under name
+- Only shuttle is live/selectable in current backend response
+
+DO NOT change backend logic.
+DO NOT hide services based on displayMode.
+ONLY fix frontend rendering and UI rules.

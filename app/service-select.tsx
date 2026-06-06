@@ -1,6 +1,6 @@
 import {
   ArrowRight, Navigation, Car, Bike, Package, Bus, CheckCircle2,
-  Clock, WifiOff, Wrench, Star, AlertCircle, RefreshCw,
+  WifiOff, Wrench, Star, AlertCircle, RefreshCw,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -34,26 +34,28 @@ const SERVICE_ICONS: Record<string, React.ComponentType<{ size: number; color: s
 };
 
 const SERVICES: ServiceOption[] = [
-  { type: 'CAR', label: 'Car', sub: 'Private rides & transfers', tag: 'Most popular' },
-  { type: 'MOTOR', label: 'Motorbike', sub: 'Fast urban deliveries' },
-  { type: 'DELIVERY', label: 'Delivery', sub: 'Package & order delivery' },
-  { type: 'SHUTTLE', label: 'Shuttle', sub: 'Fixed routes & scheduled lines', tag: 'New' },
+  { type: 'CAR',      label: 'Car',       sub: 'Private rides & transfers',      tag: 'Most popular' },
+  { type: 'MOTOR',    label: 'Scooter',   sub: 'Fast urban deliveries' },
+  { type: 'DELIVERY', label: 'Delivery',  sub: 'Package & order delivery' },
+  { type: 'SHUTTLE',  label: 'Shuttle',   sub: 'Fixed routes & scheduled lines',  tag: 'New' },
 ];
 
-function BlockedOverlay({ status }: { status: ServiceStatus }) {
-  const isComingSoon = status.displayMode === 'coming_soon';
-  const isMaintenance = status.displayMode === 'maintenance';
-  const isIneligible = !!status.ineligibilityReason;
+// Maps frontend ServiceType keys → backend serviceType strings
+const BACKEND_TYPE_MAP: Record<ServiceType, string> = {
+  CAR:      'car',
+  MOTOR:    'scooter',
+  DELIVERY: 'delivery',
+  SHUTTLE:  'shuttle',
+};
 
-  const Icon = isComingSoon ? Clock
-    : isMaintenance ? Wrench
-    : isIneligible ? Star
-    : WifiOff;
+function BlockedOverlay({ status }: { status: ServiceStatus }) {
+  const isMaintenance = status.displayMode === 'maintenance';
+  const isIneligible  = !!status.ineligibilityReason;
+
+  const Icon = isMaintenance ? Wrench : isIneligible ? Star : WifiOff;
 
   const label = isIneligible
     ? status.ineligibilityReason!
-    : isComingSoon
-    ? 'Coming Soon'
     : status.message ?? (isMaintenance ? 'Under Maintenance' : 'Unavailable');
 
   return (
@@ -70,13 +72,22 @@ function BlockedOverlay({ status }: { status: ServiceStatus }) {
 export default function ServiceSelectScreen() {
   const insets = useSafeAreaInsets();
   const { setServiceType } = useService();
-  const { getServiceStatus, isLoading: controlLoading, error: controlError, refresh } = useServiceControl();
-  const [selected, setSelected] = useState<ServiceType | null>(null);
+  const {
+    services,
+    getServiceStatus,
+    isLoading: controlLoading,
+    error: controlError,
+    refresh,
+  } = useServiceControl();
+  const [selected, setSelected]             = useState<ServiceType | null>(null);
   const [driverSnapshot, setDriverSnapshot] = useState<DriverSnapshot | null>(null);
-  const [retrying, setRetrying] = useState(false);
+  const [retrying, setRetrying]             = useState(false);
 
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
   const botPad = Platform.OS === 'web' ? 34 : insets.bottom;
+
+  // Debug log — shows exactly what ServiceControlContext has loaded
+  console.log('[SERVICE_SELECT] services:', services);
 
   // Fetch driver profile for eligibility checks (best-effort, non-blocking)
   useEffect(() => {
@@ -98,35 +109,23 @@ export default function ServiceSelectScreen() {
               : undefined,
         });
       })
-      .catch(() => {}); // non-fatal — eligibility degrades gracefully
+      .catch(() => {});
   }, []);
 
   const handleContinue = () => {
-    // Hard guards — checked before anything else.
-    // controlLoading: backend state not confirmed yet.
-    // controlError: backend unreachable, no safe state known.
     if (controlLoading || controlError || !selected) return;
-    const status = getServiceStatus(selected, driverSnapshot);
-    // getServiceStatus is already fail-secure, but we double-check available
-    // here to guard against any future caller-side drift.
+    const status = getServiceStatus(BACKEND_TYPE_MAP[selected], driverSnapshot);
     if (!status.available) return;
     setServiceType(selected);
     router.replace(selected === 'SHUTTLE' ? '/(shuttle)' : '/(tabs)');
   };
 
-  // Compute status for each service upfront.
-  // getServiceStatus returns LOADING_BLOCKED / ERROR_BLOCKED / CONFIG_BLOCKED
-  // during unsafe states, so statusMap is always in a safe state.
+  // Build status map using lowercase backend type keys so the lookup matches
   const statusMap = Object.fromEntries(
-    SERVICES.map((svc) => [svc.type, getServiceStatus(svc.type, driverSnapshot)])
+    SERVICES.map((svc) => [svc.type, getServiceStatus(BACKEND_TYPE_MAP[svc.type], driverSnapshot)])
   ) as Record<ServiceType, ServiceStatus>;
 
-  // Visible services only
-  const visibleServices = SERVICES.filter((svc) => statusMap[svc.type].visible);
-
   const selectedStatus = selected ? statusMap[selected] : null;
-  // canContinue requires: loading done, no error, a service selected, AND that
-  // service explicitly confirmed available by the backend.
   const canContinue =
     !controlLoading &&
     !controlError &&
@@ -153,7 +152,7 @@ export default function ServiceSelectScreen() {
           <Text style={s.sub}>Select how you want to earn with VeeGo. You can change this later.</Text>
         </View>
 
-        {/* Loading state — block cards until we know actual status */}
+        {/* Loading state */}
         {controlLoading ? (
           <View style={s.stateBox}>
             <ActivityIndicator size="large" color="#1e1e28" />
@@ -161,7 +160,7 @@ export default function ServiceSelectScreen() {
             <Text style={s.stateSub}>Please wait while we load availability.</Text>
           </View>
         ) : controlError ? (
-          /* Error state — fetch failed, do NOT default to open */
+          /* Error state */
           <View style={s.stateBox}>
             <WifiOff size={36} color="#e53935" />
             <Text style={[s.stateTitle, { color: '#e53935' }]}>Could not load services</Text>
@@ -185,56 +184,101 @@ export default function ServiceSelectScreen() {
         ) : null}
 
         {(!controlLoading && !controlError) ? (
-          <View style={s.grid}>
-            {visibleServices.map((svc) => {
-              const status = statusMap[svc.type];
-              const isSelected = selected === svc.type;
-              const isBlocked = !status.available;
-              const Icon = SERVICE_ICONS[svc.type];
+          services.length === 0 ? (
+            /* Safety fallback — API returned nothing */
+            <View style={s.stateBox}>
+              <Text style={s.stateTitle}>No services available</Text>
+              <Text style={s.stateSub}>There are no services configured at the moment. Please try again later.</Text>
+            </View>
+          ) : (
+            <View style={s.grid}>
+              {/* Render ALL services — never filter by displayMode */}
+              {SERVICES.map((svc) => {
+                const status      = statusMap[svc.type];
+                const isSelected  = selected === svc.type;
+                const isComingSoon = status.displayMode === 'coming_soon';
+                // coming_soon → visible but not selectable
+                // unavailable / maintenance / ineligible → blocked overlay
+                const isBlocked   = !status.available && !isComingSoon;
+                const isDisabled  = !status.available; // covers both coming_soon and truly blocked
+                const Icon        = SERVICE_ICONS[svc.type];
 
-              return (
-                <TouchableOpacity
-                  key={svc.type}
-                  style={[
-                    s.card,
-                    isSelected && s.cardSelected,
-                    isBlocked && s.cardBlocked,
-                  ]}
-                  onPress={() => !isBlocked && setSelected(svc.type)}
-                  activeOpacity={isBlocked ? 1 : 0.85}
-                  disabled={isBlocked}
-                >
-                  {svc.tag && !isBlocked && (
-                    <View style={s.tagPill}>
-                      <Text style={s.tagText}>{svc.tag}</Text>
+                return (
+                  <TouchableOpacity
+                    key={svc.type}
+                    style={[
+                      s.card,
+                      isSelected   && s.cardSelected,
+                      isComingSoon && s.cardComingSoon,
+                      isBlocked    && s.cardBlocked,
+                    ]}
+                    onPress={() => !isDisabled && setSelected(svc.type)}
+                    activeOpacity={isDisabled ? 1 : 0.85}
+                    disabled={isDisabled}
+                  >
+                    {svc.tag && !isDisabled && (
+                      <View style={s.tagPill}>
+                        <Text style={s.tagText}>{svc.tag}</Text>
+                      </View>
+                    )}
+
+                    <View style={[
+                      s.iconBox,
+                      isSelected   && s.iconBoxSelected,
+                      isComingSoon && s.iconBoxComingSoon,
+                      isBlocked    && s.iconBoxBlocked,
+                    ]}>
+                      <Icon
+                        size={28}
+                        color={
+                          isSelected   ? 'white'
+                          : isComingSoon ? '#a0a0b8'
+                          : isBlocked   ? '#b0b0c0'
+                          : '#1e1e28'
+                        }
+                      />
                     </View>
-                  )}
 
-                  <View style={[s.iconBox, isSelected && s.iconBoxSelected, isBlocked && s.iconBoxBlocked]}>
-                    <Icon size={28} color={isSelected ? 'white' : isBlocked ? '#b0b0c0' : '#1e1e28'} />
-                  </View>
+                    <Text style={[
+                      s.cardLabel,
+                      isSelected   && s.cardLabelSelected,
+                      isComingSoon && s.cardLabelComingSoon,
+                      isBlocked    && s.cardLabelBlocked,
+                    ]}>
+                      {svc.label}
+                    </Text>
 
-                  <Text style={[s.cardLabel, isSelected && s.cardLabelSelected, isBlocked && s.cardLabelBlocked]}>
-                    {svc.label}
-                  </Text>
-                  <Text style={[s.cardSub, isSelected && s.cardSubSelected, isBlocked && s.cardSubBlocked]}>
-                    {svc.sub}
-                  </Text>
+                    <Text style={[
+                      s.cardSub,
+                      isSelected   && s.cardSubSelected,
+                      isComingSoon && s.cardSubComingSoon,
+                      isBlocked    && s.cardSubBlocked,
+                    ]}>
+                      {svc.sub}
+                    </Text>
 
-                  {isSelected && !isBlocked && (
-                    <View style={s.checkMark}>
-                      <CheckCircle2 size={20} color="#1e1e28" />
-                    </View>
-                  )}
+                    {/* "Soon" badge — centered below name, only for coming_soon */}
+                    {isComingSoon && (
+                      <View style={s.soonBadge}>
+                        <Text style={s.soonBadgeText}>Soon</Text>
+                      </View>
+                    )}
 
-                  {isBlocked && <BlockedOverlay status={status} />}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+                    {isSelected && !isDisabled && (
+                      <View style={s.checkMark}>
+                        <CheckCircle2 size={20} color="#1e1e28" />
+                      </View>
+                    )}
+
+                    {/* Dark overlay only for truly blocked (unavailable / maintenance / ineligible) */}
+                    {isBlocked && <BlockedOverlay status={status} />}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )
         ) : null}
 
-        {/* Ineligibility explanation for selected service */}
         {selected && selectedStatus && !selectedStatus.available && selectedStatus.ineligibilityReason && (
           <View style={s.eligibilityBanner}>
             <AlertCircle size={14} color="#e53935" />
@@ -299,8 +343,6 @@ const s = StyleSheet.create({
   header: { gap: 10, marginBottom: 28 },
   title: { fontSize: 34, fontWeight: '700', color: '#1e1e28', letterSpacing: -1.2, lineHeight: 40, fontFamily: 'Inter_700Bold' },
   sub: { fontSize: 14, color: '#5e5e72', lineHeight: 20, fontFamily: 'Inter_400Regular' },
-  loadingRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
-  loadingText: { fontSize: 12, color: '#5e5e72', fontFamily: 'Inter_400Regular' },
   stateBox: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -349,6 +391,7 @@ const s = StyleSheet.create({
     borderColor: '#e5e5ea',
     position: 'relative',
     overflow: 'hidden',
+    alignItems: 'center',
     shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
   },
   cardSelected: {
@@ -358,12 +401,17 @@ const s = StyleSheet.create({
     shadowRadius: 16,
     elevation: 6,
   },
+  cardComingSoon: {
+    borderColor: '#e5e5ea',
+    backgroundColor: '#f9f9fc',
+    opacity: 0.65,
+  },
   cardBlocked: {
     borderColor: '#e5e5ea',
     backgroundColor: '#f7f7fa',
   },
   tagPill: {
-    alignSelf: 'flex-start',
+    alignSelf: 'center',
     backgroundColor: 'rgba(30,30,40,0.07)',
     borderRadius: 99,
     paddingHorizontal: 8,
@@ -376,14 +424,32 @@ const s = StyleSheet.create({
     backgroundColor: '#f2f2f5',
     alignItems: 'center', justifyContent: 'center',
   },
-  iconBoxSelected: { backgroundColor: '#1e1e28' },
-  iconBoxBlocked: { backgroundColor: '#ebebf0' },
-  cardLabel: { fontSize: 16, fontWeight: '700', color: '#1e1e28', fontFamily: 'Inter_700Bold', marginTop: 4 },
-  cardLabelSelected: { color: '#1e1e28' },
-  cardLabelBlocked: { color: '#b0b0c0' },
-  cardSub: { fontSize: 12, color: '#5e5e72', lineHeight: 16, fontFamily: 'Inter_400Regular' },
-  cardSubSelected: { color: '#5e5e72' },
-  cardSubBlocked: { color: '#c0c0cc' },
+  iconBoxSelected:   { backgroundColor: '#1e1e28' },
+  iconBoxComingSoon: { backgroundColor: '#ebebf0' },
+  iconBoxBlocked:    { backgroundColor: '#ebebf0' },
+  cardLabel: { fontSize: 16, fontWeight: '700', color: '#1e1e28', fontFamily: 'Inter_700Bold', marginTop: 4, textAlign: 'center' },
+  cardLabelSelected:   { color: '#1e1e28' },
+  cardLabelComingSoon: { color: '#a0a0b8' },
+  cardLabelBlocked:    { color: '#b0b0c0' },
+  cardSub: { fontSize: 12, color: '#5e5e72', lineHeight: 16, fontFamily: 'Inter_400Regular', textAlign: 'center' },
+  cardSubSelected:   { color: '#5e5e72' },
+  cardSubComingSoon: { color: '#b0b0c0' },
+  cardSubBlocked:    { color: '#c0c0cc' },
+  soonBadge: {
+    alignSelf: 'center',
+    backgroundColor: '#ebebf8',
+    borderRadius: 99,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    marginTop: 2,
+  },
+  soonBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#6060a8',
+    letterSpacing: 0.5,
+    fontFamily: 'Inter_700Bold',
+  },
   checkMark: { position: 'absolute', top: 14, right: 14 },
   eligibilityBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
