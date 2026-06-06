@@ -149,9 +149,18 @@ export function ServiceControlProvider({ children }: { children: React.ReactNode
     setIsLoading(true);
     setError(null);
 
+    console.log('[SERVICE_DEBUG] FETCH START');
     api.get<unknown>('/services/control')
       .then((data) => {
+        const response = data;
+        console.log('[SERVICE_DEBUG] RAW RESPONSE:', response);
+        console.log('[SERVICE_DEBUG] SERVICE TYPES:', Array.isArray(response)
+          ? (response as any[]).map((s: any) => s.serviceType)
+          : (response as any)?.data?.map((s: any) => s.serviceType));
         const list = extractServiceList(data);
+        const parsedServices = list;
+        console.log('[SERVICE_DEBUG] PARSED SERVICES:', parsedServices);
+        console.log('[SERVICE_DEBUG] FETCH SUCCESS');
         console.log(
           '[ServiceControl] services loaded successfully —',
           list.length, 'service(s):',
@@ -160,6 +169,7 @@ export function ServiceControlProvider({ children }: { children: React.ReactNode
         setServices(list);
       })
       .catch((err) => {
+        console.log('[SERVICE_DEBUG] FETCH FAILED', err);
         console.warn('[ServiceControl] fetch failed — entering error state:', err);
         setError('Could not load service configuration.');
         // Keep services = [] so getServiceStatus returns ERROR_BLOCKED for everything.
@@ -244,12 +254,22 @@ export function ServiceControlProvider({ children }: { children: React.ReactNode
   const refresh = useCallback(async (): Promise<void> => {
     if (authIsLoading || !token) return;
     try {
+      console.log('[SERVICE_DEBUG] FETCH START (refresh)');
       const data = await api.get<unknown>('/services/control');
+      const response = data;
+      console.log('[SERVICE_DEBUG] RAW RESPONSE (refresh):', response);
+      console.log('[SERVICE_DEBUG] SERVICE TYPES (refresh):', Array.isArray(response)
+        ? (response as any[]).map((s: any) => s.serviceType)
+        : (response as any)?.data?.map((s: any) => s.serviceType));
       const list = extractServiceList(data);
+      const parsedServices = list;
+      console.log('[SERVICE_DEBUG] PARSED SERVICES (refresh):', parsedServices);
+      console.log('[SERVICE_DEBUG] FETCH SUCCESS (refresh)');
       console.log('[ServiceControl] services loaded successfully —', list.length, 'service(s) (refresh)');
       setServices(list);
       setError(null);
     } catch (err) {
+      console.log('[SERVICE_DEBUG] FETCH FAILED (refresh)', err);
       console.warn('[ServiceControl] refresh failed — entering error state:', err);
       setError('Could not load service configuration.');
       setServices([]);
