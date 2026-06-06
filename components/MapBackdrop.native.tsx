@@ -121,6 +121,31 @@ function buildHtml(
   var DRIVER_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="38" height="46" viewBox="0 0 38 46"><circle cx="19" cy="19" r="17" fill="#2563eb" opacity="0.18"/><circle cx="19" cy="19" r="13" fill="#2563eb" stroke="white" stroke-width="2.5"/><path d="M12 17.5 h14 M15 14 l4 3.5 l4-3.5 M13 21 c0 2.5 2.8 4.5 6 4.5s6-2 6-4.5" stroke="white" stroke-width="1.6" fill="none" stroke-linecap="round"/><line x1="19" y1="32" x2="19" y2="44" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round"/></svg>';
 
   var driverMarker = null;
+  var prevPos = null;
+  var currentBearing = 0;
+
+  function calcBearing(from, to) {
+    var lat1 = from[1] * Math.PI / 180;
+    var lat2 = to[1] * Math.PI / 180;
+    var dLng = (to[0] - from[0]) * Math.PI / 180;
+    var y = Math.sin(dLng) * Math.cos(lat2);
+    var x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+    return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+  }
+
+  function shortestRotation(from, to) {
+    var diff = ((to - from) % 360 + 360) % 360;
+    return diff > 180 ? from - (360 - diff) : from + diff;
+  }
+
+  function applyBearing(deg) {
+    if (!driverMarker) return;
+    var svg = driverMarker.getElement().querySelector('svg');
+    if (!svg) return;
+    currentBearing = shortestRotation(currentBearing, deg);
+    svg.style.transform = 'rotate(' + currentBearing + 'deg)';
+    svg.style.transformOrigin = '19px 19px';
+  }
 
   map.on('load', function() {
     // Surge zones
@@ -165,10 +190,22 @@ function buildHtml(
     if (driverLoc) {
       driverMarker = new maplibregl.Marker({ element: makeSvgEl(DRIVER_SVG), anchor: 'bottom' })
         .setLngLat(driverLoc).setPopup(new maplibregl.Popup({ offset: 22, closeButton: false }).setText('Your location')).addTo(map);
+      // Set initial heading toward pickup (if driver→pickup direction is known)
+      if (driverLoc && pickup && !(driverLoc[0] === pickup[0] && driverLoc[1] === pickup[1])) {
+        currentBearing = calcBearing(driverLoc, pickup);
+        var initSvg = driverMarker.getElement().querySelector('svg');
+        if (initSvg) {
+          initSvg.style.transformOrigin = '19px 19px';
+          initSvg.style.transform = 'rotate(' + currentBearing + 'deg)';
+        }
+      }
+      prevPos = driverLoc;
       // Enable smooth glide after initial placement so first render doesn't animate from origin
       setTimeout(function() {
         if (driverMarker) {
           driverMarker.getElement().style.transition = 'transform 1400ms linear';
+          var svg = driverMarker.getElement().querySelector('svg');
+          if (svg) svg.style.transition = 'transform 1400ms linear';
         }
       }, 200);
     }
@@ -231,7 +268,12 @@ function buildHtml(
     try {
       var msg = JSON.parse(e.data);
       if (msg.type === 'driverLocation' && driverMarker) {
-        driverMarker.setLngLat([msg.lng, msg.lat]);
+        var newPos = [msg.lng, msg.lat];
+        if (prevPos && !(prevPos[0] === newPos[0] && prevPos[1] === newPos[1])) {
+          applyBearing(calcBearing(prevPos, newPos));
+        }
+        prevPos = newPos;
+        driverMarker.setLngLat(newPos);
       }
     } catch(_) {}
   });
