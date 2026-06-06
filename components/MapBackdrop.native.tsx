@@ -165,6 +165,12 @@ function buildHtml(
     if (driverLoc) {
       driverMarker = new maplibregl.Marker({ element: makeSvgEl(DRIVER_SVG), anchor: 'bottom' })
         .setLngLat(driverLoc).setPopup(new maplibregl.Popup({ offset: 22, closeButton: false }).setText('Your location')).addTo(map);
+      // Enable smooth glide after initial placement so first render doesn't animate from origin
+      setTimeout(function() {
+        if (driverMarker) {
+          driverMarker.getElement().style.transition = 'transform 1400ms linear';
+        }
+      }, 200);
     }
 
     // Route
