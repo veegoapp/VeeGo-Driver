@@ -1,12 +1,8 @@
 modules = ["nodejs-24", "python-3.11"]
 
-[deployment]
-router = "application"
-deploymentTarget = "autoscale"
-
-[deployment.postBuild]
-args = ["pnpm", "store", "prune"]
-env = { "CI" = "true" }
+[agent]
+expertMode = true
+stack = "BEST_EFFORT_FALLBACK"
 
 [workflows]
 runButton = "Project"
@@ -17,11 +13,15 @@ mode = "parallel"
 author = "agent"
 
 [[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "bash setup.sh"
+
+[[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "VeeGo Driver"
+args = "Start application"
 
 [[workflows.workflow]]
-name = "VeeGo Driver"
+name = "Start application"
 author = "agent"
 
 [workflows.workflow.metadata]
@@ -29,12 +29,16 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "bash setup.sh"
+args = "bash scripts/setup.sh"
 waitForPort = 5000
 
-[agent]
-stack = "BEST_EFFORT_FALLBACK"
-expertMode = true
+[deployment]
+router = "application"
+deploymentTarget = "autoscale"
+
+[deployment.postBuild]
+args = ["pnpm", "store", "prune"]
+env = { "CI" = "true" }
 
 [postMerge]
 path = "scripts/post-merge.sh"

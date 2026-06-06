@@ -7,7 +7,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { MapBackdrop } from '@/components/MapBackdrop';
 import { GlassView } from '@/components/GlassView';
+import { ServiceBlockedScreen } from '@/components/ServiceBlockedScreen';
 import { useColors } from '@/hooks/useColors';
+import { useServiceGuard } from '@/hooks/useServiceGuard';
 import { useWaitingCharge } from '@/hooks/useWaitingCharge';
 import { endpoints } from '@/lib/api';
 
@@ -41,6 +43,7 @@ export default function RideScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
+  const { isBlocked, status: serviceStatus } = useServiceGuard('CAR');
   const { rideId } = useLocalSearchParams<{ rideId: string }>();
   const [phase, setPhase] = useState<Phase>('to_pickup');
   const [rating, setRating] = useState(0);
@@ -50,12 +53,13 @@ export default function RideScreen() {
   const { data: rideRaw } = useQuery({
     queryKey: ['ride-active', rideId],
     queryFn: () => endpoints.rides.getById(rideId ?? ''),
-    enabled: !!rideId,
+    enabled: !!rideId && !isBlocked,
   });
 
   const { data: driverRaw } = useQuery({
     queryKey: ['driver'],
     queryFn: endpoints.driver.me,
+    enabled: !isBlocked,
   });
 
   const driverData = driverRaw as DriverData | undefined;
@@ -74,6 +78,11 @@ export default function RideScreen() {
     };
     setPhase(r.status ? (statusMap[r.status] ?? 'to_pickup') : 'to_pickup');
   }, [rideRaw]);
+
+  // All hooks called above — safe to short-circuit for blocked service
+  if (isBlocked) {
+    return <ServiceBlockedScreen status={serviceStatus} serviceName="Car Rides" />;
+  }
 
   const r = rideRaw as RideData | undefined;
   const p = PHASE_COPY[phase];

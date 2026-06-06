@@ -2,8 +2,16 @@ import { Tabs } from 'expo-router';
 import React from 'react';
 import { ShuttleTabBar } from '@/components/ShuttleTabBar';
 import { ShuttleProvider } from '@/lib/shuttleContext';
+import { useServiceGuard } from '@/hooks/useServiceGuard';
+import { ServiceBlockedScreen } from '@/components/ServiceBlockedScreen';
 
-export default function ShuttleLayout() {
+function ShuttleLayoutContent() {
+  const { isBlocked, status } = useServiceGuard('SHUTTLE');
+
+  if (isBlocked) {
+    return <ServiceBlockedScreen status={status} serviceName="Shuttle" />;
+  }
+
   return (
     <ShuttleProvider>
       <Tabs
@@ -17,4 +25,8 @@ export default function ShuttleLayout() {
       </Tabs>
     </ShuttleProvider>
   );
+}
+
+export default function ShuttleLayout() {
+  return <ShuttleLayoutContent />;
 }

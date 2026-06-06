@@ -64,6 +64,8 @@ type ServiceControlContextValue = {
   isLoading: boolean;
   error: string | null;
   getServiceStatus: (serviceType: string, driver?: DriverSnapshot | null) => ServiceStatus;
+  /** Re-fetch /services/control from the API — call on screen entry for freshness. */
+  refresh: () => Promise<void>;
 };
 
 const ServiceControlContext = createContext<ServiceControlContextValue>({
@@ -72,6 +74,7 @@ const ServiceControlContext = createContext<ServiceControlContextValue>({
   isLoading: false,
   error: null,
   getServiceStatus: () => OPEN,
+  refresh: async () => {},
 });
 
 // ── Provider ──────────────────────────────────────────────────────────────
@@ -173,6 +176,21 @@ export function ServiceControlProvider({ children }: { children: React.ReactNode
     };
   }, [token]);
 
+  // ── Refresh — re-fetch from API for freshness on screen entry ────────
+
+  const refresh = useCallback(async (): Promise<void> => {
+    if (!token) return;
+    try {
+      const data = await api.get<unknown>('/services/control');
+      const list: ServiceControl[] = Array.isArray(data)
+        ? (data as ServiceControl[])
+        : ((data as Record<string, unknown>)?.services as ServiceControl[] | undefined) ?? [];
+      setServices(list);
+    } catch (err) {
+      console.warn('[ServiceControl] refresh failed — keeping existing state:', err);
+    }
+  }, [token]);
+
   // ── Eligibility engine ────────────────────────────────────────────────
 
   const getServiceStatus = useCallback(
@@ -228,7 +246,7 @@ export function ServiceControlProvider({ children }: { children: React.ReactNode
 
   return (
     <ServiceControlContext.Provider
-      value={{ services, eligibilityRules, isLoading, error, getServiceStatus }}
+      value={{ services, eligibilityRules, isLoading, error, getServiceStatus, refresh }}
     >
       {children}
     </ServiceControlContext.Provider>

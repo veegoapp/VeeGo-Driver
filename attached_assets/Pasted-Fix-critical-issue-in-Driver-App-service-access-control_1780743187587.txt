@@ -1,0 +1,63 @@
+Fix critical issue in Driver App service access control.
+
+----------------------------------------------------
+PROBLEM
+----------------------------------------------------
+Driver App is currently allowing access to services even when they are disabled from backend.
+
+This is incorrect behavior.
+
+Backend is the single source of truth via:
+GET /services/control
+and socket event:
+service:control:changed
+
+----------------------------------------------------
+REQUIRED FIX
+----------------------------------------------------
+
+1 — ENFORCE SERVICE ACCESS ON SCREEN ENTRY
+
+Whenever a driver opens ANY service screen:
+
+- Validate service state from global store (or API if needed)
+- If service is NOT allowed, block access immediately
+
+----------------------------------------------------
+2 — BLOCK CONDITIONS (STRICT)
+----------------------------------------------------
+A service MUST NOT open if:
+
+- isEnabled === false
+- displayMode === "unavailable"
+- displayMode === "maintenance"
+- displayMode === "coming_soon"
+
+----------------------------------------------------
+3 — EXPECTED BEHAVIOR
+----------------------------------------------------
+If service is blocked:
+
+- Do NOT show service interface
+- Redirect user back to home/dashboard
+- Optionally show message from backend (unavailableMessage)
+
+----------------------------------------------------
+4 — REAL-TIME SAFETY CHECK
+----------------------------------------------------
+Even if socket data exists, ALWAYS validate state on screen open.
+
+Socket alone is NOT enough.
+
+----------------------------------------------------
+5 — CRITICAL RULE
+----------------------------------------------------
+Driver App must never allow interaction with a disabled service.
+Backend state is authoritative at all times.
+
+----------------------------------------------------
+EXPECTED RESULT
+----------------------------------------------------
+- Disabled services cannot be opened
+- UI is fully locked based on backend control
+- No outdated cached service state is used
