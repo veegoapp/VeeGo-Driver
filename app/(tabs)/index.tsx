@@ -2,14 +2,15 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location'; // Task 1: GPS tracking
-import { AlertCircle, Bell, Check, Settings, Star, TrendingUp, X } from 'lucide-react-native';
+import { AlertCircle, Bell, Check, CheckCircle, Settings, ShieldCheck, Star, TrendingUp, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ActivityIndicator,
   Animated,
   AppState,
   Image,
+  Modal,
   Platform,
   Pressable,
   StyleSheet,
@@ -41,6 +42,13 @@ export default function HomeScreen() {
   const [countdown, setCountdown] = useState(12);
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
 
+  // Socket event UI state
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [toastType, setToastType] = useState<'warning' | 'success'>('warning');
+  const [checkinApprovedVisible, setCheckinApprovedVisible] = useState(false);
+  const toastAnim = useRef(new Animated.Value(-80)).current;
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
   const TA = isRTL ? 'right' as const : 'left' as const;
 
@@ -70,6 +78,8 @@ export default function HomeScreen() {
     }
   }, [activeRide?.id]);
 
+  const queryClient = useQueryClient();
+
   const pulseScale = useRef(new Animated.Value(0.8)).current;
   const pulseOpacity = useRef(new Animated.Value(0.8)).current;
   const sheetAnim = useRef(new Animated.Value(300)).current;
@@ -81,6 +91,8 @@ export default function HomeScreen() {
   const bannerAnim = useRef(new Animated.Value(-44)).current;
   const showRequestRef = useRef<((r: RideRequest) => void) | null>(null);
   const dismissRequestRef = useRef<(() => void) | null>(null);
+  const dismissSilentlyRef = useRef<(() => void) | null>(null);
+  const showToastRef = useRef<((msg: string, type: 'warning' | 'success') => void) | null>(null);
   // Task 1: location tracking refs
   const locationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const appStateRef = useRef(AppState.currentState);
@@ -153,6 +165,21 @@ export default function HomeScreen() {
     dismissRequestRef.current?.();
   }, []);
 
+  const handleRideNoLongerAvailable = useCallback(() => {
+    dismissSilentlyRef.current?.();
+    showToastRef.current?.('Ride is no longer available', 'warning');
+  }, []);
+
+  const handleCheckinApproved = useCallback(() => {
+    setCheckinApprovedVisible(true);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+  }, []);
+
+  const handleCooldownCleared = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['driver'] });
+    showToastRef.current?.('Your cooldown has been lifted, you can receive rides again', 'success');
+  }, [queryClient]);
+
   const handleSurgeUpdated = useCallback((zones: SurgeZone[]) => {
     setSurgeZones(zones);
   }, []);
@@ -161,6 +188,9 @@ export default function HomeScreen() {
     driverId: driverData?.id as string | undefined,
     onRideOffer: handleRideOffer,
     onOfferExpired: handleOfferExpired,
+    onRideNoLongerAvailable: handleRideNoLongerAvailable,
+    onCheckinApproved: handleCheckinApproved,
+    onCooldownCleared: handleCooldownCleared,
     onSurgeUpdated: handleSurgeUpdated,
   });
 
@@ -261,6 +291,24 @@ export default function HomeScreen() {
     }
   };
 
+  const showToast = (msg: string, type: 'warning' | 'success') => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setToastMsg(msg);
+    setToastType(type);
+    Animated.spring(toastAnim, { toValue: 0, useNativeDriver: true, bounciness: 0 }).start();
+    toastTimerRef.current = setTimeout(() => {
+      Animated.timing(toastAnim, { toValue: -80, duration: 300, useNativeDriver: true }).start(() => setToastMsg(null));
+    }, 3500);
+  };
+  showToastRef.current = showToast;
+
+  const dismissSilently = () => {
+    timerRef.current?.stop();
+    if (countdownRef.current) clearInterval(countdownRef.current);
+    Animated.timing(sheetAnim, { toValue: 300, duration: 250, useNativeDriver: true }).start(() => setRequest(null));
+  };
+  dismissSilentlyRef.current = dismissSilently;
+
   const dismissRequest = () => {
     timerRef.current?.stop();
     if (countdownRef.current) clearInterval(countdownRef.current);
@@ -325,6 +373,55 @@ export default function HomeScreen() {
           </Text>
         </View>
       </Animated.View>
+
+      {/* Event toast — ride:no_longer_available / driver:cooldown:cleared */}
+      {toastMsg != null && (
+        <Animated.View
+          style={[styles.toastWrap, { top: topPad + 52, transform: [{ translateY: toastAnim }] }]}
+          pointerEvents="none"
+        >
+          <View style={[styles.toastInner, { backgroundColor: toastType === 'success' ? '#22c55e' : '#e67e22' }]}>
+            {toastType === 'success'
+              ? <CheckCircle size={14} color="#fff" strokeWidth={2.5} />
+              : <AlertCircle size={14} color="#fff" strokeWidth={2.5} />
+            }
+            <Text style={styles.toastText}>{toastMsg}</Text>
+          </View>
+        </Animated.View>
+      )}
+
+      {/* driver:checkin:approved modal */}
+      <Modal
+        visible={checkinApprovedVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setCheckinApprovedVisible(false)}
+      >
+        <View style={styles.checkinOverlay}>
+          <GlassView strong style={styles.checkinCard} borderRadius={28}>
+            <View style={styles.checkinIconWrap}>
+              <LinearGradient colors={['#22c55e', '#16a34a']} style={styles.checkinIconGrad}>
+                <ShieldCheck size={36} color="#fff" strokeWidth={2} />
+              </LinearGradient>
+            </View>
+            <Text style={[styles.checkinTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
+              Check-in approved!
+            </Text>
+            <Text style={[styles.checkinSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
+              You've passed the safety check-in. You can continue receiving ride requests.
+            </Text>
+            <Pressable
+              style={styles.checkinBtn}
+              onPress={() => setCheckinApprovedVisible(false)}
+            >
+              <LinearGradient colors={['#22c55e', '#16a34a']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.checkinBtnGrad}>
+                <Check size={18} color="#fff" strokeWidth={2.5} />
+                <Text style={[styles.checkinBtnText, { fontFamily: 'Inter_700Bold' }]}>Got it</Text>
+              </LinearGradient>
+            </Pressable>
+          </GlassView>
+        </View>
+      </Modal>
 
       <View style={[styles.overlay, { paddingTop: topPad }]}>
         <View style={[styles.header, { flexDirection: R }]}>
@@ -632,4 +729,18 @@ const styles = StyleSheet.create({
   acceptBtnGrad: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
   acceptBtnText: { fontSize: 15 },
   timerBar: { height: 4, borderRadius: 2, marginTop: 12 },
+  // Toast banner — ride:no_longer_available / driver:cooldown:cleared
+  toastWrap: { position: 'absolute', left: 0, right: 0, zIndex: 100, paddingHorizontal: 16 },
+  toastInner: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 16, shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 5 },
+  toastText: { color: '#fff', fontSize: 13, fontFamily: 'Inter_600SemiBold', flex: 1, lineHeight: 18 },
+  // Check-in approved modal
+  checkinOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28 },
+  checkinCard: { width: '100%', padding: 28, alignItems: 'center', gap: 12 },
+  checkinIconWrap: { width: 80, height: 80, borderRadius: 40, overflow: 'hidden', marginBottom: 4, shadowColor: '#22c55e', shadowOpacity: 0.4, shadowRadius: 16, shadowOffset: { width: 0, height: 4 }, elevation: 8 },
+  checkinIconGrad: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  checkinTitle: { fontSize: 22, textAlign: 'center', marginTop: 4 },
+  checkinSub: { fontSize: 14, textAlign: 'center', lineHeight: 21 },
+  checkinBtn: { marginTop: 8, width: '100%', borderRadius: 16, overflow: 'hidden', elevation: 6, shadowColor: '#22c55e', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 8 },
+  checkinBtnGrad: { height: 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  checkinBtnText: { color: '#fff', fontSize: 15 },
 });
