@@ -1,0 +1,91 @@
+You are working on the Driver App repository (React Native / Expo project).
+
+The Rider app already has a working setup script (see below reference logic), and now you need to create an equivalent setup for the Driver app.
+
+---
+
+## TASK 1 — CREATE SETUP SCRIPT
+
+Create a new file:
+
+setup.sh
+
+It must follow the same structure and behavior as the rider setup script, but adapted for the Driver app.
+
+---
+
+## REQUIRED BEHAVIOR:
+
+* Must check for BACKEND_URL in Replit Secrets
+* Must fail if BACKEND_URL is missing
+* Must create .env file safely
+* Must set:
+  EXPO_PUBLIC_API_URL=BACKEND_URL
+* Must install dependencies using pnpm install
+* Must kill any process using port 5000 before starting
+* Must kill existing expo/metro processes safely
+* Must start Expo in web mode on port 5000
+* Must use tunnel mode
+* Must clear cache on start
+* Must be stable and production-safe
+
+---
+
+## IMPORTANT RULES:
+
+* Do NOT change any app logic
+* Do NOT refactor project structure
+* Do NOT modify source code files except setup.sh if needed
+* Do NOT change business logic
+* Only create infrastructure / runtime scripts
+
+---
+
+## TASK 2 — UPDATE .replit FILE
+
+Modify the `.replit` file so that:
+
+* It runs setup.sh automatically on start
+* It starts the Driver Expo app correctly
+* It ensures environment variables are loaded before start
+
+Example requirement:
+
+* Run: bash setup.sh
+* Ensure correct working directory is used
+* Ensure no manual steps required
+
+---
+
+## FINAL GOAL:
+
+When the project starts in Replit:
+
+1. setup.sh runs automatically
+2. dependencies install
+3. backend URL is injected into .env
+4. Expo starts successfully
+5. Driver app runs in web/tunnel mode without manual intervention
+
+---
+
+## OUTPUT:
+
+Provide:
+
+1. Created setup.sh file
+2. Updated .replit file
+3. Explanation of changes
+4. Confirmation that app starts successfully
+
+---
+
+## STRICT RULE:
+
+Do NOT modify application code.
+
+Only:
+
+* Create setup script
+* Update run configuration
+* Ensure runtime stability

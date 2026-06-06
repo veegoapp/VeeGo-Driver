@@ -29,8 +29,8 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "PORT=8000 pnpm run dev"
-waitForPort = 8000
+args = "bash setup.sh"
+waitForPort = 5000
 
 [agent]
 stack = "PNPM_WORKSPACE"
