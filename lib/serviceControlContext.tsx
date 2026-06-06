@@ -46,9 +46,33 @@ export interface ServiceStatus {
   ineligibilityReason?: string;
 }
 
-// ── Defaults ──────────────────────────────────────────────────────────────
+// ── Fail-secure defaults ───────────────────────────────────────────────────
+// These are used whenever the backend has NOT explicitly confirmed a service
+// is open. No service can ever default to available — only explicit backend
+// approval can make a service available.
 
-const OPEN: ServiceStatus = { visible: true, available: true, displayMode: 'live' };
+/** Backend data is still loading — block all interaction. */
+const LOADING_BLOCKED: ServiceStatus = {
+  visible: true,
+  available: false,
+  displayMode: 'unavailable',
+  message: 'Checking availability…',
+};
+
+/** Fetch failed — backend state unknown, treat as unavailable. */
+const ERROR_BLOCKED: ServiceStatus = {
+  visible: true,
+  available: false,
+  displayMode: 'unavailable',
+  message: 'Service unavailable',
+};
+
+/** Service exists in the app but has no backend config — hide and block it. */
+const CONFIG_BLOCKED: ServiceStatus = {
+  visible: false,
+  available: false,
+  displayMode: 'unavailable',
+};
 
 // ── Socket URL (same derivation as useRideSocket) ─────────────────────────
 
@@ -71,15 +95,14 @@ type ServiceControlContextValue = {
 const ServiceControlContext = createContext<ServiceControlContextValue>({
   services: [],
   eligibilityRules: [],
-  isLoading: false,
+  isLoading: true,
   error: null,
-  getServiceStatus: () => OPEN,
+  // Safe default: block everything until a real Provider is mounted.
+  getServiceStatus: () => LOADING_BLOCKED,
   refresh: async () => {},
 });
 
 // ── Response-shape normaliser ─────────────────────────────────────────────
-// Backends commonly wrap arrays under different keys. This tries all of them
-// so we work regardless of which envelope the backend uses.
 
 function extractServiceList(data: unknown): ServiceControl[] {
   if (Array.isArray(data)) return data as ServiceControl[];
@@ -87,12 +110,10 @@ function extractServiceList(data: unknown): ServiceControl[] {
   if (data && typeof data === 'object') {
     const obj = data as Record<string, unknown>;
 
-    // Try every common envelope key
     for (const key of ['services', 'data', 'serviceControls', 'controls', 'items', 'result']) {
       if (Array.isArray(obj[key])) return obj[key] as ServiceControl[];
     }
 
-    // Single object with serviceType field — wrap it
     if (typeof obj.serviceType === 'string') return [obj as unknown as ServiceControl];
   }
 
@@ -105,21 +126,17 @@ export function ServiceControlProvider({ children }: { children: React.ReactNode
   const { token, isLoading: authIsLoading } = useAuth();
   const [services, setServices] = useState<ServiceControl[]>([]);
   const [eligibilityRules, setEligibilityRules] = useState<EligibilityRule[]>([]);
-  // Start as false — we only start loading once auth is confirmed and token exists.
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const socketRef = useRef<Socket | null>(null);
 
-  // ── Initial fetch ────────────────────────────────────────────────────
-  // CRITICAL: do NOT fetch until auth has fully resolved (authIsLoading === false).
-  // Fetching before auth is established causes 401 errors.
+  // ── Initial fetch ─────────────────────────────────────────────────────
+  // CRITICAL: do NOT fetch until auth has fully resolved.
 
   useEffect(() => {
-    // Auth context is still resolving — wait, do nothing.
     if (authIsLoading) return;
 
     if (!token) {
-      // Logged out — clear all service state.
       setServices([]);
       setEligibilityRules([]);
       setIsLoading(false);
@@ -135,21 +152,27 @@ export function ServiceControlProvider({ children }: { children: React.ReactNode
     api.get<unknown>('/services/control')
       .then((data) => {
         const list = extractServiceList(data);
-        console.log('[ServiceControl] services loaded successfully —', list.length, 'service(s):', list.map(s => `${s.serviceType}(enabled=${s.isEnabled},mode=${s.displayMode})`).join(', '));
+        console.log(
+          '[ServiceControl] services loaded successfully —',
+          list.length, 'service(s):',
+          list.map(s => `${s.serviceType}(enabled=${s.isEnabled},mode=${s.displayMode})`).join(', '),
+        );
         setServices(list);
       })
       .catch((err) => {
-        console.warn('[ServiceControl] fetch failed:', err);
+        console.warn('[ServiceControl] fetch failed — entering error state:', err);
         setError('Could not load service configuration.');
+        // Keep services = [] so getServiceStatus returns ERROR_BLOCKED for everything.
+        setServices([]);
       })
       .finally(() => setIsLoading(false));
   }, [token, authIsLoading]);
 
-  // ── Socket — real-time updates ────────────────────────────────────────
-  // CRITICAL: only connect socket after auth is fully established.
+  // ── Socket — real-time patches ────────────────────────────────────────
+  // CRITICAL: only connects after auth is established.
+  // Socket events patch existing services — they never reset to open.
 
   useEffect(() => {
-    // Auth not resolved yet, or no token — do not connect.
     if (authIsLoading || !token || !SOCKET_URL) return;
 
     const socket = io(SOCKET_URL, {
@@ -162,31 +185,36 @@ export function ServiceControlProvider({ children }: { children: React.ReactNode
     socketRef.current = socket;
     console.log('[Socket] authenticated connection established');
 
-    // service:control:changed — may carry full array or single entry
     socket.on(SOCKET_EVENTS.SERVICE_CONTROL_CHANGED, (payload: unknown) => {
-      if (Array.isArray(payload)) {
-        setServices(payload as ServiceControl[]);
-      } else if (payload && typeof payload === 'object') {
-        const entry = payload as ServiceControl;
-        if (entry.serviceType) {
-          setServices((prev) => {
+      // Socket patches only apply after the initial REST load has settled.
+      // This prevents socket events from overriding the loading/error state.
+      setServices((prev) => {
+        // If we have no services yet (still loading or errored), ignore the patch.
+        // The REST response is the source of truth on connect.
+        if (prev.length === 0) return prev;
+
+        if (Array.isArray(payload)) {
+          return payload as ServiceControl[];
+        }
+        if (payload && typeof payload === 'object') {
+          const entry = payload as ServiceControl;
+          if (entry.serviceType) {
             const idx = prev.findIndex((s) => s.serviceType === entry.serviceType);
             if (idx === -1) return [...prev, entry];
             const next = [...prev];
             next[idx] = { ...next[idx], ...entry };
             return next;
-          });
+          }
         }
-      }
+        return prev;
+      });
     });
 
-    // service:settings:changed — carries eligibility rules; triggers re-check
     socket.on(SOCKET_EVENTS.SERVICE_SETTINGS_CHANGED, (payload: unknown) => {
       if (Array.isArray(payload)) {
         setEligibilityRules(payload as EligibilityRule[]);
       } else if (payload && typeof payload === 'object') {
         const p = payload as Record<string, unknown>;
-        // Single rule object with serviceType field
         if (typeof p.serviceType === 'string') {
           const rule = p as EligibilityRule;
           setEligibilityRules((prev) => {
@@ -197,7 +225,6 @@ export function ServiceControlProvider({ children }: { children: React.ReactNode
             return next;
           });
         } else {
-          // Map of serviceType → rule object
           const entries = Object.entries(p)
             .filter(([, v]) => v && typeof v === 'object')
             .map(([type, v]) => ({ ...(v as object), serviceType: type } as EligibilityRule));
@@ -212,7 +239,7 @@ export function ServiceControlProvider({ children }: { children: React.ReactNode
     };
   }, [token, authIsLoading]);
 
-  // ── Refresh — re-fetch from API for freshness on screen entry ────────
+  // ── Refresh — re-fetch on screen entry ───────────────────────────────
 
   const refresh = useCallback(async (): Promise<void> => {
     if (authIsLoading || !token) return;
@@ -221,28 +248,44 @@ export function ServiceControlProvider({ children }: { children: React.ReactNode
       const list = extractServiceList(data);
       console.log('[ServiceControl] services loaded successfully —', list.length, 'service(s) (refresh)');
       setServices(list);
+      setError(null);
     } catch (err) {
-      console.warn('[ServiceControl] refresh failed — keeping existing state:', err);
+      console.warn('[ServiceControl] refresh failed — entering error state:', err);
+      setError('Could not load service configuration.');
+      setServices([]);
     }
   }, [token, authIsLoading]);
 
-  // ── Eligibility engine ────────────────────────────────────────────────
+  // ── Eligibility engine — FAIL-SECURE ─────────────────────────────────
+  // This is the single source of truth for all service availability decisions.
+  // It MUST close over isLoading and error so callers never need to check them
+  // separately — the result is always deterministic and safe.
 
   const getServiceStatus = useCallback(
     (serviceType: string, driver?: DriverSnapshot | null): ServiceStatus => {
+
+      // ── Layer 1: Loading lock ─────────────────────────────────────────
+      // Backend state has not been confirmed yet. Block everything.
+      if (isLoading) return LOADING_BLOCKED;
+
+      // ── Layer 2: Error lock ───────────────────────────────────────────
+      // Fetch failed — we do not know what is enabled. Block everything.
+      if (error) return ERROR_BLOCKED;
+
+      // ── Layer 3: Config check ─────────────────────────────────────────
+      // No backend config for this service — hide and block it.
+      // FAIL-SECURE: missing config is never treated as "open".
       const ctrl = services.find((s) => s.serviceType === serviceType);
+      if (!ctrl) return CONFIG_BLOCKED;
 
-      // No backend config found → default open (graceful degradation)
-      if (!ctrl) return OPEN;
-
-      // isEnabled=false → hidden entirely
+      // ── Layer 4: Enabled check ────────────────────────────────────────
       if (!ctrl.isEnabled) {
         return { visible: false, available: false, displayMode: ctrl.displayMode };
       }
 
       const base = { visible: true, available: false, displayMode: ctrl.displayMode };
 
-      // Non-live display modes → blocked with reason
+      // ── Layer 5: Display mode check ───────────────────────────────────
       if (ctrl.displayMode === 'coming_soon') {
         return { ...base, message: ctrl.message ?? 'Coming soon' };
       }
@@ -253,7 +296,8 @@ export function ServiceControlProvider({ children }: { children: React.ReactNode
         return { ...base, message: ctrl.message ?? 'Under maintenance', eta: ctrl.eta };
       }
 
-      // displayMode === 'live' → check driver eligibility in real-time
+      // ── Layer 6: Driver eligibility ───────────────────────────────────
+      // Only reached when displayMode === 'live' AND isEnabled === true.
       const rule = eligibilityRules.find((r) => r.serviceType === serviceType);
       if (rule && driver) {
         if (
@@ -274,9 +318,12 @@ export function ServiceControlProvider({ children }: { children: React.ReactNode
         }
       }
 
+      // ── Layer 7: Explicit backend approval ────────────────────────────
+      // Only reachable if: not loading, not errored, config exists,
+      // isEnabled=true, displayMode='live', and all eligibility checks pass.
       return { ...base, available: true };
     },
-    [services, eligibilityRules],
+    [services, eligibilityRules, isLoading, error],
   );
 
   return (

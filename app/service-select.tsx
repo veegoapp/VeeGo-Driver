@@ -102,14 +102,21 @@ export default function ServiceSelectScreen() {
   }, []);
 
   const handleContinue = () => {
-    if (!selected) return;
+    // Hard guards — checked before anything else.
+    // controlLoading: backend state not confirmed yet.
+    // controlError: backend unreachable, no safe state known.
+    if (controlLoading || controlError || !selected) return;
     const status = getServiceStatus(selected, driverSnapshot);
+    // getServiceStatus is already fail-secure, but we double-check available
+    // here to guard against any future caller-side drift.
     if (!status.available) return;
     setServiceType(selected);
     router.replace(selected === 'SHUTTLE' ? '/(shuttle)' : '/(tabs)');
   };
 
-  // Compute status for each service upfront
+  // Compute status for each service upfront.
+  // getServiceStatus returns LOADING_BLOCKED / ERROR_BLOCKED / CONFIG_BLOCKED
+  // during unsafe states, so statusMap is always in a safe state.
   const statusMap = Object.fromEntries(
     SERVICES.map((svc) => [svc.type, getServiceStatus(svc.type, driverSnapshot)])
   ) as Record<ServiceType, ServiceStatus>;
@@ -118,7 +125,13 @@ export default function ServiceSelectScreen() {
   const visibleServices = SERVICES.filter((svc) => statusMap[svc.type].visible);
 
   const selectedStatus = selected ? statusMap[selected] : null;
-  const canContinue = !!selected && !!selectedStatus?.available;
+  // canContinue requires: loading done, no error, a service selected, AND that
+  // service explicitly confirmed available by the backend.
+  const canContinue =
+    !controlLoading &&
+    !controlError &&
+    !!selected &&
+    !!selectedStatus?.available;
 
   return (
     <View style={[s.root, { backgroundColor: '#fafafd' }]}>
