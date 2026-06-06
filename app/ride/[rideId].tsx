@@ -2,7 +2,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Check, ChevronUp, MessageCircle, Navigation, Phone, Shield, Star } from 'lucide-react-native';
 import React, { useRef, useEffect, useState } from 'react';
-import { Animated, Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Image, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { MapBackdrop } from '@/components/MapBackdrop';
@@ -215,10 +215,21 @@ export default function RideScreen() {
                   </Text>
                 </View>
               </View>
-              <Pressable style={[styles.actionBtn, { backgroundColor: colors.primary + '26' }]}>
+              <Pressable
+                style={[styles.actionBtn, { backgroundColor: colors.primary + '26' }]}
+                onPress={() => router.push('/messages')}
+                accessibilityLabel="Message rider"
+              >
                 <MessageCircle size={20} color={colors.primary} strokeWidth={2} />
               </Pressable>
-              <Pressable style={[styles.actionBtn, { backgroundColor: colors.primary + '26' }]}>
+              <Pressable
+                style={[styles.actionBtn, { backgroundColor: colors.primary + '26' }]}
+                onPress={() => {
+                  const phone = (r as any)?.rider?.phone;
+                  if (phone) Linking.openURL(`tel:${phone}`).catch(() => {});
+                }}
+                accessibilityLabel="Call rider"
+              >
                 <Phone size={20} color={colors.primary} strokeWidth={2} />
               </Pressable>
             </View>

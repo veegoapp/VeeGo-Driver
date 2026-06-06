@@ -53,8 +53,7 @@ export default function HomeScreen() {
   });
   const { data: activeRideRaw } = useQuery({
     queryKey: ['ride-active'],
-    // FIX #1: was endpoints.rides.active → endpoints.rides.available
-    queryFn: endpoints.rides.available,
+    queryFn: endpoints.rides.active,
     retry: false,
   });
 
@@ -80,6 +79,7 @@ export default function HomeScreen() {
   const demandOpacity = useRef(new Animated.Value(0)).current;
   const bannerAnim = useRef(new Animated.Value(-44)).current;
   const showRequestRef = useRef<((r: RideRequest) => void) | null>(null);
+  const dismissRequestRef = useRef<(() => void) | null>(null);
   // Task 1: location tracking refs
   const locationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const appStateRef = useRef(AppState.currentState);
@@ -148,7 +148,15 @@ export default function HomeScreen() {
     showRequestRef.current?.(ride);
   }, []);
 
-  const { connected: socketConnected } = useRideSocket({ driverId: driverData?.id as string | undefined, onRideOffer: handleRideOffer });
+  const handleOfferExpired = useCallback(() => {
+    dismissRequestRef.current?.();
+  }, []);
+
+  const { connected: socketConnected } = useRideSocket({
+    driverId: driverData?.id as string | undefined,
+    onRideOffer: handleRideOffer,
+    onOfferExpired: handleOfferExpired,
+  });
 
   // FIX #6: was gated on `online` — spec requires registration immediately after login
   useEffect(() => {
@@ -255,6 +263,7 @@ export default function HomeScreen() {
     }
     Animated.timing(sheetAnim, { toValue: 300, duration: 250, useNativeDriver: true }).start(() => setRequest(null));
   };
+  dismissRequestRef.current = dismissRequest;
 
   const acceptRequest = async () => {
     if (!request) return;

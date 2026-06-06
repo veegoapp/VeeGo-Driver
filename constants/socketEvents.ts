@@ -4,20 +4,38 @@
  */
 
 export const SOCKET_EVENTS = {
-  // Server → Driver
-  RIDE_OFFER:             "ride:offer",
-  RIDE_NEW_REQUEST:       "ride:new_request",
-  ERROR:                  "error",
+  // Server → Driver: ride lifecycle
+  RIDE_OFFER:               "ride:offer",
+  RIDE_NEW_REQUEST:         "ride:new_request",
+  RIDE_OFFER_EXPIRED:       "ride:offer_expired",
+
+  // Server → Driver: waiting charge
+  WAITING_CHARGE_STARTED:   "ride:waiting:charge:started",
+  WAITING_CHARGE_UPDATED:   "ride:waiting:charge:updated",
+  WAITING_CHARGE_CAPPED:    "ride:waiting:charge:capped",
+
+  // Server → Driver: check-in
+  DRIVER_CHECKIN_REQUIRED:  "driver:checkin:required",
+  DRIVER_CHECKIN_REJECTED:  "driver:checkin:rejected",
+
+  // Server → Driver: service control
+  SERVICE_CONTROL_CHANGED:  "service:control:changed",
+  SERVICE_SETTINGS_CHANGED: "service:settings:changed",
+
+  // Server → Driver: location ack
+  DRIVER_LOCATION_ACK:      "driver:location:ack",
+
+  // Server → Driver: surge
+  SURGE_UPDATED:            "surge:updated",
+
+  // Server → Driver: SOS
+  SOS_TRIGGERED:            "sos:triggered",
+
+  // Server → Driver: misc
+  ERROR:                    "error",
 
   // Client → Server
-  DRIVER_LOCATION_UPDATE: "driver:location:update",
-  DRIVER_RIDE_LOCATION:   "driver:ride:location",
-  DRIVER_STATUS_ONLINE:   "driver:status:online",
-  DRIVER_STATUS_OFFLINE:  "driver:status:offline",
-  DRIVER_STATUS_BUSY:     "driver:status:busy",
-  DRIVER_TRIP_START:      "driver:trip:start",
-  DRIVER_TRIP_COMPLETE:   "driver:trip:complete",
-  JOIN:                   "join",
+  JOIN:                     "join",
 } as const;
 
 export type DriverSocketEvent = (typeof SOCKET_EVENTS)[keyof typeof SOCKET_EVENTS];

@@ -195,8 +195,9 @@ export const endpoints = {
     // Below ride actions (start/complete/decline/rateRider) are not in the spec
     // but kept for best-effort compatibility
     decline: (rideId: string) => api.post(`/driver/rides/${rideId}/decline`),
-    start: (rideId: string) => api.post(`/driver/rides/${rideId}/start`),
-    complete: (rideId: string) => api.post(`/driver/rides/${rideId}/complete`),
+    start: (rideId: string) => api.patch(`/driver/rides/${rideId}/start`),
+    complete: (rideId: string) => api.patch(`/driver/rides/${rideId}/complete`),
+    active: () => api.get('/driver/rides/active'),
     rateRider: (rideId: string, rating: number) =>
       api.post(`/driver/rides/${rideId}/rate-rider`, { rating }),
   },
@@ -234,10 +235,10 @@ export const endpoints = {
   },
 
   wallet: {
-    // GET /wallet — spec §9: returns { userId, balance }
-    balance: () => api.get('/wallet'),
-    // GET /wallet/transactions — spec §9
-    transactions: () => api.get('/wallet/transactions'),
+    // GET /driver/wallet/balance — returns { balance, totalPaid, totalPending }
+    balance: () => api.get('/driver/wallet/balance'),
+    // Driver earnings history — closest equivalent to a wallet transaction list
+    transactions: () => api.get('/driver/earnings/history'),
     // Below wallet paths are not in spec but kept for UI functionality
     payout: (amount: number) => api.post('/driver/wallet/payout', { amount }),
     payoutMethods: () => api.get('/driver/wallet/payout-methods'),
@@ -254,9 +255,9 @@ export const endpoints = {
     line: (lineId: string) => api.get(`/shuttle/lines/${lineId}`),
     activate: (lineId: string) => api.post(`/shuttle/lines/${lineId}/activate`),
     complete: (lineId: string) => api.post(`/shuttle/lines/${lineId}/complete`),
-    passengers: (lineId: string) => api.get(`/shuttle/lines/${lineId}/passengers`),
-    boardStop: (stopId: string, boardedIds: string[]) =>
-      api.post(`/shuttle/stops/${stopId}/board`, { boardedIds }),
+    passengers: (tripId: string) => api.get(`/shuttle/trips/${tripId}/passengers`),
+    boardBooking: (bookingId: string) =>
+      api.post(`/shuttle/bookings/${bookingId}/board`, {}),
     // POST /shuttle/lines/:id/book — driver books a weekly slot
     book: (lineId: string, body: { weekStart: string; weekEnd: string; departureTime: string }) =>
       api.post(`/shuttle/lines/${lineId}/book`, body),

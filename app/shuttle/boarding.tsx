@@ -27,14 +27,10 @@ export default function ShuttleBoardingScreen() {
   }, [checkedIn]);
 
   const handleDepart = async () => {
-    try {
-      await endpoints.shuttle.boardStop(
-        currentStop.id,
-        passengers.filter(p => p.checkedIn).map(p => p.id)
-      );
-    } catch {
-      // best-effort
-    }
+    const boardedIds = passengers.filter(p => p.checkedIn).map(p => p.id);
+    await Promise.allSettled(
+      boardedIds.map(bookingId => endpoints.shuttle.boardBooking(bookingId))
+    );
     nextStop();
     router.back();
   };

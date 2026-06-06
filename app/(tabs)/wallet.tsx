@@ -12,6 +12,7 @@ import { endpoints } from '@/lib/api';
 
 type WalletBalance = { balance: number };
 type Transaction = { id: string; title: string; sub: string; amount: number; incoming: boolean };
+type PayoutMethod = { id: string; type?: string; label?: string; name?: string; last4?: string; isDefault?: boolean };
 
 const TAB_BAR_HEIGHT = 96;
 
@@ -37,6 +38,11 @@ export default function WalletScreen() {
     queryKey: ['wallet-transactions'],
     queryFn: endpoints.wallet.transactions,
   });
+  const { data: payoutMethodsRaw } = useQuery({
+    queryKey: ['payout-methods'],
+    queryFn: endpoints.wallet.payoutMethods,
+    retry: false,
+  });
 
   const _balRaw = balanceRaw as WalletBalance | { balance?: number; wallet?: { balance?: number } } | undefined;
   const balanceData: WalletBalance = {
@@ -46,6 +52,10 @@ export default function WalletScreen() {
   };
   const _txRaw = txRaw as Transaction[] | { transactions?: Transaction[]; data?: Transaction[] } | undefined;
   const txs: Transaction[] = Array.isArray(_txRaw) ? _txRaw : ((_txRaw as { transactions?: Transaction[] })?.transactions ?? ((_txRaw as { data?: Transaction[] })?.data ?? []));
+  const _pmRaw = payoutMethodsRaw as PayoutMethod[] | { methods?: PayoutMethod[]; data?: PayoutMethod[] } | undefined;
+  const payoutMethods: PayoutMethod[] = Array.isArray(_pmRaw)
+    ? _pmRaw
+    : ((_pmRaw as { methods?: PayoutMethod[] })?.methods ?? ((_pmRaw as { data?: PayoutMethod[] })?.data ?? []));
 
   const isLoading = balanceLoading || txLoading;
   const isError = balanceError || txError;
@@ -175,25 +185,37 @@ export default function WalletScreen() {
           <Pressable onPress={() => Alert.alert('Coming soon')}><Text style={[styles.addBtn, { color: colors.primary, fontFamily: 'Inter_700Bold' }]}>{t.add}</Text></Pressable>
         </View>
         <View style={{ gap: 8 }}>
-          <GlassView style={[styles.methodCard, { flexDirection: R }]} borderRadius={16}>
-            <View style={[styles.methodIcon, { backgroundColor: colors.primary + '26' }]}>
-              <Briefcase size={20} color={colors.primary} strokeWidth={2} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.methodName, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>BIAT — ****4521</Text>
-              <Text style={[styles.methodSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>Default · 1-2 business days</Text>
-            </View>
-            <Text style={[styles.defaultBadge, { color: colors.primary, fontFamily: 'Inter_700Bold' }]}>Default</Text>
-          </GlassView>
-          <GlassView style={[styles.methodCard, { flexDirection: R }]} borderRadius={16}>
-            <View style={[styles.methodIcon, { backgroundColor: colors.secondary }]}>
-              <CreditCard size={20} color={colors.mutedForeground} strokeWidth={2} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.methodName, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>Visa — ****1133</Text>
-              <Text style={[styles.methodSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>Instant · 1% fee</Text>
-            </View>
-          </GlassView>
+          {payoutMethods.length > 0 ? payoutMethods.map((method) => (
+            <GlassView key={method.id} style={[styles.methodCard, { flexDirection: R }]} borderRadius={16}>
+              <View style={[styles.methodIcon, { backgroundColor: method.isDefault ? colors.primary + '26' : colors.secondary }]}>
+                {method.type === 'bank' ? (
+                  <Briefcase size={20} color={method.isDefault ? colors.primary : colors.mutedForeground} strokeWidth={2} />
+                ) : (
+                  <CreditCard size={20} color={method.isDefault ? colors.primary : colors.mutedForeground} strokeWidth={2} />
+                )}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.methodName, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
+                  {method.label ?? method.name ?? 'Payment method'}{method.last4 ? ` — ****${method.last4}` : ''}
+                </Text>
+                {method.isDefault && (
+                  <Text style={[styles.methodSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>Default</Text>
+                )}
+              </View>
+              {method.isDefault && (
+                <Text style={[styles.defaultBadge, { color: colors.primary, fontFamily: 'Inter_700Bold' }]}>Default</Text>
+              )}
+            </GlassView>
+          )) : (
+            <GlassView style={[styles.methodCard, { flexDirection: R }]} borderRadius={16}>
+              <View style={[styles.methodIcon, { backgroundColor: colors.secondary }]}>
+                <Plus size={20} color={colors.mutedForeground} strokeWidth={2} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.methodName, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>No payout methods added</Text>
+              </View>
+            </GlassView>
+          )}
         </View>
 
         <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', marginTop: 24, marginBottom: 12, textAlign: TA }]}>{t.transactions_label}</Text>

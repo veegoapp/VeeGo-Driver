@@ -26,19 +26,59 @@ export type RideRequest = {
   [key: string]: unknown;
 };
 
+export type WaitingCharge = {
+  rideId: string;
+  amount: number;
+  minutes: number;
+  capped?: boolean;
+};
+
 type UseRideSocketOptions = {
   driverId: string | undefined;
   onRideOffer: (ride: RideRequest) => void;
+  onOfferExpired?: (rideId: string) => void;
+  onWaitingChargeUpdated?: (charge: WaitingCharge) => void;
+  onWaitingChargeCapped?: (charge: WaitingCharge) => void;
+  onCheckinRequired?: () => void;
+  onCheckinRejected?: () => void;
+  onSosTriggered?: (data: unknown) => void;
 };
 
 type UseRideSocketResult = {
   connected: boolean;
 };
 
-export function useRideSocket({ driverId, onRideOffer }: UseRideSocketOptions): UseRideSocketResult {
+export function useRideSocket({
+  driverId,
+  onRideOffer,
+  onOfferExpired,
+  onWaitingChargeUpdated,
+  onWaitingChargeCapped,
+  onCheckinRequired,
+  onCheckinRejected,
+  onSosTriggered,
+}: UseRideSocketOptions): UseRideSocketResult {
   const socketRef = useRef<Socket | null>(null);
   const callbackRef = useRef(onRideOffer);
   callbackRef.current = onRideOffer;
+
+  const offerExpiredRef = useRef(onOfferExpired);
+  offerExpiredRef.current = onOfferExpired;
+
+  const waitingChargeUpdatedRef = useRef(onWaitingChargeUpdated);
+  waitingChargeUpdatedRef.current = onWaitingChargeUpdated;
+
+  const waitingChargeCappedRef = useRef(onWaitingChargeCapped);
+  waitingChargeCappedRef.current = onWaitingChargeCapped;
+
+  const checkinRequiredRef = useRef(onCheckinRequired);
+  checkinRequiredRef.current = onCheckinRequired;
+
+  const checkinRejectedRef = useRef(onCheckinRejected);
+  checkinRejectedRef.current = onCheckinRejected;
+
+  const sosTriggedRef = useRef(onSosTriggered);
+  sosTriggedRef.current = onSosTriggered;
 
   const [connected, setConnected] = useState(false);
 
@@ -46,7 +86,6 @@ export function useRideSocket({ driverId, onRideOffer }: UseRideSocketOptions): 
     if (!driverId) return;
 
     let cancelled = false;
-    let locationInterval: ReturnType<typeof setInterval> | null = null;
 
     (async () => {
       const token = await getToken();
@@ -84,14 +123,48 @@ export function useRideSocket({ driverId, onRideOffer }: UseRideSocketOptions): 
       socket.on(SOCKET_EVENTS.RIDE_OFFER, (ride: RideRequest) => {
         callbackRef.current(ride);
       });
+
+      socket.on(SOCKET_EVENTS.RIDE_OFFER_EXPIRED, (data: { rideId?: string } | string) => {
+        const rideId = typeof data === 'string' ? data : (data?.rideId ?? '');
+        offerExpiredRef.current?.(rideId);
+      });
+
+      socket.on(SOCKET_EVENTS.WAITING_CHARGE_UPDATED, (charge: WaitingCharge) => {
+        waitingChargeUpdatedRef.current?.(charge);
+      });
+
+      socket.on(SOCKET_EVENTS.WAITING_CHARGE_CAPPED, (charge: WaitingCharge) => {
+        waitingChargeCappedRef.current?.(charge);
+      });
+
+      socket.on(SOCKET_EVENTS.DRIVER_CHECKIN_REQUIRED, () => {
+        checkinRequiredRef.current?.();
+      });
+
+      socket.on(SOCKET_EVENTS.DRIVER_CHECKIN_REJECTED, () => {
+        checkinRejectedRef.current?.();
+      });
+
+      socket.on(SOCKET_EVENTS.SERVICE_CONTROL_CHANGED, (data: unknown) => {
+        console.warn('[RideSocket] service:control:changed', data);
+      });
+
+      socket.on(SOCKET_EVENTS.SERVICE_SETTINGS_CHANGED, (data: unknown) => {
+        console.warn('[RideSocket] service:settings:changed', data);
+      });
+
+      socket.on(SOCKET_EVENTS.SURGE_UPDATED, (data: unknown) => {
+        console.warn('[RideSocket] surge:updated', data);
+      });
+
+      socket.on(SOCKET_EVENTS.SOS_TRIGGERED, (data: unknown) => {
+        sosTriggedRef.current?.(data);
+        console.warn('[RideSocket] sos:triggered', data);
+      });
     })();
 
     return () => {
       cancelled = true;
-      if (locationInterval !== null) {
-        clearInterval(locationInterval);
-        locationInterval = null;
-      }
       socketRef.current?.disconnect();
       socketRef.current = null;
       setConnected(false);
