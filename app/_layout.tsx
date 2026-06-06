@@ -15,6 +15,7 @@ import { I18nProvider } from '@/lib/i18nContext';
 import { ServiceProvider } from '@/lib/serviceContext';
 import { ServiceControlProvider } from '@/lib/serviceControlContext';
 import { AuthProvider, useAuth } from '@/lib/authContext';
+import { SocketProvider } from '@/lib/socketContext';
 import { navigateAfterAuth } from '@/lib/postAuthRouter';
 
 SplashScreen.preventAutoHideAsync();
@@ -130,9 +131,11 @@ export default function RootLayout() {
               <KeyboardProvider>
                 <I18nProvider>
                   <ServiceProvider>
-                    <ServiceControlProvider>
-                      <RootLayoutNav />
-                    </ServiceControlProvider>
+                    <SocketProvider>
+                      <ServiceControlProvider>
+                        <RootLayoutNav />
+                      </ServiceControlProvider>
+                    </SocketProvider>
                   </ServiceProvider>
                 </I18nProvider>
               </KeyboardProvider>

@@ -1,18 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import type { Socket } from 'socket.io-client';
-import { getToken } from '@/lib/auth';
+import { useSocket } from '@/lib/socketContext';
 import { SOCKET_EVENTS } from '../constants/socketEvents';
-
-const _rawApiUrl = process.env.EXPO_PUBLIC_API_URL;
-if (!_rawApiUrl) {
-  throw new Error(
-    '[VeeGo Driver] EXPO_PUBLIC_API_URL is not set. ' +
-    'Create a .env file in artifacts/veego-driver/ with:\n' +
-    '  EXPO_PUBLIC_API_URL=https://<your-replit-domain>/api'
-  );
-}
-const _apiBase: string = _rawApiUrl.startsWith('http') ? _rawApiUrl : `https://${_rawApiUrl}`;
-const SOCKET_URL = _apiBase.replace(/\/api\/?$/, '');
 
 export type RideRequest = {
   id: string;
@@ -68,131 +56,111 @@ export function useRideSocket({
   onSosTriggered,
   onSurgeUpdated,
 }: UseRideSocketOptions): UseRideSocketResult {
-  const socketRef = useRef<Socket | null>(null);
+  const { socket, connected } = useSocket();
+
+  // Stable callback refs — updated every render so handlers always see current closures
   const callbackRef = useRef(onRideOffer);
   callbackRef.current = onRideOffer;
-
   const offerExpiredRef = useRef(onOfferExpired);
   offerExpiredRef.current = onOfferExpired;
-
   const waitingChargeUpdatedRef = useRef(onWaitingChargeUpdated);
   waitingChargeUpdatedRef.current = onWaitingChargeUpdated;
-
   const waitingChargeCappedRef = useRef(onWaitingChargeCapped);
   waitingChargeCappedRef.current = onWaitingChargeCapped;
-
   const checkinRequiredRef = useRef(onCheckinRequired);
   checkinRequiredRef.current = onCheckinRequired;
-
   const checkinRejectedRef = useRef(onCheckinRejected);
   checkinRejectedRef.current = onCheckinRejected;
-
   const sosTriggedRef = useRef(onSosTriggered);
   sosTriggedRef.current = onSosTriggered;
-
   const surgeUpdatedRef = useRef(onSurgeUpdated);
   surgeUpdatedRef.current = onSurgeUpdated;
 
-  const [connected, setConnected] = useState(false);
-
+  // JOIN the driver room whenever the shared socket connects (or reconnects)
   useEffect(() => {
-    if (!driverId) return;
+    if (!socket || !driverId) return;
 
-    let cancelled = false;
+    const onConnect = () => {
+      socket.emit(SOCKET_EVENTS.JOIN, `driver:${driverId}`);
+    };
 
-    (async () => {
-      const token = await getToken();
-      if (cancelled) return;
+    // If already connected, join immediately
+    if (connected) {
+      socket.emit(SOCKET_EVENTS.JOIN, `driver:${driverId}`);
+    }
 
-      const { io } = await import('socket.io-client');
+    socket.on('connect', onConnect);
+    return () => { socket.off('connect', onConnect); };
+  }, [socket, driverId, connected]);
 
-      const socket = io(SOCKET_URL, {
-        path: '/api/socket.io',
-        auth: { token },
-        transports: ['polling', 'websocket'],
-        reconnectionAttempts: 10,
-        reconnectionDelay: 1000,
-        reconnectionDelayMax: 30000,
-        randomizationFactor: 0.5,
-      });
+  // Attach ride-specific event handlers to the shared socket
+  useEffect(() => {
+    if (!socket) return;
 
-      socketRef.current = socket;
+    const handleRideOffer = (ride: RideRequest) => {
+      callbackRef.current(ride);
+    };
 
-      socket.on('connect', () => {
-        setConnected(true);
-        socket.emit(SOCKET_EVENTS.JOIN, `driver:${driverId}`);
-      });
+    const handleOfferExpired = (data: { rideId?: string } | string) => {
+      const rideId = typeof data === 'string' ? data : (data?.rideId ?? '');
+      offerExpiredRef.current?.(rideId);
+    };
 
-      socket.on('disconnect', (reason: string) => {
-        setConnected(false);
-        console.warn('[RideSocket] disconnected:', reason);
-      });
+    const handleWaitingChargeUpdated = (charge: WaitingCharge) => {
+      waitingChargeUpdatedRef.current?.(charge);
+    };
 
-      socket.on('connect_error', (err: Error) => {
-        setConnected(false);
-        console.error('[RideSocket] connect_error:', err.message);
-      });
+    const handleWaitingChargeCapped = (charge: WaitingCharge) => {
+      waitingChargeCappedRef.current?.(charge);
+    };
 
-      socket.on(SOCKET_EVENTS.RIDE_OFFER, (ride: RideRequest) => {
-        callbackRef.current(ride);
-      });
+    const handleCheckinRequired = () => {
+      checkinRequiredRef.current?.();
+    };
 
-      socket.on(SOCKET_EVENTS.RIDE_OFFER_EXPIRED, (data: { rideId?: string } | string) => {
-        const rideId = typeof data === 'string' ? data : (data?.rideId ?? '');
-        offerExpiredRef.current?.(rideId);
-      });
+    const handleCheckinRejected = () => {
+      checkinRejectedRef.current?.();
+    };
 
-      socket.on(SOCKET_EVENTS.WAITING_CHARGE_UPDATED, (charge: WaitingCharge) => {
-        waitingChargeUpdatedRef.current?.(charge);
-      });
+    const handleSurgeUpdated = (data: unknown) => {
+      let zones: SurgeZone[];
+      if (Array.isArray(data)) {
+        zones = data as SurgeZone[];
+      } else if (data && typeof data === 'object' && 'zones' in data) {
+        zones = (data as { zones: SurgeZone[] }).zones ?? [];
+      } else if (data && typeof data === 'object' && 'latitude' in data) {
+        zones = [data as SurgeZone];
+      } else {
+        zones = [];
+      }
+      surgeUpdatedRef.current?.(zones);
+    };
 
-      socket.on(SOCKET_EVENTS.WAITING_CHARGE_CAPPED, (charge: WaitingCharge) => {
-        waitingChargeCappedRef.current?.(charge);
-      });
+    const handleSosTriggered = (data: unknown) => {
+      sosTriggedRef.current?.(data);
+      console.warn('[RideSocket] sos:triggered', data);
+    };
 
-      socket.on(SOCKET_EVENTS.DRIVER_CHECKIN_REQUIRED, () => {
-        checkinRequiredRef.current?.();
-      });
-
-      socket.on(SOCKET_EVENTS.DRIVER_CHECKIN_REJECTED, () => {
-        checkinRejectedRef.current?.();
-      });
-
-      socket.on(SOCKET_EVENTS.SERVICE_CONTROL_CHANGED, (data: unknown) => {
-        console.warn('[RideSocket] service:control:changed', data);
-      });
-
-      socket.on(SOCKET_EVENTS.SERVICE_SETTINGS_CHANGED, (data: unknown) => {
-        console.warn('[RideSocket] service:settings:changed', data);
-      });
-
-      socket.on(SOCKET_EVENTS.SURGE_UPDATED, (data: unknown) => {
-        let zones: SurgeZone[];
-        if (Array.isArray(data)) {
-          zones = data as SurgeZone[];
-        } else if (data && typeof data === 'object' && 'zones' in data) {
-          zones = (data as { zones: SurgeZone[] }).zones ?? [];
-        } else if (data && typeof data === 'object' && 'latitude' in data) {
-          zones = [data as SurgeZone];
-        } else {
-          zones = [];
-        }
-        surgeUpdatedRef.current?.(zones);
-      });
-
-      socket.on(SOCKET_EVENTS.SOS_TRIGGERED, (data: unknown) => {
-        sosTriggedRef.current?.(data);
-        console.warn('[RideSocket] sos:triggered', data);
-      });
-    })();
+    socket.on(SOCKET_EVENTS.RIDE_OFFER, handleRideOffer);
+    socket.on(SOCKET_EVENTS.RIDE_OFFER_EXPIRED, handleOfferExpired);
+    socket.on(SOCKET_EVENTS.WAITING_CHARGE_UPDATED, handleWaitingChargeUpdated);
+    socket.on(SOCKET_EVENTS.WAITING_CHARGE_CAPPED, handleWaitingChargeCapped);
+    socket.on(SOCKET_EVENTS.DRIVER_CHECKIN_REQUIRED, handleCheckinRequired);
+    socket.on(SOCKET_EVENTS.DRIVER_CHECKIN_REJECTED, handleCheckinRejected);
+    socket.on(SOCKET_EVENTS.SURGE_UPDATED, handleSurgeUpdated);
+    socket.on(SOCKET_EVENTS.SOS_TRIGGERED, handleSosTriggered);
 
     return () => {
-      cancelled = true;
-      socketRef.current?.disconnect();
-      socketRef.current = null;
-      setConnected(false);
+      socket.off(SOCKET_EVENTS.RIDE_OFFER, handleRideOffer);
+      socket.off(SOCKET_EVENTS.RIDE_OFFER_EXPIRED, handleOfferExpired);
+      socket.off(SOCKET_EVENTS.WAITING_CHARGE_UPDATED, handleWaitingChargeUpdated);
+      socket.off(SOCKET_EVENTS.WAITING_CHARGE_CAPPED, handleWaitingChargeCapped);
+      socket.off(SOCKET_EVENTS.DRIVER_CHECKIN_REQUIRED, handleCheckinRequired);
+      socket.off(SOCKET_EVENTS.DRIVER_CHECKIN_REJECTED, handleCheckinRejected);
+      socket.off(SOCKET_EVENTS.SURGE_UPDATED, handleSurgeUpdated);
+      socket.off(SOCKET_EVENTS.SOS_TRIGGERED, handleSosTriggered);
     };
-  }, [driverId]);
+  }, [socket]);
 
   return { connected };
 }

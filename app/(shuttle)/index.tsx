@@ -38,15 +38,22 @@ export default function ShuttleHomeScreen() {
   const { t, isRTL } = useI18n();
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
   const TA = isRTL ? 'right' as const : 'left' as const;
-  const [online, setOnline] = useState(true);
+  const [online, setOnline] = useState(false);
+  const [onlineInitialized, setOnlineInitialized] = useState(false);
   const [onlineLoading, setOnlineLoading] = useState(false);
-  const [shiftActive, setShiftActive] = useState(true);
+  const [shiftActive, setShiftActive] = useState(false);
 
   const pulseScale = useRef(new Animated.Value(0.8)).current;
   const pulseOpacity = useRef(new Animated.Value(0.8)).current;
   const cardAnim = useRef(new Animated.Value(0)).current;
 
   const { data: driverRaw } = useQuery({ queryKey: ['driver'], queryFn: endpoints.driver.me });
+  const { data: driverStatusRaw } = useQuery({
+    queryKey: ['driver-status'],
+    queryFn: endpoints.driver.status,
+    staleTime: 0,
+    retry: false,
+  });
   const driverData = driverRaw as any;
 
   const { activeLine, stops, currentStopIndex, allLines } = useShuttle();
@@ -61,6 +68,16 @@ export default function ShuttleHomeScreen() {
   const summaryData = summaryRaw as { summary?: { totalEarnings?: string | number } } | undefined;
   const todayEarnings = parseFloat(String(summaryData?.summary?.totalEarnings ?? 0)).toFixed(0);
   const completedCount = allLines.filter(l => l.status === 'completed').length;
+
+  // Sync online status from server on first load
+  useEffect(() => {
+    if (onlineInitialized || driverStatusRaw === undefined) return;
+    const status = driverStatusRaw as { isOnline?: boolean; online?: boolean; status?: string } | null;
+    const serverFlag = status?.isOnline ?? status?.online;
+    const isOnline = serverFlag !== undefined ? Boolean(serverFlag) : status?.status === 'online';
+    setOnline(Boolean(isOnline));
+    setOnlineInitialized(true);
+  }, [driverStatusRaw, onlineInitialized]);
 
   useEffect(() => {
     Animated.spring(cardAnim, { toValue: 1, stiffness: 200, damping: 20, useNativeDriver: true }).start();

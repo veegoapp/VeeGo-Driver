@@ -386,7 +386,7 @@ export default function HomeScreen() {
           </GlassView>
         </View>
 
-        {online && (
+        {surgeZones.length > 0 && online && (
           <Animated.View style={[styles.demandCard, { transform: [{ translateX: demandAnim }], opacity: demandOpacity }]}>
             <GlassView strong style={styles.demandCardInner} borderRadius={16}>
               <View style={[styles.demandHeader, { flexDirection: R }]}>
@@ -394,7 +394,9 @@ export default function HomeScreen() {
                 <Text style={[styles.demandTitle, { color: colors.accent, fontFamily: 'Inter_700Bold' }]}>{t.high_demand}</Text>
               </View>
               <Text style={[styles.demandText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>
-                Lac 2 area is busy — head over for more trips.
+                {surgeZones.length === 1
+                  ? `${surgeZones[0].multiplier.toFixed(1)}× surge active nearby — head there for more trips.`
+                  : `${surgeZones.length} surge zones active in your area.`}
               </Text>
             </GlassView>
           </Animated.View>

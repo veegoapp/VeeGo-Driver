@@ -23,30 +23,55 @@ class ApiError extends Error {
   }
 }
 
-// Silent token refresh — called automatically on 401
+// Single-flight refresh — only one refresh request may exist at a time.
+// Concurrent 401s await the same promise; prevents token refresh storms.
+let _refreshPromise: Promise<string | null> | null = null;
+
 async function refreshAccessToken(): Promise<string | null> {
-  const refreshToken = await getRefreshToken();
-  if (!refreshToken) return null;
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-    const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken }),
-      signal: controller.signal,
-    });
-    clearTimeout(timeout);
-    if (!response.ok) return null;
-    const data = await response.json();
-    if (data.accessToken) {
-      await saveToken(data.accessToken);
-      return data.accessToken;
-    }
-    return null;
-  } catch {
-    return null;
+  if (_refreshPromise) {
+    console.log('[AUTH_REFRESH_REUSED] awaiting in-flight refresh promise');
+    return _refreshPromise;
   }
+
+  _refreshPromise = (async (): Promise<string | null> => {
+    console.log('[AUTH_REFRESH_START]');
+    const refreshToken = await getRefreshToken();
+    if (!refreshToken) {
+      console.log('[AUTH_REFRESH_FAILED] no refresh token stored');
+      return null;
+    }
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+      const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+      if (!response.ok) {
+        console.log('[AUTH_REFRESH_FAILED] server returned', response.status);
+        return null;
+      }
+      const data = await response.json();
+      if (data.accessToken) {
+        await saveToken(data.accessToken);
+        console.log('[AUTH_REFRESH_SUCCESS]');
+        return data.accessToken;
+      }
+      console.log('[AUTH_REFRESH_FAILED] no accessToken in response body');
+      return null;
+    } catch (err) {
+      console.log('[AUTH_REFRESH_FAILED]', err);
+      return null;
+    }
+  })();
+
+  // Clear the single-flight slot once settled so future refreshes can start fresh
+  _refreshPromise.finally(() => { _refreshPromise = null; });
+
+  return _refreshPromise;
 }
 
 async function request<T>(
@@ -146,16 +171,12 @@ export const endpoints = {
   },
 
   driver: {
-    // GET /driver/me — spec §4
     me: () => api.get('/driver/me'),
     updateMe: (data: unknown) => api.patch('/driver/me', data),
-    // Separate online/offline endpoints per spec §4
     goOnline: () => api.patch('/driver/status/online'),
     goOffline: () => api.patch('/driver/status/offline'),
-    // Location update — spec §4: PATCH /driver/location
     updateLocation: (data: { latitude: number; longitude: number; speed?: number; heading?: number; tripId?: string }) =>
       api.patch('/driver/location', data),
-    // Below paths are not in spec but kept as best-effort for screens that reference them
     status: () => api.get('/driver/me/status'),
     vehicle: () => api.get('/driver/me/vehicle'),
     documents: () => api.get('/driver/me/documents'),
@@ -178,22 +199,15 @@ export const endpoints = {
   },
 
   pushTokens: {
-    // POST /users/me/push-token — spec §2
     register: (platform: 'ios' | 'android' | 'web', token: string) =>
       api.post('/users/me/push-token', { token, platform }),
   },
 
   rides: {
-    // GET /driver/rides/available — spec §4 + §13
     available: () => api.get('/driver/rides/available'),
-    // GET /rides/:id — spec §13
     getById: (rideId: string) => api.get(`/rides/${rideId}`),
-    // PATCH /driver/rides/:id/accept — spec §4 + §13
     accept: (rideId: string) => api.patch(`/driver/rides/${rideId}/accept`),
-    // PATCH /driver/rides/:id/arrived — spec §4 + §13
     arrived: (rideId: string) => api.patch(`/driver/rides/${rideId}/arrived`),
-    // Below ride actions (start/complete/decline/rateRider) are not in the spec
-    // but kept for best-effort compatibility
     decline: (rideId: string) => api.post(`/driver/rides/${rideId}/decline`),
     start: (rideId: string) => api.patch(`/driver/rides/${rideId}/start`),
     complete: (rideId: string) => api.patch(`/driver/rides/${rideId}/complete`),
@@ -203,7 +217,6 @@ export const endpoints = {
   },
 
   trips: {
-    // GET /driver/trips — spec §4
     list: (status?: string, page?: number, limit = 20) => {
       const params: string[] = [];
       if (status) params.push(`status=${encodeURIComponent(status)}`);
@@ -212,14 +225,12 @@ export const endpoints = {
       return api.get(`/driver/trips?${params.join('&')}`);
     },
     detail: (tripId: string) => api.get(`/driver/trips/${tripId}`),
-    // Trip lifecycle — spec §4
     accept: (tripId: string) => api.patch(`/driver/trips/${tripId}/accept`),
     reject: (tripId: string) => api.patch(`/driver/trips/${tripId}/reject`),
     start: (tripId: string) => api.patch(`/driver/trips/${tripId}/start`),
     complete: (tripId: string) => api.patch(`/driver/trips/${tripId}/complete`),
     cancel: (tripId: string, reason: string) =>
       api.patch(`/driver/trips/${tripId}/cancel`, { reason }),
-    // Station lifecycle — spec §4
     stations: (tripId: string) => api.get(`/driver/trips/${tripId}/stations`),
     stationArrived: (tripId: string, stationId: string) =>
       api.patch(`/driver/trips/${tripId}/stations/${stationId}/arrived`),
@@ -228,18 +239,13 @@ export const endpoints = {
   },
 
   earnings: {
-    // GET /earnings/summary — spec §12
     summary: () => api.get('/earnings/summary'),
-    // GET /earnings/weekly — spec §12
     weekly: (weeks = 4) => api.get(`/earnings/weekly?weeks=${weeks}`),
   },
 
   wallet: {
-    // GET /driver/wallet/balance — returns { balance, totalPaid, totalPending }
     balance: () => api.get('/driver/wallet/balance'),
-    // Driver earnings history — closest equivalent to a wallet transaction list
     transactions: () => api.get('/driver/earnings/history'),
-    // Below wallet paths are not in spec but kept for UI functionality
     payout: (amount: number) => api.post('/driver/wallet/payout', { amount }),
     payoutMethods: () => api.get('/driver/wallet/payout-methods'),
     addPayoutMethod: (data: unknown) => api.post('/driver/wallet/payout-methods', data),
@@ -247,42 +253,32 @@ export const endpoints = {
   },
 
   shuttle: {
-    // GET /shuttle/lines — spec §14
     lines: () => api.get('/shuttle/lines'),
-    // GET /shuttle/assignments — spec §14
     assignments: () => api.get('/shuttle/assignments'),
-    // Below shuttle paths are not in spec but kept for best-effort
     line: (lineId: string) => api.get(`/shuttle/lines/${lineId}`),
     activate: (lineId: string) => api.post(`/shuttle/lines/${lineId}/activate`),
     complete: (lineId: string) => api.post(`/shuttle/lines/${lineId}/complete`),
     passengers: (tripId: string) => api.get(`/shuttle/trips/${tripId}/passengers`),
     boardBooking: (bookingId: string) =>
       api.post(`/shuttle/bookings/${bookingId}/board`, {}),
-    // POST /shuttle/lines/:id/book — driver books a weekly slot
     book: (lineId: string, body: { weekStart: string; weekEnd: string; departureTime: string }) =>
       api.post(`/shuttle/lines/${lineId}/book`, body),
   },
 
   notifications: {
-    // GET /notifications — spec §11
     list: () => api.get('/notifications'),
-    // PATCH /notifications/:id/read — spec §11
     markRead: (id: string) => api.patch(`/notifications/${id}/read`),
   },
 
   serviceControl: {
-    // GET /services/control — returns ServiceControl[] or { services: ServiceControl[] }
     fetch: () => api.get('/services/control'),
   },
 
   support: {
-    // POST /support/tickets — spec §16
-    // subject (required) + message (required) + type? + priority? + userId? + driverId?
     submitTicket: (data: unknown) => api.post('/support/tickets', data),
   },
 
   settings: {
-    // Not in spec — kept for best-effort
     get: () => api.get('/driver/me/settings'),
     update: (data: unknown) => api.patch('/driver/me/settings', data),
   },

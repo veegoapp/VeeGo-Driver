@@ -1,3 +1,4 @@
+import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Award, ChevronRight, LogOut, Moon, Star, Sun } from 'lucide-react-native';
@@ -92,13 +93,13 @@ export default function ProfileScreen() {
             colors={colors}
             isRTL={isRTL}
           />
-          <MenuItem icon="file-text" label={t.documents_label} sub="1 expiring soon" highlight onPress={() => router.push('/documents')} colors={colors} isRTL={isRTL} />
+          <MenuItem icon="file-text" label={t.documents_label} onPress={() => router.push('/documents')} colors={colors} isRTL={isRTL} />
           <MenuItem icon="shield" label={t.safety_toolkit} sub="Emergency, verification" onPress={() => router.push('/safety')} colors={colors} isRTL={isRTL} last />
         </GlassView>
 
         <GlassView style={[styles.menuGroup, { marginTop: 12 }]} borderRadius={20}>
           <MenuItem icon="help-circle" label={t.help_support} onPress={() => router.push('/support')} colors={colors} isRTL={isRTL} />
-          <MenuItem icon="message-square" label={t.messages_label} sub="2 unread" highlight onPress={() => router.push('/messages')} colors={colors} isRTL={isRTL} />
+          <MenuItem icon="message-square" label={t.messages_label} onPress={() => router.push('/messages')} colors={colors} isRTL={isRTL} />
           <MenuItem icon="settings" label={t.settings_label} onPress={() => router.push('/settings')} colors={colors} isRTL={isRTL} />
           <View style={[styles.menuItem, { flexDirection: R, borderTopWidth: 1, borderTopColor: colors.border }]}>
             <View style={[styles.menuIcon, { backgroundColor: colors.secondary + 'B3' }]}>
@@ -129,7 +130,7 @@ export default function ProfileScreen() {
           </GlassView>
         </Pressable>
 
-        <Text style={[styles.version, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>VeeGo Driver · v2.4.1</Text>
+        <Text style={[styles.version, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>VeeGo Driver · v{Constants.expoConfig?.version ?? '—'}</Text>
       </ScrollView>
     </View>
   );

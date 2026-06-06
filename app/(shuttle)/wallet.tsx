@@ -52,6 +52,10 @@ export default function ShuttleWalletScreen() {
     queryKey: ['earnings-summary'],
     queryFn: () => endpoints.earnings.summary(),
   });
+  const { data: payoutMethodsRaw, isLoading: methodsLoading } = useQuery({
+    queryKey: ['payout-methods'],
+    queryFn: endpoints.wallet.payoutMethods,
+  });
 
   const _balRaw = balanceRaw as WalletBalance | { balance?: number; wallet?: { balance?: number } } | undefined;
   const balanceData: WalletBalance = {
@@ -68,7 +72,14 @@ export default function ShuttleWalletScreen() {
   const weekTotal = weekEarnings.reduce((s, d) => s + parseFloat(String(d.amount)), 0);
   const todayAmount = parseFloat(String(summary?.recentEarnings?.[0]?.amount ?? 0));
 
-  const isLoading = balanceLoading || txLoading || weeklyLoading || summaryLoading;
+  type PayoutMethod = { id: string; name?: string; last4?: string; bankName?: string; type?: string; isDefault?: boolean };
+  const payoutMethods: PayoutMethod[] = Array.isArray(payoutMethodsRaw)
+    ? (payoutMethodsRaw as PayoutMethod[])
+    : ((payoutMethodsRaw as { data?: PayoutMethod[]; methods?: PayoutMethod[] })?.data
+      ?? (payoutMethodsRaw as { methods?: PayoutMethod[] })?.methods
+      ?? []);
+
+  const isLoading = balanceLoading || txLoading || weeklyLoading || summaryLoading || methodsLoading;
   const isError = balanceError || txError;
 
   const heroAnim = useRef(new Animated.Value(0)).current;
@@ -256,19 +267,36 @@ export default function ShuttleWalletScreen() {
 
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.payout_methods}</Text>
-          <Pressable onPress={() => Alert.alert('Coming soon')}><Text style={[styles.addBtn, { color: '#2d2d42', fontFamily: 'Inter_700Bold' }]}>{t.add}</Text></Pressable>
         </View>
         <View style={{ gap: 8 }}>
-          <GlassView style={styles.methodCard} borderRadius={16}>
-            <View style={[styles.methodIcon, { backgroundColor: '#1e1e2820' }]}>
-              <Briefcase size={20} color="#2d2d42" strokeWidth={2} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.methodName, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>BIAT — ****4521</Text>
-              <Text style={[styles.methodSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>{t.default_card} · 1-2 business days</Text>
-            </View>
-            <Text style={[styles.defaultBadge, { color: '#2d2d42', fontFamily: 'Inter_700Bold' }]}>{t.default_card}</Text>
-          </GlassView>
+          {payoutMethods.length === 0 ? (
+            <GlassView style={[styles.methodCard, { justifyContent: 'center' }]} borderRadius={16}>
+              <Text style={[styles.methodSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: 'center' }]}>
+                No payout methods on file
+              </Text>
+            </GlassView>
+          ) : (
+            payoutMethods.map((m) => {
+              const displayName = m.bankName ?? m.name ?? 'Bank account';
+              const last4 = m.last4 ? ` — ****${m.last4}` : '';
+              return (
+                <GlassView key={m.id} style={styles.methodCard} borderRadius={16}>
+                  <View style={[styles.methodIcon, { backgroundColor: '#1e1e2820' }]}>
+                    <Briefcase size={20} color="#2d2d42" strokeWidth={2} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.methodName, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{displayName}{last4}</Text>
+                    <Text style={[styles.methodSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>
+                      {m.isDefault ? `${t.default_card} · ` : ''}1-2 business days
+                    </Text>
+                  </View>
+                  {m.isDefault && (
+                    <Text style={[styles.defaultBadge, { color: '#2d2d42', fontFamily: 'Inter_700Bold' }]}>{t.default_card}</Text>
+                  )}
+                </GlassView>
+              );
+            })
+          )}
         </View>
 
         <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', marginTop: 24, marginBottom: 12, textAlign: TA }]}>{t.transactions_label}</Text>

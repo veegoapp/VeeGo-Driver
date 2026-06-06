@@ -1,3 +1,4 @@
+import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { ChevronRight, GitBranch, LogOut, Moon, Settings, Star, Sun } from 'lucide-react-native';
@@ -35,7 +36,7 @@ export default function ShuttleProfileScreen() {
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
   const { t, isRTL, language, setLanguage } = useI18n();
-  const { setServiceType, isDarkMode, setIsDarkMode } = useService();
+  const { isDarkMode, setIsDarkMode } = useService();
   const { logout } = useAuth();
 
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
@@ -54,19 +55,6 @@ export default function ShuttleProfileScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.profile_title}</Text>
-
-        <View style={[styles.serviceIndicator, { backgroundColor: '#1e1e2815', borderColor: '#1e1e2833', flexDirection: R }]}>
-          <GitBranch size={14} color="#2d2d42" strokeWidth={2} />
-          <Text style={[styles.serviceIndicatorText, { color: '#2d2d42', fontFamily: 'Inter_600SemiBold' }]}>
-            {t.shuttle_service}
-          </Text>
-          <Pressable
-            onPress={() => { setServiceType('CAR'); router.replace('/(tabs)'); }}
-            style={[styles.switchServiceBtn, { backgroundColor: '#1e1e2820' }]}
-          >
-            <Text style={[styles.switchServiceText, { color: '#2d2d42', fontFamily: 'Inter_700Bold' }]}>{t.drive}</Text>
-          </Pressable>
-        </View>
 
         <GlassView style={styles.profileCard} borderRadius={24}>
           <View style={styles.profileCardInner}>
@@ -90,9 +78,12 @@ export default function ShuttleProfileScreen() {
                   {t.shuttle_service} · {driver?.trips ?? '—'} {t.trips}
                 </Text>
                 <View style={[styles.statsGrid, { flexDirection: R }]}>
-                  <MiniStat label={t.rating_stat} value={driver?.rating?.toFixed(2) ?? '—'} icon={<Star size={14} color={colors.accent} fill={colors.accent} strokeWidth={2} />} colors={colors} />
-                  <MiniStat label="On-time" value="97%" colors={colors} accent="#2d2d42" />
-                  <MiniStat label={t.routes} value="12" colors={colors} />
+                  <MiniStat
+                    label={t.rating_stat}
+                    value={driver?.rating?.toFixed(2) ?? '—'}
+                    icon={<Star size={14} color={colors.accent} fill={colors.accent} strokeWidth={2} />}
+                    colors={colors}
+                  />
                 </View>
               </>
             )}
@@ -109,12 +100,12 @@ export default function ShuttleProfileScreen() {
             colors={colors}
             isRTL={isRTL}
           />
-          <MenuItem icon="file-text" label={t.documents_label} sub="All verified" onPress={() => router.push('/documents')} colors={colors} isRTL={isRTL} last />
+          <MenuItem icon="file-text" label={t.documents_label} onPress={() => router.push('/documents')} colors={colors} isRTL={isRTL} last />
         </GlassView>
 
         <GlassView style={[styles.menuGroup, { marginTop: 12 }]} borderRadius={20}>
-          <MenuItem icon="inbox" label={t.notifications} sub="3 new" highlight onPress={() => router.push('/messages')} colors={colors} isRTL={isRTL} />
-          <MenuItem icon="message-square" label={t.messages_label} sub="1 unread" highlight onPress={() => router.push('/messages')} colors={colors} isRTL={isRTL} last />
+          <MenuItem icon="inbox" label={t.notifications} onPress={() => router.push('/messages')} colors={colors} isRTL={isRTL} />
+          <MenuItem icon="message-square" label={t.messages_label} onPress={() => router.push('/messages')} colors={colors} isRTL={isRTL} last />
         </GlassView>
 
         <GlassView style={[styles.menuGroup, { marginTop: 12 }]} borderRadius={20}>
@@ -187,18 +178,18 @@ export default function ShuttleProfileScreen() {
           </GlassView>
         </Pressable>
 
-        <Text style={[styles.version, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>VeeGo Driver · Shuttle · v2.4.1</Text>
+        <Text style={[styles.version, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>VeeGo Driver · Shuttle · v{Constants.expoConfig?.version ?? '—'}</Text>
       </ScrollView>
     </View>
   );
 }
 
-function MiniStat({ label, value, icon, colors, accent }: { label: string; value: string; icon?: React.ReactNode; colors: ReturnType<typeof useColors>; accent?: string }) {
+function MiniStat({ label, value, icon, colors }: { label: string; value: string; icon?: React.ReactNode; colors: ReturnType<typeof useColors> }) {
   return (
     <View style={[styles.miniStat, { backgroundColor: colors.secondary + '99' }]}>
       <View style={styles.miniStatValue}>
         {icon}
-        <Text style={[styles.miniStatValueText, { color: accent ?? colors.foreground, fontFamily: 'Inter_700Bold' }]}>{value}</Text>
+        <Text style={[styles.miniStatValueText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{value}</Text>
       </View>
       <Text style={[styles.miniStatLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>{label}</Text>
     </View>
@@ -228,10 +219,6 @@ function MenuItem({ icon, label, sub, highlight, onPress, colors, isRTL, last }:
 const styles = StyleSheet.create({
   container: { flex: 1 },
   pageTitle: { fontSize: 24, marginBottom: 16 },
-  serviceIndicator: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 16, borderWidth: 1, marginBottom: 16 },
-  serviceIndicatorText: { flex: 1, fontSize: 13 },
-  switchServiceBtn: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
-  switchServiceText: { fontSize: 11 },
   profileCard: {},
   profileCardInner: { padding: 20, alignItems: 'center' },
   avatarWrap: { position: 'relative' },
@@ -239,7 +226,7 @@ const styles = StyleSheet.create({
   shuttleBadge: { position: 'absolute', bottom: -4, right: -4, width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', elevation: 4, shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.4, shadowRadius: 8 },
   driverName: { fontSize: 20, marginTop: 12 },
   driverMeta: { fontSize: 12, marginTop: 4 },
-  statsGrid: { flexDirection: 'row', gap: 8, marginTop: 20, width: '100%' },
+  statsGrid: { gap: 8, marginTop: 20, width: '100%' },
   miniStat: { flex: 1, borderRadius: 16, paddingVertical: 10, paddingHorizontal: 4, alignItems: 'center' },
   miniStatValue: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   miniStatValueText: { fontSize: 14 },

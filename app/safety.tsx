@@ -43,17 +43,18 @@ export default function SafetyScreen() {
 
         <View style={{ marginTop: 20, gap: 8 }}>
           {SAFETY_ITEMS.map(item => (
-            <Pressable key={item.title} onPress={() => router.push('/support')} style={({ pressed }) => [{ transform: [{ scale: pressed ? 0.98 : 1 }] }]}>
-              <GlassView style={styles.safetyItem} borderRadius={20}>
-                <View style={[styles.itemIcon, { backgroundColor: colors.primary + '26' }]}>
-                  <item.Icon size={18} color={colors.primary} strokeWidth={2} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.itemTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{item.title}</Text>
-                  <Text style={[styles.itemSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{item.sub}</Text>
-                </View>
-              </GlassView>
-            </Pressable>
+            <GlassView key={item.title} style={styles.safetyItem} borderRadius={20}>
+              <View style={[styles.itemIcon, { backgroundColor: colors.primary + '26' }]}>
+                <item.Icon size={18} color={colors.primary} strokeWidth={2} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.itemTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{item.title}</Text>
+                <Text style={[styles.itemSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{item.sub}</Text>
+              </View>
+              <View style={[styles.comingSoonBadge, { backgroundColor: colors.secondary }]}>
+                <Text style={[styles.comingSoonText, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>Coming soon</Text>
+              </View>
+            </GlassView>
           ))}
         </View>
       </ScrollView>
@@ -74,4 +75,6 @@ const styles = StyleSheet.create({
   itemIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   itemTitle: { fontSize: 14 },
   itemSub: { fontSize: 12, marginTop: 2 },
+  comingSoonBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
+  comingSoonText: { fontSize: 10, letterSpacing: 0.5 },
 });
