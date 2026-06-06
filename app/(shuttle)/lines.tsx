@@ -8,7 +8,6 @@ import {
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { MapBackdrop } from '@/components/MapBackdrop';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { type ShuttleLine, useShuttle } from '@/lib/shuttleContext';
@@ -181,8 +180,6 @@ export default function ShuttleLinesScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <MapBackdrop />
-
       <ScrollView
         contentContainerStyle={{
           paddingTop: topPad + 8,

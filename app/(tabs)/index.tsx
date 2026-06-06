@@ -17,7 +17,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MapBackdrop, type SurgeZone } from '@/components/MapBackdrop';
+import { type SurgeZone } from '@/components/MapBackdrop';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
@@ -290,7 +290,6 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <MapBackdrop surgeZones={surgeZones} />
 
       {/* Reconnecting banner */}
       <Animated.View

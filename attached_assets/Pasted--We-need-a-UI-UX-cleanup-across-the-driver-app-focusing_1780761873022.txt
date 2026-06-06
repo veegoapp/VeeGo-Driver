@@ -1,0 +1,101 @@
+
+We need a UI/UX cleanup across the driver app focusing on Home screen, Lines screen, and Dark Mode consistency.
+
+---
+
+## 1 — REMOVE CUSTOM BACKGROUNDS (HOME + LINES)
+
+Current issue:
+- Home screen uses a Map as background
+- Lines screen also uses Map or custom visual background
+
+TASK:
+
+- REMOVE any Map background used as UI background in:
+  - Home screen (app/(tabs)/index.tsx or equivalent)
+  - Lines screen (any screen showing routes/lines)
+
+- DO NOT destroy map functionality if it exists as a component
+- Only remove it as a BACKGROUND layer
+
+---
+
+## REQUIRED RESULT:
+
+Replace all custom backgrounds with:
+
+- Default app background color from theme system:
+  - light: #FFFFFF
+  - dark: #0B0B0F (or closest existing theme token)
+
+OR use system background token if available:
+  - theme.background
+
+---
+
+## 2 — STANDARDIZE DARK MODE (SIMPLIFY IT COMPLETELY)
+
+Current issue:
+Dark mode has inconsistent styling:
+- too many dark shades
+- low contrast text
+- unreadable UI components
+- mixed card/background colors
+
+---
+
+## DARK MODE RULE (IMPORTANT):
+
+Make dark mode SIMPLE AND FLAT:
+
+- Background: one single dark color only (#0B0B0F or theme.background)
+- Cards: slightly lighter dark (#16161A max)
+- Borders: subtle gray only (#2A2A2A)
+- Text:
+  - Primary: white (#FFFFFF)
+  - Secondary: #B0B0B0
+
+---
+
+## REMOVE COMPLEXITY:
+
+- Remove gradients in dark mode
+- Remove multiple background layers
+- Remove blurred overlays in dark mode
+- Remove map-based dark overlays
+
+---
+
+## 3 — UI CONSISTENCY RULE
+
+All screens must follow:
+
+Light Mode:
+- Clean white background
+- soft shadows
+
+Dark Mode:
+- flat dark background
+- minimal contrast layers
+- no visual noise
+
+---
+
+## 4 — CRITICAL RULE
+
+DO NOT affect:
+- navigation logic
+- service logic
+- API calls
+- maps functionality as a feature
+
+ONLY UI STYLING AND BACKGROUND LAYERS
+
+---
+
+## FINAL GOAL
+
+- Home screen must NOT use map as background
+- Lines screen must NOT use map as background
+- Dark mode must be simplified, readable, and consistent
+- App must look clean and production-ready in both themes
