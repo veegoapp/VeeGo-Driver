@@ -38,6 +38,12 @@ export const SOCKET_EVENTS = {
   // Server → Driver: SOS
   SOS_TRIGGERED:            "sos:triggered",
 
+  // Server → Driver: shuttle bookings
+  SHUTTLE_BOOKING_CREATED:   "shuttle:booking:created",
+  SHUTTLE_BOOKING_CANCELLED:  "shuttle:booking:cancelled",
+  SHUTTLE_RENEWAL_CONFIRMED:  "shuttle:renewal:confirmed",
+  SHUTTLE_BOOKING_REASSIGNED: "shuttle:booking:reassigned",
+
   // Server → Driver: misc
   ERROR:                    "error",
 

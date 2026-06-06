@@ -1,0 +1,19 @@
+The backend shuttle booking system has been fully redesigned. Here is the complete API report. Please update the driver app UI and logic to match — update everything including screens, context, API calls, socket listeners, and types. Do not touch any backend code.
+New socket events to add:
+ConstantEvent stringPayloadSHUTTLE_BOOKING_CREATEDshuttle:booking:created{ bookingId, routeName, departureTime, weekStart }SHUTTLE_BOOKING_CANCELLEDshuttle:booking:cancelled{ bookingId, routeName, departureTime, weekStart }SHUTTLE_RENEWAL_CONFIRMEDshuttle:renewal:confirmed{ bookingId, nextWeekBookingId }SHUTTLE_BOOKING_REASSIGNEDshuttle:booking:reassigned{ bookingId, role: "assigned" | "removed", routeName, departureTime, weekStart }
+New and updated endpoints:
+MethodPathDescriptionGET/api/shuttle/linesAll routes with timeslots + booking status for upcoming weekGET/api/shuttle/timeslots/:routeIdAll timeslots for a route + which are bookedPOST/api/shuttle/route-bookingsBook a route for a full week — body: { routeId, timeSlotId, weekStart }GET/api/shuttle/route-bookingsDriver's own bookingsGET/api/shuttle/route-bookings/:idSingle booking detailDELETE/api/shuttle/route-bookings/:idCancel own bookingPOST/api/shuttle/route-bookings/:id/confirm-renewalConfirm priority renewal within 10-hour window
+Booking rules to enforce in the UI:
+
+Driver must book a full week (Sunday to Thursday) — no single-day booking
+weekStart must always be a Sunday and at least the upcoming week
+A booked timeslot must appear as unavailable to other drivers
+
+Renewal flow in the UI:
+
+Every Wednesday the driver receives a push notification with category: "shuttle_renewal" and a bookingId + deadlineIso
+Show the driver a banner/modal telling them they have priority to renew — with a countdown to the deadline
+If they confirm → call POST /api/shuttle/route-bookings/:id/confirm-renewal
+If they miss the deadline → show them the slot is now open to others
+
+Please update all shuttle-related screens, the shuttleContext, api.ts endpoints, socket listeners, and TypeScript types to match this new system. App code only.

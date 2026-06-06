@@ -1,8 +1,10 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { AlertCircle, ArrowRight, Bell, GitBranch, MapPin, Navigation, Phone, Users, Wifi, WifiOff } from 'lucide-react-native';
+import { AlertCircle, AlertTriangle, ArrowRight, Bell, GitBranch, MapPin, Navigation, Phone, RefreshCw, Users, Wifi, WifiOff } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
   Animated,
   Linking,
   Platform,
@@ -16,7 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { endpoints } from '@/lib/api';
 import { useShuttle } from '@/lib/shuttleContext';
 
@@ -56,10 +58,39 @@ export default function ShuttleHomeScreen() {
   });
   const driverData = driverRaw as any;
 
-  const { activeLine, stops, currentStopIndex, allLines } = useShuttle();
+  const { activeLine, stops, currentStopIndex, allLines, renewalBooking, myBookings } = useShuttle();
+  const queryClient = useQueryClient();
   const currentStop = stops[currentStopIndex] ?? null;
   const nextStop = stops[currentStopIndex + 1] ?? null;
   const progress = stops.length > 0 ? currentStopIndex / stops.length : 0;
+
+  // Renewal countdown
+  const [renewalCountdown, setRenewalCountdown] = useState('');
+  useEffect(() => {
+    if (!renewalBooking?.renewalDeadline) { setRenewalCountdown(''); return; }
+    const tick = () => {
+      const ms = new Date(renewalBooking.renewalDeadline!).getTime() - Date.now();
+      if (ms <= 0) { setRenewalCountdown('Expired'); return; }
+      const h = Math.floor(ms / 3600000);
+      const m = Math.floor((ms % 3600000) / 60000);
+      const s = Math.floor((ms % 60000) / 1000);
+      setRenewalCountdown(`${h}h ${m}m ${s}s`);
+    };
+    tick();
+    const iv = setInterval(tick, 1000);
+    return () => clearInterval(iv);
+  }, [renewalBooking?.renewalDeadline]);
+
+  const renewalMutation = useMutation({
+    mutationFn: (id: string) => endpoints.shuttle.confirmRenewal(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
+      Alert.alert('✅ Renewal Confirmed', 'Your slot is reserved for next week!', [{ text: 'OK' }]);
+    },
+    onError: () => {
+      Alert.alert('Renewal Failed', 'Could not confirm renewal. Please try again.', [{ text: 'OK' }]);
+    },
+  });
 
   const { data: summaryRaw } = useQuery({
     queryKey: ['earnings-summary'],
@@ -189,6 +220,37 @@ export default function ShuttleHomeScreen() {
             </Text>
           </Pressable>
         </View>
+
+        {/* Renewal banner */}
+        {renewalBooking && renewalCountdown !== 'Expired' && (
+          <GlassView style={[styles.renewalCard, { borderColor: '#F59E0B55', borderWidth: 1 }]} borderRadius={16}>
+            <View style={[styles.renewalIconWrap, { backgroundColor: '#F59E0B20' }]}>
+              <AlertTriangle size={18} color="#D97706" strokeWidth={2} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.renewalTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
+                Renew your weekly slot
+              </Text>
+              <Text style={[styles.renewalRoute, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]} numberOfLines={1}>
+                {renewalBooking.routeName} · {renewalBooking.departureTime}
+              </Text>
+              <Text style={[styles.renewalCountdown, { color: '#D97706', fontFamily: 'Inter_700Bold' }]}>
+                ⏱ {renewalCountdown} remaining
+              </Text>
+            </View>
+            <Pressable
+              onPress={() => renewalMutation.mutate(renewalBooking.id)}
+              disabled={renewalMutation.isPending}
+              style={[styles.renewalBtn, { backgroundColor: '#F59E0B' }]}
+            >
+              {renewalMutation.isPending ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <RefreshCw size={14} color="#fff" strokeWidth={2} />
+              )}
+            </Pressable>
+          </GlassView>
+        )}
 
         <GlassView strong style={styles.statsRow} borderRadius={20}>
           <StatItem label={t.trips_stat} value={String(completedCount)} colors={colors} />
@@ -351,6 +413,12 @@ const styles = StyleSheet.create({
   onlineSub: { fontSize: 12, marginTop: 2 },
   shiftBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12 },
   shiftBtnText: { fontSize: 12 },
+  renewalCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, marginTop: 16 },
+  renewalIconWrap: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  renewalTitle: { fontSize: 13 },
+  renewalRoute: { fontSize: 11, marginTop: 2 },
+  renewalCountdown: { fontSize: 11, marginTop: 3 },
+  renewalBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   statsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 12, marginTop: 16 },
   statItem: { flex: 1, alignItems: 'center', paddingHorizontal: 4 },
   statLabel: { fontSize: 10, letterSpacing: 0.8, textTransform: 'uppercase' },

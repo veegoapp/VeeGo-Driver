@@ -1,6 +1,42 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { endpoints } from './api';
+import { useSocket } from './socketContext';
+import { SOCKET_EVENTS } from '@/constants/socketEvents';
+
+// ─── Public types ────────────────────────────────────────────────────────────
+
+export type ShuttleTimeslot = {
+  id: string | number;
+  departureTime: string;
+  availableSeats: number;
+  totalSeats: number;
+  booked: boolean;
+};
+
+export type ShuttleRoute = {
+  id: string | number;
+  name: string;
+  from: string;
+  to: string;
+  stationCount: number;
+  estimatedDuration: number;
+  basePrice: number;
+  timeslots: ShuttleTimeslot[];
+};
+
+export type ShuttleBooking = {
+  id: string;
+  routeId: string | number;
+  routeName: string;
+  timeSlotId: string | number;
+  departureTime: string;
+  weekStart: string;
+  weekEnd?: string;
+  status: string;
+  renewalDeadline?: string;
+  nextWeekBookingId?: string | null;
+};
 
 export type ShuttleStop = {
   id: string;
@@ -42,15 +78,28 @@ export type BoardingPassenger = {
   luggage: boolean;
 };
 
+// ─── Backend raw shapes ───────────────────────────────────────────────────────
+
 type BackendRoute = {
   id: number;
   name: string;
-  fromLocation: string;
-  toLocation: string;
+  fromLocation?: string;
+  from?: string;
+  toLocation?: string;
+  to?: string;
   estimatedDuration: number;
   basePrice: number;
-  isActive: boolean;
+  isActive?: boolean;
   stationCount?: number;
+  timeslots?: BackendTimeslot[];
+};
+
+type BackendTimeslot = {
+  id: number | string;
+  departureTime: string;
+  availableSeats?: number;
+  totalSeats?: number;
+  booked?: boolean;
 };
 
 type BackendTrip = {
@@ -75,6 +124,8 @@ type BackendStation = {
   direction: string;
 };
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
 function mapStatus(s: string): 'upcoming' | 'in-progress' | 'completed' {
   if (s === 'active') return 'in-progress';
   if (s === 'completed' || s === 'cancelled') return 'completed';
@@ -94,32 +145,11 @@ function formatTime(iso: string): string {
   }
 }
 
-function buildLine(route: BackendRoute, trip: BackendTrip | undefined): ShuttleLine {
-  const boarded = trip ? trip.totalSeats - trip.availableSeats : 0;
-  return {
-    id: String(route.id),
-    tripId: trip ? String(trip.id) : undefined,
-    lineNumber: `L${route.id}`,
-    name: route.name,
-    from: route.fromLocation,
-    to: route.toLocation,
-    departure: trip ? formatTime(trip.departureTime) : '—',
-    arrival: trip ? formatTime(trip.arrivalTime) : '—',
-    status: trip ? mapStatus(trip.status) : 'upcoming',
-    passengers: boarded,
-    capacity: trip?.totalSeats ?? 0,
-    assigned: !!trip,
-    stationCount: route.stationCount ?? 0,
-    estimatedDuration: route.estimatedDuration,
-    basePrice: route.basePrice,
-  };
-}
-
 function extractRoutes(raw: unknown): BackendRoute[] {
   if (!raw) return [];
   if (Array.isArray(raw)) return raw as BackendRoute[];
-  const r = raw as { data?: BackendRoute[]; lines?: BackendRoute[] };
-  return r.data ?? r.lines ?? [];
+  const r = raw as { data?: BackendRoute[]; routes?: BackendRoute[]; lines?: BackendRoute[] };
+  return r.data ?? r.routes ?? r.lines ?? [];
 }
 
 function extractTrips(raw: unknown): BackendTrip[] {
@@ -129,7 +159,61 @@ function extractTrips(raw: unknown): BackendTrip[] {
   return r.data ?? r.trips ?? [];
 }
 
+function extractBookings(raw: unknown): ShuttleBooking[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw as ShuttleBooking[];
+  const r = raw as { data?: ShuttleBooking[]; bookings?: ShuttleBooking[] };
+  return r.data ?? r.bookings ?? [];
+}
+
+function mapRoute(route: BackendRoute): ShuttleRoute {
+  return {
+    id: route.id,
+    name: route.name,
+    from: route.fromLocation ?? route.from ?? '—',
+    to: route.toLocation ?? route.to ?? '—',
+    stationCount: route.stationCount ?? 0,
+    estimatedDuration: route.estimatedDuration ?? 0,
+    basePrice: route.basePrice ?? 0,
+    timeslots: (route.timeslots ?? []).map(ts => ({
+      id: ts.id,
+      departureTime: ts.departureTime,
+      availableSeats: ts.availableSeats ?? 0,
+      totalSeats: ts.totalSeats ?? 0,
+      booked: ts.booked ?? false,
+    })),
+  };
+}
+
+function buildLine(route: BackendRoute, trip: BackendTrip | undefined): ShuttleLine {
+  const boarded = trip ? trip.totalSeats - trip.availableSeats : 0;
+  return {
+    id: String(route.id),
+    tripId: trip ? String(trip.id) : undefined,
+    lineNumber: `L${route.id}`,
+    name: route.name,
+    from: route.fromLocation ?? route.from ?? '—',
+    to: route.toLocation ?? route.to ?? '—',
+    departure: trip ? formatTime(trip.departureTime) : '—',
+    arrival: trip ? formatTime(trip.arrivalTime) : '—',
+    status: trip ? mapStatus(trip.status) : 'upcoming',
+    passengers: boarded,
+    capacity: trip?.totalSeats ?? 0,
+    assigned: !!trip,
+    stationCount: route.stationCount ?? 0,
+    estimatedDuration: route.estimatedDuration ?? 0,
+    basePrice: route.basePrice ?? 0,
+  };
+}
+
+// ─── Context type ─────────────────────────────────────────────────────────────
+
 type ShuttleContextType = {
+  // New: booking layer
+  routes: ShuttleRoute[];
+  myBookings: ShuttleBooking[];
+  renewalBooking: ShuttleBooking | null;
+  // Legacy: trip execution layer (powers boarding / trip-active screens)
   activeLine: ShuttleLine | null;
   allLines: ShuttleLine[];
   stops: ShuttleStop[];
@@ -142,6 +226,9 @@ type ShuttleContextType = {
 };
 
 const ShuttleContext = createContext<ShuttleContextType>({
+  routes: [],
+  myBookings: [],
+  renewalBooking: null,
   activeLine: null,
   allLines: [],
   stops: [],
@@ -153,17 +240,33 @@ const ShuttleContext = createContext<ShuttleContextType>({
   togglePassenger: () => {},
 });
 
+// ─── Provider ─────────────────────────────────────────────────────────────────
+
 export function ShuttleProvider({ children }: { children: React.ReactNode }) {
+  const queryClient = useQueryClient();
+  const { socket } = useSocket();
   const [currentStopIndex, setCurrentStopIndex] = useState(0);
   const [passengers, setPassengers] = useState<BoardingPassenger[]>([]);
+
+  // ── Queries ──────────────────────────────────────────────────────────────
 
   const {
     data: routesRaw,
     isLoading: routesLoading,
     error: routesError,
   } = useQuery({
-    queryKey: ['shuttle-routes'],
+    queryKey: ['shuttle-lines'],
     queryFn: () => endpoints.shuttle.lines() as Promise<unknown>,
+    refetchInterval: 60000,
+  });
+
+  const {
+    data: bookingsRaw,
+    isLoading: bookingsLoading,
+    error: bookingsError,
+  } = useQuery({
+    queryKey: ['shuttle-my-bookings'],
+    queryFn: () => endpoints.shuttle.myBookings() as Promise<unknown>,
     refetchInterval: 60000,
   });
 
@@ -177,11 +280,21 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
     refetchInterval: 30000,
   });
 
-  const routes = extractRoutes(routesRaw);
-  const driverTrips = extractTrips(tripsRaw);
+  // ── Derived data ─────────────────────────────────────────────────────────
 
-  // Map routeId → driver's most relevant trip
-  // Priority: active > nearest scheduled departure > others
+  const backendRoutes = extractRoutes(routesRaw);
+  const routes: ShuttleRoute[] = backendRoutes.map(mapRoute);
+
+  const myBookings: ShuttleBooking[] = extractBookings(bookingsRaw);
+
+  const renewalBooking: ShuttleBooking | null =
+    myBookings.find(b => {
+      if (!b.renewalDeadline) return false;
+      return new Date(b.renewalDeadline).getTime() > Date.now();
+    }) ?? null;
+
+  // Trip execution layer (unchanged logic)
+  const driverTrips = extractTrips(tripsRaw);
   const tripByRouteId = new Map<number, BackendTrip>();
   for (const trip of driverTrips) {
     const existing = tripByRouteId.get(trip.routeId);
@@ -201,12 +314,13 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const allLines: ShuttleLine[] = routes.map(route =>
+  const allLines: ShuttleLine[] = backendRoutes.map(route =>
     buildLine(route, tripByRouteId.get(route.id))
   );
 
   const activeLine = allLines.find(l => l.status === 'in-progress') ?? null;
 
+  // Active trip station / passenger loading
   const {
     data: activeLineDetailRaw,
     isLoading: stationsLoading,
@@ -235,11 +349,7 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
   }));
 
   const activeTripId = activeLine?.tripId;
-  const {
-    data: tripDetailRaw,
-    isLoading: detailLoading,
-    error: detailError,
-  } = useQuery({
+  const { data: tripDetailRaw, isLoading: detailLoading, error: detailError } = useQuery({
     queryKey: ['shuttle-active-trip', activeTripId],
     queryFn: () => endpoints.trips.detail(activeTripId!) as Promise<BackendTrip>,
     enabled: !!activeTripId,
@@ -262,6 +372,31 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
     }
   }, [tripDetailRaw]);
 
+  // ── Socket: shuttle booking events ───────────────────────────────────────
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const invalidate = () => {
+      queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['shuttle-lines'] });
+    };
+
+    socket.on(SOCKET_EVENTS.SHUTTLE_BOOKING_CREATED, invalidate);
+    socket.on(SOCKET_EVENTS.SHUTTLE_BOOKING_CANCELLED, invalidate);
+    socket.on(SOCKET_EVENTS.SHUTTLE_RENEWAL_CONFIRMED, invalidate);
+    socket.on(SOCKET_EVENTS.SHUTTLE_BOOKING_REASSIGNED, invalidate);
+
+    return () => {
+      socket.off(SOCKET_EVENTS.SHUTTLE_BOOKING_CREATED, invalidate);
+      socket.off(SOCKET_EVENTS.SHUTTLE_BOOKING_CANCELLED, invalidate);
+      socket.off(SOCKET_EVENTS.SHUTTLE_RENEWAL_CONFIRMED, invalidate);
+      socket.off(SOCKET_EVENTS.SHUTTLE_BOOKING_REASSIGNED, invalidate);
+    };
+  }, [socket, queryClient]);
+
+  // ── Actions ──────────────────────────────────────────────────────────────
+
   const nextStop = () => {
     if (currentStopIndex < stops.length - 1) {
       setCurrentStopIndex(i => i + 1);
@@ -278,13 +413,17 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
   return (
     <ShuttleContext.Provider
       value={{
+        routes,
+        myBookings,
+        renewalBooking,
         activeLine,
         allLines,
         stops,
         currentStopIndex,
         passengers,
-        loading: routesLoading || tripsLoading || stationsLoading || detailLoading,
-        error: (routesError ?? tripsError ?? stationsError ?? detailError) as Error | null,
+        loading:
+          routesLoading || bookingsLoading || tripsLoading || stationsLoading || detailLoading,
+        error: (routesError ?? bookingsError ?? tripsError ?? stationsError ?? detailError) as Error | null,
         nextStop,
         togglePassenger,
       }}

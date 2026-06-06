@@ -1,27 +1,28 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { Calendar, CheckCircle, Clock, GitBranch, MapPin, Search, Users, X } from 'lucide-react-native';
+import {
+  Calendar, CheckCircle, Clock, GitBranch, MapPin, Search,
+  Trash2, Users, X, AlertTriangle,
+} from 'lucide-react-native';
 import React, { useRef, useEffect, useState } from 'react';
 import {
-  ActivityIndicator, Alert, Animated, Dimensions, Modal, Platform, Pressable,
+  ActivityIndicator, Alert, Animated, Modal, Platform, Pressable,
   ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
-
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
-import { type ShuttleLine, useShuttle } from '@/lib/shuttleContext';
+import { type ShuttleRoute, type ShuttleTimeslot, type ShuttleBooking, useShuttle } from '@/lib/shuttleContext';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints, ApiError } from '@/lib/api';
 
 const TAB_BAR_HEIGHT = 96;
-const SCREEN_H = Dimensions.get('window').height;
 
 type WorkWeek = {
-  start: string;    // YYYY-MM-DD (Sunday)
-  end: string;      // YYYY-MM-DD (Thursday)
-  label: string;    // e.g. "Jun 1–5" or "May 31 – Jun 4"
-  subLabel: string; // e.g. "This Week" | "Next Week" | "Sun – Thu"
+  start: string;
+  end: string;
+  label: string;
+  subLabel: string;
 };
 
 type BackendStation = {
@@ -32,48 +33,49 @@ type BackendStation = {
   longitude?: number;
 };
 
-const DEPARTURE_TIMES = ['07:00', '08:00', '09:00', '10:00', '13:00', '14:00', '15:00', '16:00'];
-
 function parseStations(raw: unknown): BackendStation[] {
   if (!raw) return [];
   const r = raw as { data?: { stations?: BackendStation[] }; stations?: BackendStation[] };
   return r.data?.stations ?? r.stations ?? [];
 }
 
+function parseTimeslots(raw: unknown): ShuttleTimeslot[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw as ShuttleTimeslot[];
+  const r = raw as {
+    data?: ShuttleTimeslot[];
+    timeslots?: ShuttleTimeslot[];
+  };
+  return r.data ?? r.timeslots ?? [];
+}
+
 function generateWorkWeeks(count = 8): WorkWeek[] {
   const weeks: WorkWeek[] = [];
   const now = new Date();
   now.setHours(0, 0, 0, 0);
-  const dow = now.getDay(); // 0=Sun … 6=Sat
-
-  // Rewind to this week's Sunday
+  const dow = now.getDay();
   const thisSunday = new Date(now);
   thisSunday.setDate(now.getDate() - dow);
-
-  // If Wed(3), Thu(4), Fri(5), Sat(6): skip current week — too late to plan
+  // Wed(3)+ → skip current week
   const startW = dow >= 3 ? 1 : 0;
-
   for (let w = startW; w < count + startW; w++) {
     const sun = new Date(thisSunday);
     sun.setDate(thisSunday.getDate() + w * 7);
     const thu = new Date(sun);
     thu.setDate(sun.getDate() + 4);
-
     const start = sun.toISOString().split('T')[0];
-    const end   = thu.toISOString().split('T')[0];
-
+    const end = thu.toISOString().split('T')[0];
     const fmtMon = (d: Date) => d.toLocaleDateString('en-US', { month: 'short' });
-    const label  = thu.getMonth() === sun.getMonth()
-      ? `${fmtMon(sun)} ${sun.getDate()}–${thu.getDate()}`
-      : `${fmtMon(sun)} ${sun.getDate()} – ${fmtMon(thu)} ${thu.getDate()}`;
-
-    const idx = w - startW; // 0-based position in the shown list
+    const label =
+      thu.getMonth() === sun.getMonth()
+        ? `${fmtMon(sun)} ${sun.getDate()}–${thu.getDate()}`
+        : `${fmtMon(sun)} ${sun.getDate()} – ${fmtMon(thu)} ${thu.getDate()}`;
+    const idx = w - startW;
     const subLabel =
       idx === 0 && startW === 0 ? 'This Week' :
       idx === 0 && startW === 1 ? 'Next Week' :
       idx === 1 && startW === 0 ? 'Next Week' :
       'Sun – Thu';
-
     weeks.push({ start, end, label, subLabel });
   }
   return weeks;
@@ -89,50 +91,65 @@ export default function ShuttleLinesScreen() {
   const queryClient = useQueryClient();
 
   const [search, setSearch] = useState('');
-  const [bookingLine, setBookingLine] = useState<ShuttleLine | null>(null);
+  const [bookingRoute, setBookingRoute] = useState<ShuttleRoute | null>(null);
   const [selectedWeek, setSelectedWeek] = useState<WorkWeek | null>(null);
-  const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<ShuttleTimeslot | null>(null);
 
   const weeks = generateWorkWeeks();
 
-  const { allLines, loading: isLoading, error } = useShuttle();
+  const { routes, myBookings, loading: contextLoading, error: contextError } = useShuttle();
 
   useEffect(() => {
     Animated.timing(headerAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
   }, []);
 
-  const filteredLines = search.trim()
-    ? allLines.filter(l =>
-        l.name.toLowerCase().includes(search.toLowerCase()) ||
-        l.lineNumber.toLowerCase().includes(search.toLowerCase()) ||
-        (l.from ?? '').toLowerCase().includes(search.toLowerCase()) ||
-        (l.to ?? '').toLowerCase().includes(search.toLowerCase())
+  const filteredRoutes = search.trim()
+    ? routes.filter(r =>
+        r.name.toLowerCase().includes(search.toLowerCase()) ||
+        (r.from ?? '').toLowerCase().includes(search.toLowerCase()) ||
+        (r.to ?? '').toLowerCase().includes(search.toLowerCase())
       )
-    : allLines;
+    : routes;
 
+  // Fetch fresh timeslots when user opens booking sheet for a route
+  const { data: timeslotsRaw, isLoading: timeslotsLoading } = useQuery({
+    queryKey: ['shuttle-timeslots', bookingRoute?.id],
+    queryFn: () => endpoints.shuttle.timeslots(bookingRoute!.id),
+    enabled: !!bookingRoute,
+    staleTime: 30000,
+  });
+
+  // Also fetch stations for the selected route (for the info panel in sheet)
   const { data: lineDetailRaw, isLoading: stationsLoading } = useQuery({
-    queryKey: ['shuttle-line-detail', bookingLine?.id],
-    queryFn: () => endpoints.shuttle.line(bookingLine!.id),
-    enabled: !!bookingLine,
+    queryKey: ['shuttle-line-detail', bookingRoute?.id],
+    queryFn: () => endpoints.shuttle.line(String(bookingRoute!.id)),
+    enabled: !!bookingRoute,
     staleTime: 5 * 60 * 1000,
   });
 
+  const timeslots: ShuttleTimeslot[] = timeslotsRaw
+    ? parseTimeslots(timeslotsRaw)
+    : (bookingRoute?.timeslots ?? []);
   const stations = parseStations(lineDetailRaw);
 
+  // ── Mutations ───────────────────────────────────────────────────────────────
+
   const bookMutation = useMutation({
-    mutationFn: ({
-      lineId, weekStart, weekEnd, departureTime,
-    }: { lineId: string; weekStart: string; weekEnd: string; departureTime: string }) =>
-      endpoints.shuttle.book(lineId, { weekStart, weekEnd, departureTime }),
+    mutationFn: ({ routeId, timeSlotId, weekStart }: {
+      routeId: string | number;
+      timeSlotId: string | number;
+      weekStart: string;
+    }) => endpoints.shuttle.createBooking({ routeId, timeSlotId, weekStart }),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['shuttle-lines'] });
-      queryClient.invalidateQueries({ queryKey: ['trips'] });
-      setBookingLine(null);
+      queryClient.invalidateQueries({ queryKey: ['shuttle-timeslots', bookingRoute?.id] });
+      setBookingRoute(null);
       setSelectedWeek(null);
-      setSelectedTime(null);
+      setSelectedSlot(null);
       Alert.alert(
         '✅ Booked!',
-        'Your weekly slot is confirmed. This trip will now appear in your upcoming schedule and other drivers will see it as reserved.',
+        'Your weekly slot is confirmed. This trip will now appear in your schedule.',
         [{ text: 'OK' }]
       );
     },
@@ -140,7 +157,13 @@ export default function ShuttleLinesScreen() {
       if (err instanceof ApiError && err.status === 404) {
         Alert.alert(
           'Not Available Yet',
-          'The weekly booking feature is not yet active on the server. Contact your administrator to enable it.',
+          'The weekly booking feature is not yet active on the server.',
+          [{ text: 'OK' }]
+        );
+      } else if (err instanceof ApiError && err.status === 409) {
+        Alert.alert(
+          'Slot Taken',
+          'This time slot has just been booked by another driver. Please choose a different time.',
           [{ text: 'OK' }]
         );
       } else {
@@ -149,18 +172,42 @@ export default function ShuttleLinesScreen() {
     },
   });
 
+  const cancelMutation = useMutation({
+    mutationFn: (id: string) => endpoints.shuttle.cancelBooking(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['shuttle-lines'] });
+    },
+    onError: () => {
+      Alert.alert('Cancel Failed', 'Could not cancel this booking. Please try again.', [{ text: 'OK' }]);
+    },
+  });
+
+  const renewalMutation = useMutation({
+    mutationFn: (id: string) => endpoints.shuttle.confirmRenewal(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
+      Alert.alert('✅ Renewal Confirmed', 'Your slot is reserved for next week!', [{ text: 'OK' }]);
+    },
+    onError: () => {
+      Alert.alert('Renewal Failed', 'Could not confirm renewal. Please try again.', [{ text: 'OK' }]);
+    },
+  });
+
+  // ── Handlers ────────────────────────────────────────────────────────────────
+
   const handleBook = () => {
-    if (!bookingLine || !selectedWeek || !selectedTime) return;
+    if (!bookingRoute || !selectedWeek || !selectedSlot) return;
     const lines = [
-      `Line ${bookingLine.lineNumber}: ${bookingLine.name}`,
-      `Route: ${bookingLine.from} → ${bookingLine.to}`,
+      `Route: ${bookingRoute.name}`,
+      `Direction: ${bookingRoute.from} → ${bookingRoute.to}`,
       `Week: ${selectedWeek.label}  (Sun – Thu)`,
-      `Departure: ${selectedTime}`,
-      bookingLine.stationCount ? `Stations: ${bookingLine.stationCount} stops` : '',
+      `Departure: ${selectedSlot.departureTime}`,
+      bookingRoute.stationCount ? `Stations: ${bookingRoute.stationCount} stops` : '',
     ].filter(Boolean);
     Alert.alert(
       'Confirm Booking',
-      lines.join('\n') + '\n\nOther drivers will see this week and time as reserved.',
+      lines.join('\n') + '\n\nOther drivers will see this slot as reserved.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -168,15 +215,46 @@ export default function ShuttleLinesScreen() {
           style: 'default',
           onPress: () =>
             bookMutation.mutate({
-              lineId: bookingLine.id,
+              routeId: bookingRoute.id,
+              timeSlotId: selectedSlot.id,
               weekStart: selectedWeek.start,
-              weekEnd: selectedWeek.end,
-              departureTime: selectedTime,
             }),
         },
       ]
     );
   };
+
+  const handleCancel = (booking: ShuttleBooking) => {
+    Alert.alert(
+      'Cancel Booking',
+      `Cancel your booking for ${booking.routeName} (${booking.departureTime}, week of ${booking.weekStart})?`,
+      [
+        { text: 'Keep it', style: 'cancel' },
+        {
+          text: 'Cancel Booking',
+          style: 'destructive',
+          onPress: () => cancelMutation.mutate(booking.id),
+        },
+      ]
+    );
+  };
+
+  const handleRenew = (booking: ShuttleBooking) => {
+    Alert.alert(
+      'Confirm Renewal',
+      `Renew your slot for ${booking.routeName} (${booking.departureTime}) for next week?`,
+      [
+        { text: 'Not now', style: 'cancel' },
+        {
+          text: 'Confirm Renewal',
+          style: 'default',
+          onPress: () => renewalMutation.mutate(booking.id),
+        },
+      ]
+    );
+  };
+
+  // ── Render ───────────────────────────────────────────────────────────────────
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -197,7 +275,7 @@ export default function ShuttleLinesScreen() {
             {t.shuttle_routes}
           </Text>
           <Text style={[styles.pageSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>
-            Choose a line and pick your schedule
+            Choose a route and pick your weekly schedule
           </Text>
         </Animated.View>
 
@@ -206,7 +284,7 @@ export default function ShuttleLinesScreen() {
           <Search size={16} color={colors.mutedForeground} strokeWidth={2} />
           <TextInput
             style={[styles.searchInput, { color: colors.foreground, fontFamily: 'Inter_400Regular' }]}
-            placeholder="Search by name, number, or route…"
+            placeholder="Search by name or route…"
             placeholderTextColor={colors.mutedForeground + '99'}
             value={search}
             onChangeText={setSearch}
@@ -219,47 +297,69 @@ export default function ShuttleLinesScreen() {
           )}
         </View>
 
+        {/* My Bookings */}
+        {myBookings.length > 0 && (
+          <>
+            <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA, marginTop: 20 }]}>
+              My Bookings
+            </Text>
+            <View style={{ gap: 8 }}>
+              {myBookings.map(booking => (
+                <BookingCard
+                  key={booking.id}
+                  booking={booking}
+                  onCancel={() => handleCancel(booking)}
+                  onRenew={() => handleRenew(booking)}
+                  renewalPending={renewalMutation.isPending && (renewalMutation.variables as string) === booking.id}
+                  cancelPending={cancelMutation.isPending && (cancelMutation.variables as string) === booking.id}
+                  colors={colors}
+                />
+              ))}
+            </View>
+          </>
+        )}
+
         {/* Stats chips */}
-        <View style={styles.chips}>
+        <View style={[styles.chips, { marginTop: myBookings.length > 0 ? 20 : 16 }]}>
           <View style={[styles.chip, { backgroundColor: '#1e1e2820', borderColor: '#1e1e2833' }]}>
             <GitBranch size={12} color="#2d2d42" strokeWidth={2} />
             <Text style={[styles.chipText, { color: '#2d2d42', fontFamily: 'Inter_700Bold' }]}>
-              {allLines.length} lines
+              {routes.length} routes
             </Text>
           </View>
           <View style={[styles.chip, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
             <Users size={12} color={colors.mutedForeground} strokeWidth={2} />
             <Text style={[styles.chipText, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>
-              {allLines.filter(l => l.assigned).length} booked
+              {myBookings.length} booked
             </Text>
           </View>
           <View style={[styles.chip, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
             <CheckCircle size={12} color={colors.primary} strokeWidth={2} />
             <Text style={[styles.chipText, { color: colors.primary, fontFamily: 'Inter_700Bold' }]}>
-              {allLines.filter(l => l.status === 'completed').length} done
+              {myBookings.filter(b => b.status === 'completed').length} done
             </Text>
           </View>
         </View>
 
-        {isLoading && (
+        {contextLoading && (
           <View style={{ alignItems: 'center', marginTop: 48 }}>
             <ActivityIndicator color={colors.primary} />
           </View>
         )}
 
-        {!!error && !isLoading && (
+        {!!contextError && !contextLoading && (
           <View style={{ alignItems: 'center', marginTop: 48 }}>
             <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 14 }}>
-              Failed to load lines. Pull down to retry.
+              Failed to load routes. Pull down to retry.
             </Text>
           </View>
         )}
 
-        {!isLoading && !error && filteredLines.length === 0 && (
+        {!contextLoading && !contextError && filteredRoutes.length === 0 && (
           <View style={{ alignItems: 'center', marginTop: 60, gap: 8 }}>
             <Text style={{ fontSize: 32 }}>🔍</Text>
             <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: 16 }}>
-              No lines found
+              No routes found
             </Text>
             <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13 }}>
               Try a different search term
@@ -267,21 +367,22 @@ export default function ShuttleLinesScreen() {
           </View>
         )}
 
-        {!isLoading && !error && filteredLines.length > 0 && (
+        {!contextLoading && !contextError && filteredRoutes.length > 0 && (
           <>
             <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
-              Available Lines
+              Available Routes
             </Text>
             <View style={{ gap: 10 }}>
-              {filteredLines.map((line, idx) => (
-                <LineCard
-                  key={line.id}
-                  line={line}
+              {filteredRoutes.map((route, idx) => (
+                <RouteCard
+                  key={String(route.id)}
+                  route={route}
                   index={idx}
+                  myBookings={myBookings}
                   onBook={() => {
                     setSelectedWeek(null);
-                    setSelectedTime(null);
-                    setBookingLine(line);
+                    setSelectedSlot(null);
+                    setBookingRoute(route);
                   }}
                   colors={colors}
                 />
@@ -293,27 +394,27 @@ export default function ShuttleLinesScreen() {
 
       {/* Booking Bottom Sheet */}
       <Modal
-        visible={!!bookingLine}
+        visible={!!bookingRoute}
         transparent
         animationType="slide"
-        onRequestClose={() => setBookingLine(null)}
+        onRequestClose={() => setBookingRoute(null)}
       >
         <View style={styles.sheetOverlay}>
-          <Pressable style={{ flex: 1 }} onPress={() => setBookingLine(null)} />
+          <Pressable style={{ flex: 1 }} onPress={() => setBookingRoute(null)} />
           <View style={[styles.sheet, { backgroundColor: colors.background, paddingBottom: insets.bottom + 20 }]}>
             <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
 
             <View style={styles.sheetHeader}>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.sheetTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]} numberOfLines={1}>
-                  {bookingLine?.name}
+                  {bookingRoute?.name}
                 </Text>
                 <Text style={[styles.sheetSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-                  {bookingLine?.from} → {bookingLine?.to}
+                  {bookingRoute?.from} → {bookingRoute?.to}
                 </Text>
               </View>
               <Pressable
-                onPress={() => setBookingLine(null)}
+                onPress={() => setBookingRoute(null)}
                 style={[styles.closeBtn, { backgroundColor: colors.secondary }]}
                 hitSlop={8}
               >
@@ -374,7 +475,7 @@ export default function ShuttleLinesScreen() {
                   return (
                     <Pressable
                       key={week.start}
-                      onPress={() => { setSelectedWeek(week); setSelectedTime(null); }}
+                      onPress={() => { setSelectedWeek(week); setSelectedSlot(null); }}
                       style={[styles.weekChip, {
                         backgroundColor: active ? '#1e1e28' : colors.secondary,
                         borderColor: active ? '#1e1e28' : colors.border,
@@ -400,46 +501,68 @@ export default function ShuttleLinesScreen() {
                 })}
               </ScrollView>
 
-              {/* Departure time */}
+              {/* Timeslot picker */}
               {selectedWeek && (
                 <>
                   <Text style={[styles.sheetSection, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
                     Departure Time
                   </Text>
-                  <View style={styles.timesGrid}>
-                    {DEPARTURE_TIMES.map(time => {
-                      const picked = selectedTime === time;
-                      return (
-                        <Pressable
-                          key={time}
-                          onPress={() => setSelectedTime(time)}
-                          style={[styles.timeChip, {
-                            backgroundColor: picked ? '#1e1e28' : 'transparent',
-                            borderColor: picked ? '#1e1e28' : '#1e1e2833',
-                          }]}
-                        >
-                          <Clock size={13} color={picked ? '#fff' : colors.foreground} strokeWidth={2} />
-                          <Text style={[styles.timeChipText, {
-                            color: picked ? '#fff' : colors.foreground,
-                            fontFamily: 'Inter_600SemiBold',
-                          }]}>
-                            {time}
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
+                  {timeslotsLoading ? (
+                    <View style={{ alignItems: 'center', paddingVertical: 16 }}>
+                      <ActivityIndicator size="small" color={colors.primary} />
+                    </View>
+                  ) : timeslots.length === 0 ? (
+                    <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13, paddingBottom: 12 }}>
+                      No time slots available for this route
+                    </Text>
+                  ) : (
+                    <View style={styles.timesGrid}>
+                      {timeslots.map(slot => {
+                        const isBooked = slot.booked;
+                        const isPicked = selectedSlot?.id === slot.id;
+                        return (
+                          <Pressable
+                            key={String(slot.id)}
+                            onPress={() => !isBooked && setSelectedSlot(slot)}
+                            disabled={isBooked}
+                            style={[styles.timeChip, {
+                              backgroundColor: isPicked ? '#1e1e28' : isBooked ? colors.secondary : 'transparent',
+                              borderColor: isPicked ? '#1e1e28' : isBooked ? colors.border : '#1e1e2833',
+                              opacity: isBooked ? 0.45 : 1,
+                            }]}
+                          >
+                            <Clock
+                              size={13}
+                              color={isPicked ? '#fff' : isBooked ? colors.mutedForeground : colors.foreground}
+                              strokeWidth={2}
+                            />
+                            <Text style={[styles.timeChipText, {
+                              color: isPicked ? '#fff' : isBooked ? colors.mutedForeground : colors.foreground,
+                              fontFamily: 'Inter_600SemiBold',
+                            }]}>
+                              {slot.departureTime}
+                            </Text>
+                            {isBooked && (
+                              <Text style={[styles.timeChipTaken, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
+                                Taken
+                              </Text>
+                            )}
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  )}
                 </>
               )}
 
               <View style={{ height: 16 }} />
             </ScrollView>
 
-            {/* Book button */}
+            {/* Confirm button */}
             <Pressable
               onPress={handleBook}
-              disabled={!selectedWeek || !selectedTime || bookMutation.isPending}
-              style={[styles.bookBtn, { opacity: !selectedWeek || !selectedTime || bookMutation.isPending ? 0.45 : 1 }]}
+              disabled={!selectedWeek || !selectedSlot || bookMutation.isPending}
+              style={[styles.bookBtn, { opacity: !selectedWeek || !selectedSlot || bookMutation.isPending ? 0.45 : 1 }]}
             >
               <LinearGradient
                 colors={['#2d2d42', '#1e1e28']}
@@ -451,8 +574,8 @@ export default function ShuttleLinesScreen() {
                   <ActivityIndicator color="#fff" size="small" />
                 ) : (
                   <Text style={[styles.bookBtnText, { fontFamily: 'Inter_700Bold' }]}>
-                    {selectedWeek && selectedTime
-                      ? `Confirm — ${selectedWeek.label}  ·  ${selectedTime}`
+                    {selectedWeek && selectedSlot
+                      ? `Confirm — ${selectedWeek.label}  ·  ${selectedSlot.departureTime}`
                       : !selectedWeek
                       ? 'Pick a work week first'
                       : 'Pick a departure time'}
@@ -467,14 +590,115 @@ export default function ShuttleLinesScreen() {
   );
 }
 
-function LineCard({
-  line,
+// ─── Booking Card ─────────────────────────────────────────────────────────────
+
+function BookingCard({
+  booking,
+  onCancel,
+  onRenew,
+  renewalPending,
+  cancelPending,
+  colors,
+}: {
+  booking: ShuttleBooking;
+  onCancel: () => void;
+  onRenew: () => void;
+  renewalPending: boolean;
+  cancelPending: boolean;
+  colors: ReturnType<typeof useColors>;
+}) {
+  const hasRenewal = !!booking.renewalDeadline && new Date(booking.renewalDeadline).getTime() > Date.now();
+  const isActive = booking.status === 'active' || booking.status === 'confirmed';
+  const isCompleted = booking.status === 'completed' || booking.status === 'cancelled';
+
+  const statusConfig = isCompleted
+    ? { text: booking.status === 'cancelled' ? 'Cancelled' : 'Done', bg: colors.secondary, color: colors.mutedForeground }
+    : isActive
+    ? { text: 'Active', bg: '#22c55e20', color: '#16a34a' }
+    : { text: 'Upcoming', bg: '#3D52D520', color: '#3D52D5' };
+
+  return (
+    <GlassView style={styles.bookingCard} borderRadius={18}>
+      {hasRenewal && (
+        <View style={[styles.renewalBanner, { backgroundColor: '#F59E0B20', borderColor: '#F59E0B33' }]}>
+          <AlertTriangle size={12} color="#D97706" strokeWidth={2} />
+          <Text style={[styles.renewalBannerText, { color: '#D97706', fontFamily: 'Inter_600SemiBold' }]}>
+            Renewal available — deadline {new Date(booking.renewalDeadline!).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+          </Text>
+        </View>
+      )}
+      <View style={styles.bookingCardBody}>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <View style={styles.bookingCardRow}>
+            <Text style={[styles.bookingRouteName, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]} numberOfLines={1}>
+              {booking.routeName}
+            </Text>
+            <View style={[styles.statusBadge, { backgroundColor: statusConfig.bg }]}>
+              <Text style={[styles.statusText, { color: statusConfig.color, fontFamily: 'Inter_700Bold' }]}>
+                {statusConfig.text}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.bookingMeta}>
+            <View style={styles.metaItem}>
+              <Clock size={11} color={colors.mutedForeground} strokeWidth={2} />
+              <Text style={[styles.metaText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
+                {booking.departureTime}
+              </Text>
+            </View>
+            <View style={styles.metaItem}>
+              <Calendar size={11} color={colors.mutedForeground} strokeWidth={2} />
+              <Text style={[styles.metaText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
+                Week of {booking.weekStart}
+              </Text>
+            </View>
+          </View>
+        </View>
+        <View style={styles.bookingActions}>
+          {hasRenewal && (
+            <Pressable
+              onPress={onRenew}
+              disabled={renewalPending}
+              style={[styles.renewBtn, { backgroundColor: '#F59E0B20', borderColor: '#F59E0B44' }]}
+            >
+              {renewalPending ? (
+                <ActivityIndicator size="small" color="#D97706" />
+              ) : (
+                <Text style={[styles.renewBtnText, { color: '#D97706', fontFamily: 'Inter_700Bold' }]}>Renew</Text>
+              )}
+            </Pressable>
+          )}
+          {!isCompleted && (
+            <Pressable
+              onPress={onCancel}
+              disabled={cancelPending}
+              style={[styles.cancelBtn, { backgroundColor: colors.secondary }]}
+            >
+              {cancelPending ? (
+                <ActivityIndicator size="small" color={colors.destructive} />
+              ) : (
+                <Trash2 size={14} color={colors.destructive} strokeWidth={2} />
+              )}
+            </Pressable>
+          )}
+        </View>
+      </View>
+    </GlassView>
+  );
+}
+
+// ─── Route Card ───────────────────────────────────────────────────────────────
+
+function RouteCard({
+  route,
   index,
+  myBookings,
   onBook,
   colors,
 }: {
-  line: ShuttleLine;
+  route: ShuttleRoute;
   index: number;
+  myBookings: ShuttleBooking[];
   onBook: () => void;
   colors: ReturnType<typeof useColors>;
 }) {
@@ -490,19 +714,21 @@ function LineCard({
     }).start();
   }, []);
 
-  const isActive = line.status === 'in-progress';
-  const isCompleted = line.status === 'completed';
-  const isYours = line.assigned;
+  const isBooked = myBookings.some(b =>
+    String(b.routeId) === String(route.id) &&
+    b.status !== 'cancelled' &&
+    b.status !== 'completed'
+  );
+  const availableSlots = route.timeslots.filter(ts => !ts.booked).length;
+  const totalSlots = route.timeslots.length;
 
-  const statusConfig = isActive
-    ? { text: 'Active', bg: '#1e1e2820', color: '#2d2d42' }
-    : isCompleted
-    ? { text: 'Done', bg: '#f4f4fb', color: '#9e9ea8' }
-    : isYours
+  const statusConfig = isBooked
     ? { text: 'Yours', bg: '#22c55e20', color: '#16a34a' }
+    : availableSlots === 0 && totalSlots > 0
+    ? { text: 'Full', bg: colors.secondary, color: colors.mutedForeground }
     : { text: 'Available', bg: '#3D52D520', color: '#3D52D5' };
 
-  const canBook = !isCompleted && !isActive;
+  const canBook = !isBooked && (availableSlots > 0 || totalSlots === 0);
 
   return (
     <Animated.View style={{
@@ -515,25 +741,20 @@ function LineCard({
       >
         <GlassView style={styles.lineCard} borderRadius={20}>
           <View style={styles.lineCardHeader}>
-            <View style={[styles.lineNumberBadge, {
-              backgroundColor: isActive ? '#1e1e2820' : colors.secondary,
-            }]}>
+            <View style={[styles.lineNumberBadge, { backgroundColor: isBooked ? '#22c55e20' : colors.secondary }]}>
               <Text style={[styles.lineNumberText, {
-                color: isActive ? '#2d2d42' : colors.mutedForeground,
+                color: isBooked ? '#16a34a' : colors.mutedForeground,
                 fontFamily: 'Inter_700Bold',
               }]}>
-                {line.lineNumber}
+                R{String(route.id).padStart(2, '0')}
               </Text>
             </View>
             <View style={{ flex: 1 }}>
-              <Text
-                style={[styles.lineName, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}
-                numberOfLines={1}
-              >
-                {line.name}
+              <Text style={[styles.lineName, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]} numberOfLines={1}>
+                {route.name}
               </Text>
               <Text style={[styles.lineRoute, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-                {line.from} → {line.to}
+                {route.from} → {route.to}
               </Text>
             </View>
             <View style={[styles.statusBadge, { backgroundColor: statusConfig.bg }]}>
@@ -547,15 +768,17 @@ function LineCard({
             <View style={styles.lineStat}>
               <MapPin size={12} color={colors.mutedForeground} strokeWidth={2} />
               <Text style={[styles.lineStatText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-                {line.stationCount} stops
+                {route.stationCount} stops
               </Text>
             </View>
-            <View style={styles.lineStat}>
-              <Clock size={12} color={colors.mutedForeground} strokeWidth={2} />
-              <Text style={[styles.lineStatText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-                {line.departure} — {line.arrival}
-              </Text>
-            </View>
+            {totalSlots > 0 && (
+              <View style={styles.lineStat}>
+                <Clock size={12} color={colors.mutedForeground} strokeWidth={2} />
+                <Text style={[styles.lineStatText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
+                  {availableSlots}/{totalSlots} slots free
+                </Text>
+              </View>
+            )}
             {canBook && (
               <View style={[styles.lineStat, { marginLeft: 'auto' as any }]}>
                 <Text style={[styles.lineStatText, { color: '#3D52D5', fontFamily: 'Inter_600SemiBold' }]}>
@@ -569,6 +792,8 @@ function LineCard({
     </Animated.View>
   );
 }
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
@@ -585,101 +810,117 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   searchInput: { flex: 1, fontSize: 14, padding: 0, margin: 0 },
-  chips: { flexDirection: 'row', gap: 8, marginTop: 16 },
+  sectionTitle: { fontSize: 14, marginTop: 16, marginBottom: 10 },
+  chips: { flexDirection: 'row', gap: 8 },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 20,
     borderWidth: 1,
   },
-  chipText: { fontSize: 11 },
-  sectionTitle: { fontSize: 13, letterSpacing: 0.5, marginBottom: 10, marginTop: 20 },
-  lineCard: { padding: 16 },
-  lineCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  lineNumberBadge: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  lineNumberText: { fontSize: 12, letterSpacing: 1 },
-  lineName: { fontSize: 14 },
-  lineRoute: { fontSize: 12, marginTop: 2 },
-  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
-  statusText: { fontSize: 10, letterSpacing: 0.8 },
-  lineStats: { flexDirection: 'row', gap: 16, marginTop: 12, alignItems: 'center' },
-  lineStat: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  lineStatText: { fontSize: 11 },
-  // Bottom sheet
-  sheetOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' },
-  sheet: {
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    height: SCREEN_H * 0.84,
-  },
-  sheetHandle: { width: 36, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
-  sheetHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 },
-  sheetTitle: { fontSize: 18 },
-  sheetSub: { fontSize: 13, marginTop: 3 },
-  closeBtn: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  sheetSection: {
-    fontSize: 11,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-    marginTop: 20,
-    marginBottom: 12,
-  },
-  stationRow: { flexDirection: 'row', gap: 12 },
-  stationDotCol: { alignItems: 'center', width: 16 },
-  stationDot: { width: 12, height: 12, borderRadius: 6, borderWidth: 2 },
-  stationConnector: { width: 1, flex: 1, marginVertical: 2, minHeight: 20 },
-  stationInfo: { flex: 1, paddingBottom: 16 },
-  stationName: { fontSize: 13 },
-  stationTime: { fontSize: 11, marginTop: 2 },
-  dateChip: {
+  chipText: { fontSize: 12 },
+  // Booking card
+  bookingCard: { padding: 14 },
+  renewalBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
     borderWidth: 1,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
+    marginBottom: 10,
   },
-  dateChipText: { fontSize: 13 },
+  renewalBannerText: { fontSize: 11, flex: 1 },
+  bookingCardBody: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  bookingCardRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+  bookingRouteName: { fontSize: 14, flex: 1 },
+  bookingMeta: { flexDirection: 'row', gap: 12 },
+  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  metaText: { fontSize: 11 },
+  bookingActions: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  renewBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+    minWidth: 52,
+    alignItems: 'center',
+  },
+  renewBtnText: { fontSize: 12 },
+  cancelBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Route card
+  lineCard: { padding: 16 },
+  lineCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  lineNumberBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+  lineNumberText: { fontSize: 12, letterSpacing: 1 },
+  lineName: { fontSize: 14 },
+  lineRoute: { fontSize: 12, marginTop: 2 },
+  statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  statusText: { fontSize: 11 },
+  lineStats: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 12 },
+  lineStat: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  lineStatText: { fontSize: 12 },
+  // Bottom sheet
+  sheetOverlay: { flex: 1, backgroundColor: '#00000060', justifyContent: 'flex-end' },
+  sheet: {
+    maxHeight: '80%',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingTop: 12,
+    paddingHorizontal: 20,
+    overflow: 'hidden',
+  },
+  sheetHandle: { width: 36, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
+  sheetHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 16 },
+  sheetTitle: { fontSize: 18 },
+  sheetSub: { fontSize: 13, marginTop: 2 },
+  closeBtn: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  sheetSection: { fontSize: 12, letterSpacing: 1, textTransform: 'uppercase', marginTop: 20, marginBottom: 12 },
+  // Stations
+  stationRow: { flexDirection: 'row', gap: 12, marginBottom: 4 },
+  stationDotCol: { alignItems: 'center', width: 16 },
+  stationDot: { width: 14, height: 14, borderRadius: 7, borderWidth: 1, zIndex: 1 },
+  stationConnector: { flex: 1, width: 2, marginVertical: 2, minHeight: 20 },
+  stationInfo: { flex: 1, paddingBottom: 16 },
+  stationName: { fontSize: 13 },
+  stationTime: { fontSize: 11, marginTop: 2 },
+  // Week chip
   weekChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 14,
     borderWidth: 1,
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 11,
-    minWidth: 120,
   },
-  weekChipLabel: { fontSize: 14 },
-  weekChipSub: { fontSize: 11, marginTop: 1 },
-  timesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  weekChipLabel: { fontSize: 13 },
+  weekChipSub: { fontSize: 11, marginTop: 2 },
+  // Timeslot
+  timesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   timeChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    borderWidth: 1.5,
-    borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
   },
-  timeChipText: { fontSize: 14 },
-  timeChipBooked: { fontSize: 9, marginLeft: 2 },
-  bookBtn: {
-    marginTop: 16,
-    borderRadius: 16,
-    overflow: 'hidden',
-    elevation: 6,
-    shadowColor: '#1e1e28',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-  },
-  bookBtnGrad: { height: 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  bookBtnText: { fontSize: 16, color: '#fff' },
+  timeChipText: { fontSize: 13 },
+  timeChipTaken: { fontSize: 10 },
+  // Book button
+  bookBtn: { marginTop: 12, borderRadius: 16, overflow: 'hidden' },
+  bookBtnGrad: { height: 52, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
+  bookBtnText: { fontSize: 14, color: '#fff' },
 });

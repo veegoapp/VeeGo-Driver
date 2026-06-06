@@ -250,16 +250,22 @@ export const endpoints = {
   },
 
   shuttle: {
+    // Routes
     lines: () => api.get('/shuttle/lines'),
-    assignments: () => api.get('/shuttle/assignments'),
     line: (lineId: string) => api.get(`/shuttle/lines/${lineId}`),
-    activate: (lineId: string) => api.post(`/shuttle/lines/${lineId}/activate`),
+    timeslots: (routeId: string | number) => api.get(`/shuttle/timeslots/${routeId}`),
+    // Route bookings (new system)
+    myBookings: () => api.get('/shuttle/route-bookings'),
+    bookingDetail: (id: string) => api.get(`/shuttle/route-bookings/${id}`),
+    createBooking: (data: { routeId: string | number; timeSlotId: string | number; weekStart: string }) =>
+      api.post('/shuttle/route-bookings', data),
+    cancelBooking: (id: string) => api.del(`/shuttle/route-bookings/${id}`),
+    confirmRenewal: (id: string) => api.post(`/shuttle/route-bookings/${id}/confirm-renewal`),
+    // Active trip management (kept for trip-active / boarding screens)
     complete: (lineId: string) => api.post(`/shuttle/lines/${lineId}/complete`),
     passengers: (tripId: string) => api.get(`/shuttle/trips/${tripId}/passengers`),
     boardBooking: (bookingId: string) =>
       api.post(`/shuttle/bookings/${bookingId}/board`, {}),
-    book: (lineId: string, body: { weekStart: string; weekEnd: string; departureTime: string }) =>
-      api.post(`/shuttle/lines/${lineId}/book`, body),
   },
 
   notifications: {
