@@ -236,6 +236,7 @@ type ShuttleContextType = {
   currentStopIndex: number;
   passengers: BoardingPassenger[];
   loading: boolean;
+  listLoading: boolean;
   error: Error | null;
   refetch: () => void;
   nextStop: () => void;
@@ -255,6 +256,7 @@ const ShuttleContext = createContext<ShuttleContextType>({
   currentStopIndex: 0,
   passengers: [],
   loading: false,
+  listLoading: false,
   error: null,
   refetch: () => {},
   nextStop: () => {},
@@ -452,6 +454,7 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
         passengers,
         loading:
           routesLoading || bookingsLoading || tripsLoading || stationsLoading || detailLoading,
+        listLoading: routesLoading || bookingsLoading,
         error: (routesError ?? bookingsError) as Error | null,
         refetch,
         nextStop,

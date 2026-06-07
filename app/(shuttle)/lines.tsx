@@ -97,7 +97,7 @@ export default function ShuttleLinesScreen() {
 
   const weeks = generateWorkWeeks();
 
-  const { routes, myBookings, loading: contextLoading, error: contextError, refetch } = useShuttle();
+  const { routes, myBookings, listLoading: contextLoading, error: contextError, refetch } = useShuttle();
   const [refreshing, setRefreshing] = useState(false);
 
   const handleRefresh = async () => {
