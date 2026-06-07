@@ -258,19 +258,28 @@ export const endpoints = {
   },
 
   shuttle: {
-    // Routes
+    // ── Routes ──────────────────────────────────────────────────────────────
     lines: () => api.get('/shuttle/lines'),
     line: (lineId: string) => api.get(`/shuttle/lines/${lineId}`),
+
+    // NEW: جيب الأسابيع والمواعيد من الباك اند مباشرة — مفيش حاجة تتولد client-side
+    // Response: { routeId, routeName, weeks: [{ weekStart, weekEnd, slots: [...] }], total }
+    availableWeeks: (routeId: string | number) =>
+      api.get(`/shuttle/lines/${routeId}/available-weeks`),
+
+    // مازال موجود للـ fallback لو محتاج تجيب أسبوع بعينه
     timeslots: (routeId: string | number, weekStart?: string) =>
       api.get(`/shuttle/timeslots/${routeId}${weekStart ? `?weekStart=${weekStart}` : ''}`),
-    // Route bookings (new system)
+
+    // ── Route Bookings ───────────────────────────────────────────────────────
     myBookings: () => api.get('/shuttle/route-bookings'),
     bookingDetail: (id: string) => api.get(`/shuttle/route-bookings/${id}`),
     createBooking: (data: { routeId: string | number; timeSlotId: string | number; weekStart: string }) =>
       api.post('/shuttle/route-bookings', data),
     cancelBooking: (id: string) => api.del(`/shuttle/route-bookings/${id}`),
     confirmRenewal: (id: string) => api.post(`/shuttle/route-bookings/${id}/confirm-renewal`),
-    // Active trip management (kept for trip-active / boarding screens)
+
+    // ── Active Trip Management ───────────────────────────────────────────────
     complete: (lineId: string) => api.post(`/shuttle/lines/${lineId}/complete`),
     passengers: (tripId: string) => api.get(`/shuttle/trips/${tripId}/passengers`),
     boardBooking: (bookingId: string) =>
