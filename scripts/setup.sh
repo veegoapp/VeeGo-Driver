@@ -48,4 +48,9 @@ echo ""
 echo "🚀  Starting Expo (tunnel + clear cache)..."
 echo ""
 
+# Kill any lingering Metro / Expo processes so port 8081 is free
+pkill -f "expo start" 2>/dev/null || true
+pkill -f "metro"      2>/dev/null || true
+sleep 1
+
 exec pnpm exec expo start --tunnel --clear

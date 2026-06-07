@@ -175,9 +175,10 @@ export default function ShuttleLinesScreen() {
       weekStart: string;
     }) => endpoints.shuttle.createBooking({ routeId, timeSlotId, weekStart }),
     onSuccess: () => {
+      // Invalidate all timeslot queries (any route, any week)
+      queryClient.invalidateQueries({ queryKey: ['shuttle-timeslots'] });
       queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['shuttle-lines'] });
-      queryClient.invalidateQueries({ queryKey: ['shuttle-timeslots', bookingRoute?.id] });
       setBookingRoute(null);
       setSelectedWeek(null);
       setSelectedSlot(null);
@@ -200,8 +201,12 @@ export default function ShuttleLinesScreen() {
           'This time slot has just been booked by another driver. Please choose a different time.',
           [{ text: 'OK' }]
         );
+      } else if (err instanceof ApiError && err.status === 400) {
+        const msg = (err as ApiError & { message?: string }).message ?? 'Invalid booking request.';
+        Alert.alert('Booking Failed', msg, [{ text: 'OK' }]);
       } else {
-        Alert.alert('Booking Failed', 'Could not complete the booking. Please try again.', [{ text: 'OK' }]);
+        const detail = err instanceof ApiError ? ` (${err.status})` : '';
+        Alert.alert('Booking Failed', `Could not complete the booking${detail}. Please try again.`, [{ text: 'OK' }]);
       }
     },
   });
