@@ -9,9 +9,10 @@ import { SOCKET_EVENTS } from '@/constants/socketEvents';
 export type ShuttleTimeslot = {
   id: string | number;
   departureTime: string;
-  availableSeats: number;
-  totalSeats: number;
-  booked: boolean;
+  availableSeats: number | null;
+  totalSeats: number | null;
+  isBooked: boolean;   // this driver has booked this slot for the selected week
+  isTaken: boolean;    // another driver has booked this slot for the selected week
 };
 
 export type ShuttleRoute = {
@@ -103,10 +104,11 @@ type BackendRoute = {
 type BackendTimeslot = {
   id: number | string;
   departureTime: string;
-  availableSeats?: number;
-  totalSeats?: number;
+  availableSeats?: number | null;
+  totalSeats?: number | null;
   isBooked?: boolean;
   booked?: boolean;
+  isTaken?: boolean;
 };
 
 type BackendTrip = {
@@ -217,9 +219,10 @@ function mapRoute(route: BackendRoute): ShuttleRoute {
     timeslots: rawSlots.map(ts => ({
       id: ts.id,
       departureTime: ts.departureTime,
-      availableSeats: ts.availableSeats ?? 0,
-      totalSeats: ts.totalSeats ?? 0,
-      booked: ts.isBooked ?? ts.booked ?? false,
+      availableSeats: ts.availableSeats ?? null,
+      totalSeats: ts.totalSeats ?? null,
+      isBooked: ts.isBooked ?? ts.booked ?? false,
+      isTaken: ts.isTaken ?? false,
     })),
   };
 }

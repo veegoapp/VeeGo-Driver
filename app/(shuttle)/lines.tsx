@@ -41,14 +41,24 @@ function parseStations(raw: unknown): BackendStation[] {
 
 function parseTimeslots(raw: unknown): ShuttleTimeslot[] {
   if (!raw) return [];
-  type RawSlot = { id: string | number; departureTime: string; availableSeats?: number; totalSeats?: number; isBooked?: boolean; booked?: boolean };
+  type RawSlot = {
+    id: string | number;
+    departureTime: string;
+    availableSeats?: number | null;
+    totalSeats?: number | null;
+    isBooked?: boolean;
+    booked?: boolean;
+    isTaken?: boolean;
+  };
   const normalize = (s: RawSlot): ShuttleTimeslot => ({
     id: s.id,
     departureTime: s.departureTime,
-    availableSeats: s.availableSeats ?? 0,
-    totalSeats: s.totalSeats ?? 0,
-    booked: s.isBooked ?? s.booked ?? false,
+    availableSeats: s.availableSeats ?? null,
+    totalSeats: s.totalSeats ?? null,
+    isBooked: s.isBooked ?? s.booked ?? false,
+    isTaken: s.isTaken ?? false,
   });
+  // Backend wraps slots in { data: [...], routeId, weekStart, total, ... }
   if (Array.isArray(raw)) return (raw as RawSlot[]).map(normalize);
   const r = raw as { data?: RawSlot[]; timeslots?: RawSlot[] };
   return (r.data ?? r.timeslots ?? []).map(normalize);
@@ -135,11 +145,12 @@ export default function ShuttleLinesScreen() {
       )
     : routes;
 
-  // Fetch fresh timeslots when user opens booking sheet for a route
+  // Fetch timeslots only after a week is selected — pass weekStart so the
+  // backend returns seat availability and booking status for that specific week.
   const { data: timeslotsRaw, isLoading: timeslotsLoading } = useQuery({
-    queryKey: ['shuttle-timeslots', bookingRoute?.id],
-    queryFn: () => endpoints.shuttle.timeslots(bookingRoute!.id),
-    enabled: !!bookingRoute,
+    queryKey: ['shuttle-timeslots', bookingRoute?.id, selectedWeek?.start],
+    queryFn: () => endpoints.shuttle.timeslots(bookingRoute!.id, selectedWeek!.start),
+    enabled: !!bookingRoute && !!selectedWeek,
     staleTime: 30000,
   });
 
@@ -151,9 +162,8 @@ export default function ShuttleLinesScreen() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const timeslots: ShuttleTimeslot[] = timeslotsRaw
-    ? parseTimeslots(timeslotsRaw)
-    : (bookingRoute?.timeslots ?? []);
+  // timeslotsRaw is undefined until a week is selected (query disabled before that)
+  const timeslots: ShuttleTimeslot[] = timeslotsRaw ? parseTimeslots(timeslotsRaw) : [];
   const stations = parseStations(lineDetailRaw);
 
   // ── Mutations ───────────────────────────────────────────────────────────────
@@ -555,33 +565,40 @@ export default function ShuttleLinesScreen() {
                   ) : (
                     <View style={styles.timesGrid}>
                       {timeslots.map(slot => {
-                        const isBooked = slot.booked;
-                        const isPicked = selectedSlot?.id === slot.id;
+                        const bookedByMe = slot.isBooked;
+                        const takenByOther = slot.isTaken;
+                        const isDisabled = bookedByMe || takenByOther;
+                        const isPicked = !bookedByMe && selectedSlot?.id === slot.id;
+                        const iconColor = bookedByMe ? '#16a34a' : isPicked ? '#fff' : takenByOther ? colors.mutedForeground : colors.foreground;
+                        const textColor = iconColor;
                         return (
                           <Pressable
                             key={String(slot.id)}
-                            onPress={() => !isBooked && setSelectedSlot(slot)}
-                            disabled={isBooked}
+                            onPress={() => !isDisabled && setSelectedSlot(slot)}
+                            disabled={isDisabled}
                             style={[styles.timeChip, {
-                              backgroundColor: isPicked ? '#1e1e28' : isBooked ? colors.secondary : 'transparent',
-                              borderColor: isPicked ? '#1e1e28' : isBooked ? colors.border : '#1e1e2833',
-                              opacity: isBooked ? 0.45 : 1,
+                              backgroundColor: bookedByMe ? '#22c55e18' : isPicked ? '#1e1e28' : takenByOther ? colors.secondary : 'transparent',
+                              borderColor: bookedByMe ? '#22c55e55' : isPicked ? '#1e1e28' : takenByOther ? colors.border : '#1e1e2833',
+                              opacity: takenByOther && !bookedByMe ? 0.45 : 1,
                             }]}
                           >
-                            <Clock
-                              size={13}
-                              color={isPicked ? '#fff' : isBooked ? colors.mutedForeground : colors.foreground}
-                              strokeWidth={2}
-                            />
-                            <Text style={[styles.timeChipText, {
-                              color: isPicked ? '#fff' : isBooked ? colors.mutedForeground : colors.foreground,
-                              fontFamily: 'Inter_600SemiBold',
-                            }]}>
+                            <Clock size={13} color={iconColor} strokeWidth={2} />
+                            <Text style={[styles.timeChipText, { color: textColor, fontFamily: 'Inter_600SemiBold' }]}>
                               {slot.departureTime}
                             </Text>
-                            {isBooked && (
+                            {bookedByMe && (
+                              <Text style={[styles.timeChipTaken, { color: '#16a34a', fontFamily: 'Inter_700Bold' }]}>
+                                Yours
+                              </Text>
+                            )}
+                            {takenByOther && !bookedByMe && (
                               <Text style={[styles.timeChipTaken, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
                                 Taken
+                              </Text>
+                            )}
+                            {!isDisabled && slot.availableSeats !== null && slot.availableSeats !== undefined && (
+                              <Text style={[styles.timeChipTaken, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
+                                {slot.availableSeats} seats
                               </Text>
                             )}
                           </Pressable>
@@ -756,7 +773,7 @@ function RouteCard({
     b.status !== 'cancelled' &&
     b.status !== 'completed'
   );
-  const availableSlots = route.timeslots.filter(ts => !ts.booked).length;
+  const availableSlots = route.timeslots.filter(ts => !ts.isBooked).length;
   const totalSlots = route.timeslots.length;
 
   const statusConfig = isBooked

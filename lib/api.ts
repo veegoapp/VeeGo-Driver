@@ -261,7 +261,8 @@ export const endpoints = {
     // Routes
     lines: () => api.get('/shuttle/lines'),
     line: (lineId: string) => api.get(`/shuttle/lines/${lineId}`),
-    timeslots: (routeId: string | number) => api.get(`/shuttle/timeslots/${routeId}`),
+    timeslots: (routeId: string | number, weekStart?: string) =>
+      api.get(`/shuttle/timeslots/${routeId}${weekStart ? `?weekStart=${weekStart}` : ''}`),
     // Route bookings (new system)
     myBookings: () => api.get('/shuttle/route-bookings'),
     bookingDetail: (id: string) => api.get(`/shuttle/route-bookings/${id}`),
