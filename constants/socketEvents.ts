@@ -38,14 +38,28 @@ export const SOCKET_EVENTS = {
   // Server → Driver: SOS
   SOS_TRIGGERED:            "sos:triggered",
 
-  // Server → Driver: shuttle trip events
-  SHUTTLE_TRIP_AUTO_CANCELLED: "shuttle:trip:auto_cancelled",
+  // Server → Driver: shuttle booking events (sent to driver:<userId> room)
+  SHUTTLE_BOOKING_CREATED:    "shuttle:booking:created",
+  SHUTTLE_BOOKING_CANCELLED:  "shuttle:booking:cancelled",
+  SHUTTLE_BOOKING_REASSIGNED: "shuttle:booking:reassigned",
+  SHUTTLE_RENEWAL_CONFIRMED:  "shuttle:renewal:confirmed",
+
+  // Server → Driver/User: notifications
+  // NOTE: shuttle renewal/auto-cancel notifications are sent via notification:new
+  // with category="shuttle_renewal" or category="trip" to passenger:<userId> room
+  NOTIFICATION_NEW:         "notification:new",
 
   // Server → Driver: misc
   ERROR:                    "error",
 
   // Client → Server
   JOIN:                     "join",
+  DRIVER_STATUS_ONLINE:     "driver:status:online",
+  DRIVER_STATUS_OFFLINE:    "driver:status:offline",
+  DRIVER_STATUS_BUSY:       "driver:status:busy",
+  DRIVER_LOCATION_UPDATE:   "driver:location:update",
+  DRIVER_TRIP_START:        "driver:trip:start",
+  DRIVER_TRIP_COMPLETE:     "driver:trip:complete",
 } as const;
 
 export type DriverSocketEvent = (typeof SOCKET_EVENTS)[keyof typeof SOCKET_EVENTS];

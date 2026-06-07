@@ -41,12 +41,17 @@ function parseStations(raw: unknown): BackendStation[] {
 
 function parseTimeslots(raw: unknown): ShuttleTimeslot[] {
   if (!raw) return [];
-  if (Array.isArray(raw)) return raw as ShuttleTimeslot[];
-  const r = raw as {
-    data?: ShuttleTimeslot[];
-    timeslots?: ShuttleTimeslot[];
-  };
-  return r.data ?? r.timeslots ?? [];
+  type RawSlot = { id: string | number; departureTime: string; availableSeats?: number; totalSeats?: number; isBooked?: boolean; booked?: boolean };
+  const normalize = (s: RawSlot): ShuttleTimeslot => ({
+    id: s.id,
+    departureTime: s.departureTime,
+    availableSeats: s.availableSeats ?? 0,
+    totalSeats: s.totalSeats ?? 0,
+    booked: s.isBooked ?? s.booked ?? false,
+  });
+  if (Array.isArray(raw)) return (raw as RawSlot[]).map(normalize);
+  const r = raw as { data?: RawSlot[]; timeslots?: RawSlot[] };
+  return (r.data ?? r.timeslots ?? []).map(normalize);
 }
 
 function generateWorkWeeks(count = 8): WorkWeek[] {

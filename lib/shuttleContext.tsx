@@ -96,6 +96,7 @@ type BackendRoute = {
   basePrice: number;
   isActive?: boolean;
   stationCount?: number;
+  timeSlots?: BackendTimeslot[];
   timeslots?: BackendTimeslot[];
 };
 
@@ -104,6 +105,7 @@ type BackendTimeslot = {
   departureTime: string;
   availableSeats?: number;
   totalSeats?: number;
+  isBooked?: boolean;
   booked?: boolean;
 };
 
@@ -165,14 +167,45 @@ function extractTrips(raw: unknown): BackendTrip[] {
   return r.data ?? r.trips ?? [];
 }
 
+type RawDriverBooking = {
+  id: string | number;
+  routeId?: string | number;
+  timeSlotId?: string | number;
+  weekStart?: string;
+  weekEnd?: string;
+  status?: string;
+  renewalDeadline?: string;
+  nextWeekBookingId?: string | null;
+  routeName?: string;
+  departureTime?: string;
+  route?: { id?: string | number; name?: string };
+  timeSlot?: { id?: string | number; departureTime?: string };
+};
+
+function normalizeBooking(b: RawDriverBooking): ShuttleBooking {
+  return {
+    id: String(b.id),
+    routeId: b.routeId ?? b.route?.id ?? 0,
+    routeName: b.routeName ?? b.route?.name ?? '—',
+    timeSlotId: b.timeSlotId ?? b.timeSlot?.id ?? 0,
+    departureTime: b.departureTime ?? b.timeSlot?.departureTime ?? '—',
+    weekStart: b.weekStart ?? '',
+    weekEnd: b.weekEnd,
+    status: b.status ?? '',
+    renewalDeadline: b.renewalDeadline,
+    nextWeekBookingId: b.nextWeekBookingId,
+  };
+}
+
 function extractBookings(raw: unknown): ShuttleBooking[] {
   if (!raw) return [];
-  if (Array.isArray(raw)) return raw as ShuttleBooking[];
-  const r = raw as { data?: ShuttleBooking[]; bookings?: ShuttleBooking[] };
-  return r.data ?? r.bookings ?? [];
+  if (Array.isArray(raw)) return (raw as RawDriverBooking[]).map(normalizeBooking);
+  const r = raw as { data?: RawDriverBooking[]; bookings?: RawDriverBooking[] };
+  return (r.data ?? r.bookings ?? []).map(normalizeBooking);
 }
 
 function mapRoute(route: BackendRoute): ShuttleRoute {
+  const rawSlots = route.timeSlots ?? route.timeslots ?? [];
   return {
     id: route.id,
     name: route.name,
@@ -181,12 +214,12 @@ function mapRoute(route: BackendRoute): ShuttleRoute {
     stationCount: route.stationCount ?? 0,
     estimatedDuration: route.estimatedDuration ?? 0,
     basePrice: route.basePrice ?? 0,
-    timeslots: (route.timeslots ?? []).map(ts => ({
+    timeslots: rawSlots.map(ts => ({
       id: ts.id,
       departureTime: ts.departureTime,
       availableSeats: ts.availableSeats ?? 0,
       totalSeats: ts.totalSeats ?? 0,
-      booked: ts.booked ?? false,
+      booked: ts.isBooked ?? ts.booked ?? false,
     })),
   };
 }
@@ -410,17 +443,42 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!socket) return;
 
-    const handleAutoCancelled = (data?: { tripId?: string | number; routeName?: string }) => {
-      const name = data?.routeName ?? 'A trip';
-      setTripCancelledBanner(`${name} was automatically cancelled — minimum bookings not reached.`);
-      queryClient.invalidateQueries({ queryKey: ['shuttle-driver-trips'] });
+    // Backend sends trip auto-cancel + shuttle renewal via notification:new
+    // with category="trip" or "shuttle_renewal" to the passenger:<userId> room
+    const handleNotification = (data?: {
+      category?: string;
+      title?: string;
+      body?: string;
+      bookingId?: number;
+      deadlineIso?: string;
+    }) => {
+      if (data?.category === 'trip') {
+        // Trip auto-cancelled notification
+        const name = data?.title ?? 'A trip';
+        setTripCancelledBanner(`${name} — ${data?.body ?? 'was automatically cancelled.'}`);
+        queryClient.invalidateQueries({ queryKey: ['shuttle-driver-trips'] });
+        queryClient.invalidateQueries({ queryKey: ['shuttle-lines'] });
+      }
+      if (data?.category === 'shuttle_renewal' || data?.category === 'shuttle') {
+        // Renewal reminder or booking change — refresh bookings
+        queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
+      }
+    };
+
+    // Also listen for direct shuttle booking events (sent to driver:<userId> room)
+    const handleBookingCancelled = () => {
+      queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['shuttle-lines'] });
     };
 
-    socket.on(SOCKET_EVENTS.SHUTTLE_TRIP_AUTO_CANCELLED, handleAutoCancelled);
+    socket.on(SOCKET_EVENTS.NOTIFICATION_NEW, handleNotification);
+    socket.on(SOCKET_EVENTS.SHUTTLE_BOOKING_CANCELLED, handleBookingCancelled);
+    socket.on(SOCKET_EVENTS.SHUTTLE_BOOKING_REASSIGNED, handleBookingCancelled);
 
     return () => {
-      socket.off(SOCKET_EVENTS.SHUTTLE_TRIP_AUTO_CANCELLED, handleAutoCancelled);
+      socket.off(SOCKET_EVENTS.NOTIFICATION_NEW, handleNotification);
+      socket.off(SOCKET_EVENTS.SHUTTLE_BOOKING_CANCELLED, handleBookingCancelled);
+      socket.off(SOCKET_EVENTS.SHUTTLE_BOOKING_REASSIGNED, handleBookingCancelled);
     };
   }, [socket, queryClient]);
 
