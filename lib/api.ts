@@ -162,6 +162,14 @@ export const endpoints = {
       request<{ accessToken: string; refreshToken: string; user: Record<string, unknown>; driver: Record<string, unknown> }>(
         'POST', '/driver/auth/register', data
       ),
+    forgotPassword: (credential: string) =>
+      request<{ message: string }>(
+        'POST', '/driver/auth/forgot-password', { credential }
+      ),
+    resetPassword: (credential: string, code: string, newPassword: string) =>
+      request<{ message: string }>(
+        'POST', '/driver/auth/reset-password', { credential, code, newPassword }
+      ),
   },
 
   driver: {

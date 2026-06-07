@@ -3,6 +3,7 @@
 // Sign Up → endpoints.auth.driverRegister({ name, email, phone, password, licenseNumber?, nationalId? })
 
 import { Navigation, User, Mail, Phone, Lock, Eye, EyeOff, AlertCircle, ArrowLeft, ArrowRight, CreditCard } from 'lucide-react-native';
+import { router as expoRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
 import {
@@ -191,6 +192,14 @@ function SignInForm({ isRTL, onSuccess }: { isRTL: boolean; onSuccess: (at: stri
           <><Text style={s.primaryBtnText}>Sign in</Text><ArrowRight size={16} color="white" /></>
         )}
       </Pressable>
+
+      <TouchableOpacity
+        style={s.forgotBtn}
+        onPress={() => expoRouter.push('/forgot-password')}
+        activeOpacity={0.7}
+      >
+        <Text style={s.forgotText}>Forgot password?</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -350,4 +359,6 @@ const s = StyleSheet.create({
   optionalToggleText: { fontSize: 12, color: '#5e5e72', fontFamily: 'Inter_400Regular' },
   terms: { fontSize: 11, color: '#5e5e72', lineHeight: 16 },
   termsLink: { color: '#1e1e28', fontWeight: '600' },
+  forgotBtn: { alignItems: 'center', paddingVertical: 4 },
+  forgotText: { fontSize: 13, color: '#5e5e72', fontFamily: 'Inter_400Regular', textDecorationLine: 'underline' },
 });

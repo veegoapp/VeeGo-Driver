@@ -90,6 +90,7 @@ function RootLayoutNav() {
       <Stack.Screen name="service-select" />
       <Stack.Screen name="register-info" />
       <Stack.Screen name="selfie" />
+      <Stack.Screen name="forgot-password" options={{ animation: 'slide_from_right' }} />
     </Stack>
   );
 }
