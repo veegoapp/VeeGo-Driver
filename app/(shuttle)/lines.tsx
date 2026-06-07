@@ -69,11 +69,11 @@ function generateWorkWeeks(count = 8): WorkWeek[] {
   const now = new Date();
   now.setHours(0, 0, 0, 0);
   const dow = now.getDay();
+  // Always find the Sunday that starts THIS week
   const thisSunday = new Date(now);
   thisSunday.setDate(now.getDate() - dow);
-  // Wed(3)+ → skip current week
-  const startW = dow >= 3 ? 1 : 0;
-  for (let w = startW; w < count + startW; w++) {
+  // Backend only accepts bookings from NEXT week onwards (never the current week)
+  for (let w = 1; w <= count; w++) {
     const sun = new Date(thisSunday);
     sun.setDate(thisSunday.getDate() + w * 7);
     const thu = new Date(sun);
@@ -85,12 +85,7 @@ function generateWorkWeeks(count = 8): WorkWeek[] {
       thu.getMonth() === sun.getMonth()
         ? `${fmtMon(sun)} ${sun.getDate()}–${thu.getDate()}`
         : `${fmtMon(sun)} ${sun.getDate()} – ${fmtMon(thu)} ${thu.getDate()}`;
-    const idx = w - startW;
-    const subLabel =
-      idx === 0 && startW === 0 ? 'This Week' :
-      idx === 0 && startW === 1 ? 'Next Week' :
-      idx === 1 && startW === 0 ? 'Next Week' :
-      'Sun – Thu';
+    const subLabel = w === 1 ? 'Next Week' : 'Sun – Thu';
     weeks.push({ start, end, label, subLabel });
   }
   return weeks;
@@ -202,10 +197,15 @@ export default function ShuttleLinesScreen() {
           [{ text: 'OK' }]
         );
       } else if (err instanceof ApiError && err.status === 400) {
-        const msg = (err as ApiError & { message?: string }).message ?? 'Invalid booking request.';
+        // Try to extract the backend's human-readable error from the body
+        const body = (err as ApiError).body as Record<string, unknown> | null;
+        const msg =
+          (typeof body?.message === 'string' ? body.message : null) ??
+          (typeof body?.error === 'string' ? body.error : null) ??
+          'Invalid booking request.';
         Alert.alert('Booking Failed', msg, [{ text: 'OK' }]);
       } else {
-        const detail = err instanceof ApiError ? ` (${err.status})` : '';
+        const detail = err instanceof ApiError ? ` (${(err as ApiError).status})` : '';
         Alert.alert('Booking Failed', `Could not complete the booking${detail}. Please try again.`, [{ text: 'OK' }]);
       }
     },
