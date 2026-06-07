@@ -237,6 +237,7 @@ type ShuttleContextType = {
   passengers: BoardingPassenger[];
   loading: boolean;
   error: Error | null;
+  refetch: () => void;
   nextStop: () => void;
   togglePassenger: (id: string) => void;
   // Auto-cancel notification
@@ -255,6 +256,7 @@ const ShuttleContext = createContext<ShuttleContextType>({
   passengers: [],
   loading: false,
   error: null,
+  refetch: () => {},
   nextStop: () => {},
   togglePassenger: () => {},
   tripCancelledBanner: null,
@@ -276,6 +278,7 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
     data: routesRaw,
     isLoading: routesLoading,
     error: routesError,
+    refetch: refetchRoutes,
   } = useQuery({
     queryKey: ['shuttle-lines'],
     queryFn: () => endpoints.shuttle.lines() as Promise<unknown>,
@@ -286,11 +289,17 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
     data: bookingsRaw,
     isLoading: bookingsLoading,
     error: bookingsError,
+    refetch: refetchBookings,
   } = useQuery({
     queryKey: ['shuttle-my-bookings'],
     queryFn: () => endpoints.shuttle.myBookings() as Promise<unknown>,
     refetchInterval: 60000,
   });
+
+  const refetch = () => {
+    refetchRoutes();
+    refetchBookings();
+  };
 
   const {
     data: tripsRaw,
@@ -444,6 +453,7 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
         loading:
           routesLoading || bookingsLoading || tripsLoading || stationsLoading || detailLoading,
         error: (routesError ?? bookingsError) as Error | null,
+        refetch,
         nextStop,
         togglePassenger,
         tripCancelledBanner,

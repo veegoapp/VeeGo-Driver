@@ -6,7 +6,7 @@ import {
 import React, { useRef, useEffect, useState } from 'react';
 import {
   ActivityIndicator, Alert, Animated, Modal, Platform, Pressable,
-  ScrollView, StyleSheet, Text, TextInput, View,
+  RefreshControl, ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -97,7 +97,14 @@ export default function ShuttleLinesScreen() {
 
   const weeks = generateWorkWeeks();
 
-  const { routes, myBookings, loading: contextLoading, error: contextError } = useShuttle();
+  const { routes, myBookings, loading: contextLoading, error: contextError, refetch } = useShuttle();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    refetch();
+    setTimeout(() => setRefreshing(false), 1200);
+  };
 
   useEffect(() => {
     Animated.timing(headerAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
@@ -266,6 +273,14 @@ export default function ShuttleLinesScreen() {
         }}
         showsVerticalScrollIndicator={false}
         style={{ flex: 1 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
       >
         <Animated.View style={{
           opacity: headerAnim,
