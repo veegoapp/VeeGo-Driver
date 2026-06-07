@@ -18,11 +18,29 @@ import { endpoints, ApiError } from '@/lib/api';
 
 const TAB_BAR_HEIGHT = 96;
 
-type WorkWeek = {
-  start: string;
-  end: string;
-  label: string;
-  subLabel: string;
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+// Shape returned by GET /shuttle/lines/:routeId/available-weeks
+type BackendWeek = {
+  weekStart: string; // "YYYY-MM-DD" — always a Sunday, comes from the server
+  weekEnd: string;   // "YYYY-MM-DD" — always a Thursday
+  slots: BackendSlot[];
+};
+
+type BackendSlot = {
+  id: number;
+  departureTime: string; // "HH:MM"
+  totalSeats: number | null;
+  availableSeats: number | null;
+  isBooked: boolean;
+  isTaken: boolean;
+};
+
+type AvailableWeeksResponse = {
+  routeId: number;
+  routeName: string;
+  weeks: BackendWeek[];
+  total: number;
 };
 
 type BackendStation = {
@@ -33,63 +51,43 @@ type BackendStation = {
   longitude?: number;
 };
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
 function parseStations(raw: unknown): BackendStation[] {
   if (!raw) return [];
   const r = raw as { data?: { stations?: BackendStation[] }; stations?: BackendStation[] };
   return r.data?.stations ?? r.stations ?? [];
 }
 
-function parseTimeslots(raw: unknown): ShuttleTimeslot[] {
-  if (!raw) return [];
-  type RawSlot = {
-    id: string | number;
-    departureTime: string;
-    availableSeats?: number | null;
-    totalSeats?: number | null;
-    isBooked?: boolean;
-    booked?: boolean;
-    isTaken?: boolean;
-  };
-  const normalize = (s: RawSlot): ShuttleTimeslot => ({
-    id: s.id,
-    departureTime: s.departureTime,
-    availableSeats: s.availableSeats ?? null,
-    totalSeats: s.totalSeats ?? null,
-    isBooked: s.isBooked ?? s.booked ?? false,
-    isTaken: s.isTaken ?? false,
-  });
-  // Backend wraps slots in { data: [...], routeId, weekStart, total, ... }
-  if (Array.isArray(raw)) return (raw as RawSlot[]).map(normalize);
-  const r = raw as { data?: RawSlot[]; timeslots?: RawSlot[] };
-  return (r.data ?? r.timeslots ?? []).map(normalize);
+/**
+ * Formats a weekStart/weekEnd pair into a human-readable label.
+ * e.g. weekStart="2026-06-21", weekEnd="2026-06-25" → "Jun 21–25"
+ */
+function formatWeekLabel(weekStart: string, weekEnd: string): string {
+  const sun = new Date(weekStart + 'T00:00:00Z');
+  const thu = new Date(weekEnd + 'T00:00:00Z');
+  const fmtMon = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' });
+  const fmtDay = (d: Date) => d.toLocaleDateString('en-US', { day: 'numeric', timeZone: 'UTC' });
+  if (thu.getUTCMonth() === sun.getUTCMonth()) {
+    return `${fmtMon(sun)} ${fmtDay(sun)}–${fmtDay(thu)}`;
+  }
+  return `${fmtMon(sun)} ${fmtDay(sun)} – ${fmtMon(thu)} ${fmtDay(thu)}`;
 }
 
-function generateWorkWeeks(count = 8): WorkWeek[] {
-  const weeks: WorkWeek[] = [];
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  const dow = now.getDay();
-  // Always find the Sunday that starts THIS week
-  const thisSunday = new Date(now);
-  thisSunday.setDate(now.getDate() - dow);
-  // Backend only accepts bookings from NEXT week onwards (never the current week)
-  for (let w = 1; w <= count; w++) {
-    const sun = new Date(thisSunday);
-    sun.setDate(thisSunday.getDate() + w * 7);
-    const thu = new Date(sun);
-    thu.setDate(sun.getDate() + 4);
-    const start = sun.toISOString().split('T')[0];
-    const end = thu.toISOString().split('T')[0];
-    const fmtMon = (d: Date) => d.toLocaleDateString('en-US', { month: 'short' });
-    const label =
-      thu.getMonth() === sun.getMonth()
-        ? `${fmtMon(sun)} ${sun.getDate()}–${thu.getDate()}`
-        : `${fmtMon(sun)} ${sun.getDate()} – ${fmtMon(thu)} ${thu.getDate()}`;
-    const subLabel = w === 1 ? 'Next Week' : 'Sun – Thu';
-    weeks.push({ start, end, label, subLabel });
-  }
-  return weeks;
+/**
+ * Returns a short sub-label for a week chip.
+ * The first upcoming week gets "Next Week", others get "Sun – Thu".
+ */
+function formatWeekSubLabel(weekStart: string, index: number): string {
+  const todayUtc = new Date();
+  todayUtc.setUTCHours(0, 0, 0, 0);
+  const wsDate = new Date(weekStart + 'T00:00:00Z');
+  const diffDays = Math.round((wsDate.getTime() - todayUtc.getTime()) / 86400000);
+  if (index === 0 && diffDays <= 7) return 'Next Week';
+  return 'Sun – Thu';
 }
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function ShuttleLinesScreen() {
   const colors = useColors();
@@ -102,10 +100,10 @@ export default function ShuttleLinesScreen() {
 
   const [search, setSearch] = useState('');
   const [bookingRoute, setBookingRoute] = useState<ShuttleRoute | null>(null);
-  const [selectedWeek, setSelectedWeek] = useState<WorkWeek | null>(null);
-  const [selectedSlot, setSelectedSlot] = useState<ShuttleTimeslot | null>(null);
 
-  const weeks = generateWorkWeeks();
+  // selectedWeek is now a BackendWeek (from server) — never generated client-side
+  const [selectedWeek, setSelectedWeek] = useState<BackendWeek | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<BackendSlot | null>(null);
 
   const { routes, myBookings, listLoading: contextLoading, error: contextError, refetch } = useShuttle();
   const [refreshing, setRefreshing] = useState(false);
@@ -125,6 +123,10 @@ export default function ShuttleLinesScreen() {
   const handleRefresh = async () => {
     setRefreshing(true);
     refetch();
+    // Also invalidate the available-weeks cache for whichever route is open
+    if (bookingRoute) {
+      queryClient.invalidateQueries({ queryKey: ['shuttle-available-weeks', bookingRoute.id] });
+    }
     setTimeout(() => setRefreshing(false), 1200);
   };
 
@@ -140,28 +142,48 @@ export default function ShuttleLinesScreen() {
       )
     : routes;
 
-  // Fetch timeslots only after a week is selected — pass weekStart so the
-  // backend returns seat availability and booking status for that specific week.
-  const { data: timeslotsRaw, isLoading: timeslotsLoading } = useQuery({
-    queryKey: ['shuttle-timeslots', bookingRoute?.id, selectedWeek?.start],
-    queryFn: () => endpoints.shuttle.timeslots(bookingRoute!.id, selectedWeek!.start),
-    enabled: !!bookingRoute && !!selectedWeek,
-    staleTime: 30000,
+  // ── Fetch available weeks from backend (replaces generateWorkWeeks) ──────
+  // Only runs when a route is selected. Returns weeks + slots together so
+  // there is NO client-side week generation and NO separate timeslot fetch.
+  const {
+    data: availableWeeksData,
+    isLoading: weeksLoading,
+    error: weeksError,
+  } = useQuery<AvailableWeeksResponse>({
+    queryKey: ['shuttle-available-weeks', bookingRoute?.id],
+    queryFn: () => endpoints.shuttle.availableWeeks(bookingRoute!.id) as Promise<AvailableWeeksResponse>,
+    enabled: !!bookingRoute,
+    staleTime: 30_000,
   });
 
-  // Also fetch stations for the selected route (for the info panel in sheet)
+  const serverWeeks: BackendWeek[] = availableWeeksData?.weeks ?? [];
+
+  // Auto-select the first week when weeks load (better UX)
+  useEffect(() => {
+    if (serverWeeks.length > 0 && !selectedWeek) {
+      setSelectedWeek(serverWeeks[0]!);
+    }
+  }, [serverWeeks.length]);
+
+  // Reset selections when route changes
+  useEffect(() => {
+    setSelectedWeek(null);
+    setSelectedSlot(null);
+  }, [bookingRoute?.id]);
+
+  // Slots for the currently selected week come directly from the server response
+  const currentSlots: BackendSlot[] = selectedWeek?.slots ?? [];
+
+  // Stations for the route info panel
   const { data: lineDetailRaw, isLoading: stationsLoading } = useQuery({
     queryKey: ['shuttle-line-detail', bookingRoute?.id],
     queryFn: () => endpoints.shuttle.line(String(bookingRoute!.id)),
     enabled: !!bookingRoute,
     staleTime: 5 * 60 * 1000,
   });
-
-  // timeslotsRaw is undefined until a week is selected (query disabled before that)
-  const timeslots: ShuttleTimeslot[] = timeslotsRaw ? parseTimeslots(timeslotsRaw) : [];
   const stations = parseStations(lineDetailRaw);
 
-  // ── Mutations ───────────────────────────────────────────────────────────────
+  // ── Mutations ──────────────────────────────────────────────────────────────
 
   const bookMutation = useMutation({
     mutationFn: ({ routeId, timeSlotId, weekStart }: {
@@ -170,8 +192,7 @@ export default function ShuttleLinesScreen() {
       weekStart: string;
     }) => endpoints.shuttle.createBooking({ routeId, timeSlotId, weekStart }),
     onSuccess: () => {
-      // Invalidate all timeslot queries (any route, any week)
-      queryClient.invalidateQueries({ queryKey: ['shuttle-timeslots'] });
+      queryClient.invalidateQueries({ queryKey: ['shuttle-available-weeks', bookingRoute?.id] });
       queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['shuttle-lines'] });
       setBookingRoute(null);
@@ -184,20 +205,13 @@ export default function ShuttleLinesScreen() {
       );
     },
     onError: (err: unknown) => {
-      if (err instanceof ApiError && err.status === 404) {
-        Alert.alert(
-          'Not Available Yet',
-          'The weekly booking feature is not yet active on the server.',
-          [{ text: 'OK' }]
-        );
-      } else if (err instanceof ApiError && err.status === 409) {
+      if (err instanceof ApiError && err.status === 409) {
         Alert.alert(
           'Slot Taken',
           'This time slot has just been booked by another driver. Please choose a different time.',
           [{ text: 'OK' }]
         );
       } else if (err instanceof ApiError && err.status === 400) {
-        // Try to extract the backend's human-readable error from the body
         const body = (err as ApiError).body as Record<string, unknown> | null;
         const msg =
           (typeof body?.message === 'string' ? body.message : null) ??
@@ -233,14 +247,15 @@ export default function ShuttleLinesScreen() {
     },
   });
 
-  // ── Handlers ────────────────────────────────────────────────────────────────
+  // ── Handlers ───────────────────────────────────────────────────────────────
 
   const handleBook = () => {
     if (!bookingRoute || !selectedWeek || !selectedSlot) return;
+    const weekLabel = formatWeekLabel(selectedWeek.weekStart, selectedWeek.weekEnd);
     const lines = [
       `Route: ${bookingRoute.name}`,
       `Direction: ${bookingRoute.from} → ${bookingRoute.to}`,
-      `Week: ${selectedWeek.label}  (Sun – Thu)`,
+      `Week: ${weekLabel}  (Sun – Thu)`,
       `Departure: ${selectedSlot.departureTime}`,
       bookingRoute.stationCount ? `Stations: ${bookingRoute.stationCount} stops` : '',
     ].filter(Boolean);
@@ -256,7 +271,8 @@ export default function ShuttleLinesScreen() {
             bookMutation.mutate({
               routeId: bookingRoute.id,
               timeSlotId: selectedSlot.id,
-              weekStart: selectedWeek.start,
+              // weekStart comes directly from the server — no client-side date math
+              weekStart: selectedWeek.weekStart,
             }),
         },
       ]
@@ -293,7 +309,7 @@ export default function ShuttleLinesScreen() {
     );
   };
 
-  // ── Render ───────────────────────────────────────────────────────────────────
+  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -512,64 +528,77 @@ export default function ShuttleLinesScreen() {
                 ))
               )}
 
-              {/* Week picker */}
+              {/* Week picker — weeks come from the server, not generated locally */}
               <Text style={[styles.sheetSection, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
                 Select Work Week
               </Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={{ marginHorizontal: -16, paddingLeft: 16 }}
-                contentContainerStyle={{ paddingRight: 16, gap: 10, flexDirection: 'row', paddingBottom: 4 }}
-              >
-                {weeks.map(week => {
-                  const active = selectedWeek?.start === week.start;
-                  return (
-                    <Pressable
-                      key={week.start}
-                      onPress={() => { setSelectedWeek(week); setSelectedSlot(null); }}
-                      style={[styles.weekChip, {
-                        backgroundColor: active ? '#1e1e28' : colors.secondary,
-                        borderColor: active ? '#1e1e28' : colors.border,
-                      }]}
-                    >
-                      <Calendar size={12} color={active ? '#fff' : colors.mutedForeground} strokeWidth={2} />
-                      <View>
-                        <Text style={[styles.weekChipLabel, {
-                          color: active ? '#fff' : colors.foreground,
-                          fontFamily: 'Inter_700Bold',
-                        }]}>
-                          {week.label}
-                        </Text>
-                        <Text style={[styles.weekChipSub, {
-                          color: active ? '#ffffff88' : colors.mutedForeground,
-                          fontFamily: 'Inter_400Regular',
-                        }]}>
-                          {week.subLabel}
-                        </Text>
-                      </View>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
 
-              {/* Timeslot picker */}
+              {weeksLoading ? (
+                <View style={{ alignItems: 'center', paddingVertical: 20 }}>
+                  <ActivityIndicator size="small" color={colors.primary} />
+                </View>
+              ) : weeksError ? (
+                <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13, paddingBottom: 12 }}>
+                  Could not load available weeks. Pull down to retry.
+                </Text>
+              ) : serverWeeks.length === 0 ? (
+                <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13, paddingBottom: 12 }}>
+                  No weeks scheduled yet for this route. Check back soon.
+                </Text>
+              ) : (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={{ marginHorizontal: -16, paddingLeft: 16 }}
+                  contentContainerStyle={{ paddingRight: 16, gap: 10, flexDirection: 'row', paddingBottom: 4 }}
+                >
+                  {serverWeeks.map((week, idx) => {
+                    const active = selectedWeek?.weekStart === week.weekStart;
+                    const label = formatWeekLabel(week.weekStart, week.weekEnd);
+                    const subLabel = formatWeekSubLabel(week.weekStart, idx);
+                    return (
+                      <Pressable
+                        key={week.weekStart}
+                        onPress={() => { setSelectedWeek(week); setSelectedSlot(null); }}
+                        style={[styles.weekChip, {
+                          backgroundColor: active ? '#1e1e28' : colors.secondary,
+                          borderColor: active ? '#1e1e28' : colors.border,
+                        }]}
+                      >
+                        <Calendar size={12} color={active ? '#fff' : colors.mutedForeground} strokeWidth={2} />
+                        <View>
+                          <Text style={[styles.weekChipLabel, {
+                            color: active ? '#fff' : colors.foreground,
+                            fontFamily: 'Inter_700Bold',
+                          }]}>
+                            {label}
+                          </Text>
+                          <Text style={[styles.weekChipSub, {
+                            color: active ? '#ffffff88' : colors.mutedForeground,
+                            fontFamily: 'Inter_400Regular',
+                          }]}>
+                            {subLabel}
+                          </Text>
+                        </View>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              )}
+
+              {/* Timeslot picker — slots come directly from the selected week object */}
               {selectedWeek && (
                 <>
                   <Text style={[styles.sheetSection, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
                     Departure Time
                   </Text>
-                  {timeslotsLoading ? (
-                    <View style={{ alignItems: 'center', paddingVertical: 16 }}>
-                      <ActivityIndicator size="small" color={colors.primary} />
-                    </View>
-                  ) : timeslots.length === 0 ? (
+                  {currentSlots.length === 0 ? (
                     <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13, paddingBottom: 12 }}>
-                      No time slots available for this route
+                      No time slots available for this week
                     </Text>
                   ) : (
                     <View style={styles.timesGrid}>
-                      {timeslots.map(slot => {
+                      {currentSlots.map(slot => {
                         const bookedByMe = slot.isBooked;
                         const takenByOther = slot.isTaken;
                         const isDisabled = bookedByMe || takenByOther;
@@ -634,7 +663,7 @@ export default function ShuttleLinesScreen() {
                 ) : (
                   <Text style={[styles.bookBtnText, { fontFamily: 'Inter_700Bold' }]}>
                     {selectedWeek && selectedSlot
-                      ? `Confirm — ${selectedWeek.label}  ·  ${selectedSlot.departureTime}`
+                      ? `Confirm — ${formatWeekLabel(selectedWeek.weekStart, selectedWeek.weekEnd)}  ·  ${selectedSlot.departureTime}`
                       : !selectedWeek
                       ? 'Pick a work week first'
                       : 'Pick a departure time'}
@@ -649,7 +678,7 @@ export default function ShuttleLinesScreen() {
   );
 }
 
-// ─── Booking Card ─────────────────────────────────────────────────────────────
+// ─── Booking Card ──────────────────────────────────────────────────────────────
 
 function BookingCard({
   booking,
@@ -746,7 +775,7 @@ function BookingCard({
   );
 }
 
-// ─── Route Card ───────────────────────────────────────────────────────────────
+// ─── Route Card ────────────────────────────────────────────────────────────────
 
 function RouteCard({
   route,
@@ -881,7 +910,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   chipText: { fontSize: 12 },
-  // Booking card
   bookingCard: { padding: 14 },
   renewalBanner: {
     flexDirection: 'row',
@@ -917,7 +945,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // Route card
   lineCard: { padding: 16 },
   lineCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   lineNumberBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
@@ -929,7 +956,6 @@ const styles = StyleSheet.create({
   lineStats: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 12 },
   lineStat: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   lineStatText: { fontSize: 12 },
-  // Bottom sheet
   sheetOverlay: { flex: 1, backgroundColor: '#00000060', justifyContent: 'flex-end' },
   sheet: {
     height: '88%',
@@ -939,16 +965,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     overflow: 'hidden',
   },
-  sheetScroll: {
-    flex: 1,
-  },
+  sheetScroll: { flex: 1 },
   sheetHandle: { width: 36, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
   sheetHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 16 },
   sheetTitle: { fontSize: 18 },
   sheetSub: { fontSize: 13, marginTop: 2 },
   closeBtn: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   sheetSection: { fontSize: 12, letterSpacing: 1, textTransform: 'uppercase', marginTop: 20, marginBottom: 12 },
-  // Stations
   stationRow: { flexDirection: 'row', gap: 12, marginBottom: 4 },
   stationDotCol: { alignItems: 'center', width: 16 },
   stationDot: { width: 14, height: 14, borderRadius: 7, borderWidth: 1, zIndex: 1 },
@@ -956,7 +979,6 @@ const styles = StyleSheet.create({
   stationInfo: { flex: 1, paddingBottom: 16 },
   stationName: { fontSize: 13 },
   stationTime: { fontSize: 11, marginTop: 2 },
-  // Week chip
   weekChip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -968,7 +990,6 @@ const styles = StyleSheet.create({
   },
   weekChipLabel: { fontSize: 13 },
   weekChipSub: { fontSize: 11, marginTop: 2 },
-  // Timeslot
   timesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   timeChip: {
     flexDirection: 'row',
@@ -981,7 +1002,6 @@ const styles = StyleSheet.create({
   },
   timeChipText: { fontSize: 13 },
   timeChipTaken: { fontSize: 10 },
-  // Book button
   bookBtn: { marginTop: 12, borderRadius: 16, overflow: 'hidden' },
   bookBtnGrad: { height: 52, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
   bookBtnText: { fontSize: 14, color: '#fff' },
