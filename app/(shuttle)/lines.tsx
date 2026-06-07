@@ -105,6 +105,18 @@ export default function ShuttleLinesScreen() {
   const { routes, myBookings, listLoading: contextLoading, error: contextError, refetch } = useShuttle();
   const [refreshing, setRefreshing] = useState(false);
 
+  useEffect(() => {
+    console.log(
+      '[LINES_DEBUG] SCREEN_MOUNT',
+      JSON.stringify({
+        routes: routes.length,
+        myBookings: myBookings.length,
+        contextLoading,
+        contextError: contextError ? String(contextError) : null,
+      })
+    );
+  }, []);
+
   const handleRefresh = async () => {
     setRefreshing(true);
     refetch();

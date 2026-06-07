@@ -316,7 +316,21 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
     refetch: refetchRoutes,
   } = useQuery({
     queryKey: ['shuttle-lines'],
-    queryFn: () => endpoints.shuttle.lines() as Promise<unknown>,
+    queryFn: async () => {
+      console.log('[LINES_DEBUG] FETCH_START queryKey=shuttle-lines');
+      console.log('[LINES_DEBUG] REQUEST_URL /shuttle/lines');
+      try {
+        const raw = await endpoints.shuttle.lines() as unknown;
+        console.log('[LINES_DEBUG] RAW_RESPONSE', JSON.stringify(raw)?.slice(0, 800));
+        const parsed = extractRoutes(raw);
+        console.log('[LINES_DEBUG] PARSED_ROUTES_COUNT', parsed.length);
+        console.log('[LINES_DEBUG] FETCH_SUCCESS');
+        return raw;
+      } catch (err: unknown) {
+        console.log('[LINES_DEBUG] FETCH_ERROR routes', JSON.stringify(err), err);
+        throw err;
+      }
+    },
     refetchInterval: 60000,
   });
 
@@ -327,7 +341,19 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
     refetch: refetchBookings,
   } = useQuery({
     queryKey: ['shuttle-my-bookings'],
-    queryFn: () => endpoints.shuttle.myBookings() as Promise<unknown>,
+    queryFn: async () => {
+      console.log('[LINES_DEBUG] FETCH_START queryKey=shuttle-my-bookings');
+      console.log('[LINES_DEBUG] REQUEST_URL /shuttle/route-bookings');
+      try {
+        const raw = await endpoints.shuttle.myBookings() as unknown;
+        console.log('[LINES_DEBUG] RAW_RESPONSE bookings', JSON.stringify(raw)?.slice(0, 400));
+        console.log('[LINES_DEBUG] FETCH_SUCCESS bookings');
+        return raw;
+      } catch (err: unknown) {
+        console.log('[LINES_DEBUG] FETCH_ERROR bookings', JSON.stringify(err), err);
+        throw err;
+      }
+    },
     refetchInterval: 60000,
   });
 
