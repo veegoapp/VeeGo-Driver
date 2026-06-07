@@ -443,7 +443,7 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
         passengers,
         loading:
           routesLoading || bookingsLoading || tripsLoading || stationsLoading || detailLoading,
-        error: (routesError ?? bookingsError ?? tripsError ?? stationsError ?? detailError) as Error | null,
+        error: (routesError ?? bookingsError) as Error | null,
         nextStop,
         togglePassenger,
         tripCancelledBanner,
