@@ -6,10 +6,11 @@ import { getUserIdFromToken } from './auth';
 
 export type ServiceType = 'CAR' | 'MOTOR' | 'DELIVERY' | 'SHUTTLE';
 
-// Storage key for the per-user service type map: { [userId]: ServiceType }
-// The legacy flat key "veego_service_type" is intentionally NOT read — it is
-// device-scoped and cannot be trusted to belong to the current account.
+// Per-user map key — value is JSON: { [userId]: ServiceType }
 const SERVICE_MAP_KEY = 'veego_service_map';
+// Device-level fallback — written on every save so navigateAfterAuth can
+// always find a service type even when the JWT has no parseable id claim.
+const DEVICE_SERVICE_KEY = 'veego_device_service';
 
 type ServiceContextValue = {
   serviceType: ServiceType;
@@ -43,24 +44,43 @@ export function ServiceProvider({ children }: { children: React.ReactNode }) {
 
     Promise.all([
       AsyncStorage.getItem('veego_theme'),
+      // Read per-user map (when userId available) AND device fallback in parallel
       userId ? AsyncStorage.getItem(SERVICE_MAP_KEY) : Promise.resolve(null),
-    ]).then(([storedTheme, mapJson]) => {
+      AsyncStorage.getItem(DEVICE_SERVICE_KEY),
+    ]).then(([storedTheme, mapJson, deviceService]) => {
       if (storedTheme !== null) setIsDarkModeState(storedTheme === 'dark');
 
+      // Priority 1: per-user map entry
+      let resolvedService: ServiceType | null = null;
       if (userId && mapJson) {
         const map = JSON.parse(mapJson) as Record<string, ServiceType>;
-        if (map[userId]) {
-          setServiceTypeState(map[userId]);
-        }
+        resolvedService = map[userId] ?? null;
+      }
+
+      // Priority 2: device-level fallback (covers null userId or missing entry)
+      if (!resolvedService && deviceService) {
+        resolvedService = deviceService as ServiceType;
+      }
+
+      if (resolvedService) {
+        setServiceTypeState(resolvedService);
       }
 
       setLoaded(true);
     }).catch(() => setLoaded(true));
   }, [userId]);
 
-  // Write service type under the current user's identity only.
+  // Write service type to BOTH storage locations:
+  //  - Per-user map (when userId is available) — multi-account safe.
+  //  - Device-level fallback — always written so navigateAfterAuth never
+  //    misses the value even when the JWT has no parseable id claim.
   const setServiceType = (t: ServiceType) => {
     setServiceTypeState(t);
+
+    // Always write device fallback
+    AsyncStorage.setItem(DEVICE_SERVICE_KEY, t).catch(() => {});
+
+    // Also write per-user map when userId is available
     if (!userId) return;
     AsyncStorage.getItem(SERVICE_MAP_KEY)
       .then((mapJson) => {
