@@ -433,7 +433,7 @@ export default function ShuttleLinesScreen() {
       >
         <View style={styles.sheetOverlay}>
           <Pressable style={{ flex: 1 }} onPress={() => setBookingRoute(null)} />
-          <View style={[styles.sheet, { backgroundColor: colors.background, paddingBottom: insets.bottom + 20 }]}>
+          <View style={[styles.sheet, { backgroundColor: colors.background, paddingBottom: insets.bottom + 16 }]}>
             <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
 
             <View style={styles.sheetHeader}>
@@ -454,7 +454,12 @@ export default function ShuttleLinesScreen() {
               </Pressable>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              nestedScrollEnabled
+              style={styles.sheetScroll}
+              contentContainerStyle={{ paddingBottom: 8 }}
+            >
               {/* Stations */}
               <Text style={[styles.sheetSection, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
                 Stations
@@ -905,12 +910,15 @@ const styles = StyleSheet.create({
   // Bottom sheet
   sheetOverlay: { flex: 1, backgroundColor: '#00000060', justifyContent: 'flex-end' },
   sheet: {
-    maxHeight: '80%',
+    height: '88%',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     paddingTop: 12,
     paddingHorizontal: 20,
     overflow: 'hidden',
+  },
+  sheetScroll: {
+    flex: 1,
   },
   sheetHandle: { width: 36, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
   sheetHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 16 },
