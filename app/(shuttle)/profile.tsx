@@ -1,15 +1,14 @@
 import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { ChevronRight, GitBranch, LogOut, Moon, Settings, Star, Sun } from 'lucide-react-native';
+import { ChevronRight, GitBranch, LogOut, Settings, Star } from 'lucide-react-native';
 import { FeatherIcon } from '@/lib/iconMap';
 import React from 'react';
-import { ActivityIndicator, Image, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
-import { useService } from '@/lib/serviceContext';
 import { useI18n } from '@/lib/i18nContext';
 import type { Language } from '@/lib/i18nContext';
 import { useAuth } from '@/lib/authContext';
@@ -20,6 +19,8 @@ const TAB_BAR_HEIGHT = 96;
 type DriverProfile = {
   id: string;
   name: string;
+  email: string;
+  phone: string;
   rating: number;
   avatar: string;
   trips: number;
@@ -36,7 +37,6 @@ export default function ShuttleProfileScreen() {
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
   const { t, isRTL, language, setLanguage } = useI18n();
-  const { isDarkMode, setIsDarkMode } = useService();
   const { logout } = useAuth();
 
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
@@ -91,7 +91,7 @@ export default function ShuttleProfileScreen() {
         </GlassView>
 
         <GlassView style={[styles.menuGroup, { marginTop: 20 }]} borderRadius={20}>
-          <MenuItem icon="user" label={t.personal_info} sub={driver?.name ?? '—'} onPress={() => {}} colors={colors} isRTL={isRTL} />
+          <MenuItem icon="user" label={t.personal_info} sub={driver?.phone ?? driver?.email ?? driver?.name ?? '—'} onPress={() => router.push('/personal-info')} colors={colors} isRTL={isRTL} />
           <MenuItem
             icon="truck"
             label={t.vehicle_label}
@@ -133,26 +133,6 @@ export default function ShuttleProfileScreen() {
                 ))}
               </View>
             </View>
-          </View>
-          <View style={[styles.menuItem, { flexDirection: R, borderTopWidth: 1, borderTopColor: colors.border }]}>
-            <View style={[styles.menuIcon, { backgroundColor: colors.secondary + 'B3' }]}>
-              {isDarkMode
-                ? <Moon size={18} color={colors.foreground} strokeWidth={2} />
-                : <Sun size={18} color={colors.foreground} strokeWidth={2} />
-              }
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.menuLabel, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.dark_mode}</Text>
-              <Text style={[styles.menuSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>
-                {isDarkMode ? t.dark_theme_active : t.light_theme_active}
-              </Text>
-            </View>
-            <Switch
-              value={isDarkMode}
-              onValueChange={setIsDarkMode}
-              trackColor={{ false: colors.secondary, true: '#1e1e28' }}
-              thumbColor={isDarkMode ? '#fff' : colors.mutedForeground}
-            />
           </View>
           <View style={[styles.menuItem, { flexDirection: R, borderTopWidth: 1, borderTopColor: colors.border }]}>
             <View style={[styles.menuIcon, { backgroundColor: colors.secondary + 'B3' }]}>
