@@ -22,6 +22,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '@/lib/i18nContext';
 import { useAuth } from '@/lib/authContext';
 import { endpoints, ApiError } from '@/lib/api';
+import { api } from '@/lib/api';
+import { saveToken } from '@/lib/auth';
 import { navigateAfterAuth } from '@/lib/postAuthRouter';
 
 type Tab = 'signin' | 'signup';
@@ -49,9 +51,18 @@ export default function LoginScreen() {
 
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
 
-  const handleSignInSuccess = async (accessToken: string, refreshToken: string) => {
+  const handleSignInSuccess = async (accessToken: string, refreshToken: string, isActive: boolean) => {
     await login(accessToken, refreshToken);
+    if (!isActive) {
+      expoRouter.replace('/pending-approval');
+      return;
+    }
     await navigateAfterAuth(accessToken);
+  };
+
+  const handleRegisterSuccess = async (accessToken: string, refreshToken: string) => {
+    await login(accessToken, refreshToken);
+    expoRouter.replace('/register-documents');
   };
 
   return (
@@ -99,9 +110,9 @@ export default function LoginScreen() {
             </View>
 
             {tab === 'signin' ? (
-              <SignInForm isRTL={isRTL} onSuccess={(at, rt) => handleSignInSuccess(at, rt)} />
+              <SignInForm isRTL={isRTL} onSuccess={(at, rt, active) => handleSignInSuccess(at, rt, active)} />
             ) : (
-              <SignUpForm isRTL={isRTL} onSuccess={(at, rt) => handleSignInSuccess(at, rt)} />
+              <SignUpForm isRTL={isRTL} onSuccess={(at, rt) => handleRegisterSuccess(at, rt)} />
             )}
           </View>
 
@@ -116,7 +127,7 @@ export default function LoginScreen() {
 }
 
 // Task 5: credential + password sign-in form
-function SignInForm({ isRTL, onSuccess }: { isRTL: boolean; onSuccess: (at: string, rt: string) => void }) {
+function SignInForm({ isRTL, onSuccess }: { isRTL: boolean; onSuccess: (at: string, rt: string, isActive: boolean) => void }) {
   const [credential, setCredential] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
@@ -132,7 +143,18 @@ function SignInForm({ isRTL, onSuccess }: { isRTL: boolean; onSuccess: (at: stri
     setLoading(true);
     try {
       const result = await endpoints.auth.driverLogin(credential.trim(), password);
-      onSuccess(result.accessToken as string, result.refreshToken as string);
+      const at = result.accessToken as string;
+      const rt = result.refreshToken as string;
+      // Check isActive — pending drivers see the approval screen instead of the dashboard
+      let isActive = true;
+      try {
+        await saveToken(at);
+        const me = await api.get<{ isActive?: boolean }>('/driver/me');
+        isActive = me?.isActive !== false;
+      } catch {
+        // If the check fails, assume active so login still works
+      }
+      onSuccess(at, rt, isActive);
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {

@@ -35,6 +35,11 @@ const queryClient = new QueryClient({
 // Authenticated users landing on any of these are redirected to the dashboard.
 const PRE_AUTH_SCREENS = new Set(['login', 'language-select', 'onboarding', 'index']);
 
+// Screens that authenticated-but-pending drivers are allowed to stay on.
+// Any other protected route will NOT kick them back — the pending screen
+// itself has a logout button.
+const PENDING_SCREENS = new Set(['pending-approval', 'register-documents']);
+
 function RootLayoutNav() {
   const { token, isLoading } = useAuth();
   const router = useRouter();
@@ -88,6 +93,8 @@ function RootLayoutNav() {
       <Stack.Screen name="service-select" />
       <Stack.Screen name="register-info" />
       <Stack.Screen name="selfie" />
+      <Stack.Screen name="register-documents" />
+      <Stack.Screen name="pending-approval" />
       <Stack.Screen name="forgot-password" options={{ animation: 'slide_from_right' }} />
     </Stack>
   );
