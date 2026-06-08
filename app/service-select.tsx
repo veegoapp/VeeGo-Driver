@@ -113,10 +113,11 @@ export default function ServiceSelectScreen() {
   }, []);
 
   const handleContinue = () => {
-    if (controlLoading || controlError || !selected) return;
+    if (!selected) return;
     console.log('[SERVICE_SELECT_CLICK]', selected);
-    const status = getServiceStatus(BACKEND_TYPE_MAP[selected], driverSnapshot);
-    if (!status.available) return;
+    // Save the service type unconditionally — the service guard on the
+    // actual screen handles runtime availability blocking. Saving here
+    // ensures navigateAfterAuth skips service-select on every future login.
     setServiceType(selected);
     const route = selected === 'SHUTTLE' ? '/(shuttle)' : '/(tabs)';
     console.log('[FINAL ROUTE DECISION]', selected, '→', route);
@@ -129,11 +130,9 @@ export default function ServiceSelectScreen() {
   ) as Record<ServiceType, ServiceStatus>;
 
   const selectedStatus = selected ? statusMap[selected] : null;
-  const canContinue =
-    !controlLoading &&
-    !controlError &&
-    !!selected &&
-    !!selectedStatus?.available;
+  // Continue only requires a service to be selected — the service guard on
+  // the target screen handles runtime blocking. No availability gate here.
+  const canContinue = !!selected && !controlLoading;
 
   return (
     <View style={[s.root, { backgroundColor: '#fafafd' }]}>
@@ -215,7 +214,13 @@ export default function ServiceSelectScreen() {
                       isComingSoon && s.cardComingSoon,
                       isBlocked    && s.cardBlocked,
                     ]}
-                    onPress={() => !isDisabled && setSelected(svc.type)}
+                    onPress={() => {
+                      if (isDisabled) return;
+                      setSelected(svc.type);
+                      // Save immediately so navigateAfterAuth always finds the
+                      // preferred service type on every subsequent login.
+                      setServiceType(svc.type);
+                    }}
                     activeOpacity={isDisabled ? 1 : 0.85}
                     disabled={isDisabled}
                   >

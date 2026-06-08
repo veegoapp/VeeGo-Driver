@@ -1,0 +1,438 @@
+Call Stack
+  safeSetNotificationHandler (hooks/usePushNotifications.ts:13:34)
+  <global> (hooks/usePushNotifications.ts:28:27)
+  <global> (app/(tabs)/index.tsx:24)
+ LOG  [Bootstrap] token exists on pre-auth screen — routing to dashboard
+ LOG  [Auth] token detected
+ LOG  [ServiceControl] fetching services after login
+ LOG  [SERVICE_DEBUG] FETCH START
+ LOG  [PostAuth] userId=29 — no service stored, routing to /service-select
+ ERROR  The action 'REPLACE' with payload {"name":"service-select","params":{}} was not handled by any navigator.
+
+Do you have a route named 'service-select'?
+
+This is a development-only warning and won't be shown in production. 
+
+Code: construct.js
+  2 | var setPrototypeOf = require("./setPrototypeOf.js");
+  3 | function _construct(t, e, r) {
+> 4 |   if (isNativeReflectConstruct()) return Reflect.construct.apply(null, arguments);
+    |                                                                 ^
+  5 |   var o = [null];
+  6 |   o.push.apply(o, e);
+  7 |   var p = new (t.bind.apply(t, o))();
+Call Stack
+  construct (<native>)
+  apply (<native>)
+  _construct (node_modules/.pnpm/@babel+runtime@7.29.2/node_modules/@babel/runtime/helpers/construct.js:4:65)
+  Wrapper (node_modules/.pnpm/@babel+runtime@7.29.2/node_modules/@babel/runtime/helpers/wrapNativeSuper.js:15:23)
+  construct (<native>)
+  _callSuper (node_modules/.pnpm/@babel+runtime@7.29.2/node_modules/@babel/runtime/helpers/callSuper.js:5:108)
+  NamelessError (node_modules/.pnpm/@expo+metro-runtime@6.1.2_expo@54.0.35_react-dom@19.1.0_react@19.1.0__react-native@0.81_f89c1eaaf35d2dc3b9982edc1784205a/node_modules/@expo/metro-runtime/src/metroServerLogs.native.ts:102:20)
+  captureCurrentStack (node_modules/.pnpm/@expo+metro-runtime@6.1.2_expo@54.0.35_react-dom@19.1.0_react@19.1.0__react-native@0.81_f89c1eaaf35d2dc3b9982edc1784205a/node_modules/@expo/metro-runtime/src/metroServerLogs.native.ts:106:27)
+  HMRClient.log (node_modules/.pnpm/@expo+metro-runtime@6.1.2_expo@54.0.35_react-dom@19.1.0_react@19.1.0__react-native@0.81_f89c1eaaf35d2dc3b9982edc1784205a/node_modules/@expo/metro-runtime/src/metroServerLogs.native.ts:39:79)
+  console.level (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Core/setUpDeveloperTools.js:41:24)
+  onUnhandledAction (node_modules/.pnpm/expo-router@6.0.24_@types+react-dom@19.1.11_@types+react@19.1.17__@types+react@19.1.17__4094ee48018c5b5c8f1246009fce9036/node_modules/expo-router/build/ExpoRoot.js:199:22)
+  useLatestCallback$argument_0 (node_modules/.pnpm/@react-navigation+core@7.17.5_react@19.1.0/node_modules/@react-navigation/core/lib/module/useNavigationBuilder.js:539:28)
+  apply (<native>)
+  latestCallback (node_modules/.pnpm/use-latest-callback@0.2.6_react@19.1.0/node_modules/use-latest-callback/lib/src/index.js:21:33)
+  dispatch (node_modules/.pnpm/@react-navigation+core@7.17.5_react@19.1.0/node_modules/@react-navigation/core/lib/module/useNavigationHelpers.js:29:26)
+  listeners.focus._$argument_0 (node_modules/.pnpm/@react-navigation+core@7.17.5_react@19.1.0/node_modules/@react-navigation/core/lib/module/BaseNavigationContainer.js:110:59)
+  listener (node_modules/.pnpm/@react-navigation+core@7.17.5_react@19.1.0/node_modules/@react-navigation/core/lib/module/useFocusedListenersChildrenAdapter.js:31:25)
+  useLatestCallback$argument_0 (node_modules/.pnpm/@react-navigation+core@7.17.5_react@19.1.0/node_modules/@react-navigation/core/lib/module/BaseNavigationContainer.js:110:25)
+  apply (<native>)
+  latestCallback (node_modules/.pnpm/use-latest-callback@0.2.6_react@19.1.0/node_modules/use-latest-callback/lib/src/index.js:21:33)
+  exports.routingQueue.run (node_modules/.pnpm/expo-router@6.0.24_@types+react-dom@19.1.11_@types+react@19.1.17__@types+react@19.1.17__4094ee48018c5b5c8f1246009fce9036/node_modules/expo-router/build/global-state/routing.js:92:37)
+  <anonymous> (node_modules/.pnpm/expo-router@6.0.24_@types+react-dom@19.1.11_@types+react@19.1.17__@types+react@19.1.17__4094ee48018c5b5c8f1246009fce9036/node_modules/expo-router/build/imperative-api.js:27:35)
+  callCreate.reactStackBottomFrame (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:15973:26)
+  runWithFiberInDEV (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:683:21)
+  commitHookEffectListMount (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:9661:46)
+  commitHookPassiveMountEffects (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:9782:36)
+  commitPassiveMountOnFiber (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:10925:42)
+  recursivelyTraversePassiveMountEffects (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:10899:36)
+  commitPassiveMountOnFiber (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:11048:49)
+  recursivelyTraversePassiveMountEffects (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:10899:36)
+  commitPassiveMountOnFiber (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:10918:49)
+  recursivelyTraversePassiveMountEffects (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:10899:36)
+  commitPassiveMountOnFiber (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:10918:49)
+  recursivelyTraversePassiveMountEffects (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:10899:36)
+  commitPassiveMountOnFiber (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:10918:49)
+  recursivelyTraversePassiveMountEffects (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:10899:36)
+  commitPassiveMountOnFiber (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:10918:49)
+  recursivelyTraversePassiveMountEffects (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:10899:36)
+  commitPassiveMountOnFiber (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:11048:49)
+  recursivelyTraversePassiveMountEffects (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:10899:36)
+  commitPassiveMountOnFiber (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:10918:49)
+  recursivelyTraversePassiveMountEffects (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:10899:36)
+  commitPassiveMountOnFiber (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:11048:49)
+  recursivelyTraversePassiveMountEffects (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:10899:36)
+  commitPassiveMountOnFiber (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:10918:49)
+  recursivelyTraversePassiveMountEffects (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:10899:36)
+  commitPassiveMountOnFiber (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:11048:49)
+  recursivelyTraversePassiveMountEffects (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:10899:36)
+  commitPassiveMountOnFiber (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:10918:49)
+  recursivelyTraversePassiveMountEffects (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:10899:36)
+  commitPassiveMountOnFiber (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:11048:49)
+  recursivelyTraversePassiveMountEffects (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:10899:36)
+  commitPassiveMountOnFiber (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:10918:49)
+  recursivelyTraversePassiveMountEffects (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:10899:36)
+  commitPassiveMountOnFiber (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:10937:49)
+  flushPassiveEffects (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:12726:34)
+  flushPendingEffects (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:12691:33)
+  flushSpawnedWork (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:12657:30)
+  commitRoot (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:12491:25)
+  commitRootWhenReady (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:11740:17)
+  performWorkOnRoot (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:11702:34)
+  performSyncWorkOnRoot (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:3088:24)
+  flushSyncWorkAcrossRoots_impl (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:2942:42)
+  processRootScheduleInMicrotask (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:2973:36)
+  scheduleMicrotask$argument_0 (node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:3108:47) 
+
+Code: ExpoRoot.js
+  142 |     }
+  143 |     return (<storeContext_1.StoreContext.Provider value={store}>
+> 144 |       <NavigationContainer_1.NavigationContainer ref={store.navigationRef} initialState={store.state} linking={store.linking} onUnhandledAction={onUnhandledAction} documentTitle={documentTitle} onReady={store.onReady}>
+      |       ^
+  145 |         <serverLocationContext_1.ServerContext.Provider value={serverContext}>
+  146 |           <WrapperComponent>
+  147 |             <Content />
+Call Stack
+  ContextNavigator (node_modules/.pnpm/expo-router@6.0.24_@types+react-dom@19.1.11_@types+react@19.1.17__@types+react@19.1.17__4094ee48018c5b5c8f1246009fce9036/node_modules/expo-router/build/ExpoRoot.js:144:7)
+  ExpoRoot (node_modules/.pnpm/expo-router@6.0.24_@types+react-dom@19.1.11_@types+react@19.1.17__@types+react@19.1.17__4094ee48018c5b5c8f1246009fce9036/node_modules/expo-router/build/ExpoRoot.js:87:12)
+  App (node_modules/.pnpm/expo-router@6.0.24_@types+react-dom@19.1.11_@types+react@19.1.17__@types+react@19.1.17__4094ee48018c5b5c8f1246009fce9036/node_modules/expo-router/build/qualified-entry.js:21:7)
+  WithDevTools (node_modules/.pnpm/expo@54.0.35_@babel+core@7.29.0_@expo+metro-runtime@6.1.2_expo-router@6.0.24_react-nati_35c8298d08449c2c58e6d5e811cd9eb8/node_modules/expo/src/launch/withDevTools.tsx:21:12)
+ LOG  [PostAuth] userId=29 — no service stored, routing to /service-select
+ LOG  [Bootstrap] token exists on pre-auth screen — routing to dashboard
+ LOG  [Auth] token detected
+ LOG  [ServiceControl] fetching services after login
+ LOG  [SERVICE_DEBUG] FETCH START
+ LOG  [Bootstrap] token exists on pre-auth screen — routing to dashboard
+ LOG  [PostAuth] userId=29 — no service stored, routing to /service-select
+ LOG  [PostAuth] userId=29 — no service stored, routing to /service-select
+ LOG  [SERVICE_SELECT] services: []
+ LOG  [SERVICE_MATCH] no match for "car" in []
+ LOG  [SERVICE_MATCH] no match for "scooter" in []
+ LOG  [SERVICE_MATCH] no match for "delivery" in []
+ LOG  [SERVICE_MATCH] no match for "shuttle" in []
+ LOG  [Auth] token detected
+ LOG  [ServiceControl] fetching services after login
+ LOG  [SERVICE_DEBUG] FETCH START
+ LOG  [Auth] token detected
+ LOG  [ServiceControl] fetching services after login
+ LOG  [SERVICE_DEBUG] FETCH START
+ LOG  [Bootstrap] token exists on pre-auth screen — routing to dashboard
+ LOG  [SERVICE_DEBUG] RAW RESPONSE: {"data": [{"activeZoneIds": [Array], "displayMode": "live", "isEnabled": true, "maintenanceEta": null, "serviceType": "shuttle", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [Array], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "car", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [Array], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "delivery", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [Array], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "scooter", "unavailableAction": "none", "unavailableMessage": null}]}
+ LOG  [SERVICE_DEBUG] PARSED SERVICES: [{"activeZoneIds": [], "displayMode": "live", "isEnabled": true, "maintenanceEta": null, "serviceType": "shuttle", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "car", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "delivery", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "scooter", "unavailableAction": "none", "unavailableMessage": null}]
+ LOG  [SERVICE_DEBUG] FETCH SUCCESS
+ LOG  [ServiceControl] services loaded — 4 service(s): shuttle(enabled=true,mode=live), car(enabled=true,mode=coming_soon), delivery(enabled=true,mode=coming_soon), scooter(enabled=true,mode=coming_soon)
+ LOG  [PostAuth] userId=29 — no service stored, routing to /service-select
+ LOG  [SERVICE_SELECT] services: []
+Android Bundled 148ms node_modules/.pnpm/socket.io-client@4.8.3/node_modules/socket.io-client/build/esm/index.js (42 modules)
+ LOG  [SERVICE_DEBUG] RAW RESPONSE: {"data": [{"activeZoneIds": [Array], "displayMode": "live", "isEnabled": true, "maintenanceEta": null, "serviceType": "shuttle", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [Array], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "car", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [Array], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "delivery", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [Array], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "scooter", "unavailableAction": "none", "unavailableMessage": null}]}
+ LOG  [SERVICE_DEBUG] PARSED SERVICES: [{"activeZoneIds": [], "displayMode": "live", "isEnabled": true, "maintenanceEta": null, "serviceType": "shuttle", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "car", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "delivery", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "scooter", "unavailableAction": "none", "unavailableMessage": null}]
+ LOG  [SERVICE_DEBUG] FETCH SUCCESS
+ LOG  [ServiceControl] services loaded — 4 service(s): shuttle(enabled=true,mode=live), car(enabled=true,mode=coming_soon), delivery(enabled=true,mode=coming_soon), scooter(enabled=true,mode=coming_soon)
+ LOG  [SOCKET_CONNECT] id: JKSa35iMeHJSWR8kAAAB
+ LOG  [SOCKET_SHARED_INSTANCE] single shared connection active
+ LOG  [SERVICE_SELECT] services: []
+ LOG  [SERVICE_DEBUG] RAW RESPONSE: {"data": [{"activeZoneIds": [Array], "displayMode": "live", "isEnabled": true, "maintenanceEta": null, "serviceType": "shuttle", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [Array], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "car", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [Array], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "delivery", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [Array], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "scooter", "unavailableAction": "none", "unavailableMessage": null}]}
+ LOG  [SERVICE_DEBUG] PARSED SERVICES: [{"activeZoneIds": [], "displayMode": "live", "isEnabled": true, "maintenanceEta": null, "serviceType": "shuttle", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "car", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "delivery", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "scooter", "unavailableAction": "none", "unavailableMessage": null}]
+ LOG  [SERVICE_DEBUG] FETCH SUCCESS
+ LOG  [ServiceControl] services loaded — 4 service(s): shuttle(enabled=true,mode=live), car(enabled=true,mode=coming_soon), delivery(enabled=true,mode=coming_soon), scooter(enabled=true,mode=coming_soon)
+ LOG  [SERVICE_DEBUG] RAW RESPONSE: {"data": [{"activeZoneIds": [Array], "displayMode": "live", "isEnabled": true, "maintenanceEta": null, "serviceType": "shuttle", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [Array], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "car", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [Array], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "delivery", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [Array], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "scooter", "unavailableAction": "none", "unavailableMessage": null}]}
+ LOG  [SERVICE_DEBUG] PARSED SERVICES: [{"activeZoneIds": [], "displayMode": "live", "isEnabled": true, "maintenanceEta": null, "serviceType": "shuttle", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "car", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "delivery", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "scooter", "unavailableAction": "none", "unavailableMessage": null}]
+ LOG  [SERVICE_DEBUG] FETCH SUCCESS
+ LOG  [ServiceControl] services loaded — 4 service(s): shuttle(enabled=true,mode=live), car(enabled=true,mode=coming_soon), delivery(enabled=true,mode=coming_soon), scooter(enabled=true,mode=coming_soon)
+ LOG  [SERVICE_SELECT] services: [{"activeZoneIds": [], "displayMode": "live", "isEnabled": true, "maintenanceEta": null, "serviceType": "shuttle", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "car", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "delivery", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "scooter", "unavailableAction": "none", "unavailableMessage": null}]
+ LOG  [SERVICE_MATCH] {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "car", "unavailableAction": "none", "unavailableMessage": null} ["shuttle", "car", "delivery", "scooter"]
+ LOG  [SERVICE_MATCH] {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "scooter", "unavailableAction": "none", "unavailableMessage": null} ["shuttle", "car", "delivery", "scooter"]
+ LOG  [SERVICE_MATCH] {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "delivery", "unavailableAction": "none", "unavailableMessage": null} ["shuttle", "car", "delivery", "scooter"]
+ LOG  [SERVICE_MATCH] {"activeZoneIds": [], "displayMode": "live", "isEnabled": true, "maintenanceEta": null, "serviceType": "shuttle", "unavailableAction": "none", "unavailableMessage": null} ["shuttle", "car", "delivery", "scooter"]
+ LOG  [SERVICE_SELECT] services: [{"activeZoneIds": [], "displayMode": "live", "isEnabled": true, "maintenanceEta": null, "serviceType": "shuttle", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "car", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "delivery", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "scooter", "unavailableAction": "none", "unavailableMessage": null}]
+ LOG  [SERVICE_SELECT_CLICK] SHUTTLE
+ LOG  [SERVICE_MATCH] {"activeZoneIds": [], "displayMode": "live", "isEnabled": true, "maintenanceEta": null, "serviceType": "shuttle", "unavailableAction": "none", "unavailableMessage": null} ["shuttle", "car", "delivery", "scooter"]
+ LOG  [FINAL ROUTE DECISION] SHUTTLE → /(shuttle)
+ LOG  [SERVICE_SELECT] services: [{"activeZoneIds": [], "displayMode": "live", "isEnabled": true, "maintenanceEta": null, "serviceType": "shuttle", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "car", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "delivery", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "scooter", "unavailableAction": "none", "unavailableMessage": null}]
+ LOG  [SERVICE_MATCH] {"activeZoneIds": [], "displayMode": "live", "isEnabled": true, "maintenanceEta": null, "serviceType": "shuttle", "unavailableAction": "none", "unavailableMessage": null} ["shuttle", "car", "delivery", "scooter"]
+ LOG  [LINES_DEBUG] FETCH_START queryKey=shuttle-lines
+ LOG  [LINES_DEBUG] REQUEST_URL /shuttle/lines
+ LOG  [LINES_DEBUG] FETCH_START queryKey=shuttle-my-bookings
+ LOG  [LINES_DEBUG] REQUEST_URL /shuttle/route-bookings
+ LOG  [SERVICE_DEBUG] FETCH START (refresh)
+ LOG  [SERVICE_DEBUG] RAW RESPONSE (refresh): {"data": [{"activeZoneIds": [Array], "displayMode": "live", "isEnabled": true, "maintenanceEta": null, "serviceType": "shuttle", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [Array], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "car", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [Array], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "delivery", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [Array], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "scooter", "unavailableAction": "none", "unavailableMessage": null}]}
+ LOG  [SERVICE_DEBUG] PARSED SERVICES (refresh): [{"activeZoneIds": [], "displayMode": "live", "isEnabled": true, "maintenanceEta": null, "serviceType": "shuttle", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "car", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "delivery", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "scooter", "unavailableAction": "none", "unavailableMessage": null}]
+ LOG  [SERVICE_DEBUG] FETCH SUCCESS (refresh)
+ LOG  [ServiceControl] services loaded (refresh) — 4 service(s)
+ LOG  [SERVICE_MATCH] {"activeZoneIds": [], "displayMode": "live", "isEnabled": true, "maintenanceEta": null, "serviceType": "shuttle", "unavailableAction": "none", "unavailableMessage": null} ["shuttle", "car", "delivery", "scooter"]
+ LOG  [LINES_DEBUG] RAW_RESPONSE bookings {"data":[{"id":3,"driverId":18,"routeId":4,"timeSlotId":7,"weekStart":"2026-06-14","weekEnd":"2026-06-18","status":"cancelled","renewalNotifiedAt":null,"renewalDeadline":null,"renewalConfirmedAt":null,"cancelledAt":"2026-06-07T23:45:42.484Z","cancelledBy":"driver","cancelReason":null,"createdAt":"2026-06-07T23:44:41.845Z","updatedAt":"2026-06-07T23:45:42.485Z","route":{"id":4,"name":"Ain Shams → E
+ LOG  [LINES_DEBUG] FETCH_SUCCESS bookings
+ LOG  [LINES_DEBUG] RAW_RESPONSE {"data":[{"id":4,"name":"Ain Shams → El Maadi #1","from":"Mazlaqan Ain Shams","to":"Misr Helwan Agriculture Rd","fromLocation":"Mazlaqan Ain Shams","toLocation":"Misr Helwan Agriculture Rd","estimatedDuration":57,"basePrice":25,"isActive":true,"stationCount":10,"totalTrips":3,"openTrips":3,"activeTrips":0,"totalSeats":14,"minRequired":7,"createdAt":"2026-05-30T18:01:11.107Z","updatedAt":"2026-05-30T18:01:11.107Z","upcomingWeekStart":"2026-06-14","timeslots":[{"departureTime":"15:00","availableSeats":14,"isBooked":false}],"timeSlots":[{"departureTime":"15:00","availableSeats":14,"isBooked":false}],"availableSlots":1,"totalSlots":1},{"id":5,"name":"Downtown → Smart Village #1","from":"El Abaseya Street","to":"Cairo Alexandria Desert Road","fromLocation":"El Abaseya Street","toLocation":"Cair
+ LOG  [LINES_DEBUG] PARSED_ROUTES_COUNT 50
+ LOG  [LINES_DEBUG] FETCH_SUCCESS
+ LOG  [LINES_DEBUG] SCREEN_MOUNT {"routes":50,"myBookings":1,"contextLoading":false,"contextError":null}
+ LOG  [LINES_DEBUG] FETCH_START queryKey=shuttle-my-bookings
+ LOG  [LINES_DEBUG] REQUEST_URL /shuttle/route-bookings
+ LOG  [LINES_DEBUG] FETCH_START queryKey=shuttle-lines
+ LOG  [LINES_DEBUG] REQUEST_URL /shuttle/lines
+ LOG  [LINES_DEBUG] RAW_RESPONSE bookings {"data":[{"id":3,"driverId":18,"routeId":4,"timeSlotId":7,"weekStart":"2026-06-14","weekEnd":"2026-06-18","status":"cancelled","renewalNotifiedAt":null,"renewalDeadline":null,"renewalConfirmedAt":null,"cancelledAt":"2026-06-07T23:45:42.484Z","cancelledBy":"driver","cancelReason":null,"createdAt":"2026-06-07T23:44:41.845Z","updatedAt":"2026-06-07T23:45:42.485Z","route":{"id":4,"name":"Ain Shams → E
+ LOG  [LINES_DEBUG] FETCH_SUCCESS bookings
+ LOG  [LINES_DEBUG] RAW_RESPONSE {"data":[{"id":4,"name":"Ain Shams → El Maadi #1","from":"Mazlaqan Ain Shams","to":"Misr Helwan Agriculture Rd","fromLocation":"Mazlaqan Ain Shams","toLocation":"Misr Helwan Agriculture Rd","estimatedDuration":57,"basePrice":25,"isActive":true,"stationCount":10,"totalTrips":3,"openTrips":3,"activeTrips":0,"totalSeats":14,"minRequired":7,"createdAt":"2026-05-30T18:01:11.107Z","updatedAt":"2026-05-30T18:01:11.107Z","upcomingWeekStart":"2026-06-14","timeslots":[{"departureTime":"15:00","availableSeats":14,"isBooked":false}],"timeSlots":[{"departureTime":"15:00","availableSeats":14,"isBooked":false}],"availableSlots":1,"totalSlots":1},{"id":5,"name":"Downtown → Smart Village #1","from":"El Abaseya Street","to":"Cairo Alexandria Desert Road","fromLocation":"El Abaseya Street","toLocation":"Cair
+ LOG  [LINES_DEBUG] PARSED_ROUTES_COUNT 50
+ LOG  [LINES_DEBUG] FETCH_SUCCESS
+ LOG  [LINES_DEBUG] FETCH_START queryKey=shuttle-my-bookings
+ LOG  [LINES_DEBUG] REQUEST_URL /shuttle/route-bookings
+ LOG  [LINES_DEBUG] FETCH_START queryKey=shuttle-lines
+ LOG  [LINES_DEBUG] REQUEST_URL /shuttle/lines
+ LOG  [LINES_DEBUG] RAW_RESPONSE bookings {"data":[{"id":5,"driverId":18,"routeId":4,"timeSlotId":10,"weekStart":"2026-06-21","weekEnd":"2026-06-25","status":"active","renewalNotifiedAt":null,"renewalDeadline":null,"renewalConfirmedAt":null,"cancelledAt":null,"cancelledBy":null,"cancelReason":null,"createdAt":"2026-06-08T00:32:29.621Z","updatedAt":"2026-06-08T00:32:29.621Z","route":{"id":4,"name":"Ain Shams → El Maadi #1","fromLocation":"
+ LOG  [LINES_DEBUG] FETCH_SUCCESS bookings
+ LOG  [LINES_DEBUG] RAW_RESPONSE {"data":[{"id":4,"name":"Ain Shams → El Maadi #1","from":"Mazlaqan Ain Shams","to":"Misr Helwan Agriculture Rd","fromLocation":"Mazlaqan Ain Shams","toLocation":"Misr Helwan Agriculture Rd","estimatedDuration":57,"basePrice":25,"isActive":true,"stationCount":10,"totalTrips":3,"openTrips":3,"activeTrips":0,"totalSeats":14,"minRequired":7,"createdAt":"2026-05-30T18:01:11.107Z","updatedAt":"2026-05-30T18:01:11.107Z","upcomingWeekStart":"2026-06-14","timeslots":[{"departureTime":"15:00","availableSeats":14,"isBooked":false}],"timeSlots":[{"departureTime":"15:00","availableSeats":14,"isBooked":false}],"availableSlots":1,"totalSlots":1},{"id":5,"name":"Downtown → Smart Village #1","from":"El Abaseya Street","to":"Cairo Alexandria Desert Road","fromLocation":"El Abaseya Street","toLocation":"Cair
+ LOG  [LINES_DEBUG] PARSED_ROUTES_COUNT 50
+ LOG  [LINES_DEBUG] FETCH_SUCCESS
+ LOG  [LINES_DEBUG] FETCH_START queryKey=shuttle-my-bookings
+ LOG  [LINES_DEBUG] REQUEST_URL /shuttle/route-bookings
+ LOG  [LINES_DEBUG] FETCH_START queryKey=shuttle-lines
+ LOG  [LINES_DEBUG] REQUEST_URL /shuttle/lines
+ LOG  [LINES_DEBUG] RAW_RESPONSE bookings {"data":[{"id":5,"driverId":18,"routeId":4,"timeSlotId":10,"weekStart":"2026-06-21","weekEnd":"2026-06-25","status":"active","renewalNotifiedAt":null,"renewalDeadline":null,"renewalConfirmedAt":null,"cancelledAt":null,"cancelledBy":null,"cancelReason":null,"createdAt":"2026-06-08T00:32:29.621Z","updatedAt":"2026-06-08T00:32:29.621Z","route":{"id":4,"name":"Ain Shams → El Maadi #1","fromLocation":"
+ LOG  [LINES_DEBUG] FETCH_SUCCESS bookings
+ LOG  [LINES_DEBUG] RAW_RESPONSE {"data":[{"id":4,"name":"Ain Shams → El Maadi #1","from":"Mazlaqan Ain Shams","to":"Misr Helwan Agriculture Rd","fromLocation":"Mazlaqan Ain Shams","toLocation":"Misr Helwan Agriculture Rd","estimatedDuration":57,"basePrice":25,"isActive":true,"stationCount":10,"totalTrips":3,"openTrips":3,"activeTrips":0,"totalSeats":14,"minRequired":7,"createdAt":"2026-05-30T18:01:11.107Z","updatedAt":"2026-05-30T18:01:11.107Z","upcomingWeekStart":"2026-06-14","timeslots":[{"departureTime":"15:00","availableSeats":14,"isBooked":false}],"timeSlots":[{"departureTime":"15:00","availableSeats":14,"isBooked":false}],"availableSlots":1,"totalSlots":1},{"id":5,"name":"Downtown → Smart Village #1","from":"El Abaseya Street","to":"Cairo Alexandria Desert Road","fromLocation":"El Abaseya Street","toLocation":"Cair
+ LOG  [LINES_DEBUG] PARSED_ROUTES_COUNT 50
+ LOG  [LINES_DEBUG] FETCH_SUCCESS
+ LOG  [LINES_DEBUG] FETCH_START queryKey=shuttle-my-bookings
+ LOG  [LINES_DEBUG] REQUEST_URL /shuttle/route-bookings
+ LOG  [LINES_DEBUG] RAW_RESPONSE bookings {"data":[{"id":5,"driverId":18,"routeId":4,"timeSlotId":10,"weekStart":"2026-06-21","weekEnd":"2026-06-25","status":"active","renewalNotifiedAt":null,"renewalDeadline":null,"renewalConfirmedAt":null,"cancelledAt":null,"cancelledBy":null,"cancelReason":null,"createdAt":"2026-06-08T00:32:29.621Z","updatedAt":"2026-06-08T00:32:29.621Z","route":{"id":4,"name":"Ain Shams → El Maadi #1","fromLocation":"
+ LOG  [LINES_DEBUG] FETCH_SUCCESS bookings
+ LOG  [LINES_DEBUG] FETCH_START queryKey=shuttle-lines
+ LOG  [LINES_DEBUG] REQUEST_URL /shuttle/lines
+ LOG  [LINES_DEBUG] RAW_RESPONSE {"data":[{"id":4,"name":"Ain Shams → El Maadi #1","from":"Mazlaqan Ain Shams","to":"Misr Helwan Agriculture Rd","fromLocation":"Mazlaqan Ain Shams","toLocation":"Misr Helwan Agriculture Rd","estimatedDuration":57,"basePrice":25,"isActive":true,"stationCount":10,"totalTrips":3,"openTrips":3,"activeTrips":0,"totalSeats":14,"minRequired":7,"createdAt":"2026-05-30T18:01:11.107Z","updatedAt":"2026-05-30T18:01:11.107Z","upcomingWeekStart":"2026-06-14","timeslots":[{"departureTime":"15:00","availableSeats":14,"isBooked":false}],"timeSlots":[{"departureTime":"15:00","availableSeats":14,"isBooked":false}],"availableSlots":1,"totalSlots":1},{"id":5,"name":"Downtown → Smart Village #1","from":"El Abaseya Street","to":"Cairo Alexandria Desert Road","fromLocation":"El Abaseya Street","toLocation":"Cair
+ LOG  [LINES_DEBUG] PARSED_ROUTES_COUNT 50
+ LOG  [LINES_DEBUG] FETCH_SUCCESS
+ LOG  [LINES_DEBUG] FETCH_START queryKey=shuttle-my-bookings
+ LOG  [LINES_DEBUG] REQUEST_URL /shuttle/route-bookings
+ LOG  [LINES_DEBUG] RAW_RESPONSE bookings {"data":[{"id":5,"driverId":18,"routeId":4,"timeSlotId":10,"weekStart":"2026-06-21","weekEnd":"2026-06-25","status":"active","renewalNotifiedAt":null,"renewalDeadline":null,"renewalConfirmedAt":null,"cancelledAt":null,"cancelledBy":null,"cancelReason":null,"createdAt":"2026-06-08T00:32:29.621Z","updatedAt":"2026-06-08T00:32:29.621Z","route":{"id":4,"name":"Ain Shams → El Maadi #1","fromLocation":"
+ LOG  [LINES_DEBUG] FETCH_SUCCESS bookings
+ LOG  [LINES_DEBUG] FETCH_START queryKey=shuttle-lines
+ LOG  [LINES_DEBUG] REQUEST_URL /shuttle/lines
+ LOG  [LINES_DEBUG] RAW_RESPONSE {"data":[{"id":4,"name":"Ain Shams → El Maadi #1","from":"Mazlaqan Ain Shams","to":"Misr Helwan Agriculture Rd","fromLocation":"Mazlaqan Ain Shams","toLocation":"Misr Helwan Agriculture Rd","estimatedDuration":57,"basePrice":25,"isActive":true,"stationCount":10,"totalTrips":3,"openTrips":3,"activeTrips":0,"totalSeats":14,"minRequired":7,"createdAt":"2026-05-30T18:01:11.107Z","updatedAt":"2026-05-30T18:01:11.107Z","upcomingWeekStart":"2026-06-14","timeslots":[{"departureTime":"15:00","availableSeats":14,"isBooked":false}],"timeSlots":[{"departureTime":"15:00","availableSeats":14,"isBooked":false}],"availableSlots":1,"totalSlots":1},{"id":5,"name":"Downtown → Smart Village #1","from":"El Abaseya Street","to":"Cairo Alexandria Desert Road","fromLocation":"El Abaseya Street","toLocation":"Cair
+ LOG  [LINES_DEBUG] PARSED_ROUTES_COUNT 50
+ LOG  [LINES_DEBUG] FETCH_SUCCESS
+Android Bundled 107ms node_modules/.pnpm/expo-router@6.0.24_@types+react-dom@19.1.11_@types+react@19.1.17__@types+react@19.1.17__4094ee48018c5b5c8f1246009fce9036/node_modules/expo-router/entry.js (1 module)
+ WARN  `expo-notifications` functionality is not fully supported in Expo Go:
+We recommend you instead use a development build to avoid limitations. Learn more: https://expo.fyi/dev-client.
+ ERROR  expo-notifications: Android Push notifications (remote notifications) functionality provided by expo-notifications was removed from Expo Go with the release of SDK 53. Use a development build instead of Expo Go. Read more at https://docs.expo.dev/develop/development-builds/introduction/. 
+
+Code: usePushNotifications.ts
+  11 |     // Dynamic require so the import doesn't execute on web at all
+  12 |     // eslint-disable-next-line @typescript-eslint/no-var-requires
+> 13 |     const Notifications = require('expo-notifications');
+     |                                  ^
+  14 |     Notifications.setNotificationHandler({
+  15 |       handleNotification: async () => ({
+  16 |         shouldPlaySound: true,
+Call Stack
+  safeSetNotificationHandler (hooks/usePushNotifications.ts:13:34)
+  <global> (hooks/usePushNotifications.ts:28:27)
+  <global> (app/(tabs)/index.tsx:24)
+ LOG  [Bootstrap] token exists on pre-auth screen — routing to dashboard
+ LOG  [Auth] token detected
+ LOG  [ServiceControl] fetching services after login
+ LOG  [SERVICE_DEBUG] FETCH START
+ LOG  [PostAuth] userId=29 — service "SHUTTLE" found, routing to /(shuttle)
+ LOG  [SERVICE_MATCH] no match for "shuttle" in []
+ LOG  [SERVICE_DEBUG] FETCH START (refresh)
+ LOG  [Auth] token detected
+ LOG  [ServiceControl] fetching services after login
+ LOG  [SERVICE_DEBUG] FETCH START
+ LOG  [Auth] token detected
+ LOG  [ServiceControl] fetching services after login
+ LOG  [SERVICE_DEBUG] FETCH START
+ LOG  [Bootstrap] token exists on pre-auth screen — routing to dashboard
+ LOG  [PostAuth] userId=29 — service "SHUTTLE" found, routing to /(shuttle)
+ LOG  [SERVICE_DEBUG] FETCH START (refresh)
+Android Bundled 4ms node_modules/.pnpm/socket.io-client@4.8.3/node_modules/socket.io-client/build/esm/index.js (1 module)
+ LOG  [AUTH_REFRESH_START]
+ LOG  [AUTH_REFRESH_REUSED] awaiting in-flight refresh promise
+ LOG  [AUTH_REFRESH_REUSED] awaiting in-flight refresh promise
+ LOG  [AUTH_REFRESH_REUSED] awaiting in-flight refresh promise
+ LOG  [AUTH_REFRESH_REUSED] awaiting in-flight refresh promise
+ WARN  [SOCKET] connect_error: Invalid token
+ LOG  [AUTH_REFRESH_SUCCESS]
+ LOG  [SERVICE_SELECT] services: []
+ LOG  [SERVICE_DEBUG] RAW RESPONSE: {"data": [{"activeZoneIds": [Array], "displayMode": "live", "isEnabled": true, "maintenanceEta": null, "serviceType": "shuttle", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [Array], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "car", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [Array], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "delivery", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [Array], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "scooter", "unavailableAction": "none", "unavailableMessage": null}]}
+ LOG  [SERVICE_DEBUG] PARSED SERVICES: [{"activeZoneIds": [], "displayMode": "live", "isEnabled": true, "maintenanceEta": null, "serviceType": "shuttle", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "car", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "delivery", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "scooter", "unavailableAction": "none", "unavailableMessage": null}]
+ LOG  [SERVICE_DEBUG] FETCH SUCCESS
+ LOG  [ServiceControl] services loaded — 4 service(s): shuttle(enabled=true,mode=live), car(enabled=true,mode=coming_soon), delivery(enabled=true,mode=coming_soon), scooter(enabled=true,mode=coming_soon)
+ LOG  [SERVICE_DEBUG] RAW RESPONSE (refresh): {"data": [{"activeZoneIds": [Array], "displayMode": "live", "isEnabled": true, "maintenanceEta": null, "serviceType": "shuttle", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [Array], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "car", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [Array], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "delivery", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [Array], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "scooter", "unavailableAction": "none", "unavailableMessage": null}]}
+ LOG  [SERVICE_DEBUG] PARSED SERVICES (refresh): [{"activeZoneIds": [], "displayMode": "live", "isEnabled": true, "maintenanceEta": null, "serviceType": "shuttle", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "car", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "delivery", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "scooter", "unavailableAction": "none", "unavailableMessage": null}]
+ LOG  [SERVICE_DEBUG] FETCH SUCCESS (refresh)
+ LOG  [ServiceControl] services loaded (refresh) — 4 service(s)
+ LOG  [SERVICE_SELECT] services: [{"activeZoneIds": [], "displayMode": "live", "isEnabled": true, "maintenanceEta": null, "serviceType": "shuttle", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "car", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "delivery", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "scooter", "unavailableAction": "none", "unavailableMessage": null}]
+ LOG  [SERVICE_DEBUG] RAW RESPONSE (refresh): {"data": [{"activeZoneIds": [Array], "displayMode": "live", "isEnabled": true, "maintenanceEta": null, "serviceType": "shuttle", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [Array], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "car", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [Array], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "delivery", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [Array], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "scooter", "unavailableAction": "none", "unavailableMessage": null}]}
+ LOG  [SERVICE_DEBUG] PARSED SERVICES (refresh): [{"activeZoneIds": [], "displayMode": "live", "isEnabled": true, "maintenanceEta": null, "serviceType": "shuttle", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "car", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "delivery", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "scooter", "unavailableAction": "none", "unavailableMessage": null}]
+ LOG  [SERVICE_DEBUG] FETCH SUCCESS (refresh)
+ LOG  [ServiceControl] services loaded (refresh) — 4 service(s)
+ LOG  [SERVICE_DEBUG] RAW RESPONSE: {"data": [{"activeZoneIds": [Array], "displayMode": "live", "isEnabled": true, "maintenanceEta": null, "serviceType": "shuttle", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [Array], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "car", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [Array], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "delivery", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [Array], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "scooter", "unavailableAction": "none", "unavailableMessage": null}]}
+ LOG  [SERVICE_DEBUG] PARSED SERVICES: [{"activeZoneIds": [], "displayMode": "live", "isEnabled": true, "maintenanceEta": null, "serviceType": "shuttle", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "car", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "delivery", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "scooter", "unavailableAction": "none", "unavailableMessage": null}]
+ LOG  [SERVICE_DEBUG] FETCH SUCCESS
+ LOG  [ServiceControl] services loaded — 4 service(s): shuttle(enabled=true,mode=live), car(enabled=true,mode=coming_soon), delivery(enabled=true,mode=coming_soon), scooter(enabled=true,mode=coming_soon)
+ LOG  [SERVICE_DEBUG] RAW RESPONSE: {"data": [{"activeZoneIds": [Array], "displayMode": "live", "isEnabled": true, "maintenanceEta": null, "serviceType": "shuttle", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [Array], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "car", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [Array], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "delivery", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [Array], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "scooter", "unavailableAction": "none", "unavailableMessage": null}]}
+ LOG  [SERVICE_DEBUG] PARSED SERVICES: [{"activeZoneIds": [], "displayMode": "live", "isEnabled": true, "maintenanceEta": null, "serviceType": "shuttle", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "car", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "delivery", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "scooter", "unavailableAction": "none", "unavailableMessage": null}]
+ LOG  [SERVICE_DEBUG] FETCH SUCCESS
+ LOG  [ServiceControl] services loaded — 4 service(s): shuttle(enabled=true,mode=live), car(enabled=true,mode=coming_soon), delivery(enabled=true,mode=coming_soon), scooter(enabled=true,mode=coming_soon)
+ LOG  [SERVICE_SELECT] services: [{"activeZoneIds": [], "displayMode": "live", "isEnabled": true, "maintenanceEta": null, "serviceType": "shuttle", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "car", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "delivery", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "scooter", "unavailableAction": "none", "unavailableMessage": null}]
+ LOG  [SERVICE_MATCH] {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "car", "unavailableAction": "none", "unavailableMessage": null} ["shuttle", "car", "delivery", "scooter"]
+ LOG  [SERVICE_MATCH] {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "scooter", "unavailableAction": "none", "unavailableMessage": null} ["shuttle", "car", "delivery", "scooter"]
+ LOG  [SERVICE_MATCH] {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "delivery", "unavailableAction": "none", "unavailableMessage": null} ["shuttle", "car", "delivery", "scooter"]
+ LOG  [SERVICE_MATCH] {"activeZoneIds": [], "displayMode": "live", "isEnabled": true, "maintenanceEta": null, "serviceType": "shuttle", "unavailableAction": "none", "unavailableMessage": null} ["shuttle", "car", "delivery", "scooter"]
+ LOG  [SERVICE_SELECT] services: [{"activeZoneIds": [], "displayMode": "live", "isEnabled": true, "maintenanceEta": null, "serviceType": "shuttle", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "car", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "delivery", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "scooter", "unavailableAction": "none", "unavailableMessage": null}]
+ LOG  [SERVICE_MATCH] {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "car", "unavailableAction": "none", "unavailableMessage": null} ["shuttle", "car", "delivery", "scooter"]
+ LOG  [SERVICE_MATCH] {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "scooter", "unavailableAction": "none", "unavailableMessage": null} ["shuttle", "car", "delivery", "scooter"]
+ LOG  [SERVICE_MATCH] {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "delivery", "unavailableAction": "none", "unavailableMessage": null} ["shuttle", "car", "delivery", "scooter"]
+ LOG  [SERVICE_MATCH] {"activeZoneIds": [], "displayMode": "live", "isEnabled": true, "maintenanceEta": null, "serviceType": "shuttle", "unavailableAction": "none", "unavailableMessage": null} ["shuttle", "car", "delivery", "scooter"]
+ LOG  [SERVICE_SELECT] services: [{"activeZoneIds": [], "displayMode": "live", "isEnabled": true, "maintenanceEta": null, "serviceType": "shuttle", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "car", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "delivery", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "scooter", "unavailableAction": "none", "unavailableMessage": null}]
+ LOG  [SERVICE_SELECT_CLICK] SHUTTLE
+ LOG  [SERVICE_MATCH] {"activeZoneIds": [], "displayMode": "live", "isEnabled": true, "maintenanceEta": null, "serviceType": "shuttle", "unavailableAction": "none", "unavailableMessage": null} ["shuttle", "car", "delivery", "scooter"]
+ LOG  [FINAL ROUTE DECISION] SHUTTLE → /(shuttle)
+ LOG  [SERVICE_MATCH] {"activeZoneIds": [], "displayMode": "live", "isEnabled": true, "maintenanceEta": null, "serviceType": "shuttle", "unavailableAction": "none", "unavailableMessage": null} ["shuttle", "car", "delivery", "scooter"]
+ LOG  [LINES_DEBUG] FETCH_START queryKey=shuttle-lines
+ LOG  [LINES_DEBUG] REQUEST_URL /shuttle/lines
+ LOG  [LINES_DEBUG] FETCH_START queryKey=shuttle-my-bookings
+ LOG  [LINES_DEBUG] REQUEST_URL /shuttle/route-bookings
+ LOG  [SERVICE_DEBUG] FETCH START (refresh)
+ LOG  [LINES_DEBUG] RAW_RESPONSE bookings {"data":[{"id":5,"driverId":18,"routeId":4,"timeSlotId":10,"weekStart":"2026-06-21","weekEnd":"2026-06-25","status":"active","renewalNotifiedAt":null,"renewalDeadline":null,"renewalConfirmedAt":null,"cancelledAt":null,"cancelledBy":null,"cancelReason":null,"createdAt":"2026-06-08T00:32:29.621Z","updatedAt":"2026-06-08T00:32:29.621Z","route":{"id":4,"name":"Ain Shams → El Maadi #1","fromLocation":"
+ LOG  [LINES_DEBUG] FETCH_SUCCESS bookings
+ LOG  [LINES_DEBUG] RAW_RESPONSE {"data":[{"id":4,"name":"Ain Shams → El Maadi #1","from":"Mazlaqan Ain Shams","to":"Misr Helwan Agriculture Rd","fromLocation":"Mazlaqan Ain Shams","toLocation":"Misr Helwan Agriculture Rd","estimatedDuration":57,"basePrice":25,"isActive":true,"stationCount":10,"totalTrips":1,"openTrips":1,"activeTrips":0,"totalSeats":14,"minRequired":7,"createdAt":"2026-05-30T18:01:11.107Z","updatedAt":"2026-05-30T18:01:11.107Z","upcomingWeekStart":"2026-06-14","timeslots":[{"departureTime":"13:00","availableSeats":14,"isBooked":false}],"timeSlots":[{"departureTime":"13:00","availableSeats":14,"isBooked":false}],"availableSlots":1,"totalSlots":1},{"id":5,"name":"Downtown → Smart Village #1","from":"El Abaseya Street","to":"Cairo Alexandria Desert Road","fromLocation":"El Abaseya Street","toLocation":"Cair
+ LOG  [LINES_DEBUG] PARSED_ROUTES_COUNT 50
+ LOG  [LINES_DEBUG] FETCH_SUCCESS
+ LOG  [SERVICE_DEBUG] RAW RESPONSE (refresh): {"data": [{"activeZoneIds": [Array], "displayMode": "live", "isEnabled": true, "maintenanceEta": null, "serviceType": "shuttle", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [Array], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "car", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [Array], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "delivery", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [Array], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "scooter", "unavailableAction": "none", "unavailableMessage": null}]}
+ LOG  [SERVICE_DEBUG] PARSED SERVICES (refresh): [{"activeZoneIds": [], "displayMode": "live", "isEnabled": true, "maintenanceEta": null, "serviceType": "shuttle", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "car", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "delivery", "unavailableAction": "none", "unavailableMessage": null}, {"activeZoneIds": [], "displayMode": "coming_soon", "isEnabled": true, "maintenanceEta": null, "serviceType": "scooter", "unavailableAction": "none", "unavailableMessage": null}]
+ LOG  [SERVICE_DEBUG] FETCH SUCCESS (refresh)
+ LOG  [ServiceControl] services loaded (refresh) — 4 service(s)
+ LOG  [SERVICE_MATCH] {"activeZoneIds": [], "displayMode": "live", "isEnabled": true, "maintenanceEta": null, "serviceType": "shuttle", "unavailableAction": "none", "unavailableMessage": null} ["shuttle", "car", "delivery", "scooter"]
+ LOG  [LINES_DEBUG] SCREEN_MOUNT {"routes":50,"myBookings":2,"contextLoading":false,"contextError":null}
+ LOG  [LINES_DEBUG] FETCH_START queryKey=shuttle-my-bookings
+ LOG  [LINES_DEBUG] REQUEST_URL /shuttle/route-bookings
+ LOG  [LINES_DEBUG] FETCH_START queryKey=shuttle-lines
+ LOG  [LINES_DEBUG] REQUEST_URL /shuttle/lines
+ LOG  [LINES_DEBUG] RAW_RESPONSE bookings {"data":[{"id":5,"driverId":18,"routeId":4,"timeSlotId":10,"weekStart":"2026-06-21","weekEnd":"2026-06-25","status":"cancelled","renewalNotifiedAt":null,"renewalDeadline":null,"renewalConfirmedAt":null,"cancelledAt":"2026-06-08T01:03:45.237Z","cancelledBy":"driver","cancelReason":null,"createdAt":"2026-06-08T00:32:29.621Z","updatedAt":"2026-06-08T01:03:45.238Z","route":{"id":4,"name":"Ain Shams →
+ LOG  [LINES_DEBUG] FETCH_SUCCESS bookings
+ LOG  [LINES_DEBUG] RAW_RESPONSE {"data":[{"id":4,"name":"Ain Shams → El Maadi #1","from":"Mazlaqan Ain Shams","to":"Misr Helwan Agriculture Rd","fromLocation":"Mazlaqan Ain Shams","toLocation":"Misr Helwan Agriculture Rd","estimatedDuration":57,"basePrice":25,"isActive":true,"stationCount":10,"totalTrips":1,"openTrips":1,"activeTrips":0,"totalSeats":14,"minRequired":7,"createdAt":"2026-05-30T18:01:11.107Z","updatedAt":"2026-05-30T18:01:11.107Z","upcomingWeekStart":"2026-06-14","timeslots":[{"departureTime":"13:00","availableSeats":14,"isBooked":false}],"timeSlots":[{"departureTime":"13:00","availableSeats":14,"isBooked":false}],"availableSlots":1,"totalSlots":1},{"id":5,"name":"Downtown → Smart Village #1","from":"El Abaseya Street","to":"Cairo Alexandria Desert Road","fromLocation":"El Abaseya Street","toLocation":"Cair
+ LOG  [LINES_DEBUG] PARSED_ROUTES_COUNT 50
+ LOG  [LINES_DEBUG] FETCH_SUCCESS
+ LOG  [LINES_DEBUG] FETCH_START queryKey=shuttle-my-bookings
+ LOG  [LINES_DEBUG] REQUEST_URL /shuttle/route-bookings
+ LOG  [LINES_DEBUG] FETCH_START queryKey=shuttle-lines
+ LOG  [LINES_DEBUG] REQUEST_URL /shuttle/lines
+ LOG  [LINES_DEBUG] RAW_RESPONSE {"data":[{"id":4,"name":"Ain Shams → El Maadi #1","from":"Mazlaqan Ain Shams","to":"Misr Helwan Agriculture Rd","fromLocation":"Mazlaqan Ain Shams","toLocation":"Misr Helwan Agriculture Rd","estimatedDuration":57,"basePrice":25,"isActive":true,"stationCount":10,"totalTrips":1,"openTrips":0,"activeTrips":1,"totalSeats":14,"minRequired":7,"createdAt":"2026-05-30T18:01:11.107Z","updatedAt":"2026-05-30T18:01:11.107Z","upcomingWeekStart":"2026-06-14","timeslots":[{"departureTime":"13:00","availableSeats":14,"isBooked":true}],"timeSlots":[{"departureTime":"13:00","availableSeats":14,"isBooked":true}],"availableSlots":0,"totalSlots":1},{"id":5,"name":"Downtown → Smart Village #1","from":"El Abaseya Street","to":"Cairo Alexandria Desert Road","fromLocation":"El Abaseya Street","toLocation":"Cairo
+ LOG  [LINES_DEBUG] PARSED_ROUTES_COUNT 50
+ LOG  [LINES_DEBUG] FETCH_SUCCESS
+ LOG  [LINES_DEBUG] RAW_RESPONSE bookings {"data":[{"id":5,"driverId":18,"routeId":4,"timeSlotId":10,"weekStart":"2026-06-21","weekEnd":"2026-06-25","status":"cancelled","renewalNotifiedAt":null,"renewalDeadline":null,"renewalConfirmedAt":null,"cancelledAt":"2026-06-08T01:03:45.237Z","cancelledBy":"driver","cancelReason":null,"createdAt":"2026-06-08T00:32:29.621Z","updatedAt":"2026-06-08T01:03:45.238Z","route":{"id":4,"name":"Ain Shams →
+ LOG  [LINES_DEBUG] FETCH_SUCCESS bookings
+ LOG  [LINES_DEBUG] FETCH_START queryKey=shuttle-lines
+ LOG  [LINES_DEBUG] REQUEST_URL /shuttle/lines
+ LOG  [LINES_DEBUG] FETCH_START queryKey=shuttle-my-bookings
+ LOG  [LINES_DEBUG] REQUEST_URL /shuttle/route-bookings
+ LOG  [LINES_DEBUG] RAW_RESPONSE bookings {"data":[{"id":5,"driverId":18,"routeId":4,"timeSlotId":10,"weekStart":"2026-06-21","weekEnd":"2026-06-25","status":"cancelled","renewalNotifiedAt":null,"renewalDeadline":null,"renewalConfirmedAt":null,"cancelledAt":"2026-06-08T01:03:45.237Z","cancelledBy":"driver","cancelReason":null,"createdAt":"2026-06-08T00:32:29.621Z","updatedAt":"2026-06-08T01:03:45.238Z","route":{"id":4,"name":"Ain Shams →
+ LOG  [LINES_DEBUG] FETCH_SUCCESS bookings
+ LOG  [LINES_DEBUG] RAW_RESPONSE {"data":[{"id":4,"name":"Ain Shams → El Maadi #1","from":"Mazlaqan Ain Shams","to":"Misr Helwan Agriculture Rd","fromLocation":"Mazlaqan Ain Shams","toLocation":"Misr Helwan Agriculture Rd","estimatedDuration":57,"basePrice":25,"isActive":true,"stationCount":10,"totalTrips":1,"openTrips":0,"activeTrips":1,"totalSeats":14,"minRequired":7,"createdAt":"2026-05-30T18:01:11.107Z","updatedAt":"2026-05-30T18:01:11.107Z","upcomingWeekStart":"2026-06-14","timeslots":[{"departureTime":"13:00","availableSeats":14,"isBooked":true}],"timeSlots":[{"departureTime":"13:00","availableSeats":14,"isBooked":true}],"availableSlots":0,"totalSlots":1},{"id":5,"name":"Downtown → Smart Village #1","from":"El Abaseya Street","to":"Cairo Alexandria Desert Road","fromLocation":"El Abaseya Street","toLocation":"Cairo
+ LOG  [LINES_DEBUG] PARSED_ROUTES_COUNT 50
+ LOG  [LINES_DEBUG] FETCH_SUCCESS
+ LOG  [LINES_DEBUG] FETCH_START queryKey=shuttle-my-bookings
+ LOG  [LINES_DEBUG] REQUEST_URL /shuttle/route-bookings
+ LOG  [LINES_DEBUG] FETCH_START queryKey=shuttle-lines
+ LOG  [LINES_DEBUG] REQUEST_URL /shuttle/lines
+ LOG  [LINES_DEBUG] RAW_RESPONSE bookings {"data":[{"id":5,"driverId":18,"routeId":4,"timeSlotId":10,"weekStart":"2026-06-21","weekEnd":"2026-06-25","status":"cancelled","renewalNotifiedAt":null,"renewalDeadline":null,"renewalConfirmedAt":null,"cancelledAt":"2026-06-08T01:03:45.237Z","cancelledBy":"driver","cancelReason":null,"createdAt":"2026-06-08T00:32:29.621Z","updatedAt":"2026-06-08T01:03:45.238Z","route":{"id":4,"name":"Ain Shams →
+ LOG  [LINES_DEBUG] FETCH_SUCCESS bookings
+ LOG  [LINES_DEBUG] RAW_RESPONSE {"data":[{"id":4,"name":"Ain Shams → El Maadi #1","from":"Mazlaqan Ain Shams","to":"Misr Helwan Agriculture Rd","fromLocation":"Mazlaqan Ain Shams","toLocation":"Misr Helwan Agriculture Rd","estimatedDuration":57,"basePrice":25,"isActive":true,"stationCount":10,"totalTrips":1,"openTrips":0,"activeTrips":1,"totalSeats":14,"minRequired":7,"createdAt":"2026-05-30T18:01:11.107Z","updatedAt":"2026-05-30T18:01:11.107Z","upcomingWeekStart":"2026-06-14","timeslots":[{"departureTime":"13:00","availableSeats":14,"isBooked":true}],"timeSlots":[{"departureTime":"13:00","availableSeats":14,"isBooked":true}],"availableSlots":0,"totalSlots":1},{"id":5,"name":"Downtown → Smart Village #1","from":"El Abaseya Street","to":"Cairo Alexandria Desert Road","fromLocation":"El Abaseya Street","toLocation":"Cairo
+ LOG  [LINES_DEBUG] PARSED_ROUTES_COUNT 50
+ LOG  [LINES_DEBUG] FETCH_SUCCESS
+ LOG  [LINES_DEBUG] FETCH_START queryKey=shuttle-my-bookings
+ LOG  [LINES_DEBUG] REQUEST_URL /shuttle/route-bookings
+ LOG  [LINES_DEBUG] FETCH_START queryKey=shuttle-lines
+ LOG  [LINES_DEBUG] REQUEST_URL /shuttle/lines
+ LOG  [LINES_DEBUG] RAW_RESPONSE bookings {"data":[{"id":5,"driverId":18,"routeId":4,"timeSlotId":10,"weekStart":"2026-06-21","weekEnd":"2026-06-25","status":"cancelled","renewalNotifiedAt":null,"renewalDeadline":null,"renewalConfirmedAt":null,"cancelledAt":"2026-06-08T01:03:45.237Z","cancelledBy":"driver","cancelReason":null,"createdAt":"2026-06-08T00:32:29.621Z","updatedAt":"2026-06-08T01:03:45.238Z","route":{"id":4,"name":"Ain Shams →
+ LOG  [LINES_DEBUG] FETCH_SUCCESS bookings
+ LOG  [LINES_DEBUG] RAW_RESPONSE {"data":[{"id":4,"name":"Ain Shams → El Maadi #1","from":"Mazlaqan Ain Shams","to":"Misr Helwan Agriculture Rd","fromLocation":"Mazlaqan Ain Shams","toLocation":"Misr Helwan Agriculture Rd","estimatedDuration":57,"basePrice":25,"isActive":true,"stationCount":10,"totalTrips":1,"openTrips":0,"activeTrips":1,"totalSeats":14,"minRequired":7,"createdAt":"2026-05-30T18:01:11.107Z","updatedAt":"2026-05-30T18:01:11.107Z","upcomingWeekStart":"2026-06-14","timeslots":[{"departureTime":"13:00","availableSeats":14,"isBooked":true}],"timeSlots":[{"departureTime":"13:00","availableSeats":14,"isBooked":true}],"availableSlots":0,"totalSlots":1},{"id":5,"name":"Downtown → Smart Village #1","from":"El Abaseya Street","to":"Cairo Alexandria Desert Road","fromLocation":"El Abaseya Street","toLocation":"Cairo
+ LOG  [LINES_DEBUG] PARSED_ROUTES_COUNT 50
+ LOG  [LINES_DEBUG] FETCH_SUCCESS
+ LOG  [SERVICE_MATCH] {"activeZoneIds": [], "displayMode": "live", "isEnabled": true, "maintenanceEta": null, "serviceType": "shuttle", "unavailableAction": "none", "unavailableMessage": null} ["shuttle", "car", "delivery", "scooter"]
+ LOG  [LINES_DEBUG] FETCH_START queryKey=shuttle-my-bookings
+ LOG  [LINES_DEBUG] REQUEST_URL /shuttle/route-bookings
+ LOG  [LINES_DEBUG] FETCH_START queryKey=shuttle-lines
+ LOG  [LINES_DEBUG] REQUEST_URL /shuttle/lines
+ LOG  [LINES_DEBUG] RAW_RESPONSE bookings {"data":[{"id":5,"driverId":18,"routeId":4,"timeSlotId":10,"weekStart":"2026-06-21","weekEnd":"2026-06-25","status":"cancelled","renewalNotifiedAt":null,"renewalDeadline":null,"renewalConfirmedAt":null,"cancelledAt":"2026-06-08T01:03:45.237Z","cancelledBy":"driver","cancelReason":null,"createdAt":"2026-06-08T00:32:29.621Z","updatedAt":"2026-06-08T01:03:45.238Z","route":{"id":4,"name":"Ain Shams →
+ LOG  [LINES_DEBUG] FETCH_SUCCESS bookings
+ LOG  [LINES_DEBUG] RAW_RESPONSE {"data":[{"id":4,"name":"Ain Shams → El Maadi #1","from":"Mazlaqan Ain Shams","to":"Misr Helwan Agriculture Rd","fromLocation":"Mazlaqan Ain Shams","toLocation":"Misr Helwan Agriculture Rd","estimatedDuration":57,"basePrice":25,"isActive":true,"stationCount":10,"totalTrips":1,"openTrips":0,"activeTrips":1,"totalSeats":14,"minRequired":7,"createdAt":"2026-05-30T18:01:11.107Z","updatedAt":"2026-05-30T18:01:11.107Z","upcomingWeekStart":"2026-06-14","timeslots":[{"departureTime":"13:00","availableSeats":14,"isBooked":true}],"timeSlots":[{"departureTime":"13:00","availableSeats":14,"isBooked":true}],"availableSlots":0,"totalSlots":1},{"id":5,"name":"Downtown → Smart Village #1","from":"El Abaseya Street","to":"Cairo Alexandria Desert Road","fromLocation":"El Abaseya Street","toLocation":"Cairo
+ LOG  [LINES_DEBUG] PARSED_ROUTES_COUNT 50
+ LOG  [LINES_DEBUG] FETCH_SUCCESS
+ LOG  [LINES_DEBUG] FETCH_START queryKey=shuttle-my-bookings
+ LOG  [LINES_DEBUG] REQUEST_URL /shuttle/route-bookings
+ LOG  [LINES_DEBUG] FETCH_START queryKey=shuttle-lines
+ LOG  [LINES_DEBUG] REQUEST_URL /shuttle/lines
+ LOG  [LINES_DEBUG] RAW_RESPONSE bookings {"data":[{"id":5,"driverId":18,"routeId":4,"timeSlotId":10,"weekStart":"2026-06-21","weekEnd":"2026-06-25","status":"cancelled","renewalNotifiedAt":null,"renewalDeadline":null,"renewalConfirmedAt":null,"cancelledAt":"2026-06-08T01:03:45.237Z","cancelledBy":"driver","cancelReason":null,"createdAt":"2026-06-08T00:32:29.621Z","updatedAt":"2026-06-08T01:03:45.238Z","route":{"id":4,"name":"Ain Shams →
+ LOG  [LINES_DEBUG] FETCH_SUCCESS bookings
+ LOG  [LINES_DEBUG] RAW_RESPONSE {"data":[{"id":4,"name":"Ain Shams → El Maadi #1","from":"Mazlaqan Ain Shams","to":"Misr Helwan Agriculture Rd","fromLocation":"Mazlaqan Ain Shams","toLocation":"Misr Helwan Agriculture Rd","estimatedDuration":57,"basePrice":25,"isActive":true,"stationCount":10,"totalTrips":1,"openTrips":0,"activeTrips":1,"totalSeats":14,"minRequired":7,"createdAt":"2026-05-30T18:01:11.107Z","updatedAt":"2026-05-30T18:01:11.107Z","upcomingWeekStart":"2026-06-14","timeslots":[{"departureTime":"13:00","availableSeats":14,"isBooked":true}],"timeSlots":[{"departureTime":"13:00","availableSeats":14,"isBooked":true}],"availableSlots":0,"totalSlots":1},{"id":5,"name":"Downtown → Smart Village #1","from":"El Abaseya Street","to":"Cairo Alexandria Desert Road","fromLocation":"El Abaseya Street","toLocation":"Cairo
+ LOG  [LINES_DEBUG] PARSED_ROUTES_COUNT 50
+ LOG  [LINES_DEBUG] FETCH_SUCCESS
+ LOG  [LINES_DEBUG] FETCH_START queryKey=shuttle-my-bookings
+ LOG  [LINES_DEBUG] REQUEST_URL /shuttle/route-bookings
+ LOG  [LINES_DEBUG] FETCH_START queryKey=shuttle-lines
+ LOG  [LINES_DEBUG] REQUEST_URL /shuttle/lines
+ LOG  [LINES_DEBUG] RAW_RESPONSE bookings {"data":[{"id":5,"driverId":18,"routeId":4,"timeSlotId":10,"weekStart":"2026-06-21","weekEnd":"2026-06-25","status":"cancelled","renewalNotifiedAt":null,"renewalDeadline":null,"renewalConfirmedAt":null,"cancelledAt":"2026-06-08T01:03:45.237Z","cancelledBy":"driver","cancelReason":null,"createdAt":"2026-06-08T00:32:29.621Z","updatedAt":"2026-06-08T01:03:45.238Z","route":{"id":4,"name":"Ain Shams →
+ LOG  [LINES_DEBUG] FETCH_SUCCESS bookings
+ LOG  [LINES_DEBUG] RAW_RESPONSE {"data":[{"id":4,"name":"Ain Shams → El Maadi #1","from":"Mazlaqan Ain Shams","to":"Misr Helwan Agriculture Rd","fromLocation":"Mazlaqan Ain Shams","toLocation":"Misr Helwan Agriculture Rd","estimatedDuration":57,"basePrice":25,"isActive":true,"stationCount":10,"totalTrips":1,"openTrips":0,"activeTrips":1,"totalSeats":14,"minRequired":7,"createdAt":"2026-05-30T18:01:11.107Z","updatedAt":"2026-05-30T18:01:11.107Z","upcomingWeekStart":"2026-06-14","timeslots":[{"departureTime":"13:00","availableSeats":14,"isBooked":true}],"timeSlots":[{"departureTime":"13:00","availableSeats":14,"isBooked":true}],"availableSlots":0,"totalSlots":1},{"id":5,"name":"Downtown → Smart Village #1","from":"El Abaseya Street","to":"Cairo Alexandria Desert Road","fromLocation":"El Abaseya Street","toLocation":"Cairo
+ LOG  [LINES_DEBUG] PARSED_ROUTES_COUNT 50
+ LOG  [LINES_DEBUG] FETCH_SUCCESS
+ LOG  [LINES_DEBUG] FETCH_START queryKey=shuttle-my-bookings
+ LOG  [LINES_DEBUG] REQUEST_URL /shuttle/route-bookings
+ LOG  [LINES_DEBUG] FETCH_START queryKey=shuttle-lines
+ LOG  [LINES_DEBUG] REQUEST_URL /shuttle/lines
+ LOG  [LINES_DEBUG] RAW_RESPONSE bookings {"data":[{"id":5,"driverId":18,"routeId":4,"timeSlotId":10,"weekStart":"2026-06-21","weekEnd":"2026-06-25","status":"cancelled","renewalNotifiedAt":null,"renewalDeadline":null,"renewalConfirmedAt":null,"cancelledAt":"2026-06-08T01:03:45.237Z","cancelledBy":"driver","cancelReason":null,"createdAt":"2026-06-08T00:32:29.621Z","updatedAt":"2026-06-08T01:03:45.238Z","route":{"id":4,"name":"Ain Shams →
+ LOG  [LINES_DEBUG] FETCH_SUCCESS bookings
+ LOG  [LINES_DEBUG] RAW_RESPONSE {"data":[{"id":4,"name":"Ain Shams → El Maadi #1","from":"Mazlaqan Ain Shams","to":"Misr Helwan Agriculture Rd","fromLocation":"Mazlaqan Ain Shams","toLocation":"Misr Helwan Agriculture Rd","estimatedDuration":57,"basePrice":25,"isActive":true,"stationCount":10,"totalTrips":1,"openTrips":0,"activeTrips":1,"totalSeats":14,"minRequired":7,"createdAt":"2026-05-30T18:01:11.107Z","updatedAt":"2026-05-30T18:01:11.107Z","upcomingWeekStart":"2026-06-14","timeslots":[{"departureTime":"13:00","availableSeats":14,"isBooked":true}],"timeSlots":[{"departureTime":"13:00","availableSeats":14,"isBooked":true}],"availableSlots":0,"totalSlots":1},{"id":5,"name":"Downtown → Smart Village #1","from":"El Abaseya Street","to":"Cairo Alexandria Desert Road","fromLocation":"El Abaseya Street","toLocation":"Cairo
+ LOG  [LINES_DEBUG] PARSED_ROUTES_COUNT 50
+ LOG  [LINES_DEBUG] FETCH_SUCCESS
+ LOG  [LINES_DEBUG] FETCH_START queryKey=shuttle-my-bookings
+ LOG  [LINES_DEBUG] REQUEST_URL /shuttle/route-bookings
+ LOG  [LINES_DEBUG] FETCH_START queryKey=shuttle-lines
+ LOG  [LINES_DEBUG] REQUEST_URL /shuttle/lines
+ LOG  [LINES_DEBUG] RAW_RESPONSE bookings {"data":[{"id":5,"driverId":18,"routeId":4,"timeSlotId":10,"weekStart":"2026-06-21","weekEnd":"2026-06-25","status":"cancelled","renewalNotifiedAt":null,"renewalDeadline":null,"renewalConfirmedAt":null,"cancelledAt":"2026-06-08T01:03:45.237Z","cancelledBy":"driver","cancelReason":null,"createdAt":"2026-06-08T00:32:29.621Z","updatedAt":"2026-06-08T01:03:45.238Z","route":{"id":4,"name":"Ain Shams →
+ LOG  [LINES_DEBUG] FETCH_SUCCESS bookings
+ LOG  [LINES_DEBUG] RAW_RESPONSE {"data":[{"id":4,"name":"Ain Shams → El Maadi #1","from":"Mazlaqan Ain Shams","to":"Misr Helwan Agriculture Rd","fromLocation":"Mazlaqan Ain Shams","toLocation":"Misr Helwan Agriculture Rd","estimatedDuration":57,"basePrice":25,"isActive":true,"stationCount":10,"totalTrips":1,"openTrips":0,"activeTrips":1,"totalSeats":14,"minRequired":7,"createdAt":"2026-05-30T18:01:11.107Z","updatedAt":"2026-05-30T18:01:11.107Z","upcomingWeekStart":"2026-06-14","timeslots":[{"departureTime":"13:00","availableSeats":14,"isBooked":true}],"timeSlots":[{"departureTime":"13:00","availableSeats":14,"isBooked":true}],"availableSlots":0,"totalSlots":1},{"id":5,"name":"Downtown → Smart Village #1","from":"El Abaseya Street","to":"Cairo Alexandria Desert Road","fromLocation":"El Abaseya Street","toLocation":"Cairo
+ LOG  [LINES_DEBUG] PARSED_ROUTES_COUNT 50
+ LOG  [LINES_DEBUG] FETCH_SUCCESS
+ LOG  [LINES_DEBUG] FETCH_START queryKey=shuttle-my-bookings
+ LOG  [LINES_DEBUG] REQUEST_URL /shuttle/route-bookings
+ LOG  [LINES_DEBUG] FETCH_START queryKey=shuttle-lines
+ LOG  [LINES_DEBUG] REQUEST_URL /shuttle/lines
+ LOG  [LINES_DEBUG] RAW_RESPONSE bookings {"data":[{"id":5,"driverId":18,"routeId":4,"timeSlotId":10,"weekStart":"2026-06-21","weekEnd":"2026-06-25","status":"cancelled","renewalNotifiedAt":null,"renewalDeadline":null,"renewalConfirmedAt":null,"cancelledAt":"2026-06-08T01:03:45.237Z","cancelledBy":"driver","cancelReason":null,"createdAt":"2026-06-08T00:32:29.621Z","updatedAt":"2026-06-08T01:03:45.238Z","route":{"id":4,"name":"Ain Shams →
+ LOG  [LINES_DEBUG] FETCH_SUCCESS bookings
+ LOG  [LINES_DEBUG] RAW_RESPONSE {"data":[{"id":4,"name":"Ain Shams → El Maadi #1","from":"Mazlaqan Ain Shams","to":"Misr Helwan Agriculture Rd","fromLocation":"Mazlaqan Ain Shams","toLocation":"Misr Helwan Agriculture Rd","estimatedDuration":57,"basePrice":25,"isActive":true,"stationCount":10,"totalTrips":1,"openTrips":0,"activeTrips":1,"totalSeats":14,"minRequired":7,"createdAt":"2026-05-30T18:01:11.107Z","updatedAt":"2026-05-30T18:01:11.107Z","upcomingWeekStart":"2026-06-14","timeslots":[{"departureTime":"13:00","availableSeats":14,"isBooked":true}],"timeSlots":[{"departureTime":"13:00","availableSeats":14,"isBooked":true}],"availableSlots":0,"totalSlots":1},{"id":5,"name":"Downtown → Smart Village #1","from":"El Abaseya Street","to":"Cairo Alexandria Desert Road","fromLocation":"El Abaseya Street","toLocation":"Cairo
+ LOG  [LINES_DEBUG] PARSED_ROUTES_COUNT 50
+ LOG  [LINES_DEBUG] FETCH_SUCCESS
+ LOG  [LINES_DEBUG] FETCH_START queryKey=shuttle-my-bookings
+ LOG  [LINES_DEBUG] REQUEST_URL /shuttle/route-bookings
+ LOG  [LINES_DEBUG] FETCH_START queryKey=shuttle-lines
+ LOG  [LINES_DEBUG] REQUEST_URL /shuttle/lines
+ LOG  [LINES_DEBUG] RAW_RESPONSE bookings {"data":[{"id":5,"driverId":18,"routeId":4,"timeSlotId":10,"weekStart":"2026-06-21","weekEnd":"2026-06-25","status":"cancelled","renewalNotifiedAt":null,"renewalDeadline":null,"renewalConfirmedAt":null,"cancelledAt":"2026-06-08T01:03:45.237Z","cancelledBy":"driver","cancelReason":null,"createdAt":"2026-06-08T00:32:29.621Z","updatedAt":"2026-06-08T01:03:45.238Z","route":{"id":4,"name":"Ain Shams →
+ LOG  [LINES_DEBUG] FETCH_SUCCESS bookings
+ LOG  [LINES_DEBUG] RAW_RESPONSE {"data":[{"id":4,"name":"Ain Shams → El Maadi #1","from":"Mazlaqan Ain Shams","to":"Misr Helwan Agriculture Rd","fromLocation":"Mazlaqan Ain Shams","toLocation":"Misr Helwan Agriculture Rd","estimatedDuration":57,"basePrice":25,"isActive":true,"stationCount":10,"totalTrips":1,"openTrips":0,"activeTrips":1,"totalSeats":14,"minRequired":7,"createdAt":"2026-05-30T18:01:11.107Z","updatedAt":"2026-05-30T18:01:11.107Z","upcomingWeekStart":"2026-06-14","timeslots":[{"departureTime":"13:00","availableSeats":14,"isBooked":true}],"timeSlots":[{"departureTime":"13:00","availableSeats":14,"isBooked":true}],"availableSlots":0,"totalSlots":1},{"id":5,"name":"Downtown → Smart Village #1","from":"El Abaseya Street","to":"Cairo Alexandria Desert Road","fromLocation":"El Abaseya Street","toLocation":"Cairo
+ LOG  [LINES_DEBUG] PARSED_ROUTES_COUNT 50
+ LOG  [LINES_DEBUG] FETCH_SUCCESS
+ LOG  [LINES_DEBUG] FETCH_START queryKey=shuttle-my-bookings
+ LOG  [LINES_DEBUG] REQUEST_URL /shuttle/route-bookings
+ LOG  [LINES_DEBUG] FETCH_START queryKey=shuttle-lines
+ LOG  [LINES_DEBUG] REQUEST_URL /shuttle/lines
+ LOG  [LINES_DEBUG] RAW_RESPONSE bookings {"data":[{"id":5,"driverId":18,"routeId":4,"timeSlotId":10,"weekStart":"2026-06-21","weekEnd":"2026-06-25","status":"cancelled","renewalNotifiedAt":null,"renewalDeadline":null,"renewalConfirmedAt":null,"cancelledAt":"2026-06-08T01:03:45.237Z","cancelledBy":"driver","cancelReason":null,"createdAt":"2026-06-08T00:32:29.621Z","updatedAt":"2026-06-08T01:03:45.238Z","route":{"id":4,"name":"Ain Shams →
+ LOG  [LINES_DEBUG] FETCH_SUCCESS bookings
+ LOG  [LINES_DEBUG] RAW_RESPONSE {"data":[{"id":4,"name":"Ain Shams → El Maadi #1","from":"Mazlaqan Ain Shams","to":"Misr Helwan Agriculture Rd","fromLocation":"Mazlaqan Ain Shams","toLocation":"Misr Helwan Agriculture Rd","estimatedDuration":57,"basePrice":25,"isActive":true,"stationCount":10,"totalTrips":1,"openTrips":0,"activeTrips":1,"totalSeats":14,"minRequired":7,"createdAt":"2026-05-30T18:01:11.107Z","updatedAt":"2026-05-30T18:01:11.107Z","upcomingWeekStart":"2026-06-14","timeslots":[{"departureTime":"13:00","availableSeats":14,"isBooked":true}],"timeSlots":[{"departureTime":"13:00","availableSeats":14,"isBooked":true}],"availableSlots":0,"totalSlots":1},{"id":5,"name":"Downtown → Smart Village #1","from":"El Abaseya Street","to":"Cairo Alexandria Desert Road","fromLocation":"El Abaseya Street","toLocation":"Cairo
+ LOG  [LINES_DEBUG] PARSED_ROUTES_COUNT 50
+ LOG  [LINES_DEBUG] FETCH_SUCCESS
+ LOG  [LINES_DEBUG] FETCH_START queryKey=shuttle-my-bookings
+ LOG  [LINES_DEBUG] REQUEST_URL /shuttle/route-bookings
+ LOG  [LINES_DEBUG] FETCH_START queryKey=shuttle-lines
+ LOG  [LINES_DEBUG] REQUEST_URL /shuttle/lines
+ LOG  [LINES_DEBUG] RAW_RESPONSE bookings {"data":[{"id":5,"driverId":18,"routeId":4,"timeSlotId":10,"weekStart":"2026-06-21","weekEnd":"2026-06-25","status":"cancelled","renewalNotifiedAt":null,"renewalDeadline":null,"renewalConfirmedAt":null,"cancelledAt":"2026-06-08T01:03:45.237Z","cancelledBy":"driver","cancelReason":null,"createdAt":"2026-06-08T00:32:29.621Z","updatedAt":"2026-06-08T01:03:45.238Z","route":{"id":4,"name":"Ain Shams →
+ LOG  [LINES_DEBUG] FETCH_SUCCESS bookings
+ LOG  [LINES_DEBUG] RAW_RESPONSE {"data":[{"id":4,"name":"Ain Shams → El Maadi #1","from":"Mazlaqan Ain Shams","to":"Misr Helwan Agriculture Rd","fromLocation":"Mazlaqan Ain Shams","toLocation":"Misr Helwan Agriculture Rd","estimatedDuration":57,"basePrice":25,"isActive":true,"stationCount":10,"totalTrips":1,"openTrips":0,"activeTrips":1,"totalSeats":14,"minRequired":7,"createdAt":"2026-05-30T18:01:11.107Z","updatedAt":"2026-05-30T18:01:11.107Z","upcomingWeekStart":"2026-06-14","timeslots":[{"departureTime":"13:00","availableSeats":14,"isBooked":true}],"timeSlots":[{"departureTime":"13:00","availableSeats":14,"isBooked":true}],"availableSlots":0,"totalSlots":1},{"id":5,"name":"Downtown → Smart Village #1","from":"El Abaseya Street","to":"Cairo Alexandria Desert Road","fromLocation":"El Abaseya Street","toLocation":"Cairo
+ LOG  [LINES_DEBUG] PARSED_ROUTES_COUNT 50
+ LOG  [LINES_DEBUG] FETCH_SUCCESS
