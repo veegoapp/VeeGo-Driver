@@ -1,12 +1,11 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { AlertCircle, AlertTriangle, ArrowRight, Bell, GitBranch, MapPin, Navigation, Phone, RefreshCw, Users, Wifi, WifiOff, X } from 'lucide-react-native';
+import { AlertTriangle, ArrowRight, Bell, Calendar, Clock, GitBranch, Navigation, RefreshCw, Users, Wifi, WifiOff, X } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Animated,
-  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -20,30 +19,19 @@ import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { endpoints } from '@/lib/api';
-import { useShuttle } from '@/lib/shuttleContext';
+import { useShuttle, type ShuttleBooking } from '@/lib/shuttleContext';
 
 const TAB_BAR_HEIGHT = 96;
-
-type QuickActionIconName = 'users' | 'map-pin' | 'alert-circle' | 'phone';
-
-const QUICK_ACTION_ICONS: Record<QuickActionIconName, React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>> = {
-  'users': Users,
-  'map-pin': MapPin,
-  'alert-circle': AlertCircle,
-  'phone': Phone,
-};
 
 export default function ShuttleHomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
   const { t, isRTL } = useI18n();
-  const R = isRTL ? 'row-reverse' as const : 'row' as const;
   const TA = isRTL ? 'right' as const : 'left' as const;
   const [online, setOnline] = useState(false);
   const [onlineInitialized, setOnlineInitialized] = useState(false);
   const [onlineLoading, setOnlineLoading] = useState(false);
-  const [shiftActive, setShiftActive] = useState(false);
 
   const pulseScale = useRef(new Animated.Value(0.8)).current;
   const pulseOpacity = useRef(new Animated.Value(0.8)).current;
@@ -63,6 +51,11 @@ export default function ShuttleHomeScreen() {
   const currentStop = stops[currentStopIndex] ?? null;
   const nextStop = stops[currentStopIndex + 1] ?? null;
   const progress = stops.length > 0 ? currentStopIndex / stops.length : 0;
+
+  // Upcoming bookings: not completed and not cancelled
+  const upcomingBookings = myBookings.filter(
+    b => b.status !== 'completed' && b.status !== 'cancelled'
+  );
 
   // Renewal countdown
   const [renewalCountdown, setRenewalCountdown] = useState('');
@@ -139,6 +132,7 @@ export default function ShuttleHomeScreen() {
         showsVerticalScrollIndicator={false}
         style={{ flex: 1 }}
       >
+        {/* Header */}
         <View style={styles.header}>
           <View>
             <Text style={[styles.greeting, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>
@@ -162,6 +156,7 @@ export default function ShuttleHomeScreen() {
           </View>
         </View>
 
+        {/* Online toggle — Go button removed */}
         <View style={styles.onlineRow}>
           <View style={styles.pulseWrap}>
             {online && (
@@ -183,7 +178,7 @@ export default function ShuttleHomeScreen() {
                     await endpoints.driver.goOffline();
                   }
                 } catch {
-                  // best-effort — update UI regardless
+                  // best-effort
                 } finally {
                   setOnline(next);
                   setOnlineLoading(false);
@@ -211,14 +206,6 @@ export default function ShuttleHomeScreen() {
               {online ? t.live : t.go}
             </Text>
           </View>
-          <Pressable
-            onPress={() => setShiftActive(v => !v)}
-            style={[styles.shiftBtn, { backgroundColor: shiftActive ? '#1e1e2826' : colors.secondary }]}
-          >
-            <Text style={[styles.shiftBtnText, { color: shiftActive ? '#2d2d42' : colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>
-              {shiftActive ? t.cancel_trip : t.go}
-            </Text>
-          </Pressable>
         </View>
 
         {/* Auto-cancelled trip banner */}
@@ -265,6 +252,7 @@ export default function ShuttleHomeScreen() {
           </GlassView>
         )}
 
+        {/* Stats row — real data from server */}
         <GlassView strong style={styles.statsRow} borderRadius={20}>
           <StatItem label={t.trips_stat} value={String(completedCount)} colors={colors} />
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -275,13 +263,7 @@ export default function ShuttleHomeScreen() {
           <StatItem label={t.active} value={String(allLines.filter(l => l.status === 'in-progress').length)} colors={colors} />
         </GlassView>
 
-        <View style={styles.quickActions}>
-          <QuickAction icon="users" label={t.passengers} onPress={() => router.push('/shuttle/boarding')} colors={colors} accent="#1e1e28" />
-          <QuickAction icon="map-pin" label={t.next_departure} onPress={() => router.push('/shuttle/trip-active')} colors={colors} accent="#D5B23D" />
-          <QuickAction icon="alert-circle" label={t.error} onPress={() => router.push('/support')} colors={colors} accent={colors.destructive} />
-          <QuickAction icon="phone" label={t.call} onPress={() => Linking.openURL('tel:19500')} colors={colors} accent={colors.primary} />
-        </View>
-
+        {/* Active trip card */}
         {activeLine && online && (
           <Animated.View style={[{ marginTop: 16, opacity: cardAnim, transform: [{ translateY: cardAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
             <GlassView strong style={[styles.activeCard, { borderColor: '#1e1e2833' }]} borderRadius={24}>
@@ -375,6 +357,27 @@ export default function ShuttleHomeScreen() {
           </Animated.View>
         )}
 
+        {/* Upcoming Trips section */}
+        <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA, marginTop: 24 }]}>
+          Upcoming Trips
+        </Text>
+
+        {upcomingBookings.length === 0 ? (
+          <GlassView style={[styles.upcomingEmpty, { borderColor: colors.border }]} borderRadius={16}>
+            <Calendar size={20} color={colors.mutedForeground} strokeWidth={2} />
+            <Text style={[styles.upcomingEmptyText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
+              No upcoming trips scheduled
+            </Text>
+          </GlassView>
+        ) : (
+          <View style={{ gap: 8 }}>
+            {upcomingBookings.map(booking => (
+              <UpcomingTripCard key={booking.id} booking={booking} colors={colors} />
+            ))}
+          </View>
+        )}
+
+        {/* No active booking — moved to bottom */}
         {(!activeLine || !online) && (
           <GlassView style={[styles.noLineCard, { marginTop: 16 }]} borderRadius={20}>
             <GitBranch size={32} color={colors.mutedForeground} strokeWidth={2} />
@@ -396,26 +399,41 @@ export default function ShuttleHomeScreen() {
   );
 }
 
+function UpcomingTripCard({ booking, colors }: { booking: ShuttleBooking; colors: ReturnType<typeof useColors> }) {
+  return (
+    <GlassView style={styles.upcomingCard} borderRadius={16}>
+      <View style={[styles.upcomingAccent, { backgroundColor: '#1e1e28' }]} />
+      <View style={{ flex: 1, gap: 4 }}>
+        <Text style={[styles.upcomingRouteName, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]} numberOfLines={1}>
+          {booking.routeName}
+        </Text>
+        <View style={styles.upcomingMeta}>
+          <Clock size={12} color={colors.mutedForeground} strokeWidth={2} />
+          <Text style={[styles.upcomingMetaText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
+            {booking.departureTime}
+          </Text>
+          <Text style={[styles.upcomingMetaDot, { color: colors.border }]}>·</Text>
+          <Calendar size={12} color={colors.mutedForeground} strokeWidth={2} />
+          <Text style={[styles.upcomingMetaText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
+            Week of {booking.weekStart}
+          </Text>
+        </View>
+      </View>
+      <View style={[styles.upcomingStatusBadge, { backgroundColor: '#1e1e2812', borderColor: '#1e1e2825' }]}>
+        <Text style={[styles.upcomingStatusText, { color: '#2d2d42', fontFamily: 'Inter_700Bold' }]}>
+          {booking.status === 'active' ? 'Active' : 'Booked'}
+        </Text>
+      </View>
+    </GlassView>
+  );
+}
+
 function StatItem({ label, value, highlight, colors }: { label: string; value: string; highlight?: boolean; colors: ReturnType<typeof useColors> }) {
   return (
     <View style={styles.statItem}>
       <Text style={[styles.statLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>{label}</Text>
       <Text style={[styles.statValue, { color: highlight ? '#2d2d42' : colors.foreground, fontFamily: 'Inter_700Bold' }]}>{value}</Text>
     </View>
-  );
-}
-
-function QuickAction({ icon, label, onPress, colors, accent }: { icon: QuickActionIconName; label: string; onPress: () => void; colors: ReturnType<typeof useColors>; accent: string }) {
-  const Icon = QUICK_ACTION_ICONS[icon];
-  return (
-    <Pressable onPress={onPress} style={({ pressed }) => [{ flex: 1, transform: [{ scale: pressed ? 0.95 : 1 }] }]}>
-      <GlassView style={styles.quickActionCard} borderRadius={18}>
-        <View style={[styles.quickActionIcon, { backgroundColor: accent + '22' }]}>
-          <Icon size={20} color={accent} strokeWidth={2} />
-        </View>
-        <Text style={[styles.quickActionLabel, { color: colors.foreground, fontFamily: 'Inter_600SemiBold' }]} numberOfLines={1}>{label}</Text>
-      </GlassView>
-    </Pressable>
   );
 }
 
@@ -439,8 +457,6 @@ const styles = StyleSheet.create({
   onlineBtnOff: { flex: 1, alignItems: 'center', justifyContent: 'center', borderWidth: 2 },
   onlineStatus: { fontSize: 14 },
   onlineSub: { fontSize: 12, marginTop: 2 },
-  shiftBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12 },
-  shiftBtnText: { fontSize: 12 },
   renewalCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, marginTop: 16 },
   renewalIconWrap: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   renewalTitle: { fontSize: 13 },
@@ -452,6 +468,19 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 10, letterSpacing: 0.8, textTransform: 'uppercase' },
   statValue: { fontSize: 14, marginTop: 2 },
   divider: { width: 1, height: 28 },
+  sectionTitle: { fontSize: 16 },
+  // Upcoming trips
+  upcomingEmpty: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 16, marginTop: 10, borderWidth: 1 },
+  upcomingEmptyText: { fontSize: 13 },
+  upcomingCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, overflow: 'hidden' },
+  upcomingAccent: { width: 4, height: 36, borderRadius: 2 },
+  upcomingRouteName: { fontSize: 14 },
+  upcomingMeta: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  upcomingMetaText: { fontSize: 12 },
+  upcomingMetaDot: { fontSize: 12 },
+  upcomingStatusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, borderWidth: 1 },
+  upcomingStatusText: { fontSize: 11, letterSpacing: 0.3 },
+  // Active card
   activeCard: { padding: 20, borderWidth: 1 },
   activeCardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   livePill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#1e1e2820', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
@@ -485,10 +514,6 @@ const styles = StyleSheet.create({
   goToLinesBtn: { marginTop: 8, borderRadius: 14, overflow: 'hidden', elevation: 6, shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 8 },
   goToLinesBtnGrad: { height: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: 20 },
   goToLinesBtnText: { fontSize: 14, color: '#fff' },
-  quickActions: { flexDirection: 'row', gap: 8, marginTop: 16 },
-  quickActionCard: { flex: 1, flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, paddingHorizontal: 6, gap: 8 },
-  quickActionIcon: { width: 40, height: 40, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
-  quickActionLabel: { fontSize: 11, textAlign: 'center' },
   cancelBanner: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, marginTop: 12, borderRadius: 12, borderWidth: 1 },
   cancelBannerText: { fontSize: 13, lineHeight: 18 },
   seatRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
