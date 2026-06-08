@@ -1,5 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { CreditCard, GitBranch, Radio, User } from 'lucide-react-native';
+import { Bookmark, CreditCard, GitBranch, Radio, User } from 'lucide-react-native';
 import React, { useRef, useEffect, useState } from 'react';
 import { Animated, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,6 +14,7 @@ type TabBarProps = {
 const SHUTTLE_TABS = [
   { name: 'index', label: 'Home', Icon: Radio },
   { name: 'lines', label: 'Lines', Icon: GitBranch },
+  { name: 'bookings', label: 'Bookings', Icon: Bookmark },
   { name: 'wallet', label: 'Wallet', Icon: CreditCard },
   { name: 'profile', label: 'Profile', Icon: User },
 ] as const;

@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   Calendar, CheckCircle, Clock, GitBranch, MapPin, Search,
-  Trash2, Users, X, AlertTriangle,
+  Users, X,
 } from 'lucide-react-native';
 import React, { useRef, useEffect, useState } from 'react';
 import {
@@ -225,28 +225,6 @@ export default function ShuttleLinesScreen() {
     },
   });
 
-  const cancelMutation = useMutation({
-    mutationFn: (id: string) => endpoints.shuttle.cancelBooking(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
-      queryClient.invalidateQueries({ queryKey: ['shuttle-lines'] });
-    },
-    onError: () => {
-      Alert.alert('Cancel Failed', 'Could not cancel this booking. Please try again.', [{ text: 'OK' }]);
-    },
-  });
-
-  const renewalMutation = useMutation({
-    mutationFn: (id: string) => endpoints.shuttle.confirmRenewal(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
-      Alert.alert('✅ Renewal Confirmed', 'Your slot is reserved for next week!', [{ text: 'OK' }]);
-    },
-    onError: () => {
-      Alert.alert('Renewal Failed', 'Could not confirm renewal. Please try again.', [{ text: 'OK' }]);
-    },
-  });
-
   // ── Handlers ───────────────────────────────────────────────────────────────
 
   const handleBook = () => {
@@ -274,36 +252,6 @@ export default function ShuttleLinesScreen() {
               // weekStart comes directly from the server — no client-side date math
               weekStart: selectedWeek.weekStart,
             }),
-        },
-      ]
-    );
-  };
-
-  const handleCancel = (booking: ShuttleBooking) => {
-    Alert.alert(
-      'Cancel Booking',
-      `Cancel your booking for ${booking.routeName} (${booking.departureTime}, week of ${booking.weekStart})?`,
-      [
-        { text: 'Keep it', style: 'cancel' },
-        {
-          text: 'Cancel Booking',
-          style: 'destructive',
-          onPress: () => cancelMutation.mutate(booking.id),
-        },
-      ]
-    );
-  };
-
-  const handleRenew = (booking: ShuttleBooking) => {
-    Alert.alert(
-      'Confirm Renewal',
-      `Renew your slot for ${booking.routeName} (${booking.departureTime}) for next week?`,
-      [
-        { text: 'Not now', style: 'cancel' },
-        {
-          text: 'Confirm Renewal',
-          style: 'default',
-          onPress: () => renewalMutation.mutate(booking.id),
         },
       ]
     );
@@ -360,30 +308,8 @@ export default function ShuttleLinesScreen() {
           )}
         </View>
 
-        {/* My Bookings */}
-        {myBookings.length > 0 && (
-          <>
-            <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA, marginTop: 20 }]}>
-              My Bookings
-            </Text>
-            <View style={{ gap: 8 }}>
-              {myBookings.map(booking => (
-                <BookingCard
-                  key={booking.id}
-                  booking={booking}
-                  onCancel={() => handleCancel(booking)}
-                  onRenew={() => handleRenew(booking)}
-                  renewalPending={renewalMutation.isPending && (renewalMutation.variables as string) === booking.id}
-                  cancelPending={cancelMutation.isPending && (cancelMutation.variables as string) === booking.id}
-                  colors={colors}
-                />
-              ))}
-            </View>
-          </>
-        )}
-
         {/* Stats chips */}
-        <View style={[styles.chips, { marginTop: myBookings.length > 0 ? 20 : 16 }]}>
+        <View style={[styles.chips, { marginTop: 16 }]}>
           <View style={[styles.chip, { backgroundColor: '#1e1e2820', borderColor: '#1e1e2833' }]}>
             <GitBranch size={12} color="#2d2d42" strokeWidth={2} />
             <Text style={[styles.chipText, { color: '#2d2d42', fontFamily: 'Inter_700Bold' }]}>
@@ -678,103 +604,6 @@ export default function ShuttleLinesScreen() {
   );
 }
 
-// ─── Booking Card ──────────────────────────────────────────────────────────────
-
-function BookingCard({
-  booking,
-  onCancel,
-  onRenew,
-  renewalPending,
-  cancelPending,
-  colors,
-}: {
-  booking: ShuttleBooking;
-  onCancel: () => void;
-  onRenew: () => void;
-  renewalPending: boolean;
-  cancelPending: boolean;
-  colors: ReturnType<typeof useColors>;
-}) {
-  const hasRenewal = !!booking.renewalDeadline && new Date(booking.renewalDeadline).getTime() > Date.now();
-  const isActive = booking.status === 'active' || booking.status === 'confirmed';
-  const isCompleted = booking.status === 'completed' || booking.status === 'cancelled';
-
-  const statusConfig = isCompleted
-    ? { text: booking.status === 'cancelled' ? 'Cancelled' : 'Done', bg: colors.secondary, color: colors.mutedForeground }
-    : isActive
-    ? { text: 'Active', bg: '#22c55e20', color: '#16a34a' }
-    : { text: 'Upcoming', bg: '#3D52D520', color: '#3D52D5' };
-
-  return (
-    <GlassView style={styles.bookingCard} borderRadius={18}>
-      {hasRenewal && (
-        <View style={[styles.renewalBanner, { backgroundColor: '#F59E0B20', borderColor: '#F59E0B33' }]}>
-          <AlertTriangle size={12} color="#D97706" strokeWidth={2} />
-          <Text style={[styles.renewalBannerText, { color: '#D97706', fontFamily: 'Inter_600SemiBold' }]}>
-            Renewal available — deadline {new Date(booking.renewalDeadline!).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-          </Text>
-        </View>
-      )}
-      <View style={styles.bookingCardBody}>
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <View style={styles.bookingCardRow}>
-            <Text style={[styles.bookingRouteName, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]} numberOfLines={1}>
-              {booking.routeName}
-            </Text>
-            <View style={[styles.statusBadge, { backgroundColor: statusConfig.bg }]}>
-              <Text style={[styles.statusText, { color: statusConfig.color, fontFamily: 'Inter_700Bold' }]}>
-                {statusConfig.text}
-              </Text>
-            </View>
-          </View>
-          <View style={styles.bookingMeta}>
-            <View style={styles.metaItem}>
-              <Clock size={11} color={colors.mutedForeground} strokeWidth={2} />
-              <Text style={[styles.metaText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-                {booking.departureTime}
-              </Text>
-            </View>
-            <View style={styles.metaItem}>
-              <Calendar size={11} color={colors.mutedForeground} strokeWidth={2} />
-              <Text style={[styles.metaText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-                Week of {booking.weekStart}
-              </Text>
-            </View>
-          </View>
-        </View>
-        <View style={styles.bookingActions}>
-          {hasRenewal && (
-            <Pressable
-              onPress={onRenew}
-              disabled={renewalPending}
-              style={[styles.renewBtn, { backgroundColor: '#F59E0B20', borderColor: '#F59E0B44' }]}
-            >
-              {renewalPending ? (
-                <ActivityIndicator size="small" color="#D97706" />
-              ) : (
-                <Text style={[styles.renewBtnText, { color: '#D97706', fontFamily: 'Inter_700Bold' }]}>Renew</Text>
-              )}
-            </Pressable>
-          )}
-          {!isCompleted && (
-            <Pressable
-              onPress={onCancel}
-              disabled={cancelPending}
-              style={[styles.cancelBtn, { backgroundColor: colors.secondary }]}
-            >
-              {cancelPending ? (
-                <ActivityIndicator size="small" color={colors.destructive} />
-              ) : (
-                <Trash2 size={14} color={colors.destructive} strokeWidth={2} />
-              )}
-            </Pressable>
-          )}
-        </View>
-      </View>
-    </GlassView>
-  );
-}
-
 // ─── Route Card ────────────────────────────────────────────────────────────────
 
 function RouteCard({
@@ -910,41 +739,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   chipText: { fontSize: 12 },
-  bookingCard: { padding: 14 },
-  renewalBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-    marginBottom: 10,
-  },
-  renewalBannerText: { fontSize: 11, flex: 1 },
-  bookingCardBody: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  bookingCardRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
-  bookingRouteName: { fontSize: 14, flex: 1 },
-  bookingMeta: { flexDirection: 'row', gap: 12 },
-  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  metaText: { fontSize: 11 },
-  bookingActions: { flexDirection: 'row', gap: 8, alignItems: 'center' },
-  renewBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10,
-    borderWidth: 1,
-    minWidth: 52,
-    alignItems: 'center',
-  },
-  renewBtnText: { fontSize: 12 },
-  cancelBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   lineCard: { padding: 16 },
   lineCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   lineNumberBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
