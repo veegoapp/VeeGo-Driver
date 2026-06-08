@@ -139,28 +139,15 @@ export function ServiceControlProvider({ children }: { children: React.ReactNode
       return;
     }
 
-    console.log('[Auth] token detected');
-    console.log('[ServiceControl] fetching services after login');
     setIsLoading(true);
     setError(null);
 
-    console.log('[SERVICE_DEBUG] FETCH START');
     api.get<unknown>('/services/control')
       .then((data) => {
-        console.log('[SERVICE_DEBUG] RAW RESPONSE:', data);
         const list = extractServiceList(data);
-        console.log('[SERVICE_DEBUG] PARSED SERVICES:', list);
-        console.log('[SERVICE_DEBUG] FETCH SUCCESS');
-        console.log(
-          '[ServiceControl] services loaded —',
-          list.length, 'service(s):',
-          list.map(s => `${s.serviceType}(enabled=${s.isEnabled},mode=${s.displayMode})`).join(', '),
-        );
         setServices(list);
       })
-      .catch((err) => {
-        console.log('[SERVICE_DEBUG] FETCH FAILED', err);
-        console.warn('[ServiceControl] fetch failed — entering error state:', err);
+      .catch(() => {
         setError('Could not load service configuration.');
         setServices([]);
       })
@@ -232,18 +219,11 @@ export function ServiceControlProvider({ children }: { children: React.ReactNode
   const refresh = useCallback(async (): Promise<void> => {
     if (authIsLoading || !token) return;
     try {
-      console.log('[SERVICE_DEBUG] FETCH START (refresh)');
       const data = await api.get<unknown>('/services/control');
-      console.log('[SERVICE_DEBUG] RAW RESPONSE (refresh):', data);
       const list = extractServiceList(data);
-      console.log('[SERVICE_DEBUG] PARSED SERVICES (refresh):', list);
-      console.log('[SERVICE_DEBUG] FETCH SUCCESS (refresh)');
-      console.log('[ServiceControl] services loaded (refresh) —', list.length, 'service(s)');
       setServices(list);
       setError(null);
-    } catch (err) {
-      console.log('[SERVICE_DEBUG] FETCH FAILED (refresh)', err);
-      console.warn('[ServiceControl] refresh failed:', err);
+    } catch {
       setError('Could not load service configuration.');
       setServices([]);
     }
@@ -259,7 +239,6 @@ export function ServiceControlProvider({ children }: { children: React.ReactNode
 
       const backendType = normalizeToBackendType(serviceType);
       const ctrl = services.find((s) => s.serviceType.toLowerCase() === backendType);
-      console.log('[SERVICE_MATCH]', ctrl ?? `no match for "${backendType}" in`, services.map(s => s.serviceType));
       if (!ctrl) return CONFIG_BLOCKED;
 
       if (!ctrl.isEnabled) {

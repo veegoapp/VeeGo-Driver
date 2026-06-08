@@ -86,9 +86,6 @@ export default function ServiceSelectScreen() {
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
   const botPad = Platform.OS === 'web' ? 34 : insets.bottom;
 
-  // Debug log — shows exactly what ServiceControlContext has loaded
-  console.log('[SERVICE_SELECT] services:', services);
-
   // Fetch driver profile for eligibility checks (best-effort, non-blocking)
   useEffect(() => {
     api.get<Record<string, unknown>>('/driver/me')
@@ -114,13 +111,8 @@ export default function ServiceSelectScreen() {
 
   const handleContinue = () => {
     if (!selected) return;
-    console.log('[SERVICE_SELECT_CLICK]', selected);
-    // Save the service type unconditionally — the service guard on the
-    // actual screen handles runtime availability blocking. Saving here
-    // ensures navigateAfterAuth skips service-select on every future login.
     setServiceType(selected);
     const route = selected === 'SHUTTLE' ? '/(shuttle)' : '/(tabs)';
-    console.log('[FINAL ROUTE DECISION]', selected, '→', route);
     router.replace(route);
   };
 

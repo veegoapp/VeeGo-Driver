@@ -162,7 +162,6 @@ export function useRideSocket({
 
     const handleSosTriggered = (data: unknown) => {
       sosTriggedRef.current?.(data);
-      console.warn('[RideSocket] sos:triggered', data);
     };
 
     socket.on(SOCKET_EVENTS.RIDE_OFFER, handleRideOffer);

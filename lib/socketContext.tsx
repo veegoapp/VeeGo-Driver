@@ -57,23 +57,19 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       setSocketInstance(socket);
 
       socket.on('connect', () => {
-        console.log('[SOCKET_CONNECT] id:', socket.id);
-        console.log('[SOCKET_SHARED_INSTANCE] single shared connection active');
         setConnected(true);
       });
 
-      socket.on('disconnect', (reason: string) => {
-        console.log('[SOCKET_DISCONNECT] reason:', reason);
+      socket.on('disconnect', () => {
         setConnected(false);
       });
 
-      socket.on('reconnect', (attempt: number) => {
-        console.log('[SOCKET_RECONNECT] attempt:', attempt);
+      socket.on('reconnect', () => {
         setConnected(true);
       });
 
-      socket.on('connect_error', (err: Error) => {
-        console.warn('[SOCKET] connect_error:', err.message);
+      socket.on('connect_error', () => {
+        // connection error — socket will retry automatically
       });
     })();
 

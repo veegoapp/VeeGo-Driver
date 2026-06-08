@@ -51,7 +51,6 @@ function RootLayoutNav() {
     if (!token) {
       // Unauthenticated user on a protected screen → send to login.
       if (!inPreAuthZone) {
-        console.log('[Bootstrap] no token on protected screen — redirecting to /login');
         queryClient.clear();
         router.replace('/login');
       }
@@ -61,7 +60,6 @@ function RootLayoutNav() {
     // Authenticated user on a pre-auth screen (splash, onboarding, login) →
     // skip all marketing/onboarding and go directly to the correct dashboard.
     if (inPreAuthZone) {
-      console.log('[Bootstrap] token exists on pre-auth screen — routing to dashboard');
       navigateAfterAuth(token);
     }
   }, [token, isLoading, segments]);

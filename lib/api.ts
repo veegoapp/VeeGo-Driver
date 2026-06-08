@@ -29,15 +29,12 @@ let _refreshPromise: Promise<string | null> | null = null;
 
 async function refreshAccessToken(): Promise<string | null> {
   if (_refreshPromise) {
-    console.log('[AUTH_REFRESH_REUSED] awaiting in-flight refresh promise');
     return _refreshPromise;
   }
 
   _refreshPromise = (async (): Promise<string | null> => {
-    console.log('[AUTH_REFRESH_START]');
     const refreshToken = await getRefreshToken();
     if (!refreshToken) {
-      console.log('[AUTH_REFRESH_FAILED] no refresh token stored');
       return null;
     }
     try {
@@ -51,19 +48,15 @@ async function refreshAccessToken(): Promise<string | null> {
       });
       clearTimeout(timeout);
       if (!response.ok) {
-        console.log('[AUTH_REFRESH_FAILED] server returned', response.status);
         return null;
       }
       const data = await response.json();
       if (data.accessToken) {
         await saveToken(data.accessToken);
-        console.log('[AUTH_REFRESH_SUCCESS]');
         return data.accessToken;
       }
-      console.log('[AUTH_REFRESH_FAILED] no accessToken in response body');
       return null;
-    } catch (err) {
-      console.log('[AUTH_REFRESH_FAILED]', err);
+    } catch {
       return null;
     }
   })();

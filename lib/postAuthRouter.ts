@@ -46,10 +46,8 @@ export async function navigateAfterAuth(token: string | null): Promise<void> {
 
   if (serviceType) {
     const destination = serviceType === SHUTTLE_TYPE ? '/(shuttle)' : '/(tabs)';
-    console.log(`[PostAuth] userId=${userId ?? 'unknown'} — service "${serviceType}" found, routing to ${destination}`);
     router.replace(destination as Parameters<typeof router.replace>[0]);
   } else {
-    console.log(`[PostAuth] userId=${userId ?? 'unknown'} — no service stored, routing to /service-select`);
     router.replace('/service-select');
   }
 }
