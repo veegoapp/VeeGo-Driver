@@ -17,6 +17,7 @@ import { ServiceControlProvider } from '@/lib/serviceControlContext';
 import { AuthProvider, useAuth } from '@/lib/authContext';
 import { SocketProvider } from '@/lib/socketContext';
 import { navigateAfterAuth } from '@/lib/postAuthRouter';
+import { setOnAccountSuspended } from '@/lib/api';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -44,6 +45,13 @@ function RootLayoutNav() {
   const { token, isLoading } = useAuth();
   const router = useRouter();
   const segments = useSegments();
+
+  // Fix 8: redirect to /suspended whenever any API call returns 403 account_suspended
+  useEffect(() => {
+    setOnAccountSuspended(() => {
+      router.replace('/suspended');
+    });
+  }, [router]);
 
   useEffect(() => {
     // Wait until auth state is fully resolved before making any routing decision.
@@ -93,6 +101,8 @@ function RootLayoutNav() {
       <Stack.Screen name="service-select" />
       <Stack.Screen name="register-info" />
       <Stack.Screen name="selfie" />
+      <Stack.Screen name="suspended" options={{ gestureEnabled: false }} />
+      <Stack.Screen name="shuttle/rate-passengers" options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="register-documents" />
       <Stack.Screen name="pending-approval" />
       <Stack.Screen name="forgot-password" options={{ animation: 'slide_from_right' }} />

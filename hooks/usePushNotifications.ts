@@ -4,11 +4,9 @@ import { router } from 'expo-router';
 
 export type PushToken = string | null;
 
-// Safely set the notification handler — no-op on web or if the module throws
 function safeSetNotificationHandler() {
   if (Platform.OS === 'web') return;
   try {
-    // Dynamic require so the import doesn't execute on web at all
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const Notifications = require('expo-notifications');
     Notifications.setNotificationHandler({
@@ -56,14 +54,43 @@ export function usePushNotifications(onRideRequest?: () => void) {
       responseListener.current = Notifications.addNotificationResponseReceivedListener(
         (response: { notification: { request: { content: { data: Record<string, unknown> } } } }) => {
           const data = response.notification.request.content.data;
+
           if (data?.type === 'ride_request') {
             if (data.rideId) {
               router.push(`/ride/${data.rideId}` as any);
             } else if (onRideRequest) {
               onRideRequest();
             }
-          } else if (data?.type === 'shuttle_trip' && data.tripId) {
+            return;
+          }
+
+          if (data?.type === 'shuttle_trip' && data.tripId) {
             router.push('/shuttle/trip-active');
+            return;
+          }
+
+          // Fix 7: rate passengers after shuttle trip
+          if (data?.type === 'rate_passengers' && data.tripId) {
+            router.push({ pathname: '/shuttle/rate-passengers', params: { tripId: String(data.tripId) } } as any);
+            return;
+          }
+
+          // Fix 8: offence notification routing
+          if (data?.type === 'suspension' || data?.category === 'suspension') {
+            router.replace('/suspended');
+            return;
+          }
+
+          if (data?.type === 'fine' || data?.category === 'fine') {
+            // Navigate to wallet — the deduction will be visible there
+            router.push('/(tabs)/wallet' as any);
+            return;
+          }
+
+          if (data?.type === 'warning' || data?.category === 'warning') {
+            // Navigate to wallet (or offences screen if one exists)
+            router.push('/(tabs)/wallet' as any);
+            return;
           }
         },
       );

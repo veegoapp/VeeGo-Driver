@@ -1,7 +1,8 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
+import * as Location from 'expo-location';
 import { AlertTriangle, ArrowRight, Bell, Calendar, Clock, GitBranch, Navigation, RefreshCw, Users, Wifi, WifiOff, X } from 'lucide-react-native';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -20,6 +21,8 @@ import { useI18n } from '@/lib/i18nContext';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { endpoints } from '@/lib/api';
 import { useShuttle, type ShuttleBooking } from '@/lib/shuttleContext';
+import { useSocket } from '@/lib/socketContext';
+import { SOCKET_EVENTS } from '@/constants/socketEvents';
 
 const TAB_BAR_HEIGHT = 96;
 
@@ -33,9 +36,16 @@ export default function ShuttleHomeScreen() {
   const [onlineInitialized, setOnlineInitialized] = useState(false);
   const [onlineLoading, setOnlineLoading] = useState(false);
 
+  // Fix 2: shuttle check-in state
+  const [shuttleCheckinRequired, setShuttleCheckinRequired] = useState<{ tripId: string; deadlineMinutes: number } | null>(null);
+
   const pulseScale = useRef(new Animated.Value(0.8)).current;
   const pulseOpacity = useRef(new Animated.Value(0.8)).current;
   const cardAnim = useRef(new Animated.Value(0)).current;
+  // Fix 1: location broadcast interval ref
+  const locationBroadcastRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const { socket } = useSocket();
 
   const { data: driverRaw } = useQuery({ queryKey: ['driver'], queryFn: endpoints.driver.me });
   const { data: driverStatusRaw } = useQuery({
@@ -52,10 +62,95 @@ export default function ShuttleHomeScreen() {
   const nextStop = stops[currentStopIndex + 1] ?? null;
   const progress = stops.length > 0 ? currentStopIndex / stops.length : 0;
 
-  // Upcoming bookings: not completed and not cancelled
   const upcomingBookings = myBookings.filter(
     b => b.status !== 'completed' && b.status !== 'cancelled'
   );
+
+  // Fix 1: check if any booking departs within 20 minutes (HH:MM comparison)
+  const isShuttleAboutToDepart = useCallback(() => {
+    return upcomingBookings.some(b => {
+      const match = b.departureTime.match(/(\d{1,2}):(\d{2})/);
+      if (!match) return false;
+      const h = parseInt(match[1], 10);
+      const m = parseInt(match[2], 10);
+      const now = new Date();
+      const nowMins = now.getHours() * 60 + now.getMinutes();
+      const deptMins = h * 60 + m;
+      return deptMins >= nowMins && deptMins - nowMins <= 20;
+    });
+  }, [upcomingBookings]);
+
+  // Fix 1: start/stop shuttle location broadcasting via socket
+  const startShuttleBroadcast = useCallback(async () => {
+    if (locationBroadcastRef.current) return;
+    if (Platform.OS === 'web') return;
+
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') return;
+
+    const emit = async () => {
+      if (!socket) return;
+      try {
+        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        const tripId = activeLine?.tripId;
+        socket.emit(SOCKET_EVENTS.DRIVER_LOCATION_UPDATE, {
+          tripId,
+          lat: loc.coords.latitude,
+          lng: loc.coords.longitude,
+          heading: loc.coords.heading ?? 0,
+        });
+      } catch {
+        // best-effort
+      }
+    };
+
+    emit();
+    locationBroadcastRef.current = setInterval(emit, 3000);
+  }, [socket, activeLine?.tripId]);
+
+  const stopShuttleBroadcast = useCallback(() => {
+    if (locationBroadcastRef.current) {
+      clearInterval(locationBroadcastRef.current);
+      locationBroadcastRef.current = null;
+    }
+  }, []);
+
+  // Fix 1: start broadcasting when online + shuttle trip is active or about to depart
+  useEffect(() => {
+    const shouldBroadcast = online && (!!activeLine || isShuttleAboutToDepart());
+    if (shouldBroadcast) {
+      startShuttleBroadcast();
+    } else {
+      stopShuttleBroadcast();
+    }
+    return () => {
+      // Stop when active line becomes completed/cancelled
+      if (activeLine?.status === 'completed') {
+        stopShuttleBroadcast();
+      }
+    };
+  }, [online, activeLine, isShuttleAboutToDepart, startShuttleBroadcast, stopShuttleBroadcast]);
+
+  // Clean up on unmount
+  useEffect(() => () => stopShuttleBroadcast(), []);
+
+  // Fix 2: listen for shuttle:checkin:required
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleShuttleCheckinRequired = (data: { tripId: string; deadlineMinutes: number }) => {
+      setShuttleCheckinRequired({ tripId: data.tripId, deadlineMinutes: data.deadlineMinutes ?? 10 });
+      router.push({
+        pathname: '/selfie',
+        params: { tripId: data.tripId, deadlineMinutes: String(data.deadlineMinutes ?? 10) },
+      });
+    };
+
+    socket.on(SOCKET_EVENTS.SHUTTLE_CHECKIN_REQUIRED, handleShuttleCheckinRequired);
+    return () => {
+      socket.off(SOCKET_EVENTS.SHUTTLE_CHECKIN_REQUIRED, handleShuttleCheckinRequired);
+    };
+  }, [socket]);
 
   // Renewal countdown
   const [renewalCountdown, setRenewalCountdown] = useState('');
@@ -93,7 +188,6 @@ export default function ShuttleHomeScreen() {
   const todayEarnings = parseFloat(String(summaryData?.summary?.totalEarnings ?? 0)).toFixed(0);
   const completedCount = allLines.filter(l => l.status === 'completed').length;
 
-  // Sync online status from server on first load
   useEffect(() => {
     if (onlineInitialized || driverStatusRaw === undefined) return;
     const status = driverStatusRaw as { isOnline?: boolean; online?: boolean; status?: string } | null;
@@ -124,6 +218,32 @@ export default function ShuttleHomeScreen() {
     pulse.start();
     return () => pulse.stop();
   }, [online]);
+
+  // Fix 2: handle navigation to active trip — block if check-in is still pending
+  const handleNavigateToActiveTrip = () => {
+    if (shuttleCheckinRequired) {
+      Alert.alert(
+        'التحقق مطلوب',
+        'يجب إتمام التحقق من الهوية قبل بدء الرحلة.',
+        [
+          {
+            text: 'تحقق الآن',
+            onPress: () =>
+              router.push({
+                pathname: '/selfie',
+                params: {
+                  tripId: shuttleCheckinRequired.tripId,
+                  deadlineMinutes: String(shuttleCheckinRequired.deadlineMinutes),
+                },
+              }),
+          },
+          { text: 'لاحقاً', style: 'cancel' },
+        ]
+      );
+      return;
+    }
+    router.push('/shuttle/trip-active');
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -156,7 +276,7 @@ export default function ShuttleHomeScreen() {
           </View>
         </View>
 
-        {/* Online toggle — Go button removed */}
+        {/* Online toggle */}
         <View style={styles.onlineRow}>
           <View style={styles.pulseWrap}>
             {online && (
@@ -176,6 +296,7 @@ export default function ShuttleHomeScreen() {
                     await endpoints.driver.goOnline();
                   } else {
                     await endpoints.driver.goOffline();
+                    stopShuttleBroadcast();
                   }
                 } catch {
                   // best-effort
@@ -207,6 +328,27 @@ export default function ShuttleHomeScreen() {
             </Text>
           </View>
         </View>
+
+        {/* Fix 2: check-in pending banner */}
+        {!!shuttleCheckinRequired && (
+          <Pressable
+            onPress={() =>
+              router.push({
+                pathname: '/selfie',
+                params: {
+                  tripId: shuttleCheckinRequired.tripId,
+                  deadlineMinutes: String(shuttleCheckinRequired.deadlineMinutes),
+                },
+              })
+            }
+            style={[styles.cancelBanner, { backgroundColor: '#FFF7ED', borderColor: '#FED7AA' }]}
+          >
+            <AlertTriangle size={16} color="#D97706" strokeWidth={2} />
+            <Text style={[styles.cancelBannerText, { color: '#92400E', fontFamily: 'Inter_600SemiBold', flex: 1 }]}>
+              التحقق مطلوب — اضغط هنا لإتمام التحقق قبل بدء الرحلة
+            </Text>
+          </Pressable>
+        )}
 
         {/* Auto-cancelled trip banner */}
         {!!tripCancelledBanner && (
@@ -252,7 +394,7 @@ export default function ShuttleHomeScreen() {
           </GlassView>
         )}
 
-        {/* Stats row — real data from server */}
+        {/* Stats row */}
         <GlassView strong style={styles.statsRow} borderRadius={20}>
           <StatItem label={t.trips_stat} value={String(completedCount)} colors={colors} />
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -347,7 +489,8 @@ export default function ShuttleHomeScreen() {
                 ))}
               </View>
 
-              <Pressable onPress={() => router.push('/shuttle/trip-active')} style={styles.continueBtn}>
+              {/* Fix 2: use handleNavigateToActiveTrip to block if checkin pending */}
+              <Pressable onPress={handleNavigateToActiveTrip} style={styles.continueBtn}>
                 <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.continueBtnGrad}>
                   <Navigation size={16} color="#fff" strokeWidth={2} />
                   <Text style={[styles.continueBtnText, { fontFamily: 'Inter_700Bold' }]}>{t.full_route}</Text>
@@ -377,7 +520,7 @@ export default function ShuttleHomeScreen() {
           </View>
         )}
 
-        {/* No active booking — moved to bottom */}
+        {/* No active booking */}
         {(!activeLine || !online) && (
           <GlassView style={[styles.noLineCard, { marginTop: 16 }]} borderRadius={20}>
             <GitBranch size={32} color={colors.mutedForeground} strokeWidth={2} />
@@ -457,6 +600,8 @@ const styles = StyleSheet.create({
   onlineBtnOff: { flex: 1, alignItems: 'center', justifyContent: 'center', borderWidth: 2 },
   onlineStatus: { fontSize: 14 },
   onlineSub: { fontSize: 12, marginTop: 2 },
+  cancelBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: 12, borderWidth: 1, marginTop: 12 },
+  cancelBannerText: { fontSize: 13 },
   renewalCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, marginTop: 16 },
   renewalIconWrap: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   renewalTitle: { fontSize: 13 },
@@ -469,56 +614,52 @@ const styles = StyleSheet.create({
   statValue: { fontSize: 14, marginTop: 2 },
   divider: { width: 1, height: 28 },
   sectionTitle: { fontSize: 16 },
-  // Upcoming trips
-  upcomingEmpty: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 16, marginTop: 10, borderWidth: 1 },
+  activeCard: { padding: 20 },
+  activeCardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  livePill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 4, backgroundColor: '#1e1e2815', borderRadius: 99, borderWidth: 1, borderColor: '#1e1e2830' },
+  liveDot: { width: 6, height: 6, borderRadius: 3 },
+  liveText: { fontSize: 10, letterSpacing: 2 },
+  lineNumber: { fontSize: 12 },
+  activeLineName: { fontSize: 18 },
+  activeLineRoute: { fontSize: 13, marginTop: 4 },
+  seatRow: { flexDirection: 'row', gap: 8, marginTop: 12, flexWrap: 'wrap' },
+  vehicleBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1 },
+  vehicleBadgeText: { fontSize: 11, letterSpacing: 0.5 },
+  seatBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1 },
+  seatBadgeText: { fontSize: 12 },
+  progressWrap: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 16 },
+  progressTrack: { flex: 1, height: 6, borderRadius: 3, overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: 3 },
+  progressPct: { fontSize: 13, minWidth: 32, textAlign: 'right' },
+  stopRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: 16 },
+  stopBox: { flex: 1, flexDirection: 'row', gap: 8 },
+  stopDotCurrent: { width: 10, height: 10, borderRadius: 5, marginTop: 4 },
+  stopDotNext: { width: 10, height: 10, borderRadius: 5, marginTop: 4, borderWidth: 2, backgroundColor: 'transparent' },
+  stopBoxLabel: { fontSize: 9, letterSpacing: 1 },
+  stopBoxName: { fontSize: 13, marginTop: 2 },
+  stopBoxMeta: { fontSize: 11, marginTop: 2 },
+  stopArrow: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
+  dotsRow: { flexDirection: 'row', alignItems: 'center', marginTop: 16, flexWrap: 'wrap' },
+  dotItem: { flexDirection: 'row', alignItems: 'center' },
+  dot: { width: 8, height: 8, borderRadius: 4 },
+  dotLine: { width: 16, height: 2, marginHorizontal: 2 },
+  continueBtn: { marginTop: 16, borderRadius: 14, overflow: 'hidden' },
+  continueBtnGrad: { height: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  continueBtnText: { color: '#fff', fontSize: 14 },
+  upcomingEmpty: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 16, borderWidth: 1, marginTop: 8 },
   upcomingEmptyText: { fontSize: 13 },
   upcomingCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, overflow: 'hidden' },
   upcomingAccent: { width: 4, height: 36, borderRadius: 2 },
   upcomingRouteName: { fontSize: 14 },
   upcomingMeta: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   upcomingMetaText: { fontSize: 12 },
-  upcomingMetaDot: { fontSize: 12 },
-  upcomingStatusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, borderWidth: 1 },
-  upcomingStatusText: { fontSize: 11, letterSpacing: 0.3 },
-  // Active card
-  activeCard: { padding: 20, borderWidth: 1 },
-  activeCardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  livePill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#1e1e2820', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
-  liveDot: { width: 8, height: 8, borderRadius: 4 },
-  liveText: { fontSize: 10, letterSpacing: 2 },
-  lineNumber: { fontSize: 12, letterSpacing: 1.5 },
-  activeLineName: { fontSize: 18 },
-  activeLineRoute: { fontSize: 13, marginTop: 4 },
-  progressWrap: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 16 },
-  progressTrack: { flex: 1, height: 6, borderRadius: 3, overflow: 'hidden' },
-  progressFill: { height: '100%', borderRadius: 3 },
-  progressPct: { fontSize: 12, minWidth: 32, textAlign: 'right' },
-  stopRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16 },
-  stopBox: { flex: 1, flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
-  stopDotCurrent: { width: 10, height: 10, borderRadius: 5, marginTop: 4 },
-  stopDotNext: { width: 10, height: 10, borderRadius: 5, borderWidth: 2, marginTop: 4 },
-  stopBoxLabel: { fontSize: 9, letterSpacing: 1.5, textTransform: 'uppercase' },
-  stopBoxName: { fontSize: 13, marginTop: 2 },
-  stopBoxMeta: { fontSize: 11, marginTop: 2 },
-  stopArrow: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  dotsRow: { flexDirection: 'row', alignItems: 'center', marginTop: 16 },
-  dotItem: { flex: 1, flexDirection: 'row', alignItems: 'center' },
-  dot: { width: 8, height: 8, borderRadius: 4 },
-  dotLine: { flex: 1, height: 2, marginHorizontal: -1 },
-  continueBtn: { marginTop: 16, borderRadius: 14, overflow: 'hidden', elevation: 6, shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.35, shadowRadius: 10 },
-  continueBtnGrad: { height: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  continueBtnText: { fontSize: 15, color: '#fff' },
-  noLineCard: { padding: 32, alignItems: 'center', gap: 12 },
-  noLineTitle: { fontSize: 16 },
+  upcomingMetaDot: { fontSize: 14 },
+  upcomingStatusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1 },
+  upcomingStatusText: { fontSize: 11, letterSpacing: 0.5 },
+  noLineCard: { alignItems: 'center', padding: 28, gap: 10 },
+  noLineTitle: { fontSize: 16, marginTop: 4 },
   noLineSub: { fontSize: 13, textAlign: 'center', lineHeight: 20 },
-  goToLinesBtn: { marginTop: 8, borderRadius: 14, overflow: 'hidden', elevation: 6, shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 8 },
-  goToLinesBtnGrad: { height: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: 20 },
-  goToLinesBtnText: { fontSize: 14, color: '#fff' },
-  cancelBanner: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, marginTop: 12, borderRadius: 12, borderWidth: 1 },
-  cancelBannerText: { fontSize: 13, lineHeight: 18 },
-  seatRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
-  vehicleBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, borderWidth: 1 },
-  vehicleBadgeText: { fontSize: 11, letterSpacing: 0.5 },
-  seatBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, borderWidth: 1 },
-  seatBadgeText: { fontSize: 12 },
+  goToLinesBtn: { marginTop: 8, borderRadius: 14, overflow: 'hidden', width: '100%' },
+  goToLinesBtnGrad: { height: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  goToLinesBtnText: { color: '#fff', fontSize: 14 },
 });

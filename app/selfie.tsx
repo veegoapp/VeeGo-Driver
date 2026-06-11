@@ -1,8 +1,7 @@
-import { CheckCircle, CheckCircle2, Camera } from 'lucide-react-native';
-import { ArrowLeft, Check } from 'lucide-react-native';
+import { ArrowLeft, Camera, Check, CheckCircle, CheckCircle2 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { router } from 'expo-router';
-import React, { useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -26,6 +25,41 @@ export default function SelfieScreen() {
   const [photo, setPhoto] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+
+  // Fix 2: shuttle check-in params
+  const params = useLocalSearchParams<{ tripId?: string; deadlineMinutes?: string }>();
+  const shuttleCheckinMode = !!params.tripId;
+  const deadlineSecs = shuttleCheckinMode
+    ? Math.max(1, parseInt(params.deadlineMinutes ?? '10', 10)) * 60
+    : 0;
+
+  const [secondsLeft, setSecondsLeft] = useState(deadlineSecs);
+  const [timedOut, setTimedOut] = useState(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Countdown timer for shuttle check-in
+  useEffect(() => {
+    if (!shuttleCheckinMode) return;
+    intervalRef.current = setInterval(() => {
+      setSecondsLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(intervalRef.current!);
+          setTimedOut(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [shuttleCheckinMode]);
+
+  const formatCountdown = (secs: number) => {
+    const m = Math.floor(secs / 60).toString().padStart(2, '0');
+    const s = (secs % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
 
   const takeSelfie = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -58,16 +92,36 @@ export default function SelfieScreen() {
 
   const handleConfirm = async () => {
     if (!photo || isUploading) return;
+    if (shuttleCheckinMode && timedOut) {
+      Alert.alert('انتهى الوقت', 'لم تقم بالتحقق في الوقت المحدد. يرجى التواصل مع الدعم.');
+      return;
+    }
     setIsUploading(true);
     try {
       const formData = new FormData();
       formData.append('file', { uri: photo, type: 'image/jpeg', name: 'selfie.jpg' } as unknown as Blob);
       formData.append('type', 'selfie');
-      await endpoints.driver.uploadDocument(formData);
-      setConfirmed(true);
-      setTimeout(() => {
-        router.replace(serviceType === 'SHUTTLE' ? '/(shuttle)' : '/(tabs)');
-      }, 1200);
+
+      if (shuttleCheckinMode && params.tripId) {
+        // Fix 2: use dedicated checkin endpoint and include tripId
+        formData.append('tripId', params.tripId);
+        const response = await endpoints.driver.checkin(formData);
+        if (!response.ok) {
+          throw new Error('Checkin failed');
+        }
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        setConfirmed(true);
+        setTimeout(() => {
+          router.back();
+        }, 1200);
+      } else {
+        // Original onboarding selfie flow
+        await endpoints.driver.uploadDocument(formData);
+        setConfirmed(true);
+        setTimeout(() => {
+          router.replace(serviceType === 'SHUTTLE' ? '/(shuttle)' : '/(tabs)');
+        }, 1200);
+      }
     } catch {
       Alert.alert('Upload failed', 'Could not upload your selfie. Please try again.');
     } finally {
@@ -81,8 +135,14 @@ export default function SelfieScreen() {
         <View style={s.successIcon}>
           <CheckCircle2 size={72} color="#1e1e28" />
         </View>
-        <Text style={s.successTitle}>You're all set!</Text>
-        <Text style={s.successSub}>Your account is being reviewed. You can start accepting trips shortly.</Text>
+        <Text style={s.successTitle}>
+          {shuttleCheckinMode ? 'تم التحقق بنجاح!' : "You're all set!"}
+        </Text>
+        <Text style={s.successSub}>
+          {shuttleCheckinMode
+            ? 'تم التحقق من هويتك. يمكنك الآن بدء الرحلة.'
+            : 'Your account is being reviewed. You can start accepting trips shortly.'}
+        </Text>
       </View>
     );
   }
@@ -95,10 +155,41 @@ export default function SelfieScreen() {
         </TouchableOpacity>
 
         <View style={s.header}>
-          <Text style={s.step}>Step 4 of 4</Text>
-          <Text style={s.title}>Face{'\n'}verification</Text>
-          <Text style={s.sub}>Take a clear selfie so we can verify your identity. Make sure your face is well-lit.</Text>
+          {shuttleCheckinMode ? (
+            <>
+              <Text style={s.step}>التحقق من الهوية · الشاتل</Text>
+              <Text style={s.title}>{'التحقق\nقبل الرحلة'}</Text>
+              <Text style={s.sub}>يرجى التقاط صورة واضحة للتحقق من هويتك قبل بدء الرحلة.</Text>
+            </>
+          ) : (
+            <>
+              <Text style={s.step}>Step 4 of 4</Text>
+              <Text style={s.title}>Face{'\n'}verification</Text>
+              <Text style={s.sub}>Take a clear selfie so we can verify your identity. Make sure your face is well-lit.</Text>
+            </>
+          )}
         </View>
+
+        {/* Fix 2: countdown timer for shuttle check-in */}
+        {shuttleCheckinMode && (
+          <View style={[
+            s.timerBox,
+            timedOut ? { backgroundColor: '#fee2e2', borderColor: '#fca5a5' } : { backgroundColor: '#fff7ed', borderColor: '#fed7aa' },
+          ]}>
+            {timedOut ? (
+              <Text style={[s.timerText, { color: '#dc2626', fontFamily: 'Inter_700Bold' }]}>
+                لم تقم بالتحقق في الوقت المحدد. لن تظهر للركاب حتى تقوم بالتحقق.
+              </Text>
+            ) : (
+              <>
+                <Text style={[s.timerLabel, { color: '#92400e', fontFamily: 'Inter_400Regular' }]}>الوقت المتبقي</Text>
+                <Text style={[s.timerCount, { color: secondsLeft <= 60 ? '#dc2626' : '#c2410c', fontFamily: 'Inter_700Bold' }]}>
+                  {formatCountdown(secondsLeft)}
+                </Text>
+              </>
+            )}
+          </View>
+        )}
       </View>
 
       <View style={s.faceArea}>
@@ -137,7 +228,9 @@ export default function SelfieScreen() {
               />
             </Svg>
             <View style={s.ovalHint}>
-              <Text style={s.ovalHintText}>Position your face inside the oval</Text>
+              <Text style={s.ovalHintText}>
+                {shuttleCheckinMode ? 'ضع وجهك داخل البيضاوي' : 'Position your face inside the oval'}
+              </Text>
             </View>
           </View>
         )}
@@ -153,39 +246,46 @@ export default function SelfieScreen() {
               disabled={isUploading}
             >
               <Camera size={18} color="#1e1e28" />
-              <Text style={s.retakeBtnText}>Retake</Text>
+              <Text style={s.retakeBtnText}>{shuttleCheckinMode ? 'إعادة الالتقاط' : 'Retake'}</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[s.confirmBtn, { flex: 2, opacity: isUploading ? 0.8 : 1 }]}
+              style={[s.confirmBtn, { flex: 2, opacity: (isUploading || (shuttleCheckinMode && timedOut)) ? 0.6 : 1 }]}
               onPress={handleConfirm}
               activeOpacity={0.9}
-              disabled={isUploading}
+              disabled={isUploading || (shuttleCheckinMode && timedOut)}
             >
               {isUploading ? (
                 <ActivityIndicator color="white" />
               ) : (
                 <>
-                  <Text style={s.confirmBtnText}>Confirm & finish</Text>
+                  <Text style={s.confirmBtnText}>{shuttleCheckinMode ? 'تأكيد التحقق' : 'Confirm & finish'}</Text>
                   <Check size={18} color="white" strokeWidth={2} />
                 </>
               )}
             </TouchableOpacity>
           </View>
         ) : (
-          <TouchableOpacity style={s.confirmBtn} onPress={takeSelfie} activeOpacity={0.9}>
+          <TouchableOpacity
+            style={[s.confirmBtn, { opacity: (shuttleCheckinMode && timedOut) ? 0.5 : 1 }]}
+            onPress={takeSelfie}
+            activeOpacity={0.9}
+            disabled={shuttleCheckinMode && timedOut}
+          >
             <Camera size={20} color="white" />
-            <Text style={s.confirmBtnText}>Take selfie</Text>
+            <Text style={s.confirmBtnText}>{shuttleCheckinMode ? 'التقاط صورة' : 'Take selfie'}</Text>
           </TouchableOpacity>
         )}
 
-        <View style={s.tipsRow}>
-          {['Good lighting', 'Face centered', 'No glasses'].map((tip) => (
-            <View key={tip} style={s.tip}>
-              <CheckCircle size={13} color="#5e5e72" />
-              <Text style={s.tipText}>{tip}</Text>
-            </View>
-          ))}
-        </View>
+        {!shuttleCheckinMode && (
+          <View style={s.tipsRow}>
+            {['Good lighting', 'Face centered', 'No glasses'].map((tip) => (
+              <View key={tip} style={s.tip}>
+                <CheckCircle size={13} color="#5e5e72" />
+                <Text style={s.tipText}>{tip}</Text>
+              </View>
+            ))}
+          </View>
+        )}
       </View>
     </View>
   );
@@ -210,6 +310,14 @@ const s = StyleSheet.create({
   step: { fontSize: 12, fontWeight: '600', color: '#5e5e72', letterSpacing: 1, textTransform: 'uppercase', fontFamily: 'Inter_600SemiBold' },
   title: { fontSize: 34, fontWeight: '700', color: '#1e1e28', letterSpacing: -1.2, lineHeight: 40, fontFamily: 'Inter_700Bold' },
   sub: { fontSize: 14, color: '#5e5e72', lineHeight: 20, fontFamily: 'Inter_400Regular' },
+  // Fix 2: countdown timer styles
+  timerBox: {
+    marginTop: 12, borderRadius: 12, borderWidth: 1,
+    paddingHorizontal: 16, paddingVertical: 10, alignItems: 'center',
+  },
+  timerLabel: { fontSize: 11, letterSpacing: 0.5 },
+  timerCount: { fontSize: 28, letterSpacing: 2, marginTop: 2 },
+  timerText: { fontSize: 13, lineHeight: 20, textAlign: 'center' },
   faceArea: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   ovalGuide: { alignItems: 'center', gap: 16 },
   ovalHint: {

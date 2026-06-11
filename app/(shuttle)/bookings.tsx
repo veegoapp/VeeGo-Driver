@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   AlertTriangle, ArrowLeft, Calendar, CheckCircle, Clock,
-  GitBranch, RefreshCw, Trash2, XCircle,
+  GitBranch, RefreshCw, Star, Trash2, Users, XCircle,
 } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
@@ -9,7 +9,7 @@ import {
   RefreshControl, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
@@ -17,6 +17,16 @@ import { useShuttle, type ShuttleBooking } from '@/lib/shuttleContext';
 import { endpoints, ApiError } from '@/lib/api';
 
 const TAB_BAR_HEIGHT = 96;
+
+type DriverTrip = {
+  id: string;
+  routeName?: string;
+  date?: string;
+  boardedPassengers?: number;
+  totalPassengers?: number;
+  earnings?: number | string;
+  status?: string;
+};
 
 // ─── Status helpers ───────────────────────────────────────────────────────────
 
@@ -40,10 +50,25 @@ export default function BookingsScreen() {
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<ShuttleBooking | null>(null);
+  // Fix 6: driver trip history pagination
+  const [tripPage, setTripPage] = useState(1);
+  const TRIP_LIMIT = 10;
+
+  // Fix 6: fetch driver trip history
+  const { data: driverTripsRaw, isLoading: tripsLoading } = useQuery({
+    queryKey: ['shuttle-driver-trips', tripPage],
+    queryFn: () => endpoints.shuttle.driverTrips(tripPage, TRIP_LIMIT),
+    staleTime: 30000,
+  });
+  const driverTripsData = driverTripsRaw as { trips?: DriverTrip[]; total?: number } | undefined;
+  const driverTrips: DriverTrip[] = driverTripsData?.trips ?? [];
+  const driverTripsTotal = driverTripsData?.total ?? 0;
+  const hasMoreTrips = driverTrips.length > 0 && tripPage * TRIP_LIMIT < driverTripsTotal;
 
   const handleRefresh = () => {
     setRefreshing(true);
     refetch();
+    queryClient.invalidateQueries({ queryKey: ['shuttle-driver-trips'] });
     setTimeout(() => setRefreshing(false), 1200);
   };
 
@@ -101,7 +126,6 @@ export default function BookingsScreen() {
     );
   };
 
-  // Separate upcoming from history
   const upcomingBookings = myBookings.filter(b => b.status !== 'completed' && b.status !== 'cancelled');
   const historyBookings = myBookings.filter(b => b.status === 'completed' || b.status === 'cancelled');
 
@@ -197,6 +221,61 @@ export default function BookingsScreen() {
             </View>
           </>
         )}
+
+        {/* Fix 6: Driver trip history */}
+        <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA, marginTop: 28 }]}>
+          Completed Trips
+        </Text>
+        <Text style={[styles.pageSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA, marginBottom: 12 }]}>
+          Trips you've driven for passengers
+        </Text>
+
+        {tripsLoading ? (
+          <View style={{ padding: 24, alignItems: 'center' }}>
+            <ActivityIndicator color={colors.primary} />
+          </View>
+        ) : driverTrips.length === 0 ? (
+          <GlassView style={[styles.emptyTripsCard, { borderColor: colors.border }]} borderRadius={16}>
+            <Users size={24} color={colors.mutedForeground} strokeWidth={1.5} />
+            <Text style={[styles.emptyTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: 14, marginTop: 0 }]}>
+              No completed trips yet
+            </Text>
+            <Text style={[styles.emptySub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 12 }]}>
+              Completed shuttle trips will appear here
+            </Text>
+          </GlassView>
+        ) : (
+          <View style={{ gap: 8 }}>
+            {driverTrips.map(trip => (
+              <DriverTripRow key={trip.id} trip={trip} colors={colors} />
+            ))}
+
+            {/* Pagination */}
+            {(hasMoreTrips || tripPage > 1) && (
+              <View style={styles.paginationRow}>
+                {tripPage > 1 && (
+                  <Pressable
+                    style={[styles.pageBtn, { borderColor: colors.border }]}
+                    onPress={() => setTripPage(p => Math.max(1, p - 1))}
+                  >
+                    <Text style={[styles.pageBtnText, { color: colors.foreground, fontFamily: 'Inter_600SemiBold' }]}>← Prev</Text>
+                  </Pressable>
+                )}
+                <Text style={[styles.pageIndicator, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
+                  Page {tripPage}
+                </Text>
+                {hasMoreTrips && (
+                  <Pressable
+                    style={[styles.pageBtn, { borderColor: colors.border }]}
+                    onPress={() => setTripPage(p => p + 1)}
+                  >
+                    <Text style={[styles.pageBtnText, { color: colors.foreground, fontFamily: 'Inter_600SemiBold' }]}>Next →</Text>
+                  </Pressable>
+                )}
+              </View>
+            )}
+          </View>
+        )}
       </ScrollView>
 
       {/* Detail bottom sheet */}
@@ -267,6 +346,52 @@ function BookingRow({
         </View>
       </GlassView>
     </Pressable>
+  );
+}
+
+// Fix 6: Driver trip row
+function DriverTripRow({ trip, colors }: { trip: DriverTrip; colors: ReturnType<typeof useColors> }) {
+  const isCompleted = trip.status === 'completed';
+  const earnings = trip.earnings != null ? `${parseFloat(String(trip.earnings)).toFixed(2)} DT` : '—';
+  const occupancy = trip.boardedPassengers != null && trip.totalPassengers != null
+    ? `${trip.boardedPassengers}/${trip.totalPassengers}`
+    : '—';
+
+  return (
+    <GlassView style={styles.driverTripRow} borderRadius={16}>
+      <View style={[styles.rowAccent, { backgroundColor: isCompleted ? '#16a34a' : colors.mutedForeground }]} />
+      <View style={{ flex: 1, gap: 4 }}>
+        <Text style={[styles.rowRoute, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]} numberOfLines={1}>
+          {trip.routeName ?? 'Shuttle Trip'}
+        </Text>
+        <View style={styles.rowMeta}>
+          {trip.date && (
+            <>
+              <Calendar size={11} color={colors.mutedForeground} strokeWidth={2} />
+              <Text style={[styles.rowMetaText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
+                {trip.date}
+              </Text>
+              <Text style={[{ color: colors.border }]}>·</Text>
+            </>
+          )}
+          <Users size={11} color={colors.mutedForeground} strokeWidth={2} />
+          <Text style={[styles.rowMetaText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
+            {occupancy} passengers
+          </Text>
+        </View>
+      </View>
+      <View style={{ alignItems: 'flex-end', gap: 4 }}>
+        <Text style={[styles.tripEarnings, { color: '#16a34a', fontFamily: 'Inter_700Bold' }]}>
+          {earnings}
+        </Text>
+        <View style={[styles.statusBadge, { backgroundColor: isCompleted ? '#22c55e18' : colors.secondary }]}>
+          <Star size={9} color={isCompleted ? '#16a34a' : colors.mutedForeground} strokeWidth={2} fill={isCompleted ? '#16a34a' : 'transparent'} />
+          <Text style={[styles.statusText, { color: isCompleted ? '#16a34a' : colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>
+            {trip.status ?? 'completed'}
+          </Text>
+        </View>
+      </View>
+    </GlassView>
   );
 }
 
@@ -410,13 +535,21 @@ const styles = StyleSheet.create({
   emptyState: { alignItems: 'center', marginTop: 60, gap: 10 },
   emptyTitle: { fontSize: 16 },
   emptySub: { fontSize: 13, textAlign: 'center' },
+  emptyTripsCard: { flexDirection: 'column', alignItems: 'center', gap: 8, padding: 24, borderWidth: 1 },
   bookingRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, overflow: 'hidden' },
+  driverTripRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, overflow: 'hidden' },
   rowAccent: { width: 4, height: 36, borderRadius: 2 },
   rowRoute: { fontSize: 14 },
   rowMeta: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   rowMetaText: { fontSize: 12 },
   statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
   statusText: { fontSize: 11 },
+  tripEarnings: { fontSize: 13 },
+  // Pagination
+  paginationRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 },
+  pageBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, borderWidth: 1 },
+  pageBtnText: { fontSize: 13 },
+  pageIndicator: { fontSize: 13 },
   // Sheet
   sheetOverlay: { flex: 1, backgroundColor: '#00000060', justifyContent: 'flex-end' },
   sheet: { maxHeight: '80%', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingTop: 12, paddingHorizontal: 20, overflow: 'hidden' },

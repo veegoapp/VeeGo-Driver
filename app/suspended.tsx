@@ -1,0 +1,87 @@
+import { router } from 'expo-router';
+import { AlertOctagon, HeadphonesIcon } from 'lucide-react-native';
+import React from 'react';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+export default function SuspendedScreen() {
+  const insets = useSafeAreaInsets();
+  const topPad = Platform.OS === 'web' ? 67 : insets.top;
+  const botPad = Platform.OS === 'web' ? 34 : insets.bottom;
+
+  return (
+    <View style={[s.root, { paddingTop: topPad, paddingBottom: botPad + 24 }]}>
+      <View style={s.iconWrap}>
+        <AlertOctagon size={64} color="#ef4444" strokeWidth={1.5} />
+      </View>
+      <Text style={s.title}>تم إيقاف حسابك</Text>
+      <Text style={s.body}>
+        تم إيقاف حسابك بسبب تكرار الغياب. تواصل مع الدعم لإعادة التفعيل.
+      </Text>
+      <Pressable
+        style={s.btn}
+        onPress={() => router.push('/support')}
+        accessibilityRole="button"
+      >
+        <HeadphonesIcon size={18} color="#fff" strokeWidth={2} />
+        <Text style={s.btnText}>Contact Support</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+const s = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: '#fff5f5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    gap: 16,
+  },
+  iconWrap: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#fee2e2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  title: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#1e1e28',
+    fontFamily: 'Inter_700Bold',
+    textAlign: 'center',
+  },
+  body: {
+    fontSize: 15,
+    color: '#5e5e72',
+    lineHeight: 24,
+    fontFamily: 'Inter_400Regular',
+    textAlign: 'center',
+  },
+  btn: {
+    marginTop: 16,
+    height: 56,
+    borderRadius: 20,
+    backgroundColor: '#ef4444',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 32,
+    shadowColor: '#ef4444',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  btnText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+  },
+});

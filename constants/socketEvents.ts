@@ -14,10 +14,16 @@ export const SOCKET_EVENTS = {
   WAITING_CHARGE_UPDATED:   "ride:waiting:charge:updated",
   WAITING_CHARGE_CAPPED:    "ride:waiting:charge:capped",
 
-  // Server → Driver: check-in
+  // Server → Driver: check-in (on-demand)
   DRIVER_CHECKIN_REQUIRED:  "driver:checkin:required",
   DRIVER_CHECKIN_REJECTED:  "driver:checkin:rejected",
   DRIVER_CHECKIN_APPROVED:  "driver:checkin:approved",
+
+  // Server → Driver: shuttle check-in (Fix 2)
+  SHUTTLE_CHECKIN_REQUIRED: "shuttle:checkin:required",
+
+  // Server → Driver: shuttle station timeout (Fix 3)
+  SHUTTLE_STATION_TIMEOUT:  "shuttle:station:timeout",
 
   // Server → Driver: cooldown
   DRIVER_COOLDOWN_CLEARED:  "driver:cooldown:cleared",
@@ -45,8 +51,6 @@ export const SOCKET_EVENTS = {
   SHUTTLE_RENEWAL_CONFIRMED:  "shuttle:renewal:confirmed",
 
   // Server → Driver/User: notifications
-  // NOTE: shuttle renewal/auto-cancel notifications are sent via notification:new
-  // with category="shuttle_renewal" or category="trip" to passenger:<userId> room
   NOTIFICATION_NEW:         "notification:new",
 
   // Server → Driver: misc

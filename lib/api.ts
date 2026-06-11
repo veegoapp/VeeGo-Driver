@@ -23,8 +23,14 @@ class ApiError extends Error {
   }
 }
 
+// Fix 8: callback invoked when server returns 403 account_suspended
+type SuspendedCallback = () => void;
+let _onAccountSuspended: SuspendedCallback | null = null;
+export function setOnAccountSuspended(cb: SuspendedCallback) {
+  _onAccountSuspended = cb;
+}
+
 // Single-flight refresh — only one refresh request may exist at a time.
-// Concurrent 401s await the same promise; prevents token refresh storms.
 let _refreshPromise: Promise<string | null> | null = null;
 
 async function refreshAccessToken(): Promise<string | null> {
@@ -61,7 +67,6 @@ async function refreshAccessToken(): Promise<string | null> {
     }
   })();
 
-  // Clear the single-flight slot once settled so future refreshes can start fresh
   _refreshPromise.finally(() => { _refreshPromise = null; });
 
   return _refreshPromise;
@@ -116,6 +121,17 @@ async function request<T>(
     await deleteToken();
     await deleteRefreshToken();
     throw new ApiError(401, 'Unauthorized', null);
+  }
+
+  // Fix 8: intercept 403 account_suspended
+  if (response.status === 403) {
+    let errorBody: unknown = null;
+    try { errorBody = await response.json(); } catch { /* empty */ }
+    const reason = (errorBody as { reason?: string } | null)?.reason;
+    if (reason === 'account_suspended') {
+      _onAccountSuspended?.();
+    }
+    throw new ApiError(403, 'Forbidden', errorBody);
   }
 
   if (!response.ok) {
@@ -193,6 +209,22 @@ export const endpoints = {
         clearTimeout(timeout);
       }
     },
+    // Fix 2: shuttle check-in — POST /driver/checkin with selfie + optional tripId
+    checkin: async (formData: FormData) => {
+      const token = await getToken();
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+      try {
+        return await fetch(`${API_BASE_URL}/driver/checkin`, {
+          method: 'POST',
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+          body: formData,
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeout);
+      }
+    },
     ratings: () => api.get('/driver/me/ratings'),
   },
 
@@ -255,12 +287,13 @@ export const endpoints = {
     lines: () => api.get('/shuttle/lines'),
     line: (lineId: string) => api.get(`/shuttle/lines/${lineId}`),
 
-    // NEW: جيب الأسابيع والمواعيد من الباك اند مباشرة — مفيش حاجة تتولد client-side
-    // Response: { routeId, routeName, weeks: [{ weekStart, weekEnd, slots: [...] }], total }
     availableWeeks: (routeId: string | number) =>
       api.get(`/shuttle/lines/${routeId}/available-weeks`),
 
-    // مازال موجود للـ fallback لو محتاج تجيب أسبوع بعينه
+    // Fix 5: correct available-slots endpoint — only returns slots with full-week coverage
+    availableSlots: (routeId: string | number, weekStart: string) =>
+      api.get(`/shuttle/available-slots?routeId=${routeId}&weekStart=${weekStart}`),
+
     timeslots: (routeId: string | number, weekStart?: string) =>
       api.get(`/shuttle/timeslots/${routeId}${weekStart ? `?weekStart=${weekStart}` : ''}`),
 
@@ -275,8 +308,17 @@ export const endpoints = {
     // ── Active Trip Management ───────────────────────────────────────────────
     complete: (lineId: string) => api.post(`/shuttle/lines/${lineId}/complete`),
     passengers: (tripId: string) => api.get(`/shuttle/trips/${tripId}/passengers`),
-    boardBooking: (bookingId: string) =>
-      api.post(`/shuttle/bookings/${bookingId}/board`, {}),
+    // Fix 4: include stationId to trigger the 60-second timer on the backend
+    boardBooking: (bookingId: string, stationId?: string | number) =>
+      api.post(`/shuttle/bookings/${bookingId}/board`, stationId != null ? { stationId } : {}),
+
+    // Fix 6: driver trip history
+    driverTrips: (page = 1, limit = 10) =>
+      api.get(`/shuttle/driver/my-trips?page=${page}&limit=${limit}`),
+
+    // Fix 7: rate a passenger after a trip
+    ratePassenger: (tripId: string, rateeId: string, stars: number) =>
+      api.post('/shuttle/ratings', { tripId, rateeId, stars }),
   },
 
   notifications: {
