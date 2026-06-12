@@ -1,0 +1,55 @@
+You are working on the VeeGo Driver App (Expo SDK 54 / React Native / Expo Router). The backend API base URL is EXPO_PUBLIC_API_URL. Auth token is stored and sent as Bearer token. Below are 3 separate tasks. Complete them in order and do not mix them. After finishing all 3, output a report section titled "## What was done" listing exactly what you changed, created, or fixed per task.
+
+---
+
+**TASK 1 — Vehicle registration form with dropdowns**
+
+Location: app/register-info.tsx (or create a new screen app/register-vehicle.tsx and insert it into the registration flow between register-info and register-documents)
+
+What to build:
+- A form screen where the driver selects their vehicle details using chained dropdowns:
+  1. Brand → calls GET /vehicles/brands → shows list of brand names
+  2. Model → calls GET /vehicles/brands/:id/models (triggered after brand selected) → shows model names for that brand
+  3. Year → calls GET /vehicles/models/:id/years (triggered after model selected) → shows valid years as a picker
+  4. Color → calls GET /vehicles/colors → shows color names (load once on mount)
+- All 4 fields are required before the user can proceed
+- Show a loading indicator inside each dropdown while fetching
+- Show a clear error message if any fetch fails (with a retry button)
+- On submit, store the selected vehicleId context locally (AsyncStorage key: veego_vehicle_reg) so register-documents.tsx can read it
+- The form must work in both Arabic (RTL) and English using the existing i18nContext (lib/i18nContext.tsx) — use existing translation keys if available, add new ones if not
+- After submitting, navigate to register-documents.tsx
+
+---
+
+**TASK 2 — Pending approval screen auto-advance**
+
+Location: app/pending-approval.tsx
+
+What to fix:
+- Currently the screen shows a static message and never checks the backend
+- Add polling: every 10 seconds call GET /driver/me/status
+- If the response returns status === "active" or isActive === true, automatically navigate the driver to their correct dashboard using the existing postAuthRouter (lib/postAuthRouter.ts)
+- Show a subtle animated loading indicator (pulsing dot or spinner) so the driver knows the app is checking
+- Stop polling cleanly when the component unmounts (clear the interval)
+- Do not show any error to the user if the poll fails — just silently retry next interval
+
+---
+
+**TASK 3 — Camera-only enforcement for document upload and selfie**
+
+Locations: app/register-documents.tsx and app/selfie.tsx
+
+What to fix:
+- Currently both screens allow the user to pick from gallery as a fallback when camera permission is denied
+- Change this so that if camera permission is denied or unavailable, the screen shows a clear message explaining that camera access is required (use i18n), with a button that opens the device app settings using Linking.openSettings()
+- Remove all gallery/ImagePicker fallback code entirely from both screens
+- The camera must be the only way to capture images in both screens
+- Test that the logic works: if permission is granted → open camera. If denied → show message + settings button. No other path.
+
+---
+
+After completing all 3 tasks output:
+## What was done
+- Task 1: [list every file created or modified and what changed]
+- Task 2: [list every file modified and what changed]
+- Task 3: [list every file modified and what changed]

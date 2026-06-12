@@ -1,7 +1,8 @@
 import { Navigation, Clock, CheckCircle2, Mail, Phone, LogOut } from 'lucide-react-native';
 import { router } from 'expo-router';
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
+  Animated,
   Platform,
   ScrollView,
   StyleSheet,
@@ -12,6 +13,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '@/lib/authContext';
+import { endpoints } from '@/lib/api';
+import { navigateAfterAuth } from '@/lib/postAuthRouter';
 
 const STEPS = [
   { label: 'Account created', done: true },
@@ -20,13 +23,51 @@ const STEPS = [
   { label: 'Account activation', done: false },
 ];
 
+const POLL_INTERVAL_MS = 10000;
+
 export default function PendingApprovalScreen() {
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
   const botPad = Platform.OS === 'web' ? 34 : insets.bottom;
-  const { logout } = useAuth();
+  const { logout, token } = useAuth();
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const anim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 0.3, duration: 800, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+      ])
+    );
+    anim.start();
+    return () => anim.stop();
+  }, [pulseAnim]);
+
+  useEffect(() => {
+    const poll = async () => {
+      try {
+        const data = await endpoints.driver.status() as { status?: string; isActive?: boolean } | null;
+        if (!data) return;
+        if (data.status === 'active' || data.isActive === true) {
+          if (intervalRef.current) clearInterval(intervalRef.current);
+          navigateAfterAuth(token);
+        }
+      } catch {
+        // silent — retry at next interval
+      }
+    };
+
+    poll();
+    intervalRef.current = setInterval(poll, POLL_INTERVAL_MS);
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [token]);
 
   const handleLogout = async () => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
     await logout();
     router.replace('/login');
   };
@@ -56,6 +97,11 @@ export default function PendingApprovalScreen() {
             Your documents have been submitted successfully. Our team is reviewing them and will notify you once your account is activated.
           </Text>
 
+          <View style={s.pollingRow}>
+            <Animated.View style={[s.pollingDot, { opacity: pulseAnim }]} />
+            <Text style={s.pollingText}>Checking status automatically…</Text>
+          </View>
+
           <View style={s.stepsBlock}>
             {STEPS.map((step, i) => (
               <View key={i} style={s.stepRow}>
@@ -68,7 +114,7 @@ export default function PendingApprovalScreen() {
                     {step.done ? (
                       <CheckCircle2 size={12} color="white" strokeWidth={2.5} />
                     ) : step.active ? (
-                      <View style={s.stepPulse} />
+                      <Animated.View style={[s.stepPulse, { opacity: pulseAnim }]} />
                     ) : null}
                   </View>
                   {i < STEPS.length - 1 && (
@@ -134,6 +180,14 @@ const s = StyleSheet.create({
   },
   title: { fontSize: 28, fontWeight: '700', color: '#1e1e28', letterSpacing: -0.8, lineHeight: 34, textAlign: 'center', fontFamily: 'Inter_700Bold' },
   sub: { fontSize: 14, color: '#5e5e72', lineHeight: 22, textAlign: 'center', fontFamily: 'Inter_400Regular' },
+  pollingRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: '#f2f4fe', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 8,
+  },
+  pollingDot: {
+    width: 8, height: 8, borderRadius: 4, backgroundColor: '#3D52D5',
+  },
+  pollingText: { fontSize: 12, color: '#3D52D5', fontFamily: 'Inter_500Medium' },
   stepsBlock: { gap: 0, marginTop: 4 },
   stepRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, minHeight: 40 },
   stepLeft: { alignItems: 'center', width: 20 },

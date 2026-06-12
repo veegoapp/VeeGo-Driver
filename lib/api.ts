@@ -340,6 +340,13 @@ export const endpoints = {
     submitTicket: (data: unknown) => api.post('/support/tickets', data),
   },
 
+  vehicles: {
+    brands: () => api.get<{ id: string; name: string }[]>('/vehicles/brands'),
+    models: (brandId: string) => api.get<{ id: string; name: string }[]>(`/vehicles/brands/${brandId}/models`),
+    years: (modelId: string) => api.get<unknown>(`/vehicles/models/${modelId}/years`),
+    colors: () => api.get<{ id: string; name: string; hex?: string }[]>('/vehicles/colors'),
+  },
+
   settings: {
     get: () => api.get('/driver/me/settings'),
     update: (data: unknown) => api.patch('/driver/me/settings', data),

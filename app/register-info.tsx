@@ -34,7 +34,7 @@ export default function RegisterInfoScreen() {
       await endpoints.driver.updateMe({
         name: name.trim(),
       });
-      router.push('/documents');
+      router.push('/register-vehicle');
     } catch {
       Alert.alert('Error', 'Could not save your information. Please try again.');
     } finally {

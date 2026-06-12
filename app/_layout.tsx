@@ -103,6 +103,7 @@ function RootLayoutNav() {
       <Stack.Screen name="selfie" />
       <Stack.Screen name="suspended" options={{ gestureEnabled: false }} />
       <Stack.Screen name="shuttle/rate-passengers" options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="register-vehicle" />
       <Stack.Screen name="register-documents" />
       <Stack.Screen name="pending-approval" />
       <Stack.Screen name="forgot-password" options={{ animation: 'slide_from_right' }} />

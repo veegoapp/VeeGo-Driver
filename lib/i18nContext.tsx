@@ -406,6 +406,20 @@ const en = {
   service_select_sub: 'Select how you want to earn with VeeGo. You can change this later.',
   mark_all_read: 'Mark all as read',
   no_payout_methods: 'No payout methods on file',
+  vehicle_details: 'Vehicle\ndetails',
+  vehicle_details_sub: 'Select your vehicle information to continue.',
+  vehicle_brand: 'Brand',
+  vehicle_model: 'Model',
+  vehicle_year: 'Year',
+  vehicle_color: 'Color',
+  select_brand: 'Select brand',
+  select_model: 'Select model',
+  select_year: 'Select year',
+  select_color: 'Select color',
+  load_failed: 'Failed to load. Tap to retry.',
+  camera_required: 'Camera Access Required',
+  camera_required_sub: 'Camera permission is needed to capture images. Please open Settings and grant camera access.',
+  open_settings: 'Open Settings',
 };
 
 const ar: typeof en = {
@@ -812,6 +826,20 @@ const ar: typeof en = {
   service_select_sub: 'اختر كيف تريد الكسب مع VeeGo. يمكنك تغيير ذلك لاحقاً.',
   mark_all_read: 'تحديد الكل كمقروء',
   no_payout_methods: 'لا توجد طرق صرف مسجلة',
+  vehicle_details: 'تفاصيل\nمركبتك',
+  vehicle_details_sub: 'اختر معلومات مركبتك للمتابعة.',
+  vehicle_brand: 'الماركة',
+  vehicle_model: 'الموديل',
+  vehicle_year: 'السنة',
+  vehicle_color: 'اللون',
+  select_brand: 'اختر الماركة',
+  select_model: 'اختر الموديل',
+  select_year: 'اختر السنة',
+  select_color: 'اختر اللون',
+  load_failed: 'فشل التحميل. اضغط للمحاولة.',
+  camera_required: 'مطلوب إذن الكاميرا',
+  camera_required_sub: 'مطلوب إذن الكاميرا لالتقاط الصور. يرجى فتح الإعدادات ومنح إذن الكاميرا.',
+  open_settings: 'فتح الإعدادات',
 };
 
 export type Translations = typeof en;

@@ -1,4 +1,4 @@
-import { ArrowLeft, Camera, Check, CheckCircle, CheckCircle2 } from 'lucide-react-native';
+import { ArrowLeft, Camera, Check, CheckCircle, CheckCircle2, Settings } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState, useEffect, useRef } from 'react';
@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Linking,
   Platform,
   StyleSheet,
   Text,
@@ -27,8 +28,9 @@ export default function SelfieScreen() {
   const [photo, setPhoto] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [cameraBlocked, setCameraBlocked] = useState(false);
 
-  // Fix 2: shuttle check-in params
+  // Shuttle check-in params
   const params = useLocalSearchParams<{ tripId?: string; deadlineMinutes?: string }>();
   const shuttleCheckinMode = !!params.tripId;
   const deadlineSecs = shuttleCheckinMode
@@ -39,7 +41,6 @@ export default function SelfieScreen() {
   const [timedOut, setTimedOut] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Countdown timer for shuttle check-in
   useEffect(() => {
     if (!shuttleCheckinMode) return;
     intervalRef.current = setInterval(() => {
@@ -65,28 +66,17 @@ export default function SelfieScreen() {
 
   const takeSelfie = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    let result: ImagePicker.ImagePickerResult;
-    if (status === 'granted') {
-      result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ['images'],
-        quality: 0.85,
-        allowsEditing: true,
-        aspect: [1, 1],
-        cameraType: ImagePicker.CameraType.front,
-      });
-    } else {
-      const lib = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (lib.status !== 'granted') {
-        Alert.alert('Permission needed', 'Please allow camera access for face verification.');
-        return;
-      }
-      result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        quality: 0.85,
-        allowsEditing: true,
-        aspect: [1, 1],
-      });
+    if (status !== 'granted') {
+      setCameraBlocked(true);
+      return;
     }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
+      quality: 0.85,
+      allowsEditing: true,
+      aspect: [1, 1],
+      cameraType: ImagePicker.CameraType.front,
+    });
     if (!result.canceled && result.assets[0]) {
       setPhoto(result.assets[0].uri);
     }
@@ -105,19 +95,13 @@ export default function SelfieScreen() {
       formData.append('type', 'selfie');
 
       if (shuttleCheckinMode && params.tripId) {
-        // Fix 2: use dedicated checkin endpoint and include tripId
         formData.append('tripId', params.tripId);
         const response = await endpoints.driver.checkin(formData);
-        if (!response.ok) {
-          throw new Error('Checkin failed');
-        }
+        if (!response.ok) throw new Error('Checkin failed');
         if (intervalRef.current) clearInterval(intervalRef.current);
         setConfirmed(true);
-        setTimeout(() => {
-          router.back();
-        }, 1200);
+        setTimeout(() => router.back(), 1200);
       } else {
-        // Original onboarding selfie flow
         await endpoints.driver.uploadDocument(formData);
         setConfirmed(true);
         setTimeout(() => {
@@ -130,6 +114,37 @@ export default function SelfieScreen() {
       setIsUploading(false);
     }
   };
+
+  if (cameraBlocked) {
+    return (
+      <View style={[s.root, s.blockedRoot, { backgroundColor: '#fafafd' }]}>
+        <TouchableOpacity onPress={() => router.back()} style={[s.backBtn, { position: 'absolute', top: topPad + 16, left: 24 }]} activeOpacity={0.7}>
+          <ArrowLeft size={20} color="#1e1e28" strokeWidth={2} />
+        </TouchableOpacity>
+        <View style={s.blockedCard}>
+          <View style={s.blockedIconBox}>
+            <Camera size={36} color="#5e5e72" strokeWidth={1.5} />
+          </View>
+          <Text style={s.blockedTitle}>{t.camera_required}</Text>
+          <Text style={s.blockedSub}>{t.camera_required_sub}</Text>
+          <TouchableOpacity style={s.settingsBtn} onPress={() => Linking.openSettings()} activeOpacity={0.85}>
+            <Settings size={16} color="white" strokeWidth={2} />
+            <Text style={s.settingsBtnText}>{t.open_settings}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={s.retryPermBtn}
+            onPress={async () => {
+              const { status } = await ImagePicker.requestCameraPermissionsAsync();
+              if (status === 'granted') setCameraBlocked(false);
+            }}
+            activeOpacity={0.7}
+          >
+            <Text style={s.retryPermText}>I've granted permission — try again</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   if (confirmed) {
     return (
@@ -172,7 +187,6 @@ export default function SelfieScreen() {
           )}
         </View>
 
-        {/* Fix 2: countdown timer for shuttle check-in */}
         {shuttleCheckinMode && (
           <View style={[
             s.timerBox,
@@ -293,6 +307,28 @@ export default function SelfieScreen() {
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#fafafd' },
+  blockedRoot: { alignItems: 'center', justifyContent: 'center', padding: 32 },
+  blockedCard: {
+    backgroundColor: 'white', borderRadius: 28, padding: 28,
+    alignItems: 'center', gap: 12,
+    borderWidth: 1, borderColor: '#e5e5ea',
+    shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.07, shadowRadius: 16, elevation: 4,
+    width: '100%',
+  },
+  blockedIconBox: {
+    width: 80, height: 80, borderRadius: 24, backgroundColor: '#f2f2f5',
+    alignItems: 'center', justifyContent: 'center', marginBottom: 4,
+  },
+  blockedTitle: { fontSize: 20, fontWeight: '700', color: '#1e1e28', textAlign: 'center', fontFamily: 'Inter_700Bold' },
+  blockedSub: { fontSize: 14, color: '#5e5e72', lineHeight: 21, textAlign: 'center', fontFamily: 'Inter_400Regular' },
+  settingsBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#1e1e28', borderRadius: 16, height: 48,
+    paddingHorizontal: 24, marginTop: 8,
+  },
+  settingsBtnText: { color: 'white', fontSize: 14, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  retryPermBtn: { paddingVertical: 8 },
+  retryPermText: { fontSize: 13, color: '#5e5e72', fontFamily: 'Inter_400Regular', textDecorationLine: 'underline' },
   successRoot: { alignItems: 'center', justifyContent: 'center', gap: 16, paddingHorizontal: 40 },
   successIcon: {
     width: 120, height: 120, borderRadius: 60, backgroundColor: '#f2f2f5',
@@ -310,7 +346,6 @@ const s = StyleSheet.create({
   step: { fontSize: 12, fontWeight: '600', color: '#5e5e72', letterSpacing: 1, textTransform: 'uppercase', fontFamily: 'Inter_600SemiBold' },
   title: { fontSize: 34, fontWeight: '700', color: '#1e1e28', letterSpacing: -1.2, lineHeight: 40, fontFamily: 'Inter_700Bold' },
   sub: { fontSize: 14, color: '#5e5e72', lineHeight: 20, fontFamily: 'Inter_400Regular' },
-  // Fix 2: countdown timer styles
   timerBox: {
     marginTop: 12, borderRadius: 12, borderWidth: 1,
     paddingHorizontal: 16, paddingVertical: 10, alignItems: 'center',

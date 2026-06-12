@@ -1,14 +1,14 @@
 import {
   CheckCircle2, Camera, CreditCard, Car, FileText,
-  Award, Shield, AlertCircle, ArrowRight, User,
+  Award, AlertCircle, ArrowRight, User, Settings,
 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
+  Linking,
   Platform,
   ScrollView,
   StyleSheet,
@@ -17,6 +17,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
 
 type DocSlot = {
@@ -69,12 +70,14 @@ export default function RegisterDocumentsScreen() {
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
   const botPad = Platform.OS === 'web' ? 34 : insets.bottom;
+  const { t } = useI18n();
 
   const [photos, setPhotos] = useState<Record<string, string>>({});
   const [uploaded, setUploaded] = useState<Record<string, boolean>>({});
   const [uploading, setUploading] = useState<Record<string, boolean>>({});
   const [failed, setFailed] = useState<Record<string, boolean>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [cameraBlocked, setCameraBlocked] = useState(false);
 
   const allDone = ALL_IDS.every(id => uploaded[id]);
   const doneCount = ALL_IDS.filter(id => uploaded[id]).length;
@@ -82,31 +85,20 @@ export default function RegisterDocumentsScreen() {
   const captureDoc = async (slot: DocSlot) => {
     if (uploading[slot.id]) return;
 
-    let result: ImagePicker.ImagePickerResult | null = null;
-
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status === 'granted') {
-      result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ['images'],
-        quality: 0.85,
-        allowsEditing: true,
-        aspect: slot.id === 'profile_photo' ? [1, 1] : [4, 3],
-      });
-    } else {
-      const lib = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (lib.status !== 'granted') {
-        Alert.alert('Permission needed', 'Please allow camera or gallery access to upload documents.');
-        return;
-      }
-      result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        quality: 0.85,
-        allowsEditing: true,
-        aspect: slot.id === 'profile_photo' ? [1, 1] : [4, 3],
-      });
+    if (status !== 'granted') {
+      setCameraBlocked(true);
+      return;
     }
 
-    if (!result || result.canceled || !result.assets[0]) return;
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
+      quality: 0.85,
+      allowsEditing: true,
+      aspect: slot.id === 'profile_photo' ? [1, 1] : [4, 3],
+    });
+
+    if (result.canceled || !result.assets[0]) return;
 
     const asset = result.assets[0];
     setPhotos(prev => ({ ...prev, [slot.id]: asset.uri }));
@@ -137,6 +129,38 @@ export default function RegisterDocumentsScreen() {
     router.replace('/pending-approval');
   };
 
+  if (cameraBlocked) {
+    return (
+      <View style={[s.root, s.blockedRoot, { backgroundColor: '#fafafd' }]}>
+        <View style={s.blockedCard}>
+          <View style={s.blockedIconBox}>
+            <Camera size={36} color="#5e5e72" strokeWidth={1.5} />
+          </View>
+          <Text style={s.blockedTitle}>{t.camera_required}</Text>
+          <Text style={s.blockedSub}>{t.camera_required_sub}</Text>
+          <TouchableOpacity
+            style={s.settingsBtn}
+            onPress={() => Linking.openSettings()}
+            activeOpacity={0.85}
+          >
+            <Settings size={16} color="white" strokeWidth={2} />
+            <Text style={s.settingsBtnText}>{t.open_settings}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={s.retryPermBtn}
+            onPress={async () => {
+              const { status } = await ImagePicker.requestCameraPermissionsAsync();
+              if (status === 'granted') setCameraBlocked(false);
+            }}
+            activeOpacity={0.7}
+          >
+            <Text style={s.retryPermText}>I've granted permission — try again</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={[s.root, { backgroundColor: '#fafafd' }]}>
       <ScrollView
@@ -144,7 +168,7 @@ export default function RegisterDocumentsScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={s.header}>
-          <Text style={s.step}>Step 2 of 2</Text>
+          <Text style={s.step}>Step 4 of 4</Text>
           <Text style={s.title}>Upload your{'\n'}documents</Text>
           <Text style={s.sub}>
             Upload all required documents to complete your registration. Your account will be reviewed by our team.
@@ -269,6 +293,28 @@ export default function RegisterDocumentsScreen() {
 
 const s = StyleSheet.create({
   root: { flex: 1 },
+  blockedRoot: { alignItems: 'center', justifyContent: 'center', padding: 32 },
+  blockedCard: {
+    backgroundColor: 'white', borderRadius: 28, padding: 28,
+    alignItems: 'center', gap: 12,
+    borderWidth: 1, borderColor: '#e5e5ea',
+    shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.07, shadowRadius: 16, elevation: 4,
+    width: '100%',
+  },
+  blockedIconBox: {
+    width: 80, height: 80, borderRadius: 24, backgroundColor: '#f2f2f5',
+    alignItems: 'center', justifyContent: 'center', marginBottom: 4,
+  },
+  blockedTitle: { fontSize: 20, fontWeight: '700', color: '#1e1e28', textAlign: 'center', fontFamily: 'Inter_700Bold' },
+  blockedSub: { fontSize: 14, color: '#5e5e72', lineHeight: 21, textAlign: 'center', fontFamily: 'Inter_400Regular' },
+  settingsBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#1e1e28', borderRadius: 16, height: 48,
+    paddingHorizontal: 24, marginTop: 8,
+  },
+  settingsBtnText: { color: 'white', fontSize: 14, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  retryPermBtn: { paddingVertical: 8 },
+  retryPermText: { fontSize: 13, color: '#5e5e72', fontFamily: 'Inter_400Regular', textDecorationLine: 'underline' },
   header: { marginBottom: 20, gap: 8 },
   step: { fontSize: 12, fontWeight: '600', color: '#5e5e72', letterSpacing: 1, textTransform: 'uppercase', fontFamily: 'Inter_600SemiBold' },
   title: { fontSize: 34, fontWeight: '700', color: '#1e1e28', letterSpacing: -1.2, lineHeight: 40, fontFamily: 'Inter_700Bold' },
