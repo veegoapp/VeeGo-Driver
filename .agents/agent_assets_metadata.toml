@@ -18,3 +18,9 @@ id = "PMMpEaVdncN3RqCKmCGQM"
 uri = "file://PROJECT_UPDATE_REPORT.md"
 type = "text"
 title = "Stabilization Update Report"
+
+[[outputs]]
+id = "FXl9lEk2r7N5eGXfHUYfK"
+uri = "file://audit_driver_app.md"
+type = "text"
+title = "VeeGo Driver App — Technical Audit Report"

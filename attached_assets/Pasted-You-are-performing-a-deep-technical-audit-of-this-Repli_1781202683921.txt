@@ -1,0 +1,134 @@
+You are performing a deep technical audit of this Replit project.
+
+This is the Driver App for a ride-hailing app called VeeGo — built with React Native. It serves drivers across 4 services: Shuttle (Shatel), Car, Scooter, and Delivery.
+
+Your job is to produce a comprehensive audit report as a `.md` file named `audit_driver_app.md`.
+
+---
+
+## AUDIT SCOPE
+
+### 1. PROJECT STRUCTURE
+- List every folder and file with a one-line description
+- Identify navigation structure
+- Identify dead or unused screens/components
+
+### 2. SCREENS INVENTORY — For EVERY screen:
+- Screen name and file path
+- What it displays and does
+- Connected to backend? (real API call or mock/hardcoded)
+- Status: ✅ Fully working | ⚠️ Needs improvement | ❌ Broken/mock | 🗑️ Dead/unused
+
+### 3. API INTEGRATION
+- Every API call: endpoint, method, trigger, response handling
+- Are errors handled?
+- Is the base URL pointing to the correct backend?
+
+### 4. SOCKET / REAL-TIME
+- Sockets implemented?
+- All socket events (emit and listen) with status
+- Working end-to-end vs. mocked?
+
+### 5. AUTHENTICATION & ONBOARDING
+- Phone signup + OTP — implemented and real?
+- Service selection screen (Car / Scooter / Shuttle / Delivery) — implemented?
+- Currently only Shuttle should be selectable — is this enforced?
+- Token-based auto-login — implemented?
+- Service switch (between multiple services) removed? Should be: one account = one service only — is old switch logic still present?
+
+### 6. DOCUMENT UPLOAD FLOW
+- Direct camera only (no gallery) — enforced?
+- Mandatory docs: driving license (front+back), vehicle registration (front+back), personal photo, vehicle photo — implemented?
+- Criminal record photo — optional until 30 trips, then mandatory with account lock — implemented?
+- Vehicle brand / model / year selection during signup — implemented?
+- Documents sent to backend for admin review — implemented?
+- Account stays Pending until admin approves — implemented?
+
+### 7. MULTI-ACCOUNT / MULTI-VEHICLE ALERT
+- If same driver registers with a second vehicle/service, does the backend alert the admin? — implemented on app side (does the app send identifying info)?
+
+### 8. FACE VERIFICATION
+- For Car/Scooter/Delivery: face photo required every 8 hours — implemented?
+- For Shuttle: face photo required before each trip — implemented?
+- Is it camera-only (no upload from gallery)?
+- Is it verified server-side (face detection, not just any photo)?
+
+### 9. HOME SCREEN — CAR/SCOOTER/DELIVERY
+- Map displayed — implemented?
+- "Go Live" / online toggle — implemented?
+- Daily analytics (trips count, earnings) shown at top — implemented?
+- Earnings hide/show toggle — implemented?
+- Incoming ride request popup (15s timer, accept/reject) — implemented?
+- Shows: rider name, rating, pickup, dropoff, price, driver's cut — implemented?
+- 5-rejection penalty (deprioritized until 2 rides accepted) — implemented?
+- After accept: rider location on map + Google Maps option — implemented?
+- "I have arrived" button + 5-min wait timer — implemented?
+- No-show cancellation: rider charged 15 LE (configurable from admin) — implemented?
+- Start trip → map with route + Google Maps option — implemented?
+- Route deviation notification to driver and rider — implemented?
+- Safety button (122 + WhatsApp) — implemented?
+- End trip: amount confirmation + rider rating — implemented?
+
+### 10. HOME SCREEN — SHUTTLE (SHATEL)
+- View all available lines/routes — implemented?
+- Search for a specific line — implemented?
+- Book a weekly slot (full week Sun–Thu, not single day) — implemented?
+- Slot shown as taken to other drivers once booked — implemented?
+- Thursday renewal notification — implemented?
+- 10-hour auto-release if driver doesn't respond — implemented?
+- Driver must be online 3 hours before trip — implemented?
+- Notification if offline 3 hours before — implemented?
+- Visible to all riders on map 20 min before trip — implemented?
+- Station-by-station flow: arrive at station → mark present riders → mark absent → proceed — implemented?
+- Absent rider: 1-minute wait timer, then warn/charge — implemented?
+- Driver no-show: fine + temporary ban logic — implemented?
+- Trip transfer to another driver (min 2 hours before) — implemented?
+
+### 11. SCHEDULE CONFLICT DETECTION (SHUTTLE)
+- When driver tries to book a trip, does the system check for time+location conflicts with existing bookings? — implemented?
+- Logic: estimated arrival time at destination + travel time back to new pickup = must fit before new trip start — implemented?
+
+### 12. TRIPS PAGE
+- Full trip history — implemented?
+- Trip detail view — implemented?
+
+### 13. EARNINGS PAGE
+- Detailed earnings breakdown — implemented?
+- Per trip, daily, weekly — implemented?
+- Deductions (penalties, fees) visible — implemented?
+
+### 14. PROFILE PAGE
+- Personal info — implemented?
+- Vehicle info page — implemented?
+- Document status page (which docs approved/pending/rejected) — implemented?
+- Language toggle — implemented?
+- Dark/light mode — implemented?
+- Help & support — implemented?
+- Sign out — implemented?
+
+### 15. SHUTTLE-SPECIFIC PAGES
+- Lines/Routes browser for drivers — implemented?
+- Weekly schedule view — implemented?
+
+### 16. DEAD CODE & UNNECESSARY FEATURES
+- Old service-switch logic still present?
+- Any mocked ride requests or hardcoded data?
+- Unused screens or components?
+
+---
+
+## OUTPUT FORMAT
+
+Generate a single file: `audit_driver_app.md`
+
+Use this structure:
+- Use `##` for each section
+- Use tables for screens and API calls
+- Use status emojis: ✅ ⚠️ ❌ 🗑️
+- End with a prioritized summary table:
+
+| # | Item | Status | Priority |
+|---|------|--------|----------|
+| 1 | ... | ❌ Missing | 🔴 High |
+
+Be exhaustive. Do not skip any screen or component. Flag anything unclear with ❓.
