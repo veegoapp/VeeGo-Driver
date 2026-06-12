@@ -84,7 +84,7 @@ export default function SettingsScreen() {
 
         <Text style={[styles.sectionLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.preferences}</Text>
         <GlassView style={{ marginTop: 8 }} borderRadius={20}>
-          <SettingRow icon="globe" label={t.language} value="English" onPress={() => router.push('/language-select')} colors={colors} isRTL={isRTL} />
+          <SettingRow icon="globe" label={t.language} value="English" colors={colors} isRTL={isRTL} />
           <SettingRow icon="map-pin" label={t.country} value="Tunisia" colors={colors} isRTL={isRTL} />
           <SettingRow icon="moon" label={t.appearance} value="Dark" colors={colors} isRTL={isRTL} last />
         </GlassView>

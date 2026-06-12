@@ -255,10 +255,13 @@ export const endpoints = {
       return api.get(`/driver/trips?${params.join('&')}`);
     },
     detail: (tripId: string) => api.get(`/driver/trips/${tripId}`),
+    /* defined — not yet connected to UI */
     accept: (tripId: string) => api.patch(`/driver/trips/${tripId}/accept`),
+    /* defined — not yet connected to UI */
     reject: (tripId: string) => api.patch(`/driver/trips/${tripId}/reject`),
     start: (tripId: string) => api.patch(`/driver/trips/${tripId}/start`),
     complete: (tripId: string) => api.patch(`/driver/trips/${tripId}/complete`),
+    /* defined — not yet connected to UI */
     cancel: (tripId: string, reason: string) =>
       api.patch(`/driver/trips/${tripId}/cancel`, { reason }),
     stations: (tripId: string) => api.get(`/driver/trips/${tripId}/stations`),
@@ -278,7 +281,9 @@ export const endpoints = {
     transactions: () => api.get('/driver/earnings/history'),
     payout: (amount: number) => api.post('/driver/wallet/payout', { amount }),
     payoutMethods: () => api.get('/driver/wallet/payout-methods'),
+    /* defined — not yet connected to UI */
     addPayoutMethod: (data: unknown) => api.post('/driver/wallet/payout-methods', data),
+    /* defined — not yet connected to UI */
     removePayoutMethod: (id: string) => api.del(`/driver/wallet/payout-methods/${id}`),
   },
 
@@ -312,7 +317,7 @@ export const endpoints = {
     boardBooking: (bookingId: string, stationId?: string | number) =>
       api.post(`/shuttle/bookings/${bookingId}/board`, stationId != null ? { stationId } : {}),
 
-    // Fix 6: driver trip history
+    /* defined — not yet connected to UI */
     driverTrips: (page = 1, limit = 10) =>
       api.get(`/shuttle/driver/my-trips?page=${page}&limit=${limit}`),
 
@@ -324,6 +329,7 @@ export const endpoints = {
   notifications: {
     list: () => api.get('/notifications'),
     markRead: (id: string) => api.patch(`/notifications/${id}/read`),
+    markAllRead: () => api.patch('/notifications/read-all'),
   },
 
   serviceControl: {

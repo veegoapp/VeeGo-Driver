@@ -15,6 +15,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from 'expo-router';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
@@ -35,6 +36,7 @@ export default function ShuttleHomeScreen() {
   const [online, setOnline] = useState(false);
   const [onlineInitialized, setOnlineInitialized] = useState(false);
   const [onlineLoading, setOnlineLoading] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   // Fix 2: shuttle check-in state
   const [shuttleCheckinRequired, setShuttleCheckinRequired] = useState<{ tripId: string; deadlineMinutes: number } | null>(null);
@@ -54,10 +56,27 @@ export default function ShuttleHomeScreen() {
     staleTime: 0,
     retry: false,
   });
+  const { data: notificationsRaw, refetch: refetchNotifications } = useQuery({
+    queryKey: ['notifications'],
+    queryFn: () => endpoints.notifications.list() as Promise<{ id: string; read?: boolean; isRead?: boolean }[]>,
+    staleTime: 30000,
+  });
   const driverData = driverRaw as any;
 
   const { activeLine, stops, currentStopIndex, allLines, renewalBooking, myBookings, tripCancelledBanner, dismissTripCancelledBanner } = useShuttle();
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const notifs = Array.isArray(notificationsRaw) ? notificationsRaw : [];
+    const count = notifs.filter(n => !(n.read ?? n.isRead ?? false)).length;
+    setUnreadCount(count);
+  }, [notificationsRaw]);
+
+  useFocusEffect(
+    useCallback(() => {
+      refetchNotifications();
+    }, [refetchNotifications])
+  );
   const currentStop = stops[currentStopIndex] ?? null;
   const nextStop = stops[currentStopIndex + 1] ?? null;
   const progress = stops.length > 0 ? currentStopIndex / stops.length : 0;
@@ -146,9 +165,15 @@ export default function ShuttleHomeScreen() {
       });
     };
 
+    const handleNotificationNew = () => {
+      setUnreadCount(prev => prev + 1);
+    };
+
     socket.on(SOCKET_EVENTS.SHUTTLE_CHECKIN_REQUIRED, handleShuttleCheckinRequired);
+    socket.on(SOCKET_EVENTS.NOTIFICATION_NEW, handleNotificationNew);
     return () => {
       socket.off(SOCKET_EVENTS.SHUTTLE_CHECKIN_REQUIRED, handleShuttleCheckinRequired);
+      socket.off(SOCKET_EVENTS.NOTIFICATION_NEW, handleNotificationNew);
     };
   }, [socket]);
 
@@ -223,11 +248,11 @@ export default function ShuttleHomeScreen() {
   const handleNavigateToActiveTrip = () => {
     if (shuttleCheckinRequired) {
       Alert.alert(
-        'التحقق مطلوب',
-        'يجب إتمام التحقق من الهوية قبل بدء الرحلة.',
+        t.checkin_required_title,
+        t.checkin_required_body,
         [
           {
-            text: 'تحقق الآن',
+            text: t.checkin_now,
             onPress: () =>
               router.push({
                 pathname: '/selfie',
@@ -237,7 +262,7 @@ export default function ShuttleHomeScreen() {
                 },
               }),
           },
-          { text: 'لاحقاً', style: 'cancel' },
+          { text: t.later, style: 'cancel' },
         ]
       );
       return;
@@ -266,7 +291,11 @@ export default function ShuttleHomeScreen() {
             <Pressable style={styles.iconBtn} onPress={() => router.push('/messages')}>
               <GlassView style={styles.iconBtnGlass} borderRadius={20}>
                 <Bell size={18} color={colors.foreground} strokeWidth={2} />
-                <View style={[styles.notifDot, { backgroundColor: colors.destructive }]} />
+                {unreadCount > 0 && (
+                  <View style={[styles.notifDot, { backgroundColor: colors.destructive }]}>
+                    <Text style={styles.notifDotText}>{unreadCount > 9 ? '9+' : String(unreadCount)}</Text>
+                  </View>
+                )}
               </GlassView>
             </Pressable>
             <GlassView style={[styles.serviceChip, { borderColor: '#1e1e2833' }]} borderRadius={20}>
@@ -345,7 +374,7 @@ export default function ShuttleHomeScreen() {
           >
             <AlertTriangle size={16} color="#D97706" strokeWidth={2} />
             <Text style={[styles.cancelBannerText, { color: '#92400E', fontFamily: 'Inter_600SemiBold', flex: 1 }]}>
-              التحقق مطلوب — اضغط هنا لإتمام التحقق قبل بدء الرحلة
+              {t.checkin_required_banner}
             </Text>
           </Pressable>
         )}
@@ -371,13 +400,13 @@ export default function ShuttleHomeScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.renewalTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-                Renew your weekly slot
+                {t.renew_weekly_slot}
               </Text>
               <Text style={[styles.renewalRoute, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]} numberOfLines={1}>
                 {renewalBooking.routeName} · {renewalBooking.departureTime}
               </Text>
               <Text style={[styles.renewalCountdown, { color: '#D97706', fontFamily: 'Inter_700Bold' }]}>
-                ⏱ {renewalCountdown} remaining
+                ⏱ {renewalCountdown} {t.remaining}
               </Text>
             </View>
             <Pressable
@@ -502,14 +531,14 @@ export default function ShuttleHomeScreen() {
 
         {/* Upcoming Trips section */}
         <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA, marginTop: 24 }]}>
-          Upcoming Trips
+          {t.upcoming_trips}
         </Text>
 
         {upcomingBookings.length === 0 ? (
           <GlassView style={[styles.upcomingEmpty, { borderColor: colors.border }]} borderRadius={16}>
             <Calendar size={20} color={colors.mutedForeground} strokeWidth={2} />
             <Text style={[styles.upcomingEmptyText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-              No upcoming trips scheduled
+              {t.no_upcoming_trips}
             </Text>
           </GlassView>
         ) : (
@@ -588,7 +617,8 @@ const styles = StyleSheet.create({
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   iconBtn: {},
   iconBtnGlass: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', position: 'relative' },
-  notifDot: { position: 'absolute', top: 8, right: 8, width: 8, height: 8, borderRadius: 4 },
+  notifDot: { position: 'absolute', top: 2, right: 2, minWidth: 14, height: 14, borderRadius: 7, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 2 },
+  notifDotText: { fontSize: 7, color: '#fff', fontFamily: 'Inter_700Bold' },
   serviceChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1 },
   serviceChipDot: { width: 6, height: 6, borderRadius: 3 },
   serviceChipText: { fontSize: 10, letterSpacing: 1.5 },

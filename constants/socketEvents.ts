@@ -6,6 +6,7 @@
 export const SOCKET_EVENTS = {
   // Server → Driver: ride lifecycle
   RIDE_OFFER:               "ride:offer",
+  /* unused — reserved for future */
   RIDE_NEW_REQUEST:         "ride:new_request",
   RIDE_OFFER_EXPIRED:       "ride:offer_expired",
 
@@ -35,7 +36,7 @@ export const SOCKET_EVENTS = {
   SERVICE_CONTROL_CHANGED:  "service:control:changed",
   SERVICE_SETTINGS_CHANGED: "service:settings:changed",
 
-  // Server → Driver: location ack
+  /* unused — reserved for future */
   DRIVER_LOCATION_ACK:      "driver:location:ack",
 
   // Server → Driver: surge
@@ -58,11 +59,16 @@ export const SOCKET_EVENTS = {
 
   // Client → Server
   JOIN:                     "join",
+  /* unused — reserved for future */
   DRIVER_STATUS_ONLINE:     "driver:status:online",
+  /* unused — reserved for future */
   DRIVER_STATUS_OFFLINE:    "driver:status:offline",
+  /* unused — reserved for future */
   DRIVER_STATUS_BUSY:       "driver:status:busy",
   DRIVER_LOCATION_UPDATE:   "driver:location:update",
+  /* unused — reserved for future */
   DRIVER_TRIP_START:        "driver:trip:start",
+  /* unused — reserved for future */
   DRIVER_TRIP_COMPLETE:     "driver:trip:complete",
 } as const;
 

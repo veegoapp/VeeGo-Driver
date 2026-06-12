@@ -1,12 +1,13 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { ArrowLeft, Bell, InboxIcon } from 'lucide-react-native';
+import { ArrowLeft, Bell, CheckCheck, InboxIcon } from 'lucide-react-native';
 import React from 'react';
 import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
+import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
 
 type Notification = {
@@ -21,11 +22,26 @@ export default function MessagesScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
+  const { t } = useI18n();
   const queryClient = useQueryClient();
 
   const { data: notifications, isLoading, isError } = useQuery<Notification[]>({
     queryKey: ['notifications'],
     queryFn: () => endpoints.notifications.list() as Promise<Notification[]>,
+  });
+
+  const hasUnread = (notifications ?? []).some(n => !n.read);
+
+  const markAllMutation = useMutation({
+    mutationFn: () => endpoints.notifications.markAllRead() as Promise<unknown>,
+    onMutate: () => {
+      queryClient.setQueryData<Notification[]>(['notifications'], prev =>
+        prev?.map(item => ({ ...item, read: true }))
+      );
+    },
+    onError: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
   });
 
   const handleTap = async (n: Notification) => {
@@ -52,7 +68,23 @@ export default function MessagesScreen() {
         <Pressable onPress={() => router.back()} style={[styles.backBtn, { backgroundColor: colors.glass, borderColor: colors.border }]}>
           <ArrowLeft size={20} color={colors.foreground} strokeWidth={2} />
         </Pressable>
-        <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>Messages</Text>
+
+        <View style={styles.titleRow}>
+          <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>Messages</Text>
+          {hasUnread && (
+            <Pressable
+              onPress={() => markAllMutation.mutate()}
+              disabled={markAllMutation.isPending}
+              style={({ pressed }) => [styles.markAllBtn, { backgroundColor: colors.glass, borderColor: colors.border, opacity: pressed || markAllMutation.isPending ? 0.6 : 1 }]}
+            >
+              {markAllMutation.isPending
+                ? <ActivityIndicator size="small" color={colors.mutedForeground} />
+                : <CheckCheck size={14} color={colors.mutedForeground} strokeWidth={2} />
+              }
+              <Text style={[styles.markAllText, { color: colors.mutedForeground, fontFamily: 'Inter_500Medium' }]}>{t.mark_all_read}</Text>
+            </Pressable>
+          )}
+        </View>
 
         {isLoading && (
           <View style={styles.centeredState}>
@@ -141,7 +173,10 @@ export default function MessagesScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  pageTitle: { fontSize: 24, marginTop: 24 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 24, marginBottom: 0 },
+  pageTitle: { fontSize: 24 },
+  markAllBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, borderWidth: 1 },
+  markAllText: { fontSize: 12 },
   centeredState: { marginTop: 40, alignItems: 'center', padding: 32, gap: 12 },
   stateTitle: { fontSize: 16, textAlign: 'center' },
   stateSub: { fontSize: 13, textAlign: 'center', lineHeight: 20 },

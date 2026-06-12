@@ -1,10 +1,12 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location'; // Task 1: GPS tracking
 import { AlertCircle, Bell, Check, CheckCircle, Settings, ShieldCheck, Star, TrendingUp, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useSocket } from '@/lib/socketContext';
+import { SOCKET_EVENTS } from '@/constants/socketEvents';
 import {
   ActivityIndicator,
   Animated,
@@ -52,6 +54,9 @@ export default function HomeScreen() {
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const checkinCountdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const [unreadCount, setUnreadCount] = useState(0);
+  const { socket } = useSocket();
+
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
   const TA = isRTL ? 'right' as const : 'left' as const;
 
@@ -68,6 +73,11 @@ export default function HomeScreen() {
     queryFn: endpoints.rides.active,
     retry: false,
   });
+  const { data: notificationsRaw, refetch: refetchNotifications } = useQuery({
+    queryKey: ['notifications'],
+    queryFn: () => endpoints.notifications.list() as Promise<{ id: string; read?: boolean; isRead?: boolean }[]>,
+    staleTime: 30000,
+  });
 
   const driverData = driverRaw as any;
   const earningsData = earningsRaw as any;
@@ -82,6 +92,25 @@ export default function HomeScreen() {
   }, [activeRide?.id]);
 
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const notifs = Array.isArray(notificationsRaw) ? notificationsRaw : [];
+    const count = notifs.filter(n => !(n.read ?? n.isRead ?? false)).length;
+    setUnreadCount(count);
+  }, [notificationsRaw]);
+
+  useFocusEffect(
+    useCallback(() => {
+      refetchNotifications();
+    }, [refetchNotifications])
+  );
+
+  useEffect(() => {
+    if (!socket) return;
+    const handleNotificationNew = () => setUnreadCount(prev => prev + 1);
+    socket.on(SOCKET_EVENTS.NOTIFICATION_NEW, handleNotificationNew);
+    return () => { socket.off(SOCKET_EVENTS.NOTIFICATION_NEW, handleNotificationNew); };
+  }, [socket]);
 
   const pulseScale = useRef(new Animated.Value(0.8)).current;
   const pulseOpacity = useRef(new Animated.Value(0.8)).current;
@@ -552,7 +581,11 @@ export default function HomeScreen() {
             >
               <GlassView style={styles.iconBtnGlass} borderRadius={20}>
                 <Bell size={18} color={colors.foreground} strokeWidth={2} />
-                <View style={[styles.notifDot, { backgroundColor: colors.destructive }]} />
+                {unreadCount > 0 && (
+                  <View style={[styles.notifDot, { backgroundColor: colors.destructive }]}>
+                    <Text style={styles.notifDotText}>{unreadCount > 9 ? '9+' : String(unreadCount)}</Text>
+                  </View>
+                )}
               </GlassView>
             </Pressable>
             <Pressable
@@ -773,7 +806,8 @@ const styles = StyleSheet.create({
   headerActions: { gap: 8 },
   iconBtn: {},
   iconBtnGlass: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', position: 'relative' },
-  notifDot: { position: 'absolute', top: 8, right: 8, width: 8, height: 8, borderRadius: 4 },
+  notifDot: { position: 'absolute', top: 2, right: 2, minWidth: 14, height: 14, borderRadius: 7, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 2 },
+  notifDotText: { fontSize: 7, color: '#fff', fontFamily: 'Inter_700Bold' },
   statsPillWrap: { paddingHorizontal: 16, marginTop: 16 },
   statsPill: {},
   statsPillInner: { alignItems: 'center', justifyContent: 'space-between', padding: 12 },

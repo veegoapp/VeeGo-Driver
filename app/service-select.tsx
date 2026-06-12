@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useService, ServiceType } from '@/lib/serviceContext';
 import { useServiceControl, DriverSnapshot, ServiceStatus } from '@/lib/serviceControlContext';
 import { api } from '@/lib/api';
+import { useI18n } from '@/lib/i18nContext';
 
 type ServiceOption = {
   type: ServiceType;
@@ -71,6 +72,7 @@ function BlockedOverlay({ status }: { status: ServiceStatus }) {
 
 export default function ServiceSelectScreen() {
   const insets = useSafeAreaInsets();
+  const { t } = useI18n();
   const { setServiceType } = useService();
   const {
     services,
@@ -142,8 +144,8 @@ export default function ServiceSelectScreen() {
         </View>
 
         <View style={s.header}>
-          <Text style={s.title}>Choose your{'\n'}service type</Text>
-          <Text style={s.sub}>Select how you want to earn with VeeGo. You can change this later.</Text>
+          <Text style={s.title}>{t.choose_service_type}</Text>
+          <Text style={s.sub}>{t.service_select_sub}</Text>
         </View>
 
         {/* Loading state */}
@@ -294,7 +296,7 @@ export default function ServiceSelectScreen() {
           disabled={!canContinue}
           activeOpacity={0.9}
         >
-          <Text style={s.continueBtnText}>Continue</Text>
+          <Text style={s.continueBtnText}>{t.continue}</Text>
           <ArrowRight size={18} color="white" strokeWidth={2} />
         </TouchableOpacity>
       </View>

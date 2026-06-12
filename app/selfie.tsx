@@ -15,6 +15,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Ellipse, Path } from 'react-native-svg';
 import { useService } from '@/lib/serviceContext';
+import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
 
 export default function SelfieScreen() {
@@ -22,6 +23,7 @@ export default function SelfieScreen() {
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
   const botPad = Platform.OS === 'web' ? 34 : insets.bottom;
   const { serviceType } = useService();
+  const { t } = useI18n();
   const [photo, setPhoto] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -93,7 +95,7 @@ export default function SelfieScreen() {
   const handleConfirm = async () => {
     if (!photo || isUploading) return;
     if (shuttleCheckinMode && timedOut) {
-      Alert.alert('انتهى الوقت', 'لم تقم بالتحقق في الوقت المحدد. يرجى التواصل مع الدعم.');
+      Alert.alert(t.timeout_alert_title, t.timeout_alert_body);
       return;
     }
     setIsUploading(true);
@@ -136,11 +138,11 @@ export default function SelfieScreen() {
           <CheckCircle2 size={72} color="#1e1e28" />
         </View>
         <Text style={s.successTitle}>
-          {shuttleCheckinMode ? 'تم التحقق بنجاح!' : "You're all set!"}
+          {shuttleCheckinMode ? t.verified_title_checkin : "You're all set!"}
         </Text>
         <Text style={s.successSub}>
           {shuttleCheckinMode
-            ? 'تم التحقق من هويتك. يمكنك الآن بدء الرحلة.'
+            ? t.verified_sub_checkin
             : 'Your account is being reviewed. You can start accepting trips shortly.'}
         </Text>
       </View>
@@ -157,9 +159,9 @@ export default function SelfieScreen() {
         <View style={s.header}>
           {shuttleCheckinMode ? (
             <>
-              <Text style={s.step}>التحقق من الهوية · الشاتل</Text>
-              <Text style={s.title}>{'التحقق\nقبل الرحلة'}</Text>
-              <Text style={s.sub}>يرجى التقاط صورة واضحة للتحقق من هويتك قبل بدء الرحلة.</Text>
+              <Text style={s.step}>{t.selfie_checkin_step}</Text>
+              <Text style={s.title}>{t.selfie_checkin_title}</Text>
+              <Text style={s.sub}>{t.selfie_checkin_sub}</Text>
             </>
           ) : (
             <>
@@ -178,11 +180,11 @@ export default function SelfieScreen() {
           ]}>
             {timedOut ? (
               <Text style={[s.timerText, { color: '#dc2626', fontFamily: 'Inter_700Bold' }]}>
-                لم تقم بالتحقق في الوقت المحدد. لن تظهر للركاب حتى تقوم بالتحقق.
+                {t.checkin_timed_out_msg}
               </Text>
             ) : (
               <>
-                <Text style={[s.timerLabel, { color: '#92400e', fontFamily: 'Inter_400Regular' }]}>الوقت المتبقي</Text>
+                <Text style={[s.timerLabel, { color: '#92400e', fontFamily: 'Inter_400Regular' }]}>{t.time_remaining}</Text>
                 <Text style={[s.timerCount, { color: secondsLeft <= 60 ? '#dc2626' : '#c2410c', fontFamily: 'Inter_700Bold' }]}>
                   {formatCountdown(secondsLeft)}
                 </Text>
@@ -228,9 +230,7 @@ export default function SelfieScreen() {
               />
             </Svg>
             <View style={s.ovalHint}>
-              <Text style={s.ovalHintText}>
-                {shuttleCheckinMode ? 'ضع وجهك داخل البيضاوي' : 'Position your face inside the oval'}
-              </Text>
+              <Text style={s.ovalHintText}>{t.face_in_oval}</Text>
             </View>
           </View>
         )}
@@ -246,7 +246,7 @@ export default function SelfieScreen() {
               disabled={isUploading}
             >
               <Camera size={18} color="#1e1e28" />
-              <Text style={s.retakeBtnText}>{shuttleCheckinMode ? 'إعادة الالتقاط' : 'Retake'}</Text>
+              <Text style={s.retakeBtnText}>{t.retake_photo}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[s.confirmBtn, { flex: 2, opacity: (isUploading || (shuttleCheckinMode && timedOut)) ? 0.6 : 1 }]}
@@ -258,7 +258,7 @@ export default function SelfieScreen() {
                 <ActivityIndicator color="white" />
               ) : (
                 <>
-                  <Text style={s.confirmBtnText}>{shuttleCheckinMode ? 'تأكيد التحقق' : 'Confirm & finish'}</Text>
+                  <Text style={s.confirmBtnText}>{shuttleCheckinMode ? t.confirm_checkin : 'Confirm & finish'}</Text>
                   <Check size={18} color="white" strokeWidth={2} />
                 </>
               )}
@@ -272,13 +272,13 @@ export default function SelfieScreen() {
             disabled={shuttleCheckinMode && timedOut}
           >
             <Camera size={20} color="white" />
-            <Text style={s.confirmBtnText}>{shuttleCheckinMode ? 'التقاط صورة' : 'Take selfie'}</Text>
+            <Text style={s.confirmBtnText}>{t.take_photo_btn}</Text>
           </TouchableOpacity>
         )}
 
         {!shuttleCheckinMode && (
           <View style={s.tipsRow}>
-            {['Good lighting', 'Face centered', 'No glasses'].map((tip) => (
+            {[t.tip_good_lighting, t.tip_face_centered, t.tip_no_glasses].map((tip) => (
               <View key={tip} style={s.tip}>
                 <CheckCircle size={13} color="#5e5e72" />
                 <Text style={s.tipText}>{tip}</Text>

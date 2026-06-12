@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowDownLeft, ArrowUpRight, Briefcase, FileText, X } from 'lucide-react-native';
 import React, { useRef, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Animated, Platform, ScrollView, StyleSheet, Text, TextInput, View, Pressable } from 'react-native';
+import { ActivityIndicator, Alert, Animated, Platform, ScrollView, StyleSheet, Text, TextInput, View, Pressable, LayoutChangeEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { GlassView } from '@/components/GlassView';
@@ -35,6 +35,12 @@ export default function ShuttleWalletScreen() {
   const [payoutVisible, setPayoutVisible] = useState(false);
   const [payoutAmount, setPayoutAmount] = useState('');
   const [isPayingOut, setIsPayingOut] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
+  const [txSectionY, setTxSectionY] = useState(0);
+
+  const handleHistoryPress = () => {
+    scrollRef.current?.scrollTo({ y: txSectionY, animated: true });
+  };
 
   const { data: balanceRaw, isLoading: balanceLoading, isError: balanceError } = useQuery({
     queryKey: ['wallet-balance'],
@@ -144,6 +150,7 @@ export default function ShuttleWalletScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={{ paddingTop: topPad + 8, paddingBottom: TAB_BAR_HEIGHT + 24, paddingHorizontal: 20 }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -216,7 +223,7 @@ export default function ShuttleWalletScreen() {
                     <Text style={[styles.actionText, { color: '#fff', fontFamily: 'Inter_700Bold' }]}>{t.cash_out}</Text>
                   </LinearGradient>
                 </Pressable>
-                <Pressable onPress={() => Alert.alert('Coming soon')} style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.9 : 1 }]}>
+                <Pressable onPress={handleHistoryPress} style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.9 : 1 }]}>
                   <GlassView strong style={styles.secondaryAction} borderRadius={16}>
                     <FileText size={16} color={colors.foreground} strokeWidth={2} />
                     <Text style={[styles.actionText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.history}</Text>
@@ -259,9 +266,9 @@ export default function ShuttleWalletScreen() {
 
         <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', marginTop: 24, marginBottom: 12, textAlign: TA }]}>{t.net_earnings}</Text>
         <GlassView borderRadius={16} style={{ padding: 4 }}>
-          <SummaryRow label="Confirmed" value={`+${parseFloat(String(summary?.summary?.totalConfirmed ?? 0)).toFixed(2)} DT`} positive colors={colors} isRTL={isRTL} />
-          <SummaryRow label="Pending" value={`+${parseFloat(String(summary?.summary?.totalPending ?? 0)).toFixed(2)} DT`} positive colors={colors} isRTL={isRTL} />
-          <SummaryRow label="Paid Out" value={`${parseFloat(String(summary?.summary?.totalPaid ?? 0)).toFixed(2)} DT`} colors={colors} isRTL={isRTL} />
+          <SummaryRow label={t.status_confirmed} value={`+${parseFloat(String(summary?.summary?.totalConfirmed ?? 0)).toFixed(2)} DT`} positive colors={colors} isRTL={isRTL} />
+          <SummaryRow label={t.status_pending} value={`+${parseFloat(String(summary?.summary?.totalPending ?? 0)).toFixed(2)} DT`} positive colors={colors} isRTL={isRTL} />
+          <SummaryRow label={t.status_paid_out} value={`${parseFloat(String(summary?.summary?.totalPaid ?? 0)).toFixed(2)} DT`} colors={colors} isRTL={isRTL} />
           <SummaryRow label={t.net_earnings} value={`${parseFloat(String(summary?.summary?.totalEarnings ?? 0)).toFixed(2)} DT`} highlight colors={colors} isRTL={isRTL} last />
         </GlassView>
 
@@ -272,7 +279,7 @@ export default function ShuttleWalletScreen() {
           {payoutMethods.length === 0 ? (
             <GlassView style={[styles.methodCard, { justifyContent: 'center' }]} borderRadius={16}>
               <Text style={[styles.methodSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: 'center' }]}>
-                No payout methods on file
+                {t.no_payout_methods}
               </Text>
             </GlassView>
           ) : (
@@ -299,7 +306,12 @@ export default function ShuttleWalletScreen() {
           )}
         </View>
 
-        <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', marginTop: 24, marginBottom: 12, textAlign: TA }]}>{t.transactions_label}</Text>
+        <Text
+          onLayout={(e: LayoutChangeEvent) => setTxSectionY(e.nativeEvent.layout.y)}
+          style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', marginTop: 24, marginBottom: 12, textAlign: TA }]}
+        >
+          {t.transactions_label}
+        </Text>
         <GlassView borderRadius={16}>
           {txs.map((tx, i) => (
             <View key={tx.id} style={[styles.txItem, i > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}>

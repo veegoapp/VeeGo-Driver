@@ -96,7 +96,7 @@ return (
 
         <View style={{ marginTop: 40, gap: 10 }}>
           <Pressable
-            onPress={() => router.push('/onboarding')}
+            onPress={() => router.push('/login')}
             style={({ pressed }) => [styles.ctaBtn, { opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] }]}
           >
             <View style={styles.ctaBtnInner}>
