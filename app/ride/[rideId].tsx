@@ -12,6 +12,7 @@ import { useColors } from '@/hooks/useColors';
 import { useServiceGuard } from '@/hooks/useServiceGuard';
 import { useWaitingCharge } from '@/hooks/useWaitingCharge';
 import { endpoints } from '@/lib/api';
+import { useI18n } from '@/lib/i18nContext';
 
 type Phase = 'to_pickup' | 'arrived' | 'in_trip' | 'completed';
 
@@ -41,6 +42,7 @@ type DriverData = { id: string };
 
 export default function RideScreen() {
   const colors = useColors();
+  const { t } = useI18n();
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
   const { isBlocked, status: serviceStatus } = useServiceGuard('CAR');
@@ -270,7 +272,7 @@ export default function RideScreen() {
               >
                 <Clock size={13} color={waitingCharge.capped ? colors.mutedForeground : '#D5B23D'} strokeWidth={2.5} />
                 <Text style={[styles.waitingTickerText, { color: waitingCharge.capped ? colors.mutedForeground : '#D5B23D', fontFamily: 'Inter_700Bold' }]}>
-                  Waiting fee: +{waitingCharge.amount.toFixed(2)} DT · {waitingCharge.minutes} min
+                  {`Waiting fee: +${waitingCharge.amount.toFixed(2)} ${t.egp} · ${waitingCharge.minutes} min`}
                 </Text>
                 {waitingCharge.capped && (
                   <View style={styles.cappedBadge}>

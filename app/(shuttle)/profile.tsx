@@ -147,6 +147,7 @@ export default function ShuttleProfileScreen() {
         </GlassView>
 
         <GlassView style={[styles.menuGroup, { marginTop: 12 }]} borderRadius={20}>
+          <MenuItem icon="target" label={t.bonus_targets} onPress={() => router.push('/bonus-targets')} colors={colors} isRTL={isRTL} />
           <MenuItem icon="help-circle" label={t.help_support} sub="Shuttle operations" onPress={() => router.push('/support')} colors={colors} isRTL={isRTL} />
           <MenuItem icon="shield" label={t.safety_toolkit} sub="Emergency, verification" onPress={() => router.push('/safety')} colors={colors} isRTL={isRTL} last />
         </GlassView>

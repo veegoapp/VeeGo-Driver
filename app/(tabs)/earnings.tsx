@@ -125,7 +125,7 @@ export default function EarningsScreen() {
               <Text style={[styles.heroLabel, { color: colors.primaryForeground + 'CC', fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.total_this_week}</Text>
               <View style={[styles.heroAmountRow, { flexDirection: R }]}>
                 <Text style={[styles.heroAmount, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>{WEEK_TOTAL.toFixed(2)}</Text>
-                <Text style={[styles.heroCurrency, { color: colors.primaryForeground + 'CC', fontFamily: 'Inter_700Bold' }]}>DT</Text>
+                <Text style={[styles.heroCurrency, { color: colors.primaryForeground + 'CC', fontFamily: 'Inter_700Bold' }]}>{t.egp}</Text>
               </View>
 
               <View style={[styles.barChart, { flexDirection: R }]}>
@@ -148,11 +148,11 @@ export default function EarningsScreen() {
         <GlassView style={styles.summaryCard} borderRadius={20}>
           <View style={styles.summaryInner}>
             {/* FIX #4: parseFloat — all summary amounts come as strings from DB */}
-            <EarningsRow icon="dollar-sign" label="Confirmed" value={`${parseFloat(String(summary?.summary?.totalConfirmed ?? 0)).toFixed(2)} DT`} colors={colors} isRTL={isRTL} />
-            <EarningsRow icon="credit-card" label="Pending" value={`${parseFloat(String(summary?.summary?.totalPending ?? 0)).toFixed(2)} DT`} colors={colors} isRTL={isRTL} />
-            <EarningsRow icon="star" label="Paid Out" value={`${parseFloat(String(summary?.summary?.totalPaid ?? 0)).toFixed(2)} DT`} accent colors={colors} isRTL={isRTL} />
+            <EarningsRow icon="dollar-sign" label="Confirmed" value={`${parseFloat(String(summary?.summary?.totalConfirmed ?? 0)).toFixed(2)} ${t.egp}`} colors={colors} isRTL={isRTL} />
+            <EarningsRow icon="credit-card" label="Pending" value={`${parseFloat(String(summary?.summary?.totalPending ?? 0)).toFixed(2)} ${t.egp}`} colors={colors} isRTL={isRTL} />
+            <EarningsRow icon="star" label="Paid Out" value={`${parseFloat(String(summary?.summary?.totalPaid ?? 0)).toFixed(2)} ${t.egp}`} accent colors={colors} isRTL={isRTL} />
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
-            <EarningsRow label={t.net_earnings} value={`${parseFloat(String(summary?.summary?.totalEarnings ?? 0)).toFixed(2)} DT`} bold colors={colors} isRTL={isRTL} />
+            <EarningsRow label={t.net_earnings} value={`${parseFloat(String(summary?.summary?.totalEarnings ?? 0)).toFixed(2)} ${t.egp}`} bold colors={colors} isRTL={isRTL} />
           </View>
         </GlassView>
 

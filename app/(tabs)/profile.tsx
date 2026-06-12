@@ -94,6 +94,7 @@ export default function ProfileScreen() {
             isRTL={isRTL}
           />
           <MenuItem icon="file-text" label={t.documents_label} onPress={() => router.push('/documents')} colors={colors} isRTL={isRTL} />
+          <MenuItem icon="target" label={t.bonus_targets} onPress={() => router.push('/bonus-targets')} colors={colors} isRTL={isRTL} />
           <MenuItem icon="shield" label={t.safety_toolkit} sub="Emergency, verification" onPress={() => router.push('/safety')} colors={colors} isRTL={isRTL} last />
         </GlassView>
 

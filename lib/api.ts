@@ -354,4 +354,8 @@ export const endpoints = {
     get: () => api.get('/driver/me/settings'),
     update: (data: unknown) => api.patch('/driver/me/settings', data),
   },
+
+  bonusTargets: {
+    list: () => api.get('/driver/bonus-targets'),
+  },
 };
