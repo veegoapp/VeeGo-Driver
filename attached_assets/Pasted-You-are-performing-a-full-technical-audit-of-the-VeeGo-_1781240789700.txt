@@ -1,0 +1,303 @@
+You are performing a full technical audit of the VeeGo Driver App (React Native).
+
+The backend is 100% complete with 320 endpoints and 40 socket events.
+Your job is to compare what exists in this app against what the backend provides
+and what the product spec requires.
+
+Generate a file called `driver_app_audit.md` at the end.
+
+---
+
+## CONTEXT — VeeGo Services
+
+- SHUTTLE (شاتيل): Fixed routes, fixed schedules, drivers book weekly slots,
+  complete station-by-station trips. THIS IS THE ONLY ACTIVE SERVICE NOW.
+- CAR: On-demand, dynamic pricing — coming soon
+- SCOOTER: On-demand — coming soon  
+- DELIVERY: On-demand — coming soon
+
+The app must reflect this: only Shuttle is selectable during registration.
+Car/Scooter/Delivery must show as "Coming Soon".
+
+---
+
+## BACKEND BASE URL & AUTH
+
+- Base URL: stored in env/config — check what it's currently set to
+- Auth: JWT Bearer token in Authorization header
+- Token storage: check where token is stored (SecureStore / AsyncStorage / other)
+- Auto-login: token should persist — no re-login after app restart
+
+---
+
+## AUDIT SCOPE — go through EVERY file and folder
+
+### 1. PROJECT STRUCTURE
+- List every folder and file with one-line description
+- Identify the navigation structure (which navigator, which screens)
+- Identify entry point
+- List any dead files or unused screens/components
+
+### 2. AUTHENTICATION & REGISTRATION FLOW
+
+Check each screen/step:
+
+**Registration:**
+- Phone number input screen — exists? connected to `POST /driver/auth/register`?
+- OTP verification screen — exists? connected to `POST /auth/verify-otp`?
+- Service selection screen — exists? enforces Shuttle-only? 
+  (Car/Scooter/Delivery must be disabled/"coming soon")
+- Personal info screen (name, national ID) — exists? connected?
+- Vehicle info screen:
+  - Brand dropdown → `GET /vehicles/brands` connected?
+  - Model dropdown → `GET /vehicles/brands/:id/models` connected?
+  - Year dropdown → `GET /vehicles/models/:id/years` connected?
+  - Color dropdown → `GET /vehicles/colors` connected?
+  - All dropdowns or free text? (must be dropdowns)
+- Document upload screens:
+  - Driving license front — camera only or gallery allowed?
+  - Driving license back — camera only or gallery allowed?
+  - Vehicle registration front — camera only or gallery allowed?
+  - Vehicle registration back — camera only or gallery allowed?
+  - Personal photo — camera only or gallery allowed?
+  - Vehicle photo — camera only or gallery allowed?
+  - Criminal record — optional, camera only?
+  - Each connected to `POST /driver-documents/upload/:driverId`?
+- Pending approval screen — shown after registration until admin approves?
+
+**Login:**
+- Phone + password login — connected to `POST /driver/auth/login`?
+- Auto-login on app restart — implemented with stored token?
+- Logout — connected to `POST /driver/auth/logout`?
+
+### 3. HOME SCREEN — SHUTTLE
+
+The home screen for a shuttle driver should show:
+- Driver online/offline toggle → `PATCH /driver/me/online` and `PATCH /driver/me/offline`
+- Today's trips list → `GET /driver/trips`
+- Current active trip (if any) → `GET /driver/trips/:id`
+- Earnings summary (today) → `GET /driver/earnings`
+- Notifications bell → `GET /driver/notifications`
+- Dark/light mode toggle — implemented?
+
+For each element: exists? connected to correct endpoint? shows real data?
+
+### 4. SHUTTLE SCHEDULE SCREEN
+
+Driver views and books weekly slots:
+- Browse available routes → `GET /shuttle/lines`
+- View available weeks → `GET /shuttle/lines/:routeId/available-weeks`
+- View time slots → `GET /shuttle/timeslots/:routeId`
+- Book a weekly slot → `POST /shuttle/route-bookings`
+- View my bookings → `GET /shuttle/route-bookings`
+- Confirm renewal (Thursday) → `POST /shuttle/route-bookings/:id/confirm-renewal`
+- View available slots → `GET /shuttle/available-slots`
+
+For each: exists? connected? working?
+
+### 5. ACTIVE TRIP SCREEN — SHUTTLE
+
+When driver starts a trip:
+- Start trip button → `PATCH /driver/trips/:id/start`
+- View passengers list → `GET /shuttle/trips/:id/passengers`
+- Mark passenger as boarded → `POST /shuttle/bookings/:id/board`
+- Mark passenger as no-show → `PATCH /driver/bookings/:id/no-show`
+- Complete trip button → `PATCH /driver/trips/:id/complete`
+- Map showing route — implemented?
+- Station-by-station navigation — implemented?
+
+For each: exists? connected? working?
+
+### 6. HOME SCREEN — CAR/SCOOTER/DELIVERY (Coming Soon)
+
+These services are not active yet. Check:
+- Is there a service switcher in the app?
+- If driver selects Car/Scooter/Delivery — does it show "Coming Soon" 
+  or does it try to load a full ride flow?
+- The ride request flow (map, accept/decline popup) — is it built?
+  Even if "coming soon", document what exists for future use.
+
+For the ride flow (document status even if not active):
+- Online toggle
+- Incoming ride request popup (15s timer, accept/decline)
+- Shows: rider name, rating, pickup, dropoff, price, driver cut?
+- After accept: rider location on map
+- "I have arrived" button
+- Start trip button  
+- End trip + rating screen
+- All connected to rides endpoints or mocked?
+
+### 7. SOCKET / REAL-TIME
+
+Check if socket connection is implemented:
+- Where is socket initialized? (on app start? on login? on home screen?)
+- Is JWT sent on socket connection?
+- Which socket events does the app LISTEN to? List each with handler
+- Which socket events does the app EMIT? List each
+- Is driver location broadcasting implemented? 
+  (`driver:location:update` every X seconds while online)
+- Is `driver:status:online` / `driver:status:offline` emitted on toggle?
+- Are shuttle socket events handled?
+  (`shuttle:booking:created`, `shuttle:checkin:required`, 
+   `shuttle:station:timeout`, `shuttle:renewal:confirmed`)
+- Are ride socket events handled?
+  (`ride:offer`, `ride:offer_expired`, `ride:no_longer_available`)
+- Any mock/fake socket events in the code?
+
+### 8. FACE VERIFICATION (Check-in)
+
+- Is face verification/check-in implemented?
+- Connected to `POST /driver/checkin`?
+- For shuttle: required before each trip?
+- Camera-only (no gallery)?
+- What happens if check-in is rejected?
+
+### 9. EARNINGS SCREEN
+
+- Shows earnings summary → `GET /driver/earnings`
+- Shows earnings history → `GET /driver/earnings/history`
+- Shows wallet balance → `GET /driver/wallet/balance`
+- Breakdown by type (ride, trip, peak_bonus, milestone_bonus)?
+- Payout request → `POST /driver/wallet/payout`?
+
+### 10. BONUS TARGETS SCREEN
+
+- Is there a screen showing active bonus targets?
+- Connected to `GET /driver/bonus-targets`?
+- Shows current progress per target?
+- Shows bonus amount to be earned?
+
+### 11. PROFILE SCREEN
+
+- Shows driver info → `GET /driver/me`
+- Edit personal info → `PATCH /driver/me`
+- Shows vehicle info → `GET /driver/me/vehicle`
+- Shows document status → `GET /driver/me/documents`
+- Shows ratings → `GET /driver/me/ratings`
+- Language toggle (AR/EN) — implemented?
+- Dark/light mode — implemented?
+- Help & support — implemented?
+- Sign out — implemented?
+
+### 12. NOTIFICATIONS SCREEN
+
+- Lists notifications → `GET /driver/notifications`
+- Mark as read → `PATCH /notifications/:id/read`
+- Mark all as read → `PATCH /notifications/read-all`
+- Real-time new notifications via socket `notification:new`?
+
+### 13. API INTEGRATION — FULL SCAN
+
+Go through every API call in the entire app:
+For each call list:
+- File and line number
+- HTTP method + endpoint being called
+- What triggers it
+- Is the base URL correct?
+- Is the auth token included?
+- Is the response handled correctly (loading/error/success states)?
+- Is it connected to real backend or mock data?
+
+### 14. NAVIGATION STRUCTURE
+
+- List every screen and its route name
+- What is the navigation flow after login?
+- What is the navigation flow for a new driver registering?
+- Are there any screens that are navigated to but don't exist?
+- Are there any screens that exist but are never navigated to?
+
+### 15. STATE MANAGEMENT
+
+- What state management is used? (Redux / Zustand / Context / other)
+- Where is the auth token stored and managed?
+- Where is the driver profile stored?
+- Is there persistent state across app restarts?
+
+### 16. LOCALIZATION (AR/EN)
+
+- Is i18n implemented?
+- Are all screens translated?
+- Is RTL layout handled for Arabic?
+- Any hardcoded Arabic or English strings that should be in translation files?
+
+### 17. DEAD CODE & UNNECESSARY FEATURES
+
+List everything that:
+- Exists in the code but is never used
+- Has mock/hardcoded data instead of real API calls
+- Is connected to wrong endpoints
+- Belongs to a feature that doesn't exist in the spec
+- Old service-switch logic that should be removed
+
+---
+
+## OUTPUT FORMAT
+
+Generate `driver_app_audit.md` with these sections:
+
+# VeeGo Driver App — Full Audit Report
+
+## 1. Project Structure
+(folder tree with descriptions)
+
+## 2. Authentication & Registration
+(table: Screen | Exists | Connected | Issues)
+
+## 3. Home Screen — Shuttle
+(table: Feature | Exists | Connected | Issues)
+
+## 4. Shuttle Schedule Screen
+(table: Feature | Exists | Connected | Issues)
+
+## 5. Active Trip Screen
+(table: Feature | Exists | Connected | Issues)
+
+## 6. Car/Scooter/Delivery Flow
+(what exists, what's mocked, what's missing)
+
+## 7. Socket / Real-Time
+(table: Event | Direction | Handled | Issues)
+
+## 8. Face Verification
+(status + issues)
+
+## 9. Earnings Screen
+(table: Feature | Exists | Connected | Issues)
+
+## 10. Bonus Targets Screen
+(status + issues)
+
+## 11. Profile Screen
+(table: Feature | Exists | Connected | Issues)
+
+## 12. Notifications Screen
+(table: Feature | Exists | Connected | Issues)
+
+## 13. All API Calls
+(table: File | Endpoint | Method | Real/Mock | Auth Token | Issues)
+
+## 14. Navigation Structure
+(complete screen list + flow)
+
+## 15. State Management
+(summary)
+
+## 16. Localization
+(status + missing translations)
+
+## 17. Dead Code & Unnecessary Features
+(list with file + reason)
+
+## Summary Table
+| # | Feature | Status | Priority |
+|---|---------|--------|----------|
+Use: ✅ Done | ⚠️ Partial | ❌ Missing | 🗑️ Remove
+
+## Stats
+- Total screens: X
+- Screens fully connected to backend: X
+- Screens with mock data: X
+- Dead screens: X
+- Missing screens: X
+
+Be exhaustive. Check every file. Flag everything with ❓ if unsure.
