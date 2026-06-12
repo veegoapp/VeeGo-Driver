@@ -324,6 +324,9 @@ export const endpoints = {
     // Fix 7: rate a passenger after a trip
     ratePassenger: (tripId: string, rateeId: string, stars: number) =>
       api.post('/shuttle/ratings', { tripId, rateeId, stars }),
+
+    noShowBooking: (bookingId: string) =>
+      api.patch(`/driver/bookings/${bookingId}/no-show`),
   },
 
   notifications: {

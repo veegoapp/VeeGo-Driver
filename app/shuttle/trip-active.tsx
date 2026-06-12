@@ -1,14 +1,16 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { ArrowRight, Check, ChevronLeft, Clock, Map, Navigation, Phone, Users } from 'lucide-react-native';
-import React, { useRef, useEffect } from 'react';
-import { Animated, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AlertCircle, ArrowRight, Check, ChevronLeft, Clock, Map, Navigation, Phone, Users } from 'lucide-react-native';
+import React, { useRef, useEffect, useState } from 'react';
+import { Alert, Animated, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MapBackdrop } from '@/components/MapBackdrop';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useShuttle } from '@/lib/shuttleContext';
 import { useI18n } from '@/lib/i18nContext';
+import { useSocket } from '@/lib/socketContext';
+import { SOCKET_EVENTS } from '@/constants/socketEvents';
 import { endpoints } from '@/lib/api';
 
 export default function ShuttleTripActiveScreen() {
@@ -16,14 +18,76 @@ export default function ShuttleTripActiveScreen() {
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
   const { t, isRTL } = useI18n();
+  const { socket } = useSocket();
   const { activeLine, stops, currentStopIndex, passengers, nextStop } = useShuttle();
   const currentStop = stops[currentStopIndex];
   const completedCount = currentStopIndex;
   const cardAnim = useRef(new Animated.Value(0)).current;
 
+  // Task 2: station status per stop — reset when stop changes
+  const [stationStatus, setStationStatus] = useState<'navigating' | 'arrived'>('navigating');
+  const [stationActionLoading, setStationActionLoading] = useState(false);
+
+  // Task 3a: station timeout banner
+  const [stationTimeoutVisible, setStationTimeoutVisible] = useState(false);
+
   useEffect(() => {
     Animated.spring(cardAnim, { toValue: 1, useNativeDriver: true, stiffness: 300, damping: 28 }).start();
+    // Reset station status whenever the active stop changes
+    setStationStatus('navigating');
+    setStationTimeoutVisible(false);
   }, [currentStopIndex]);
+
+  // Task 3a: listen for shuttle:station:timeout
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleStationTimeout = (data: { tripId?: string; stationId?: string }) => {
+      const tripId = activeLine?.tripId;
+      if (!data.tripId || data.tripId === tripId) {
+        setStationTimeoutVisible(true);
+        // Auto-advance to next station
+        nextStop();
+      }
+    };
+
+    socket.on(SOCKET_EVENTS.SHUTTLE_STATION_TIMEOUT, handleStationTimeout);
+    return () => {
+      socket.off(SOCKET_EVENTS.SHUTTLE_STATION_TIMEOUT, handleStationTimeout);
+    };
+  }, [socket, activeLine?.tripId, nextStop]);
+
+  // Task 2: "Arrived at station" — call PATCH /driver/trips/:tripId/stations/:stationId/arrived
+  const handleStationArrived = async () => {
+    const tripId = activeLine?.tripId;
+    const stationId = currentStop?.id;
+    if (!tripId || !stationId || stationActionLoading) return;
+    setStationActionLoading(true);
+    try {
+      await endpoints.trips.stationArrived(tripId, stationId);
+      setStationStatus('arrived');
+    } catch {
+      Alert.alert(t.error, t.station_action_error);
+    } finally {
+      setStationActionLoading(false);
+    }
+  };
+
+  // Task 2: "Station completed" — call PATCH /driver/trips/:tripId/stations/:stationId/completed
+  const handleStationCompleted = async () => {
+    const tripId = activeLine?.tripId;
+    const stationId = currentStop?.id;
+    if (!tripId || !stationId || stationActionLoading) return;
+    setStationActionLoading(true);
+    try {
+      await endpoints.trips.stationCompleted(tripId, stationId);
+      setStationStatus('navigating');
+    } catch {
+      Alert.alert(t.error, t.station_action_error);
+    } finally {
+      setStationActionLoading(false);
+    }
+  };
 
   const handleCompleteStop = async () => {
     if (!currentStop) return;
@@ -70,6 +134,19 @@ export default function ShuttleTripActiveScreen() {
             </Text>
           </GlassView>
         </View>
+
+        {/* Task 3a: station timeout banner */}
+        {stationTimeoutVisible && (
+          <View style={[styles.timeoutBanner, { backgroundColor: '#fff7ed', borderColor: '#fed7aa' }]}>
+            <AlertCircle size={16} color="#d97706" strokeWidth={2} />
+            <Text style={[styles.timeoutText, { color: '#92400e', fontFamily: 'Inter_400Regular', flex: 1 }]}>
+              {t.station_timeout_msg}
+            </Text>
+            <Pressable onPress={() => setStationTimeoutVisible(false)}>
+              <Text style={[{ color: '#d97706', fontFamily: 'Inter_700Bold', fontSize: 12 }]}>{t.done}</Text>
+            </Pressable>
+          </View>
+        )}
 
         <GlassView strong style={styles.progressCard} borderRadius={20}>
           <View style={styles.progressHeader}>
@@ -137,6 +214,39 @@ export default function ShuttleTripActiveScreen() {
                 </Pressable>
               </View>
 
+              {/* Task 2: Arrived / Completed station buttons */}
+              {stationStatus === 'navigating' ? (
+                <Pressable
+                  onPress={handleStationArrived}
+                  disabled={stationActionLoading}
+                  style={[styles.stationActionBtn, {
+                    backgroundColor: stationActionLoading ? colors.secondary : colors.accent + '22',
+                    borderColor: colors.accent,
+                    marginTop: 12,
+                  }]}
+                >
+                  <Check size={16} color={stationActionLoading ? colors.mutedForeground : colors.accent} strokeWidth={2} />
+                  <Text style={[styles.stationActionText, { color: stationActionLoading ? colors.mutedForeground : colors.accent, fontFamily: 'Inter_700Bold' }]}>
+                    {t.station_arrived_btn}
+                  </Text>
+                </Pressable>
+              ) : (
+                <Pressable
+                  onPress={handleStationCompleted}
+                  disabled={stationActionLoading}
+                  style={[styles.stationActionBtn, {
+                    backgroundColor: stationActionLoading ? colors.secondary : colors.primary + '22',
+                    borderColor: colors.primary,
+                    marginTop: 12,
+                  }]}
+                >
+                  <Check size={16} color={stationActionLoading ? colors.mutedForeground : colors.primary} strokeWidth={2} />
+                  <Text style={[styles.stationActionText, { color: stationActionLoading ? colors.mutedForeground : colors.primary, fontFamily: 'Inter_700Bold' }]}>
+                    {t.station_completed_btn}
+                  </Text>
+                </Pressable>
+              )}
+
               <Pressable onPress={() => router.push('/shuttle/boarding')} style={styles.boardingBtn}>
                 <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.boardingBtnGrad}>
                   <Users size={16} color={colors.primaryForeground} strokeWidth={2} />
@@ -196,6 +306,11 @@ const styles = StyleSheet.create({
   routeTitle: { fontSize: 14 },
   stopBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6 },
   stopBadgeText: { fontSize: 12 },
+  timeoutBanner: {
+    marginTop: 12, borderRadius: 14, borderWidth: 1,
+    padding: 12, flexDirection: 'row', alignItems: 'center', gap: 8,
+  },
+  timeoutText: { fontSize: 13, lineHeight: 18 },
   progressCard: { marginTop: 16, padding: 16 },
   progressHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
   progressLabel: { fontSize: 10, letterSpacing: 1.5, textTransform: 'uppercase' },
@@ -218,6 +333,8 @@ const styles = StyleSheet.create({
   stopActions: { flexDirection: 'row', gap: 8, marginTop: 16 },
   stopActionBtn: { flex: 1, height: 44, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   stopActionText: { fontSize: 14 },
+  stationActionBtn: { height: 44, borderRadius: 12, borderWidth: 1.5, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  stationActionText: { fontSize: 14 },
   boardingBtn: { marginTop: 12, borderRadius: 16, overflow: 'hidden', elevation: 6, shadowColor: '#2d2d42', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.35, shadowRadius: 10 },
   boardingBtnGrad: { height: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   boardingBtnText: { fontSize: 14 },

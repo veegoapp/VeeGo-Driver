@@ -107,7 +107,17 @@ export default function HomeScreen() {
 
   useEffect(() => {
     if (!socket) return;
-    const handleNotificationNew = () => setUnreadCount(prev => prev + 1);
+    const handleNotificationNew = (data?: { title?: string; body?: string }) => {
+      setUnreadCount(prev => prev + 1);
+      const msg = data?.title
+        ? data.body
+          ? `${data.title}: ${data.body}`
+          : data.title
+        : data?.body ?? null;
+      if (msg) {
+        showToastRef.current?.(msg, 'success');
+      }
+    };
     socket.on(SOCKET_EVENTS.NOTIFICATION_NEW, handleNotificationNew);
     return () => { socket.off(SOCKET_EVENTS.NOTIFICATION_NEW, handleNotificationNew); };
   }, [socket]);

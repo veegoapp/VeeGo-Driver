@@ -420,6 +420,16 @@ const en = {
   camera_required: 'Camera Access Required',
   camera_required_sub: 'Camera permission is needed to capture images. Please open Settings and grant camera access.',
   open_settings: 'Open Settings',
+  no_show_btn: 'No-show',
+  no_show_confirm_title: 'Confirm no-show',
+  no_show_confirm_msg: 'Are you sure this passenger did not show up?',
+  no_show_error: 'Failed to mark as no-show. Please try again.',
+  passenger_absent: 'Absent',
+  station_arrived_btn: 'Arrived at station',
+  station_completed_btn: 'Station completed',
+  station_action_error: 'Failed to update station status. Please try again.',
+  station_timeout_msg: 'Time at this station has expired — please proceed to the next station',
+  renewal_confirmed_toast: 'Your booking for next week has been confirmed',
 };
 
 const ar: typeof en = {
@@ -840,6 +850,16 @@ const ar: typeof en = {
   camera_required: 'مطلوب إذن الكاميرا',
   camera_required_sub: 'مطلوب إذن الكاميرا لالتقاط الصور. يرجى فتح الإعدادات ومنح إذن الكاميرا.',
   open_settings: 'فتح الإعدادات',
+  no_show_btn: 'غياب',
+  no_show_confirm_title: 'تأكيد الغياب',
+  no_show_confirm_msg: 'هل أنت متأكد أن هذا الراكب لم يحضر؟',
+  no_show_error: 'فشل تحديد الغياب. حاول مجدداً.',
+  passenger_absent: 'غائب',
+  station_arrived_btn: 'وصلت إلى المحطة',
+  station_completed_btn: 'أكملت المحطة',
+  station_action_error: 'فشل تحديث حالة المحطة. حاول مجدداً.',
+  station_timeout_msg: 'انتهى وقت هذه المحطة — يرجى الانتقال إلى المحطة التالية',
+  renewal_confirmed_toast: 'تم تأكيد حجزك للأسبوع القادم',
 };
 
 export type Translations = typeof en;

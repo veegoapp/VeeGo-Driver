@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { Alert } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { endpoints } from './api';
 import { useSocket } from './socketContext';
@@ -480,14 +481,29 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
       queryClient.invalidateQueries({ queryKey: ['shuttle-lines'] });
     };
 
+    // Task 3b: SHUTTLE_RENEWAL_CONFIRMED — show success alert + refresh bookings
+    const handleRenewalConfirmed = () => {
+      queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
+      Alert.alert('', 'Your booking for next week has been confirmed');
+    };
+
+    // Task 3c: SHUTTLE_BOOKING_CREATED — silent refresh of bookings
+    const handleBookingCreated = () => {
+      queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
+    };
+
     socket.on(SOCKET_EVENTS.NOTIFICATION_NEW, handleNotification);
     socket.on(SOCKET_EVENTS.SHUTTLE_BOOKING_CANCELLED, handleBookingCancelled);
     socket.on(SOCKET_EVENTS.SHUTTLE_BOOKING_REASSIGNED, handleBookingCancelled);
+    socket.on(SOCKET_EVENTS.SHUTTLE_RENEWAL_CONFIRMED, handleRenewalConfirmed);
+    socket.on(SOCKET_EVENTS.SHUTTLE_BOOKING_CREATED, handleBookingCreated);
 
     return () => {
       socket.off(SOCKET_EVENTS.NOTIFICATION_NEW, handleNotification);
       socket.off(SOCKET_EVENTS.SHUTTLE_BOOKING_CANCELLED, handleBookingCancelled);
       socket.off(SOCKET_EVENTS.SHUTTLE_BOOKING_REASSIGNED, handleBookingCancelled);
+      socket.off(SOCKET_EVENTS.SHUTTLE_RENEWAL_CONFIRMED, handleRenewalConfirmed);
+      socket.off(SOCKET_EVENTS.SHUTTLE_BOOKING_CREATED, handleBookingCreated);
     };
   }, [socket, queryClient]);
 

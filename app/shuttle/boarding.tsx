@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { AlertCircle, Check, ChevronLeft, Package, Phone, Tag, Users } from 'lucide-react-native';
+import { AlertCircle, Check, ChevronLeft, Package, Phone, Tag, Users, X } from 'lucide-react-native';
 import React, { useRef, useEffect, useState } from 'react';
 import { Alert, Animated, Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,20 +25,26 @@ export default function ShuttleBoardingScreen() {
   const total = passengers.length;
   const progressAnim = useRef(new Animated.Value(checkedIn / total)).current;
 
-  // Fix 3: station timeout banner state
   const [stationTimeoutVisible, setStationTimeoutVisible] = useState(false);
+
+  // Task 1: per-passenger action state ('boarded' | 'absent' | null) and loading id
+  const [actionState, setActionState] = useState<Record<string, 'boarded' | 'absent'>>({});
+  const [loadingPassengerId, setLoadingPassengerId] = useState<string | null>(null);
 
   useEffect(() => {
     Animated.spring(progressAnim, { toValue: checkedIn / total, useNativeDriver: false, stiffness: 300, damping: 25 }).start();
   }, [checkedIn]);
 
-  // Fix 3: listen for shuttle:station:timeout
+  // Reset action state when stop changes
+  useEffect(() => {
+    setActionState({});
+  }, [currentStopIndex]);
+
   useEffect(() => {
     if (!socket) return;
 
     const handleStationTimeout = (data: { tripId?: string; stationId?: string }) => {
       const tripId = activeLine?.tripId;
-      // Only react if the timeout is for the current trip (or if no tripId filter)
       if (!data.tripId || data.tripId === tripId) {
         setStationTimeoutVisible(true);
       }
@@ -58,9 +64,42 @@ export default function ShuttleBoardingScreen() {
     router.back();
   };
 
+  // Task 1: board handler (mark as boarded)
+  const handleBoard = (passengerId: string) => {
+    if (actionState[passengerId] || loadingPassengerId) return;
+    togglePassenger(passengerId);
+    setActionState(prev => ({ ...prev, [passengerId]: 'boarded' }));
+  };
+
+  // Task 1: no-show handler with confirmation alert
+  const handleNoShow = (passengerId: string) => {
+    if (actionState[passengerId] || loadingPassengerId) return;
+    Alert.alert(
+      t.no_show_confirm_title,
+      t.no_show_confirm_msg,
+      [
+        { text: t.cancel, style: 'cancel' },
+        {
+          text: t.no_show_btn,
+          style: 'destructive',
+          onPress: async () => {
+            setLoadingPassengerId(passengerId);
+            try {
+              await endpoints.shuttle.noShowBooking(passengerId);
+              setActionState(prev => ({ ...prev, [passengerId]: 'absent' }));
+            } catch {
+              Alert.alert(t.error, t.no_show_error);
+            } finally {
+              setLoadingPassengerId(null);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleDepart = async () => {
     const boardedIds = passengers.filter(p => p.checkedIn).map(p => p.id);
-    // Fix 4: include stationId from the current stop
     const stationId = currentStop?.id;
     await Promise.allSettled(
       boardedIds.map(bookingId =>
@@ -87,12 +126,11 @@ export default function ShuttleBoardingScreen() {
           </View>
         </View>
 
-        {/* Fix 3: station timeout banner */}
         {stationTimeoutVisible && (
           <View style={[styles.timeoutBanner, { backgroundColor: '#fff7ed', borderColor: '#fed7aa' }]}>
             <AlertCircle size={18} color="#d97706" strokeWidth={2} />
             <Text style={[styles.timeoutText, { color: '#92400e', fontFamily: 'Inter_400Regular', flex: 1 }]}>
-              انتهى وقت الانتظار في هذه المحطة. هل تريد المتابعة؟
+              {t.station_timeout_msg}
             </Text>
             <View style={styles.timeoutActions}>
               <Pressable
@@ -100,7 +138,7 @@ export default function ShuttleBoardingScreen() {
                 style={[styles.timeoutBtn, { backgroundColor: '#fed7aa' }]}
               >
                 <Text style={[styles.timeoutBtnText, { color: '#92400e', fontFamily: 'Inter_700Bold' }]}>
-                  أحتاج وقتاً أكثر
+                  {t.later}
                 </Text>
               </Pressable>
               <Pressable
@@ -108,7 +146,7 @@ export default function ShuttleBoardingScreen() {
                 style={[styles.timeoutBtn, { backgroundColor: '#d97706' }]}
               >
                 <Text style={[styles.timeoutBtnText, { color: '#fff', fontFamily: 'Inter_700Bold' }]}>
-                  متابعة
+                  {t.continue}
                 </Text>
               </Pressable>
             </View>
@@ -140,18 +178,50 @@ export default function ShuttleBoardingScreen() {
 
         <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.passengers}</Text>
         <View style={{ gap: 10 }}>
-          {passengers.map((p) => (
-            <Pressable key={p.id} onPress={() => togglePassenger(p.id)} style={({ pressed }) => [{ transform: [{ scale: pressed ? 0.98 : 1 }] }]}>
-              <GlassView style={[styles.passengerCard, p.checkedIn ? { borderColor: colors.primary + '4D', borderWidth: 1 } : {}]} borderRadius={20}>
+          {passengers.map((p) => {
+            const action = actionState[p.id];
+            const isLoading = loadingPassengerId === p.id;
+            const isDisabled = !!action || !!loadingPassengerId;
+            const isAbsent = action === 'absent';
+            const isBoarded = action === 'boarded';
+
+            return (
+              <GlassView
+                key={p.id}
+                style={[
+                  styles.passengerCard,
+                  isBoarded ? { borderColor: colors.primary + '4D', borderWidth: 1 } : {},
+                  isAbsent ? { borderColor: '#ef4444' + '4D', borderWidth: 1, opacity: 0.7 } : {},
+                ]}
+                borderRadius={20}
+              >
                 <View style={styles.passengerContent}>
                   <View style={styles.avatarWrap}>
-                    <Image source={{ uri: p.avatar }} style={[styles.avatar, { borderColor: p.checkedIn ? colors.primary : colors.border }]} />
-                    {p.checkedIn && (
+                    <Image
+                      source={{ uri: p.avatar }}
+                      style={[
+                        styles.avatar,
+                        {
+                          borderColor: isBoarded
+                            ? colors.primary
+                            : isAbsent
+                            ? '#ef4444'
+                            : colors.border,
+                        },
+                      ]}
+                    />
+                    {isBoarded && (
                       <View style={[styles.checkBadge, { backgroundColor: colors.primary }]}>
                         <Check size={10} color={colors.primaryForeground} strokeWidth={3} />
                       </View>
                     )}
+                    {isAbsent && (
+                      <View style={[styles.checkBadge, { backgroundColor: '#ef4444' }]}>
+                        <X size={10} color="#fff" strokeWidth={3} />
+                      </View>
+                    )}
                   </View>
+
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <View style={styles.nameRow}>
                       <Text style={[styles.passengerName, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{p.name}</Text>
@@ -167,21 +237,54 @@ export default function ShuttleBoardingScreen() {
                         <Text style={[styles.metaText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{p.phone}</Text>
                       </View>
                     </View>
-                  </View>
-                  <View style={[styles.checkCircle, {
-                    backgroundColor: p.checkedIn ? colors.primary : colors.secondary,
-                    borderColor: p.checkedIn ? 'transparent' : colors.border,
-                  }]}>
-                    {p.checkedIn ? (
-                      <Check size={16} color={colors.primaryForeground} strokeWidth={2} />
-                    ) : (
-                      <View style={[styles.emptyDot, { borderColor: colors.mutedForeground }]} />
+                    {isAbsent && (
+                      <Text style={[styles.absentLabel, { color: '#ef4444', fontFamily: 'Inter_700Bold' }]}>
+                        {t.passenger_absent}
+                      </Text>
                     )}
+                  </View>
+
+                  {/* Task 1: two action buttons */}
+                  <View style={styles.actionBtns}>
+                    <Pressable
+                      onPress={() => handleBoard(p.id)}
+                      disabled={isDisabled}
+                      style={[
+                        styles.actionBtn,
+                        {
+                          backgroundColor: isBoarded
+                            ? colors.primary
+                            : isDisabled
+                            ? colors.secondary
+                            : colors.primary + '22',
+                          borderColor: isBoarded ? colors.primary : colors.primary + '66',
+                        },
+                      ]}
+                    >
+                      <Check size={14} color={isBoarded ? colors.primaryForeground : isDisabled ? colors.mutedForeground : colors.primary} strokeWidth={2.5} />
+                    </Pressable>
+                    <Pressable
+                      onPress={() => handleNoShow(p.id)}
+                      disabled={isDisabled || isLoading}
+                      style={[
+                        styles.actionBtn,
+                        {
+                          backgroundColor: isAbsent
+                            ? '#ef4444'
+                            : isDisabled
+                            ? colors.secondary
+                            : '#ef444422',
+                          borderColor: isAbsent ? '#ef4444' : '#ef444466',
+                        },
+                      ]}
+                    >
+                      <X size={14} color={isAbsent ? '#fff' : isDisabled ? colors.mutedForeground : '#ef4444'} strokeWidth={2.5} />
+                    </Pressable>
                   </View>
                 </View>
               </GlassView>
-            </Pressable>
-          ))}
+            );
+          })}
         </View>
       </ScrollView>
 
@@ -213,7 +316,6 @@ const styles = StyleSheet.create({
   backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   pageTitle: { fontSize: 20 },
   pageSub: { fontSize: 12, marginTop: 2 },
-  // Fix 3: timeout banner styles
   timeoutBanner: {
     marginTop: 12, borderRadius: 14, borderWidth: 1,
     padding: 14, gap: 8,
@@ -241,8 +343,9 @@ const styles = StyleSheet.create({
   passengerMeta: { flexDirection: 'row', gap: 12, marginTop: 4 },
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   metaText: { fontSize: 11 },
-  checkCircle: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  emptyDot: { width: 12, height: 12, borderRadius: 6, borderWidth: 2 },
+  absentLabel: { fontSize: 11, marginTop: 4 },
+  actionBtns: { flexDirection: 'column', gap: 6 },
+  actionBtn: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5 },
   bottomAction: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 16, paddingTop: 8, backgroundColor: 'transparent' },
   departBtn: { borderRadius: 16, overflow: 'hidden', elevation: 8, shadowColor: '#2d2d42', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 12 },
   departBtnGrad: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
