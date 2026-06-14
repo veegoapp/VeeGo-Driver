@@ -102,8 +102,17 @@ function formatCurrency(amount: number | string | undefined): string {
   return `${n.toFixed(0)} جنيه`;
 }
 
+// Returns current UTC epoch ms. Using Date.now() is correct for deadline diffs
+// because the deadline ISO comes from the server in UTC and Date.now() is always
+// UTC epoch — unaffected by the device's local timezone setting.
+// The Cairo boundary (Wed 17:00 GMT+3) is enforced server-side; the client only
+// counts down against the server-issued deadline timestamp.
+function getUtcNowMs(): number {
+  return Date.now();
+}
+
 function formatCountdown(deadlineIso: string): string {
-  const ms = new Date(deadlineIso).getTime() - Date.now();
+  const ms = new Date(deadlineIso).getTime() - getUtcNowMs();
   if (ms <= 0) return 'انتهى الوقت';
   const h = Math.floor(ms / 3600000);
   const m = Math.floor((ms % 3600000) / 60000);
@@ -128,6 +137,10 @@ export default function BookingsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [tripPage, setTripPage] = useState(1);
   const TRIP_LIMIT = 10;
+
+  // Debounce guard: prevents a second Alert from opening while the first is still
+  // visible (e.g. fast double-tap on slow connections). Reset after mutation settles.
+  const renewalAlertOpen = useRef(false);
 
   // ── Queries ────────────────────────────────────────────────────────────────
 
@@ -187,29 +200,49 @@ export default function BookingsScreen() {
   });
 
   const handleConfirmRenewal = (bookingId: string) => {
+    // Double-tap guard: block if an alert is already open or a mutation is in flight
+    if (renewalAlertOpen.current || renewalPending) return;
+    renewalAlertOpen.current = true;
     Alert.alert(
       'تأكيد التجديد',
       'سيتم تأكيد حجزك لنفس الموعد في الأسبوع القادم.',
       [
-        { text: 'رجوع', style: 'cancel' },
+        {
+          text: 'رجوع',
+          style: 'cancel',
+          onPress: () => { renewalAlertOpen.current = false; },
+        },
         {
           text: 'تأكيد التجديد',
-          onPress: () => confirmRenewalMutation.mutate(bookingId),
+          onPress: () => {
+            renewalAlertOpen.current = false;
+            confirmRenewalMutation.mutate(bookingId);
+          },
         },
       ]
     );
   };
 
   const handleDeclineRenewal = (bookingId: string) => {
+    // Double-tap guard: block if an alert is already open or a mutation is in flight
+    if (renewalAlertOpen.current || renewalPending) return;
+    renewalAlertOpen.current = true;
     Alert.alert(
       'الاعتذار عن الخط',
       'هل أنت متأكد من الاعتذار عن هذا الخط للأسبوع القادم؟ سيتم تحرير الموعد لسائقين آخرين فوراً.',
       [
-        { text: 'رجوع', style: 'cancel' },
+        {
+          text: 'رجوع',
+          style: 'cancel',
+          onPress: () => { renewalAlertOpen.current = false; },
+        },
         {
           text: 'اعتذار عن الخط',
           style: 'destructive',
-          onPress: () => declineRenewalMutation.mutate(bookingId),
+          onPress: () => {
+            renewalAlertOpen.current = false;
+            declineRenewalMutation.mutate(bookingId);
+          },
         },
       ]
     );
@@ -299,14 +332,25 @@ export default function BookingsScreen() {
             </View>
 
             {filteredUpcoming.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Calendar size={36} color={colors.mutedForeground} strokeWidth={1.5} />
-                <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
-                  {weekFilter === 'current' ? 'لا توجد حجوزات هذا الأسبوع' : 'لا توجد حجوزات الأسبوع القادم'}
+              <View style={styles.smartEmptyState}>
+                <Calendar size={40} color={colors.mutedForeground} strokeWidth={1.2} />
+                <Text style={[styles.smartEmptyTitle, { color: colors.foreground }]}>
+                  لا توجد رحلات مجدولة في هذا الأسبوع
                 </Text>
-                <Text style={[styles.emptySub, { color: colors.mutedForeground }]}>
-                  توجه إلى تبويب الخطوط لحجز موعد جديد
-                </Text>
+                <Pressable
+                  onPress={() => router.push('/(shuttle)/lines')}
+                  style={({ pressed }) => [
+                    styles.smartEmptyCta,
+                    {
+                      backgroundColor: colors.primary,
+                      opacity: pressed ? 0.85 : 1,
+                    },
+                  ]}
+                >
+                  <Text style={styles.smartEmptyCtaText}>
+                    تصفح الخطوط المتاحة واحجز أسبوعك الآن ←
+                  </Text>
+                </Pressable>
               </View>
             ) : (
               <View style={{ gap: 8, marginTop: 4 }}>
@@ -505,12 +549,20 @@ function RenewalBanner({
   const [countdown, setCountdown] = useState(() =>
     formatCountdown(booking.renewalDeadline!)
   );
+  // useRef ensures the interval ID is stable across re-renders and clearInterval
+  // is always called with the correct ID on unmount — prevents memory leaks.
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    const iv = setInterval(() => {
+    intervalRef.current = setInterval(() => {
       setCountdown(formatCountdown(booking.renewalDeadline!));
     }, 1000);
-    return () => clearInterval(iv);
+    return () => {
+      if (intervalRef.current !== null) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
   }, [booking.renewalDeadline]);
 
   const expired = countdown === 'انتهى الوقت';
@@ -728,7 +780,8 @@ function BookingDetailSheet({
     // is live. The component degrades gracefully (no passenger card shown) until then.
     queryFn: () => endpoints.shuttle.bookingDetail(booking.id) as Promise<BookingDetail>,
     staleTime: 15_000,
-    refetchInterval: 30_000,
+    // No interval polling — live passenger count is pushed via SLOT_TAKEN / SLOT_RELEASED
+    // socket events (handled in the useEffect below). Manual refresh via the ↺ icon.
     enabled: false,
     retry: false,
   });
@@ -1093,6 +1146,38 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: 15, fontFamily: 'Inter_700Bold', textAlign: 'center' },
   emptySub: { fontSize: 13, fontFamily: 'Inter_400Regular', textAlign: 'center' },
   loaderWrap: { padding: 32, alignItems: 'center' },
+
+  // Smart empty state (upcoming tab — no scheduled week blocks)
+  smartEmptyState: {
+    alignItems: 'center',
+    marginTop: 56,
+    marginHorizontal: 8,
+    gap: 16,
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    paddingVertical: 40,
+    paddingHorizontal: 24,
+  },
+  smartEmptyTitle: {
+    fontSize: 15,
+    fontFamily: 'Inter_700Bold',
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  smartEmptyCta: {
+    marginTop: 4,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    width: '100%',
+  },
+  smartEmptyCtaText: {
+    fontSize: 14,
+    fontFamily: 'Inter_700Bold',
+    color: '#fff',
+    textAlign: 'center',
+  },
 
   // Renewal banner
   renewalBanner: {

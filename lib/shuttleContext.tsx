@@ -381,7 +381,8 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
   } = useQuery({
     queryKey: ['shuttle-driver-trips'],
     queryFn: () => endpoints.trips.list() as Promise<unknown>,
-    refetchInterval: 30000,
+    // No polling — invalidated by socket events (SLOT_TAKEN, SLOT_RELEASED,
+    // SHUTTLE_BOOKING_CANCELLED, NOTIFICATION_NEW). Manual refresh via refetch().
   });
 
   // ── Derived data ─────────────────────────────────────────────────────────
