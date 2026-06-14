@@ -188,7 +188,7 @@ export default function ShuttleTripActiveScreen() {
       >
         <View style={styles.topBar}>
           <Pressable onPress={handleSafeBack} style={[styles.backBtn, { backgroundColor: colors.glass, borderColor: colors.border }]}>
-            <ChevronLeft size={20} color={colors.foreground} strokeWidth={2} />
+            <ChevronLeft size={20} color={colors.foreground} strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
           </Pressable>
           <View style={{ flex: 1 }}>
             <Text style={[styles.routeLabel, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>{t.shuttle_service}</Text>

@@ -496,7 +496,7 @@ export default function ShuttleHomeScreen() {
                   </View>
                 </View>
                 <View style={[styles.stopArrow, { backgroundColor: colors.secondary }]}>
-                  <ArrowRight size={14} color={colors.mutedForeground} strokeWidth={2} />
+                  <ArrowRight size={14} color={colors.mutedForeground} strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
                 </View>
                 <View style={styles.stopBox}>
                   <View style={[styles.stopDotNext, { borderColor: '#1e1e28' }]} />
