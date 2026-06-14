@@ -430,6 +430,32 @@ export const endpoints = {
     cancelBooking: (id: string) => api.del(`/shuttle/route-bookings/${id}`),
     confirmRenewal: (id: string) => api.post(`/shuttle/route-bookings/${id}/confirm-renewal`),
 
+    // TODO: Backend Integration - POST /shuttle/route-bookings/:id/decline-renewal
+    // Driver proactively opts out of renewal before the Wednesday 17:00 Cairo deadline.
+    // Backend should:
+    //   1. Set renewalStatus = 'declined' on the booking record.
+    //   2. Release the slot for the upcoming week (isTaken = false for next week block).
+    //   3. Broadcast `slot_released` to all connected drivers via socket.
+    //   4. Send a push notification to all waiting drivers: "خط [routeName] متاح للحجز الآن!"
+    // Returns: { success: true }
+    declineRenewal: (id: string) => api.post(`/shuttle/route-bookings/${id}/decline-renewal`),
+
+    // TODO: Backend Integration - GET /shuttle/route-bookings/:id/detail
+    // Returns live booking state including current passenger count and threshold status.
+    // Expected response shape:
+    //   {
+    //     id:                    string,
+    //     bookedSeats:           number,   — current confirmed passenger count for this week block
+    //     totalSeats:            number,   — bus capacity (14 = HiAce, 28 = Mini Bus)
+    //     minRequiredPassengers: number,   — minimum threshold for trip activation (set per route)
+    //     thresholdMet:          boolean,  — true once bookedSeats >= minRequiredPassengers
+    //   }
+    // Used by BookingDetailSheet for live passenger counter + threshold badge.
+    // Socket channel: listen for `booking:passenger_updated` event (scoped to booking room)
+    //   payload: { bookingId: string, bookedSeats: number, thresholdMet: boolean }
+    bookingDetail: (id: string) =>
+      api.get(`/shuttle/route-bookings/${id}/detail`),
+
     // ── Active Trip Management ───────────────────────────────────────────────
     // TODO: Backend Integration - POST /shuttle/route-bookings/:id/start
     // Marks the weekly booking as active, creates the trip instance on the backend.
