@@ -51,6 +51,10 @@ export const SOCKET_EVENTS = {
   SHUTTLE_BOOKING_REASSIGNED: "shuttle:booking:reassigned",
   SHUTTLE_RENEWAL_CONFIRMED:  "shuttle:renewal:confirmed",
 
+  // Server → All Drivers: real-time slot availability (broadcast to "drivers" room)
+  SLOT_TAKEN:                 "slot_taken",
+  SLOT_RELEASED:              "slot_released",
+
   // TODO: Backend Integration - Connect to production Socket.io server and bind real event listeners
   // Server → Driver 2: a colleague (Driver 1) has submitted a trip-referral request
   // Payload: IncomingReferralPayload (see lib/referralContext.tsx)

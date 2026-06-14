@@ -512,11 +512,31 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
       queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
     };
 
+    // Real-time slot availability: another driver booked a slot
+    const handleSlotTaken = (data?: { routeId?: string | number }) => {
+      if (data?.routeId != null) {
+        queryClient.invalidateQueries({ queryKey: ['shuttle-available-weeks', data.routeId] });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['shuttle-available-weeks'] });
+      }
+    };
+
+    // Real-time slot availability: a slot was freed up
+    const handleSlotReleased = (data?: { routeId?: string | number }) => {
+      if (data?.routeId != null) {
+        queryClient.invalidateQueries({ queryKey: ['shuttle-available-weeks', data.routeId] });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['shuttle-available-weeks'] });
+      }
+    };
+
     socket.on(SOCKET_EVENTS.NOTIFICATION_NEW, handleNotification);
     socket.on(SOCKET_EVENTS.SHUTTLE_BOOKING_CANCELLED, handleBookingCancelled);
     socket.on(SOCKET_EVENTS.SHUTTLE_BOOKING_REASSIGNED, handleBookingCancelled);
     socket.on(SOCKET_EVENTS.SHUTTLE_RENEWAL_CONFIRMED, handleRenewalConfirmed);
     socket.on(SOCKET_EVENTS.SHUTTLE_BOOKING_CREATED, handleBookingCreated);
+    socket.on(SOCKET_EVENTS.SLOT_TAKEN, handleSlotTaken);
+    socket.on(SOCKET_EVENTS.SLOT_RELEASED, handleSlotReleased);
 
     return () => {
       socket.off(SOCKET_EVENTS.NOTIFICATION_NEW, handleNotification);
@@ -524,6 +544,8 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
       socket.off(SOCKET_EVENTS.SHUTTLE_BOOKING_REASSIGNED, handleBookingCancelled);
       socket.off(SOCKET_EVENTS.SHUTTLE_RENEWAL_CONFIRMED, handleRenewalConfirmed);
       socket.off(SOCKET_EVENTS.SHUTTLE_BOOKING_CREATED, handleBookingCreated);
+      socket.off(SOCKET_EVENTS.SLOT_TAKEN, handleSlotTaken);
+      socket.off(SOCKET_EVENTS.SLOT_RELEASED, handleSlotReleased);
     };
   }, [socket, queryClient]);
 
