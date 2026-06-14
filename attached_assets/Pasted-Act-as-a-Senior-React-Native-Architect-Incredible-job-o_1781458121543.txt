@@ -1,0 +1,21 @@
+Act as a Senior React Native Architect. Incredible job on the profile rewrite, the 16 i18n keys integration, and keeping the strict defensive type configurations intact!
+
+Let's proceed with your excellent suggestion to build the Dedicated Bonus Targets Screen (`app/shuttle/bonus-targets.tsx`). Please implement the following production architecture:
+
+### 1. Milestone Tracking & Analytics UI
+- **Layout Theme:** Stick strictly to our minimalist clean white layout theme (white cards, clear borders, `#fff` backgrounds, zero complex textures).
+- **Header Summary Card:** A prominent top layout block split into two clean segments using our dynamic currency fallback:
+  - `"المكافآت المكتسبة"` (Earned Bonuses) -> Highlighting total paid out incentives.
+  - `"المكافآت المعلقة"` (Pending Bonuses) -> Highlighting milestones currently in progress or awaiting verification.
+- **Milestone History List:** Render a paginated vertical timeline list of all historical targets. Each target item card must display: Title/Milestone Name, Completion Date, Status badge (e.g., "مكتمل", "قيد التقدم"), and the payout value cleanly formatted.
+
+### 2. Interaction Features & API Wiring
+- **Pull-to-Refresh:** Implement standard React Native `RefreshControl` tied natively to the query state so the driver can manually pull down to force-update their milestone metrics.
+- **Graceful Failure States:** If the backend endpoint is not fully live yet, ensure the screen leverages our verified defensive coding framework—degrading gracefully to a clean empty placeholder or static preview mock state without ever hard-crashing the navigation stack.
+
+### 3. API Contract & TypeScript Safety
+- Inside `lib/api.ts`, add the documented placeholder contract for:
+  - `GET /driver/bonus-targets` mapping out the expected array structure and response payload constraints.
+- Ensure strict TypeScript compliance, verify all imports are verified, and double-check there are absolutely zero compilation or type errors.
+
+Proceed with the complete implementation!

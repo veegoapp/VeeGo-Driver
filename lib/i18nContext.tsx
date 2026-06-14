@@ -503,6 +503,16 @@ const en = {
   bonus_progress_trips: 'trips',
   communication_settings: 'Communication & Settings',
   help_safety: 'Help & Safety',
+  earned_bonuses: 'Earned Bonuses',
+  pending_bonuses: 'Pending Bonuses',
+  completion_date: 'Completion date',
+  bonus_paid_out: 'Paid out',
+  bonus_awaiting_payout: 'Awaiting payout',
+  bonus_expired: 'Expired',
+  bonus_failed_load: 'Could not load bonus targets',
+  bonus_retry: 'Retry',
+  bonus_targets_empty_sub: 'New bonus milestones will appear here once assigned',
+  bonus_summary_label: 'Summary',
 };
 
 const ar: typeof en = {
@@ -1006,6 +1016,16 @@ const ar: typeof en = {
   bonus_progress_trips: 'رحلة',
   communication_settings: 'التواصل والإعدادات',
   help_safety: 'المساعدة والسلامة',
+  earned_bonuses: 'المكافآت المكتسبة',
+  pending_bonuses: 'المكافآت المعلقة',
+  completion_date: 'تاريخ الإكمال',
+  bonus_paid_out: 'تم الصرف',
+  bonus_awaiting_payout: 'في انتظار الصرف',
+  bonus_expired: 'منتهية',
+  bonus_failed_load: 'تعذّر تحميل أهداف المكافآت',
+  bonus_retry: 'إعادة المحاولة',
+  bonus_targets_empty_sub: 'ستظهر أهداف المكافآت الجديدة هنا عند تعيينها',
+  bonus_summary_label: 'الملخص',
 };
 
 export type Translations = typeof en;

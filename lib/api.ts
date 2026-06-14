@@ -646,6 +646,54 @@ export const endpoints = {
   },
 
   bonusTargets: {
-    list: () => api.get('/driver/bonus-targets'),
+    // TODO: Backend Integration — GET /driver/bonus-targets
+    //
+    // Returns the full list of bonus milestone records for the authenticated driver.
+    //
+    // EXPECTED RESPONSE — array at root OR nested under `data` / `bonusTargets`:
+    //   Array<{
+    //     id:           string,
+    //     title:        string,             — human-readable milestone name
+    //     description?: string,             — optional supporting detail
+    //     targetType:   string,             — e.g. "trips", "distance", "earnings"
+    //     targetValue:  number,             — threshold required to earn the bonus
+    //     progress:     number,             — driver's current progress toward targetValue
+    //     bonusAmount:  number,             — payout in EGP when milestone is reached
+    //     completed:    boolean,            — true once progress >= targetValue
+    //     completedAt?: string,             — ISO8601 date the milestone was completed
+    //     startsAt?:    string,             — ISO8601 activation date
+    //     endsAt?:      string,             — ISO8601 expiry date (null = no expiry)
+    //     vehicleType?: string,             — optional vehicle-type filter
+    //     isActive:     boolean,            — false if expired or suspended
+    //     paidOut?:     boolean,            — true once the bonus has been disbursed
+    //   }>
+    //
+    // SUMMARY DERIVATION (no separate endpoint required):
+    //   earned  = sum of bonusAmount where completed === true  && (paidOut === true || paidOut is absent)
+    //   pending = sum of bonusAmount where completed === false && isActive === true
+    //
+    // ERROR RESPONSES:
+    //   401 — token expired (auto-refreshed by request())
+    //   404 — driver has no targets configured yet → return [] gracefully
+    //   503 — service unavailable → screen degrades to empty placeholder
+    list: () => api.get<BonusTarget[]>('/driver/bonus-targets'),
   },
 };
+
+// Exported bonus target shape — used by both the profile summary and the dedicated screen
+export interface BonusTarget {
+  id: string;
+  title: string;
+  description?: string;
+  targetType: string;
+  targetValue: number;
+  progress: number;
+  bonusAmount: number;
+  completed: boolean;
+  completedAt?: string;
+  startsAt?: string;
+  endsAt?: string;
+  vehicleType?: string;
+  isActive: boolean;
+  paidOut?: boolean;
+}
