@@ -326,8 +326,13 @@ export const endpoints = {
     boardBooking: (bookingId: string, stationId?: string | number) =>
       api.post(`/shuttle/bookings/${bookingId}/board`, stationId != null ? { stationId } : {}),
 
-    /* defined — not yet connected to UI */
     driverTrips: (page = 1, limit = 10) =>
+      api.get(`/shuttle/driver/my-trips?page=${page}&limit=${limit}`),
+
+    // TODO: Backend Integration - GET /shuttle/driver/my-trips — fetches paginated list of past completed trips
+    // Expected response: { trips: Array<{ id, routeName, completedAt, earnedAmount }> }
+    // or: { data: { trips: [...] } }
+    history: (page = 1, limit = 20) =>
       api.get(`/shuttle/driver/my-trips?page=${page}&limit=${limit}`),
 
     // Fix 7: rate a passenger after a trip

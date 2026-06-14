@@ -1,7 +1,7 @@
 import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { Check, ChevronRight, Copy, GitBranch, LogOut, Settings, Star } from 'lucide-react-native';
+import { Check, ChevronRight, Clock, Copy, GitBranch, LogOut, Settings, Star } from 'lucide-react-native';
 import { FeatherIcon } from '@/lib/iconMap';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -209,6 +209,19 @@ export default function ShuttleProfileScreen() {
         </GlassView>
 
         <GlassView style={[styles.menuGroup, { marginTop: 12 }]} borderRadius={20}>
+          <Pressable
+            onPress={() => router.push('/shuttle/history' as any)}
+            style={({ pressed }) => [styles.menuItem, { flexDirection: R, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: pressed ? colors.secondary + '66' : 'transparent' }]}
+          >
+            <View style={[styles.menuIcon, { backgroundColor: colors.secondary + 'B3' }]}>
+              <Clock size={18} color={colors.foreground} strokeWidth={2} />
+            </View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={[styles.menuLabel, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.trip_history}</Text>
+              <Text style={[styles.menuSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>{t.history_subtitle}</Text>
+            </View>
+            <ChevronRight size={16} color={colors.mutedForeground} strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
+          </Pressable>
           <MenuItem icon="target" label={t.bonus_targets} onPress={() => router.push('/bonus-targets')} colors={colors} isRTL={isRTL} />
           <MenuItem icon="help-circle" label={t.help_support} sub="Shuttle operations" onPress={() => router.push('/support')} colors={colors} isRTL={isRTL} />
           <MenuItem icon="shield" label={t.safety_toolkit} sub="Emergency, verification" onPress={() => router.push('/safety')} colors={colors} isRTL={isRTL} last />

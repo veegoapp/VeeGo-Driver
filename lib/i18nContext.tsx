@@ -479,6 +479,11 @@ const en = {
   code_copied: 'Copied!',
   vehicle_line_label: 'Vehicle / Line',
   passengers_label_count: 'Passengers',
+  trip_history: 'Trip History',
+  history_subtitle: 'Completed shuttle trips',
+  no_trip_history: 'No completed trips yet',
+  no_trip_history_sub: 'Your completed trips will appear here once you finish your first route',
+  history_earned: 'Earned',
 };
 
 const ar: typeof en = {
@@ -958,6 +963,11 @@ const ar: typeof en = {
   code_copied: 'تم النسخ!',
   vehicle_line_label: 'المركبة / الخط',
   passengers_label_count: 'الركاب',
+  trip_history: 'سجل الرحلات',
+  history_subtitle: 'رحلاتك المكتملة',
+  no_trip_history: 'لا توجد رحلات مكتملة بعد',
+  no_trip_history_sub: 'ستظهر رحلاتك المكتملة هنا بعد إتمام أول رحلة',
+  history_earned: 'الأرباح',
 };
 
 export type Translations = typeof en;
