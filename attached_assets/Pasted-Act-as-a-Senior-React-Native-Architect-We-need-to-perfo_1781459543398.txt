@@ -1,0 +1,28 @@
+Act as a Senior React Native Architect. We need to perform a critical structural refactor on our Authentication/Sign-Up Routing Guard and implement a missing Vehicle Details Selection flow based on new backend expansions.
+
+Refer to the "Choose your service type" screen layout from our initialization flow. Here are the strict architectural mandates:
+
+### 1. Fix the Core Auth Flow Bug (Show ONLY on Sign-Up, NEVER on Sign-In)
+- **The Issue:** The `Choose your service type` screen currently erroneously renders every time the driver logs in.
+- **The Fix:** Redesign the Auth Routing/Guard Logic (likely inside `app/_layout.tsx` or your central Auth Guard state context).
+  - When a driver successfully logs in (`Sign-In`), evaluate the `serviceType` field returned by the backend user payload (e.g., `GET /driver/me` or auth response).
+  - If `serviceType` is already populated (e.g., `'shuttle'`), BYPASS this screen completely and route the driver directly to their respective interface layout stack.
+  - Show this screen ONLY if `serviceType` is explicitly `null` or unassigned (which denotes a freshly registered account completing their initial registration flow).
+  - Once the driver selects a service type and presses "Continue", persist this selection globally and to the backend so it never renders again for this account.
+
+### 2. Implement the Brand, Model, Year, & Color Selection Screen (`app/auth/vehicle-specs.tsx`)
+- Create a subsequent setup step screen for the driver after selecting a vehicle-based service.
+- Implement 4 mandatory input fields which must be **Strict Selectors (Dropdowns/Sheets)**, absolutely **NO raw text typing** allowed:
+  1. **الشركة المصنعة (Brand)**
+  2. **الموديل (Model)** - Dynamically filtered or enabled based on selected Brand.
+  3. **سنة الصنع (Manufacture Year)**
+  4. **لون المركبة (Vehicle Color)**
+- **CRITICAL SEARCH AFFORDANCE:** Each dropdown list overlay/sheet MUST incorporate a functional search bar (`TextInput` with filter logic) anchored firmly at the top of the selectable list to easily handle large datasets.
+
+### 3. API Placeholder Contracts & // TODOs
+- In `lib/api.ts`, add clean explicit `// TODO: Backend Integration` endpoints for:
+  - `POST /driver/register/service-type` -> Payload: `{ serviceType: 'shuttle' | 'car' | etc. }`
+  - `GET /vehicles/meta` or separate endpoints (`/brands`, `/models`) to cleanly fetch the data matrices for the dropdown menus.
+  - `POST /driver/register/vehicle-details` -> Payload: `{ brandId, modelId, year, color }`
+
+Ensure strict TypeScript coverage, zero compilation errors, full synchronization with our minimalist white layout theme, and complete Arabic RTL support. Execute now!

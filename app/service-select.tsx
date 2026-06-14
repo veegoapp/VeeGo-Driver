@@ -17,7 +17,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useService, ServiceType } from '@/lib/serviceContext';
 import { useServiceControl, DriverSnapshot, ServiceStatus } from '@/lib/serviceControlContext';
-import { api } from '@/lib/api';
+import { api, endpoints } from '@/lib/api';
 import { useI18n } from '@/lib/i18nContext';
 
 type ServiceOption = {
@@ -111,11 +111,24 @@ export default function ServiceSelectScreen() {
       .catch(() => {});
   }, []);
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (!selected) return;
     setServiceType(selected);
-    const route = selected === 'SHUTTLE' ? '/(shuttle)' : '/(tabs)';
-    router.replace(route);
+
+    // Persist service type to the backend (non-blocking — proceed even if it fails)
+    try {
+      // TODO: Backend Integration — POST /driver/register/service-type
+      await endpoints.registration.setServiceType(BACKEND_TYPE_MAP[selected]);
+    } catch {
+      // Endpoint may not be live yet; local + per-user storage already saved above
+    }
+
+    if (selected === 'SHUTTLE') {
+      router.replace('/(shuttle)');
+    } else {
+      // Vehicle-based services go through the vehicle specs setup step first
+      router.replace('/auth/vehicle-specs');
+    }
   };
 
   // Build status map using lowercase backend type keys so the lookup matches

@@ -633,11 +633,60 @@ export const endpoints = {
     submitTicket: (data: unknown) => api.post('/support/tickets', data),
   },
 
+  // TODO: Backend Integration — Registration setup endpoints (initial account flow)
+  registration: {
+    // POST /driver/register/service-type
+    // Persists the driver's chosen service type on the backend so the server is aware
+    // of it independently of the local AsyncStorage cache.
+    //
+    // PAYLOAD:  { serviceType: 'car' | 'scooter' | 'delivery' | 'shuttle' }
+    // SUCCESS RESPONSE (200 | 201):  { serviceType: string }
+    // ERROR RESPONSES:
+    //   400 — invalid serviceType value
+    //   401 — token expired
+    setServiceType: (serviceType: string) =>
+      api.post<{ serviceType: string }>('/driver/register/service-type', { serviceType }),
+
+    // POST /driver/register/vehicle-details
+    // Stores brand, model, year, and color chosen in the vehicle-specs setup step.
+    // The backend should upsert the vehicle record associated with this driver.
+    //
+    // PAYLOAD:  { brandId: string, modelId: string, year: string, color: string }
+    // SUCCESS RESPONSE (200 | 201):
+    //   { vehicleId: string, brandId: string, modelId: string, year: string, color: string }
+    // ERROR RESPONSES:
+    //   400 — missing or invalid fields
+    //   401 — token expired
+    //   404 — brandId or modelId not found in /vehicles/meta
+    setVehicleDetails: (data: {
+      brandId: string;
+      modelId: string;
+      year: string;
+      color: string;
+    }) => api.post<{ vehicleId: string }>('/driver/register/vehicle-details', data),
+  },
+
+  // TODO: Backend Integration — Vehicle metadata endpoints
   vehicles: {
+    // GET /vehicles/brands
+    // Returns the full list of supported vehicle manufacturers.
+    // SUCCESS RESPONSE: Array<{ id: string; name: string }>
     brands: () => api.get<{ id: string; name: string }[]>('/vehicles/brands'),
+
+    // GET /vehicles/brands/:brandId/models
+    // Returns models available for the given brand.
+    // Filtered on the server by brandId so large model lists are only fetched on demand.
+    // SUCCESS RESPONSE: Array<{ id: string; name: string; brandId: string }>
     models: (brandId: string) => api.get<{ id: string; name: string }[]>(`/vehicles/brands/${brandId}/models`),
-    years: (modelId: string) => api.get<unknown>(`/vehicles/models/${modelId}/years`),
-    colors: () => api.get<{ id: string; name: string; hex?: string }[]>('/vehicles/colors'),
+
+    // GET /vehicles/meta  (alternative: fetch brands + models in a single request)
+    // Returns { brands: Brand[], models: Model[] } to populate both dropdowns in one call.
+    meta: () => api.get<{ brands: { id: string; name: string }[]; models: { id: string; name: string; brandId: string }[] }>('/vehicles/meta'),
+
+    // GET /vehicles/colors
+    // Returns the list of supported vehicle colors (id + label + optional hex code).
+    // SUCCESS RESPONSE: Array<{ id: string; label: string; hex?: string }>
+    colors: () => api.get<{ id: string; label: string; hex?: string }[]>('/vehicles/colors'),
   },
 
   settings: {

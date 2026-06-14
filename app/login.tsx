@@ -24,7 +24,7 @@ import { useAuth } from '@/lib/authContext';
 import { endpoints, ApiError } from '@/lib/api';
 import { api } from '@/lib/api';
 import { saveToken } from '@/lib/auth';
-import { navigateAfterAuth } from '@/lib/postAuthRouter';
+import { navigateAfterAuth, saveServiceType } from '@/lib/postAuthRouter';
 
 type Tab = 'signin' | 'signup';
 
@@ -51,11 +51,32 @@ export default function LoginScreen() {
 
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
 
-  const handleSignInSuccess = async (accessToken: string, refreshToken: string, isActive: boolean) => {
+  // Maps backend serviceType strings → frontend ServiceType keys
+  const BACKEND_TO_FRONTEND: Record<string, string> = {
+    car:      'CAR',
+    scooter:  'MOTOR',
+    delivery: 'DELIVERY',
+    shuttle:  'SHUTTLE',
+  };
+
+  const handleSignInSuccess = async (
+    accessToken: string,
+    refreshToken: string,
+    isActive: boolean,
+    backendServiceType: string | null,
+  ) => {
     await login(accessToken, refreshToken);
     if (!isActive) {
       expoRouter.replace('/pending-approval');
       return;
+    }
+    // If the backend already has a serviceType set for this driver, persist it
+    // locally so navigateAfterAuth bypasses service-select on every sign-in.
+    if (backendServiceType) {
+      const normalized = BACKEND_TO_FRONTEND[backendServiceType.toLowerCase()];
+      if (normalized) {
+        await saveServiceType(normalized, accessToken);
+      }
     }
     await navigateAfterAuth(accessToken);
   };
@@ -110,7 +131,7 @@ export default function LoginScreen() {
             </View>
 
             {tab === 'signin' ? (
-              <SignInForm isRTL={isRTL} onSuccess={(at, rt, active) => handleSignInSuccess(at, rt, active)} />
+              <SignInForm isRTL={isRTL} onSuccess={(at, rt, active, svcType) => handleSignInSuccess(at, rt, active, svcType)} />
             ) : (
               <SignUpForm isRTL={isRTL} onSuccess={(at, rt) => handleRegisterSuccess(at, rt)} />
             )}
@@ -127,7 +148,7 @@ export default function LoginScreen() {
 }
 
 // Task 5: credential + password sign-in form
-function SignInForm({ isRTL, onSuccess }: { isRTL: boolean; onSuccess: (at: string, rt: string, isActive: boolean) => void }) {
+function SignInForm({ isRTL, onSuccess }: { isRTL: boolean; onSuccess: (at: string, rt: string, isActive: boolean, serviceType: string | null) => void }) {
   const [credential, setCredential] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
@@ -145,16 +166,24 @@ function SignInForm({ isRTL, onSuccess }: { isRTL: boolean; onSuccess: (at: stri
       const result = await endpoints.auth.driverLogin(credential.trim(), password);
       const at = result.accessToken as string;
       const rt = result.refreshToken as string;
-      // Check isActive — pending drivers see the approval screen instead of the dashboard
+      // Check isActive — pending drivers see the approval screen instead of the dashboard.
+      // Also read serviceType so we can bypass service-select for returning drivers.
       let isActive = true;
+      let serviceType: string | null = null;
       try {
         await saveToken(at);
-        const me = await api.get<{ isActive?: boolean }>('/driver/me');
+        const me = await api.get<{ isActive?: boolean; serviceType?: string }>('/driver/me');
         isActive = me?.isActive !== false;
+        // Prefer the value from /driver/me; fall back to the login response payload
+        serviceType =
+          me?.serviceType ??
+          ((result.user as Record<string, unknown>)?.serviceType as string | undefined) ??
+          ((result.driver as Record<string, unknown>)?.serviceType as string | undefined) ??
+          null;
       } catch {
         // If the check fails, assume active so login still works
       }
-      onSuccess(at, rt, isActive);
+      onSuccess(at, rt, isActive, serviceType);
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
