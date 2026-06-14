@@ -38,9 +38,12 @@ export default function ShuttleTripActiveScreen() {
   const timeoutProcessingRef = useRef(false);
 
   // ── Exit guard: intercept back-press while a trip is active ─────────────────
+  // The listener is only registered when activeLine is truthy — when it becomes
+  // null (trip ended) the effect re-runs, unsubscribes the old listener, and
+  // skips registration entirely, preventing any leak onto other screens.
   useEffect(() => {
+    if (!activeLine) return; // no trip active — do not register a listener
     const unsubscribe = navigation.addListener('beforeRemove', (e: any) => {
-      if (!activeLine) return; // no active trip — allow navigation freely
       e.preventDefault();
       Alert.alert(
         'رحلة جارية حالياً!',
@@ -55,7 +58,7 @@ export default function ShuttleTripActiveScreen() {
         ]
       );
     });
-    return unsubscribe;
+    return unsubscribe; // removes the listener on unmount or when activeLine changes
   }, [navigation, activeLine]);
 
   // Safe back handler — routes through the beforeRemove guard above
@@ -69,6 +72,10 @@ export default function ShuttleTripActiveScreen() {
     // Reset station status whenever the active stop changes
     setStationStatus('navigating');
     setStationTimeoutVisible(false);
+    // Reset the timeout debounce guard so the next stop can respond to a new
+    // SHUTTLE_STATION_TIMEOUT event — without this, a timeout on stop N would
+    // permanently block the guard for all subsequent stops.
+    timeoutProcessingRef.current = false;
   }, [currentStopIndex]);
 
   // Task 3a: listen for shuttle:station:timeout
