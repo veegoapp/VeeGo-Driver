@@ -15,6 +15,8 @@ export interface MapBackdropProps {
   dropoff?: { latitude: number; longitude: number };
   driverLocation?: { latitude: number; longitude: number };
   surgeZones?: SurgeZone[];
+  /** Gap C: ordered station coordinates for the fixed shuttle route polyline */
+  routePolyline?: Array<{ latitude: number; longitude: number }>;
 }
 
 function buildHtml(
@@ -22,12 +24,16 @@ function buildHtml(
   dropoff: MapBackdropProps['dropoff'],
   driverLocation: MapBackdropProps['driverLocation'],
   surgeZones: SurgeZone[],
+  routePolyline: MapBackdropProps['routePolyline'],
 ): string {
-  const pts = [driverLocation, pickup, dropoff].filter(Boolean) as Array<{ latitude: number; longitude: number }>;
-  const center = pts.length
+  const ridePts = [driverLocation, pickup, dropoff].filter(Boolean) as Array<{ latitude: number; longitude: number }>;
+  const stationPts = routePolyline?.length ? routePolyline : [];
+  // Use ride points for center if available; otherwise center on stations
+  const centerPts = ridePts.length > 0 ? ridePts : stationPts;
+  const center = centerPts.length
     ? [
-        pts.reduce((s, p) => s + p.longitude, 0) / pts.length,
-        pts.reduce((s, p) => s + p.latitude, 0) / pts.length,
+        centerPts.reduce((s, p) => s + p.longitude, 0) / centerPts.length,
+        centerPts.reduce((s, p) => s + p.latitude, 0) / centerPts.length,
       ]
     : [31.2357, 30.0444];
 
@@ -36,6 +42,10 @@ function buildHtml(
   const driverJson = driverLocation ? JSON.stringify([driverLocation.longitude, driverLocation.latitude]) : 'null';
   const surgeJson = JSON.stringify(surgeZones);
   const centerJson = JSON.stringify(center);
+  // Gap C: serialize station coordinates as [[lng, lat], ...]
+  const routePolylineJson = routePolyline?.length
+    ? JSON.stringify(routePolyline.map(p => [p.longitude, p.latitude]))
+    : 'null';
 
   return `<!DOCTYPE html>
 <html>
@@ -58,6 +68,7 @@ function buildHtml(
   var driver = ${driverJson};
   var surgeZones = ${surgeJson};
   var center = ${centerJson};
+  var routePolyline = ${routePolylineJson};
 
   var map = new maplibregl.Map({
     container: 'map',
@@ -116,6 +127,10 @@ function buildHtml(
     return el;
   }
 
+  function stationSvg(n) {
+    return '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28"><circle cx="14" cy="14" r="12" fill="#1e1e28" stroke="white" stroke-width="2.5"/><text x="14" y="18.5" text-anchor="middle" fill="white" font-size="10" font-family="sans-serif" font-weight="bold">' + n + '</text></svg>';
+  }
+
   var PICKUP_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36"><circle cx="14" cy="14" r="12" fill="#22c55e" stroke="white" stroke-width="2.5"/><text x="14" y="18.5" text-anchor="middle" fill="white" font-size="11" font-family="sans-serif" font-weight="bold">P</text><line x1="14" y1="26" x2="14" y2="34" stroke="#22c55e" stroke-width="2" stroke-linecap="round"/></svg>';
   var DROPOFF_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36"><circle cx="14" cy="14" r="12" fill="#ef4444" stroke="white" stroke-width="2.5"/><text x="14" y="18.5" text-anchor="middle" fill="white" font-size="11" font-family="sans-serif" font-weight="bold">D</text><line x1="14" y1="26" x2="14" y2="34" stroke="#ef4444" stroke-width="2" stroke-linecap="round"/></svg>';
   var DRIVER_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="38" height="46" viewBox="0 0 38 46"><circle cx="19" cy="19" r="17" fill="#2563eb" opacity="0.18"/><circle cx="19" cy="19" r="13" fill="#2563eb" stroke="white" stroke-width="2.5"/><path d="M12 17.5 h14 M15 14 l4 3.5 l4-3.5 M13 21 c0 2.5 2.8 4.5 6 4.5s6-2 6-4.5" stroke="white" stroke-width="1.6" fill="none" stroke-linecap="round"/><line x1="19" y1="32" x2="19" y2="44" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round"/></svg>';
@@ -148,7 +163,7 @@ function buildHtml(
   }
 
   map.on('load', function() {
-    // Surge zones
+    // ── Surge zones ───────────────────────────────────────────────────────
     map.addSource('surge-zones', { type: 'geojson', data: buildSurgeGeoJSON(surgeZones) });
     map.addLayer({
       id: 'surge-fill', type: 'fill', source: 'surge-zones',
@@ -177,7 +192,7 @@ function buildHtml(
       new maplibregl.Marker({ element: el, anchor: 'center' }).setLngLat([z.longitude, z.latitude]).addTo(map);
     });
 
-    // Markers
+    // ── On-demand ride markers (pickup / dropoff) ─────────────────────────
     if (pickup) {
       new maplibregl.Marker({ element: makeSvgEl(PICKUP_SVG), anchor: 'bottom' })
         .setLngLat(pickup).setPopup(new maplibregl.Popup({ offset: 20, closeButton: false }).setText('Pickup')).addTo(map);
@@ -186,11 +201,12 @@ function buildHtml(
       new maplibregl.Marker({ element: makeSvgEl(DROPOFF_SVG), anchor: 'bottom' })
         .setLngLat(dropoff).setPopup(new maplibregl.Popup({ offset: 20, closeButton: false }).setText('Dropoff')).addTo(map);
     }
+
+    // ── Driver marker ─────────────────────────────────────────────────────
     var driverLoc = driver || pickup;
     if (driverLoc) {
       driverMarker = new maplibregl.Marker({ element: makeSvgEl(DRIVER_SVG), anchor: 'bottom' })
         .setLngLat(driverLoc).setPopup(new maplibregl.Popup({ offset: 22, closeButton: false }).setText('Your location')).addTo(map);
-      // Set initial heading toward pickup (if driver→pickup direction is known)
       if (driverLoc && pickup && !(driverLoc[0] === pickup[0] && driverLoc[1] === pickup[1])) {
         currentBearing = calcBearing(driverLoc, pickup);
         var initSvg = driverMarker.getElement().querySelector('svg');
@@ -200,7 +216,6 @@ function buildHtml(
         }
       }
       prevPos = driverLoc;
-      // Enable smooth glide after initial placement so first render doesn't animate from origin
       setTimeout(function() {
         if (driverMarker) {
           driverMarker.getElement().style.transition = 'transform 1400ms linear';
@@ -210,7 +225,7 @@ function buildHtml(
       }, 200);
     }
 
-    // Route
+    // ── On-demand ride route (pickup → dropoff) ───────────────────────────
     var routePts = [driver || pickup, pickup, dropoff].filter(Boolean);
     if (routePts.length >= 2) {
       var straightCoords = routePts.map(function(p) { return p; });
@@ -236,9 +251,7 @@ function buildHtml(
         }
       }
 
-      // Draw straight-line fallback immediately, then upgrade with OSRM road route
       drawRoute(straightCoords);
-
       (function() {
         var c = straightCoords.map(function(p) { return p[0] + ',' + p[1]; }).join(';');
         fetch('https://router.project-osrm.org/route/v1/driving/' + c + '?overview=full&geometries=geojson', {
@@ -254,7 +267,60 @@ function buildHtml(
       })();
     }
 
-    // Fit bounds
+    // ── Gap C: Shuttle fixed-route polyline ───────────────────────────────
+    // Renders numbered station markers and the full route line when the driver
+    // is in active-trip mode.  Uses a separate source/layer from the ride route.
+    if (routePolyline && routePolyline.length >= 2) {
+      // Numbered station circle markers
+      routePolyline.forEach(function(pt, idx) {
+        new maplibregl.Marker({ element: makeSvgEl(stationSvg(idx + 1)), anchor: 'center' })
+          .setLngLat(pt)
+          .addTo(map);
+      });
+
+      function drawShuttleRoute(coords) {
+        var geoData = { type: 'Feature', geometry: { type: 'LineString', coordinates: coords }, properties: {} };
+        if (map.getSource('shuttle-route')) {
+          map.getSource('shuttle-route').setData(geoData);
+        } else {
+          map.addSource('shuttle-route', { type: 'geojson', data: geoData });
+          map.addLayer({
+            id: 'shuttle-casing', type: 'line', source: 'shuttle-route',
+            layout: { 'line-join': 'round', 'line-cap': 'round' },
+            paint: { 'line-color': '#ffffff', 'line-width': 5, 'line-opacity': 0.35 }
+          });
+          map.addLayer({
+            id: 'shuttle-line', type: 'line', source: 'shuttle-route',
+            layout: { 'line-join': 'round', 'line-cap': 'round' },
+            paint: { 'line-color': '#6366f1', 'line-width': 3.5, 'line-opacity': 0.88 }
+          });
+        }
+      }
+
+      // Draw straight-line immediately, then upgrade with OSRM road route
+      drawShuttleRoute(routePolyline);
+      (function() {
+        var c = routePolyline.map(function(p) { return p[0] + ',' + p[1]; }).join(';');
+        fetch('https://router.project-osrm.org/route/v1/driving/' + c + '?overview=full&geometries=geojson', {
+          signal: AbortSignal.timeout(8000)
+        })
+          .then(function(res) { return res.ok ? res.json() : null; })
+          .then(function(data) {
+            if (data && data.code === 'Ok' && data.routes && data.routes.length) {
+              drawShuttleRoute(data.routes[0].geometry.coordinates);
+            }
+          })
+          .catch(function() {});
+      })();
+
+      // Fit the viewport to encompass all stations
+      var stBounds = new maplibregl.LngLatBounds();
+      routePolyline.forEach(function(pt) { stBounds.extend(pt); });
+      map.fitBounds(stBounds, { padding: 80, maxZoom: 14, duration: 700 });
+      return; // skip the generic fitBounds below when in shuttle mode
+    }
+
+    // Fit bounds (on-demand ride mode)
     var allPts = [driver, pickup, dropoff].filter(Boolean);
     if (allPts.length > 1) {
       var bounds = new maplibregl.LngLatBounds();
@@ -263,7 +329,7 @@ function buildHtml(
     }
   });
 
-  // Listen for driver location updates from RN
+  // Listen for driver location updates from RN (live tracking)
   window.addEventListener('message', function(e) {
     try {
       var msg = JSON.parse(e.data);
@@ -283,11 +349,11 @@ function buildHtml(
 </html>`;
 }
 
-export function MapBackdrop({ pickup, dropoff, driverLocation, surgeZones = [] }: MapBackdropProps) {
+export function MapBackdrop({ pickup, dropoff, driverLocation, surgeZones = [], routePolyline }: MapBackdropProps) {
   const webviewRef = useRef<WebView>(null);
   const lastLocUpdate = useRef(0);
 
-  const html = buildHtml(pickup, dropoff, driverLocation, surgeZones);
+  const html = buildHtml(pickup, dropoff, driverLocation, surgeZones, routePolyline);
 
   useEffect(() => {
     const now = Date.now();

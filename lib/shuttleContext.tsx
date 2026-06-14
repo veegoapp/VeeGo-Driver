@@ -281,6 +281,14 @@ type ShuttleContextType = {
   // Auto-cancel notification
   tripCancelledBanner: string | null;
   dismissTripCancelledBanner: () => void;
+  // Gap A: optimistic trip ID set immediately when driver taps "Start Trip"
+  // (bridges the gap before the backend refetch reflects activeLine.tripId)
+  startedTripId: string | null;
+  setStartedTripId: (id: string | null) => void;
+  // Gap C: ordered lat/lng of each station for the map route polyline
+  stationCoords: Array<{ latitude: number; longitude: number }>;
+  // Resets all in-trip state (stop index, passengers, startedTripId) after trip completion
+  resetTrip: () => void;
 };
 
 const ShuttleContext = createContext<ShuttleContextType>({
@@ -300,6 +308,10 @@ const ShuttleContext = createContext<ShuttleContextType>({
   togglePassenger: () => {},
   tripCancelledBanner: null,
   dismissTripCancelledBanner: () => {},
+  startedTripId: null,
+  setStartedTripId: () => {},
+  stationCoords: [],
+  resetTrip: () => {},
 });
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
@@ -310,6 +322,8 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
   const [currentStopIndex, setCurrentStopIndex] = useState(0);
   const [passengers, setPassengers] = useState<BoardingPassenger[]>([]);
   const [tripCancelledBanner, setTripCancelledBanner] = useState<string | null>(null);
+  // Gap A: optimistic tripId stored immediately on Start Trip press
+  const [startedTripId, setStartedTripId] = useState<string | null>(null);
 
   // ── Queries ──────────────────────────────────────────────────────────────
 
@@ -412,6 +426,12 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
     (activeLineDetailRaw as { stations?: BackendStation[] } | undefined);
   const activeStations: BackendStation[] =
     (activeDetail as { stations?: BackendStation[] } | undefined)?.stations ?? [];
+
+  // Gap C: ordered lat/lng coordinates for each active route station (must follow activeStations)
+  const stationCoords: Array<{ latitude: number; longitude: number }> = activeStations.map(st => ({
+    latitude: st.latitude,
+    longitude: st.longitude,
+  }));
 
   const stops: ShuttleStop[] = activeStations.map((st, idx) => ({
     id: String(st.id),
@@ -524,6 +544,13 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
 
   const dismissTripCancelledBanner = () => setTripCancelledBanner(null);
 
+  // Gap A + B: resets all in-trip local state after trip completion
+  const resetTrip = () => {
+    setCurrentStopIndex(0);
+    setPassengers([]);
+    setStartedTripId(null);
+  };
+
   return (
     <ShuttleContext.Provider
       value={{
@@ -544,6 +571,10 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
         togglePassenger,
         tripCancelledBanner,
         dismissTripCancelledBanner,
+        startedTripId,
+        setStartedTripId,
+        stationCoords,
+        resetTrip,
       }}
     >
       {children}

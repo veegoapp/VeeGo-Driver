@@ -19,7 +19,7 @@ export default function ShuttleTripActiveScreen() {
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
   const { t, isRTL } = useI18n();
   const { socket } = useSocket();
-  const { activeLine, stops, currentStopIndex, passengers, nextStop } = useShuttle();
+  const { activeLine, stops, currentStopIndex, passengers, nextStop, stationCoords } = useShuttle();
   const currentStop = stops[currentStopIndex];
   const completedCount = currentStopIndex;
   const cardAnim = useRef(new Animated.Value(0)).current;
@@ -104,16 +104,29 @@ export default function ShuttleTripActiveScreen() {
   const handleFinishRoute = async () => {
     if (!activeLine) return;
     try {
-      await endpoints.shuttle.complete(activeLine.id);
+      // TODO: Backend Integration - POST /shuttle/lines/:id/complete
+      // Expected response: { earnedAmount: number, walletBalance: number }
+      const result = await endpoints.shuttle.complete(activeLine.id);
+      const earned = (result as any)?.earnedAmount ?? (result as any)?.data?.earnedAmount;
+      const balance = (result as any)?.walletBalance ?? (result as any)?.data?.walletBalance;
+      router.replace({
+        pathname: '/shuttle/trip-complete' as any,
+        params: {
+          earnedAmount: earned != null ? String(earned) : '',
+          walletBalance: balance != null ? String(balance) : '',
+          tripId: activeLine.id,
+        },
+      });
     } catch {
-      // best-effort
+      // best-effort: still navigate to completion screen
+      router.replace('/shuttle/trip-complete' as any);
     }
-    router.replace('/(shuttle)');
   };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <MapBackdrop />
+      {/* Gap C: pass ordered station coordinates so the map draws the full fixed route polyline */}
+      <MapBackdrop routePolyline={stationCoords} />
       <ScrollView
         contentContainerStyle={{ paddingTop: topPad + 8, paddingBottom: 40, paddingHorizontal: 16 }}
         showsVerticalScrollIndicator={false}

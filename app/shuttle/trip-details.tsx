@@ -4,6 +4,7 @@ import { Calendar, ChevronLeft, Clock, MapPin, Users } from 'lucide-react-native
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Platform,
   Pressable,
   ScrollView,
@@ -37,7 +38,8 @@ export default function TripDetailsScreen() {
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
 
   const { bookingId, routeId } = useLocalSearchParams<Params>();
-  const { myBookings, allLines } = useShuttle();
+  const { myBookings, allLines, setStartedTripId, refetch } = useShuttle();
+  const [starting, setStarting] = useState(false);
 
   const booking = myBookings.find(b => b.id === bookingId);
   const line = allLines.find(l => String(l.id) === String(routeId));
@@ -288,13 +290,29 @@ export default function TripDetailsScreen() {
         <View style={{ flex: 1 }}>
           <Pressable
             disabled={!isStartEnabled}
-            onPress={() => {
-              // TODO: Backend Integration - Call PATCH /driver/trips/:tripId/start to begin the trip
-              // before navigating. Replace `bookingId` with the real tripId once the backend returns it.
-              // Example: await endpoints.trips.start(bookingId!)
-              router.push('/shuttle/trip-active' as any);
+            onPress={async () => {
+              if (!bookingId || starting) return;
+              setStarting(true);
+              try {
+                // TODO: Backend Integration - POST /shuttle/route-bookings/:id/start
+                // Marks the booking as active and creates the trip instance on the backend.
+                // Expected response shape: { tripId: string }
+                const result = await endpoints.shuttle.start(bookingId);
+                const tripId =
+                  (result as any)?.tripId ??
+                  (result as any)?.data?.tripId ??
+                  null;
+                if (tripId) setStartedTripId(String(tripId));
+                // Background refetch so context picks up the new activeLine status
+                refetch();
+                router.push('/shuttle/trip-active' as any);
+              } catch {
+                Alert.alert('', 'تعذّر بدء الرحلة. يرجى المحاولة مجدداً.');
+              } finally {
+                setStarting(false);
+              }
             }}
-            style={({ pressed }) => [{ borderRadius: 16, overflow: 'hidden', opacity: !isStartEnabled ? 1 : pressed ? 0.88 : 1 }]}
+            style={({ pressed }) => [{ borderRadius: 16, overflow: 'hidden', opacity: !isStartEnabled ? 1 : starting ? 0.7 : pressed ? 0.88 : 1 }]}
           >
             {isStartEnabled ? (
               <LinearGradient
@@ -303,7 +321,11 @@ export default function TripDetailsScreen() {
                 end={{ x: 1, y: 0 }}
                 style={styles.startBtn}
               >
-                <Text style={[styles.startBtnText, { fontFamily: 'Inter_700Bold' }]}>{t.start_trip}</Text>
+                {starting ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={[styles.startBtnText, { fontFamily: 'Inter_700Bold' }]}>{t.start_trip}</Text>
+                )}
               </LinearGradient>
             ) : (
               <View style={[styles.startBtnDisabled, { backgroundColor: colors.secondary, borderColor: colors.border }]}>

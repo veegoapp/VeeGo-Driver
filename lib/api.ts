@@ -311,6 +311,15 @@ export const endpoints = {
     confirmRenewal: (id: string) => api.post(`/shuttle/route-bookings/${id}/confirm-renewal`),
 
     // ── Active Trip Management ───────────────────────────────────────────────
+    // TODO: Backend Integration - POST /shuttle/route-bookings/:id/start
+    // Marks the weekly booking as active, creates the trip instance on the backend.
+    // Returns: { tripId: string, earnedAmount?: number, walletBalance?: number }
+    start: (bookingId: string) =>
+      api.post(`/shuttle/route-bookings/${bookingId}/start`),
+
+    // TODO: Backend Integration - POST /shuttle/lines/:id/complete
+    // Marks the active trip as completed.
+    // Returns: { earnedAmount: number, walletBalance: number }
     complete: (lineId: string) => api.post(`/shuttle/lines/${lineId}/complete`),
     passengers: (tripId: string) => api.get(`/shuttle/trips/${tripId}/passengers`),
     // Fix 4: include stationId to trigger the 60-second timer on the backend
