@@ -1,0 +1,31 @@
+Act as a Senior React Native Architect. We need to completely rewrite and structurally optimize the Driver's Profile Screen (`app/(shuttle)/profile.tsx`) to match our strict minimalist white layout theme, fix the visual hierarchy, and wire it cleanly to our backend contracts.
+
+Please implement the following complete production architecture:
+
+### 1. Re-Structured Visual Hierarchy (Minimalist White Theme)
+- **Eliminate Redundancy:** Remove all static filler text. Use clean white cards (`backgroundColor: '#fff'`, unified `borderRadius`, and subtle borders) with clean RTL Arabic text and `textAlign: 'right'`.
+- **Group 1: Master Driver Card (Top):**
+  - Displays Driver Avatar, Full Name, Rating (5.00), and Driver ID.
+  - **CRITICAL RETENTION:** Include a highly visible, copyable **"كود الإحالة للسائق" (Referral/Peer Code)** block with a "Copy to Clipboard" icon button. This code is vital for our peer-to-peer trip referral system—do NOT omit it.
+- **Group 2: Core Operations & Earnings:**
+  - **Vehicle & Documents (Combined Card):** Merges vehicle description and document status (e.g., "حالة التوثيق: مقبول").
+  - **Bonus Targets:** Displays weekly incentive tracking with a clean progress bar layout.
+- **Group 3: Preferences & Support:**
+  - **Communication & Settings:** Combines Notification preferences and Messages.
+  - **Help & Safety:** Combines Help desk and the Safety toolkit.
+  - **Language Toggle:** Render a clean inline switch/button for English/العربية rather than wasting an entire screen card block.
+
+### 2. Guarded Fields & Controlled Avatar Upload Flow
+- **Locked Personal Info:** The Driver's Full Name and Phone Number fields must be strictly **Read-Only / Disabled**. They cannot be edited directly by the driver.
+- **Controlled Photo Change Request:** Tapping the profile picture or an edit icon must NOT open a direct local camera roll upload. Instead, it must trigger a controlled step-by-step request flow:
+  1. Open a modal/sheet prompting the driver to select or input the **"سبب تغيير الصورة الشخصية" (Reason for replacement)**.
+  2. Let them pick the new image file.
+  3. Wire this to trigger a review request payload that goes to the server, awaiting your Admin Dashboard manual approval.
+
+### 3. Production Backend Integration & Precise // TODOs
+Since we are actively auditing server-side endpoint coverage, please map out heavily documented `// TODO: Backend Integration` contracts inside `lib/api.ts` and the profile component tracking:
+- `GET /driver/profile` -> Fetching name, phone, verified vehicle info, referral code, and bonus milestone progress.
+- `POST /driver/profile/avatar-request` -> Uploading Multipart Form Data containing `{ newAvatarImage, changeReason }` for Admin review.
+- Provide defensive fallback states (`loading`, error catches) for every card row so that any missing endpoint degrades gracefully into a clean placeholder rather than crashing the app stack.
+
+Ensure absolute type safety with zero TypeScript compilation errors. Proceed with the full rewrite.

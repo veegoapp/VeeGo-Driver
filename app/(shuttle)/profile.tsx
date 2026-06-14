@@ -1,36 +1,67 @@
 import Constants from 'expo-constants';
-import { LinearGradient } from 'expo-linear-gradient';
+import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
-import { Check, ChevronRight, Clock, Copy, GitBranch, LogOut, Settings, Star } from 'lucide-react-native';
-import { FeatherIcon } from '@/lib/iconMap';
+import {
+  Camera,
+  Check,
+  ChevronRight,
+  Clock,
+  Copy,
+  GitBranch,
+  HelpCircle,
+  Inbox,
+  Lock,
+  LogOut,
+  MessageSquare,
+  Settings,
+  Shield,
+  Star,
+  Target,
+  Truck,
+} from 'lucide-react-native';
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
-import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import type { Language } from '@/lib/i18nContext';
 import { useAuth } from '@/lib/authContext';
 import { endpoints } from '@/lib/api';
+import type { DriverProfileEnriched } from '@/lib/api';
 
 const TAB_BAR_HEIGHT = 96;
-
-type DriverProfile = {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  rating: number;
-  avatar: string;
-  trips: number;
-  vehicle?: { make: string; model: string; plate: string };
-};
+const CARD_RADIUS = 16;
+const BORDER_COLOR = 'rgba(0,0,0,0.08)';
 
 const LANGUAGES: { label: string; value: Language }[] = [
   { label: 'English', value: 'en' },
   { label: 'العربية', value: 'ar' },
 ];
+
+// ─── Fallback base profile from GET /driver/me ────────────────────────────
+type BaseProfile = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  rating: number;
+  avatar?: string | null;
+  trips: number;
+  vehicle?: { make: string; model: string; plate: string } | null;
+};
 
 export default function ShuttleProfileScreen() {
   const colors = useColors();
@@ -39,271 +70,939 @@ export default function ShuttleProfileScreen() {
   const { t, isRTL, language, setLanguage } = useI18n();
   const { logout } = useAuth();
 
-  const R = isRTL ? 'row-reverse' as const : 'row' as const;
   const TA = isRTL ? 'right' as const : 'left' as const;
+  const R = isRTL ? 'row-reverse' as const : 'row' as const;
 
   const [copied, setCopied] = useState(false);
+  const [showAvatarModal, setShowAvatarModal] = useState(false);
+  const [avatarReason, setAvatarReason] = useState('');
+  const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
+  const [avatarSubmitting, setAvatarSubmitting] = useState(false);
 
-  const { data: driverRaw, isLoading } = useQuery<DriverProfile>({
-    queryKey: ['driver'],
-    queryFn: endpoints.driver.me as () => Promise<DriverProfile>,
+  // ── Primary: GET /driver/profile (enriched) ────────────────────────────
+  // TODO: Backend Integration — GET /driver/profile must be live on the server.
+  // Falls back gracefully to GET /driver/me if endpoint returns an error.
+  const {
+    data: enriched,
+    isLoading: enrichedLoading,
+    isError: enrichedError,
+  } = useQuery<DriverProfileEnriched>({
+    queryKey: ['driver', 'profile'],
+    queryFn: endpoints.driver.profile,
+    retry: 1,
   });
-  const driver = driverRaw;
 
-  // TODO: Backend Integration - Fetch this driver's unique referral code from GET /driver/me/referral-code
-  // For now, derive a placeholder from the driver's ID or use a fixed format
-  const driverCode: string = driver?.id
-    ? `VGO-${driver.id.slice(0, 4).toUpperCase()}`
-    : 'VGO-XXXX';
+  // ── Fallback: GET /driver/me ───────────────────────────────────────────
+  const {
+    data: base,
+    isLoading: baseLoading,
+  } = useQuery<BaseProfile>({
+    queryKey: ['driver'],
+    queryFn: endpoints.driver.me as () => Promise<BaseProfile>,
+    enabled: enrichedError,
+  });
 
+  const isLoading = enrichedLoading || (enrichedError && baseLoading);
+
+  // Merge: prefer enriched, degrade to base
+  const id = enriched?.id ?? base?.id ?? null;
+  const name = enriched?.name ?? base?.name ?? null;
+  const phone = enriched?.phone ?? base?.phone ?? null;
+  const rating = enriched?.rating ?? base?.rating ?? null;
+  const avatar = enriched?.avatar ?? base?.avatar ?? null;
+  const trips = enriched?.trips ?? base?.trips ?? null;
+  const vehicle = enriched?.vehicle ?? base?.vehicle ?? null;
+  const documentStatus = enriched?.documentStatus ?? null;
+  const bonusTargets = enriched?.bonusTargets ?? [];
+
+  // Referral code: from enriched endpoint or derive from base ID
+  // TODO: Backend Integration — referralCode must be returned by GET /driver/profile
+  const referralCode: string = enriched?.referralCode
+    ?? (id ? `VGO-${id.slice(0, 4).toUpperCase()}` : 'VGO-XXXX');
+
+  const avatarUri = avatar
+    ?? `https://ui-avatars.com/api/?name=${encodeURIComponent(name ?? 'Driver')}&background=1e1e28&color=fff&size=256`;
+
+  // ── Clipboard ─────────────────────────────────────────────────────────
   const handleCopyCode = async () => {
     try {
-      // Web: use native clipboard API
       if (typeof navigator !== 'undefined' && navigator.clipboard) {
-        await navigator.clipboard.writeText(driverCode);
+        await navigator.clipboard.writeText(referralCode);
         setCopied(true);
         setTimeout(() => setCopied(false), 2500);
         return;
       }
-      // Native: fallback Alert so the user can see and copy the code
-      Alert.alert(t.referral_code_section, driverCode);
+      Alert.alert(t.referral_code_section, referralCode);
     } catch {
-      Alert.alert(t.referral_code_section, driverCode);
+      Alert.alert(t.referral_code_section, referralCode);
     }
   };
 
+  // ── Avatar change request flow ────────────────────────────────────────
+  const handleOpenAvatarModal = () => {
+    setAvatarReason('');
+    setSelectedImageUri(null);
+    setShowAvatarModal(true);
+  };
+
+  const handleSelectPhoto = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission required', 'Please allow photo access to continue.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.85,
+    });
+    if (!result.canceled && result.assets.length > 0) {
+      setSelectedImageUri(result.assets[0].uri);
+    }
+  };
+
+  const handleSubmitAvatarRequest = async () => {
+    if (!avatarReason.trim() || avatarReason.trim().length < 5) {
+      Alert.alert('', t.change_photo_reason_label);
+      return;
+    }
+    if (!selectedImageUri) {
+      Alert.alert('', t.select_new_photo);
+      return;
+    }
+
+    setAvatarSubmitting(true);
+    try {
+      // TODO: Backend Integration — POST /driver/profile/avatar-request
+      // Multipart payload: { newAvatarImage: file, changeReason: string }
+      // Awaits Admin approval before the photo goes live.
+      const formData = new FormData();
+      formData.append('changeReason', avatarReason.trim());
+      const fileName = selectedImageUri.split('/').pop() ?? 'avatar.jpg';
+      const ext = fileName.split('.').pop()?.toLowerCase() ?? 'jpg';
+      const mimeType = ext === 'png' ? 'image/png' : 'image/jpeg';
+      formData.append('newAvatarImage', {
+        uri: selectedImageUri,
+        name: fileName,
+        type: mimeType,
+      } as unknown as Blob);
+
+      await endpoints.driver.requestAvatarChange(formData);
+      setShowAvatarModal(false);
+      Alert.alert('', t.avatar_request_sent);
+    } catch {
+      Alert.alert('', t.avatar_request_error);
+    } finally {
+      setAvatarSubmitting(false);
+    }
+  };
+
+  // ── Document status label & colour ────────────────────────────────────
+  const docStatusLabel = (() => {
+    if (documentStatus === 'accepted') return t.verification_accepted;
+    if (documentStatus === 'rejected') return t.verification_rejected;
+    if (documentStatus === 'pending') return t.verification_pending;
+    return '—';
+  })();
+  const docStatusColor = (() => {
+    if (documentStatus === 'accepted') return '#16a34a';
+    if (documentStatus === 'rejected') return colors.destructive;
+    return colors.mutedForeground;
+  })();
+
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.root, { backgroundColor: colors.background }]}>
       <ScrollView
-        contentContainerStyle={{ paddingTop: topPad + 8, paddingBottom: TAB_BAR_HEIGHT + 24, paddingHorizontal: 20 }}
+        contentContainerStyle={{
+          paddingTop: topPad + 8,
+          paddingBottom: TAB_BAR_HEIGHT + 24,
+          paddingHorizontal: 20,
+        }}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.profile_title}</Text>
+        {/* Page title */}
+        <Text style={[styles.pageTitle, { color: colors.foreground, textAlign: TA }]}>
+          {t.profile_title}
+        </Text>
 
-        <GlassView style={styles.profileCard} borderRadius={24}>
-          <View style={styles.profileCardInner}>
-            {isLoading ? (
-              <ActivityIndicator size="large" color={colors.primary} style={{ marginVertical: 32 }} />
-            ) : (
-              <>
-                <View style={styles.avatarWrap}>
+        {/* ── GROUP 1: Master Driver Card ─────────────────────────────── */}
+        <View style={styles.card}>
+          {isLoading ? (
+            <ActivityIndicator size="large" color={colors.primary} style={{ marginVertical: 32 }} />
+          ) : (
+            <>
+              {/* Avatar + edit trigger */}
+              <View style={styles.avatarRow}>
+                <Pressable onPress={handleOpenAvatarModal} style={styles.avatarWrap} hitSlop={4}>
                   <Image
-                    source={{ uri: driver?.avatar ?? `https://ui-avatars.com/api/?name=${encodeURIComponent(driver?.name ?? 'Driver')}&background=1e1e28&color=fff` }}
-                    style={[styles.avatar, { borderColor: '#1e1e2866' }]}
+                    source={{ uri: avatarUri }}
+                    style={styles.avatar}
+                    contentFit="cover"
                   />
-                  <LinearGradient colors={['#2d2d42', '#1e1e28']} style={styles.shuttleBadge}>
-                    <GitBranch size={14} color="#fff" strokeWidth={2} />
-                  </LinearGradient>
-                </View>
-                <Text style={[styles.driverName, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: 'center' }]}>
-                  {driver?.name ?? '—'}
-                </Text>
-                <Text style={[styles.driverMeta, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold', textAlign: 'center' }]}>
-                  {t.shuttle_service} · {driver?.trips ?? '—'} {t.trips}
-                </Text>
-                <View style={[styles.statsGrid, { flexDirection: R }]}>
-                  <MiniStat
-                    label={t.rating_stat}
-                    value={driver?.rating?.toFixed(2) ?? '—'}
-                    icon={<Star size={14} color={colors.accent} fill={colors.accent} strokeWidth={2} />}
-                    colors={colors}
-                  />
-                </View>
-              </>
-            )}
-          </View>
-        </GlassView>
+                  <View style={[styles.cameraOverlay, { backgroundColor: colors.primary }]}>
+                    <Camera size={14} color="#fff" strokeWidth={2.5} />
+                  </View>
+                </Pressable>
+              </View>
 
-        {/* Referral Code Section */}
-        <GlassView style={[styles.referralCard, { marginTop: 20 }]} borderRadius={20}>
-          <View style={[styles.referralCardInner, { flexDirection: R }]}>
-            <View style={[styles.referralIconWrap, { backgroundColor: '#1e1e2812' }]}>
-              <GitBranch size={18} color="#2d2d42" strokeWidth={2} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.referralLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
-                {t.referral_code_section}
+              {/* Name — read-only */}
+              <Text style={[styles.driverName, { color: colors.foreground, textAlign: 'center' }]}>
+                {name ?? '—'}
               </Text>
-              <Text style={[styles.referralCode, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
-                {/* TODO: Backend Integration - Fetch from GET /driver/me/referral-code */}
-                {driverCode}
+
+              {/* Service + trip count */}
+              <Text style={[styles.driverMeta, { color: colors.mutedForeground, textAlign: 'center' }]}>
+                {t.shuttle_service}
+                {trips !== null ? ` · ${trips} ${t.trips}` : ''}
               </Text>
-              <Text style={[styles.referralHint, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>
-                {t.referral_code_copy_hint}
-              </Text>
-            </View>
-            <Pressable
-              onPress={handleCopyCode}
-              style={({ pressed }) => [
-                styles.copyBtn,
-                { backgroundColor: pressed ? '#1e1e2820' : '#1e1e2810', borderColor: '#1e1e2825' },
-              ]}
-              hitSlop={8}
-            >
-              {copied
-                ? <Check size={16} color="#16a34a" strokeWidth={2.5} />
-                : <Copy size={16} color="#2d2d42" strokeWidth={2} />}
-            </Pressable>
-          </View>
-          {copied && (
-            <Text style={[styles.copiedMsg, { color: '#16a34a', fontFamily: 'Inter_600SemiBold', textAlign: 'center' }]}>
-              {t.code_copied}
-            </Text>
+
+              {/* Rating pill */}
+              <View style={[styles.ratingPill, { backgroundColor: colors.secondary, flexDirection: R }]}>
+                <Star size={13} color={colors.accent} fill={colors.accent} strokeWidth={2} />
+                <Text style={[styles.ratingText, { color: colors.foreground }]}>
+                  {rating !== null ? rating.toFixed(2) : '—'}
+                </Text>
+                <Text style={[styles.ratingLabel, { color: colors.mutedForeground }]}>
+                  {t.rating_stat}
+                </Text>
+              </View>
+
+              {/* Driver ID — read-only */}
+              {id && (
+                <View style={[styles.lockedRow, { flexDirection: R, borderTopColor: BORDER_COLOR }]}>
+                  <Lock size={13} color={colors.mutedForeground} strokeWidth={2} />
+                  <Text style={[styles.lockedLabel, { color: colors.mutedForeground, textAlign: TA }]}>
+                    {t.driver_id_label}
+                  </Text>
+                  <Text style={[styles.lockedValue, { color: colors.foreground, textAlign: TA }]}>
+                    #{id.slice(0, 8).toUpperCase()}
+                  </Text>
+                </View>
+              )}
+
+              {/* Phone — read-only */}
+              {phone && (
+                <View style={[styles.lockedRow, { flexDirection: R, borderTopColor: BORDER_COLOR }]}>
+                  <Lock size={13} color={colors.mutedForeground} strokeWidth={2} />
+                  <Text style={[styles.lockedLabel, { color: colors.mutedForeground, textAlign: TA }]}>
+                    {t.personal_info}
+                  </Text>
+                  <Text style={[styles.lockedValue, { color: colors.foreground, textAlign: TA }]}>
+                    {phone}
+                  </Text>
+                </View>
+              )}
+            </>
           )}
-        </GlassView>
+        </View>
 
-        <GlassView style={[styles.menuGroup, { marginTop: 12 }]} borderRadius={20}>
-          <MenuItem icon="user" label={t.personal_info} sub={driver?.phone ?? driver?.email ?? driver?.name ?? '—'} onPress={() => router.push('/personal-info')} colors={colors} isRTL={isRTL} />
-          <MenuItem
-            icon="truck"
+        {/* ── Referral Code (كود الإحالة للسائق) ─────────────────────── */}
+        <View style={[styles.card, styles.referralCard, { flexDirection: R }]}>
+          <View style={[styles.referralIconWrap, { backgroundColor: colors.secondary }]}>
+            <GitBranch size={20} color={colors.primary} strokeWidth={2} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.referralTitle, { color: colors.mutedForeground, textAlign: TA }]}>
+              {t.referral_code_section}
+            </Text>
+            <Text style={[styles.referralCode, { color: colors.foreground, textAlign: TA }]}>
+              {referralCode}
+            </Text>
+            <Text style={[styles.referralHint, { color: colors.mutedForeground, textAlign: TA }]}>
+              {t.referral_code_copy_hint}
+            </Text>
+          </View>
+          <Pressable
+            onPress={handleCopyCode}
+            hitSlop={8}
+            style={({ pressed }) => [
+              styles.copyBtn,
+              { backgroundColor: pressed ? colors.secondary : 'transparent', borderColor: BORDER_COLOR },
+            ]}
+          >
+            {copied
+              ? <Check size={17} color="#16a34a" strokeWidth={2.5} />
+              : <Copy size={17} color={colors.primary} strokeWidth={2} />}
+          </Pressable>
+        </View>
+        {copied && (
+          <Text style={[styles.copiedMsg, { color: '#16a34a' }]}>{t.code_copied}</Text>
+        )}
+
+        {/* ── GROUP 2: Core Operations & Earnings ───────────────────── */}
+        {/* Vehicle & Documents combined */}
+        <SectionHeader label={isRTL ? 'المركبة والوثائق' : 'Vehicle & Documents'} colors={colors} isRTL={isRTL} />
+        <View style={styles.card}>
+          <MenuRow
+            icon={<Truck size={18} color={colors.foreground} strokeWidth={2} />}
             label={t.vehicle_label}
-            sub={driver?.vehicle ? `${driver.vehicle.make} ${driver.vehicle.model} · ${driver.vehicle.plate}` : '—'}
+            sub={vehicle ? `${vehicle.make} ${vehicle.model} · ${vehicle.plate}` : '—'}
             onPress={() => router.push('/vehicle')}
             colors={colors}
             isRTL={isRTL}
           />
-          <MenuItem icon="file-text" label={t.documents_label} onPress={() => router.push('/documents')} colors={colors} isRTL={isRTL} last />
-        </GlassView>
+          <View style={[styles.divider, { backgroundColor: BORDER_COLOR }]} />
+          <MenuRow
+            icon={<Shield size={18} color={colors.foreground} strokeWidth={2} />}
+            label={t.documents_label}
+            sub={documentStatus !== null ? `${t.verification_status_label}: ${docStatusLabel}` : '—'}
+            subColor={documentStatus !== null ? docStatusColor : colors.mutedForeground}
+            onPress={() => router.push('/documents')}
+            colors={colors}
+            isRTL={isRTL}
+            last
+          />
+        </View>
 
-        <GlassView style={[styles.menuGroup, { marginTop: 12 }]} borderRadius={20}>
-          <MenuItem icon="inbox" label={t.notifications} onPress={() => router.push('/messages')} colors={colors} isRTL={isRTL} />
-          <MenuItem icon="message-square" label={t.messages_label} onPress={() => router.push('/messages')} colors={colors} isRTL={isRTL} last />
-        </GlassView>
+        {/* Bonus Targets */}
+        <SectionHeader label={t.bonus_targets} colors={colors} isRTL={isRTL} />
+        <View style={styles.card}>
+          {isLoading ? (
+            <View style={{ padding: 20 }}>
+              <ActivityIndicator size="small" color={colors.primary} />
+            </View>
+          ) : bonusTargets.length === 0 ? (
+            <Text style={[styles.emptyBonus, { color: colors.mutedForeground, textAlign: TA }]}>
+              {t.no_bonus_targets}
+            </Text>
+          ) : (
+            bonusTargets.map((bt, idx) => {
+              const progress = Math.min(bt.currentTrips / Math.max(bt.targetTrips, 1), 1);
+              const isLast = idx === bonusTargets.length - 1;
+              return (
+                <View key={bt.id}>
+                  <View style={[styles.bonusRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Text style={[styles.bonusTitle, { color: colors.foreground, textAlign: TA }]}>
+                          {bt.title}
+                        </Text>
+                        <Text style={[styles.bonusAmount, { color: colors.accent }]}>
+                          +{bt.bonusAmount} EGP
+                        </Text>
+                      </View>
+                      <Text style={[styles.bonusSub, { color: colors.mutedForeground, textAlign: TA }]}>
+                        {bt.currentTrips} {t.bonus_progress_of} {bt.targetTrips} {t.bonus_progress_trips}
+                      </Text>
+                      <View style={[styles.progressTrack, { backgroundColor: colors.secondary }]}>
+                        <View
+                          style={[
+                            styles.progressFill,
+                            {
+                              width: `${Math.round(progress * 100)}%` as `${number}%`,
+                              backgroundColor: bt.completed ? '#16a34a' : colors.accent,
+                            },
+                          ]}
+                        />
+                      </View>
+                    </View>
+                  </View>
+                  {!isLast && <View style={[styles.divider, { backgroundColor: BORDER_COLOR }]} />}
+                </View>
+              );
+            })
+          )}
+        </View>
 
-        <GlassView style={[styles.menuGroup, { marginTop: 12 }]} borderRadius={20}>
-          <View style={[styles.menuItem, { flexDirection: R }]}>
-            <View style={[styles.menuIcon, { backgroundColor: colors.secondary + 'B3' }]}>
-              <FeatherIcon name="globe" size={18} color={colors.foreground} />
+        {/* ── GROUP 3: Preferences & Support ────────────────────────── */}
+
+        {/* Communication & Settings */}
+        <SectionHeader label={t.communication_settings} colors={colors} isRTL={isRTL} />
+        <View style={styles.card}>
+          <MenuRow
+            icon={<Inbox size={18} color={colors.foreground} strokeWidth={2} />}
+            label={t.notifications}
+            onPress={() => router.push('/messages')}
+            colors={colors}
+            isRTL={isRTL}
+          />
+          <View style={[styles.divider, { backgroundColor: BORDER_COLOR }]} />
+          <MenuRow
+            icon={<MessageSquare size={18} color={colors.foreground} strokeWidth={2} />}
+            label={t.messages_label}
+            onPress={() => router.push('/messages')}
+            colors={colors}
+            isRTL={isRTL}
+          />
+          <View style={[styles.divider, { backgroundColor: BORDER_COLOR }]} />
+          {/* Settings row */}
+          <Pressable
+            onPress={() => router.push('/settings' as never)}
+            style={({ pressed }) => [styles.menuRow, { flexDirection: R, backgroundColor: pressed ? colors.secondary + '55' : 'transparent' }]}
+          >
+            <View style={[styles.menuIconWrap, { backgroundColor: colors.secondary }]}>
+              <Settings size={18} color={colors.foreground} strokeWidth={2} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.menuLabel, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.language}</Text>
+              <Text style={[styles.menuLabel, { color: colors.foreground, textAlign: TA }]}>{t.settings_label}</Text>
+              <Text style={[styles.menuSub, { color: colors.mutedForeground, textAlign: TA }]}>{t.push_notifs}</Text>
+            </View>
+            <ChevronRight size={16} color={colors.mutedForeground} strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
+          </Pressable>
+          <View style={[styles.divider, { backgroundColor: BORDER_COLOR }]} />
+          {/* Language inline toggle */}
+          <View style={[styles.menuRow, { flexDirection: R }]}>
+            <View style={[styles.menuIconWrap, { backgroundColor: colors.secondary }]}>
+              <Text style={{ fontSize: 16 }}>🌐</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.menuLabel, { color: colors.foreground, textAlign: TA }]}>{t.language}</Text>
               <View style={[styles.langRow, { flexDirection: R }]}>
                 {LANGUAGES.map(({ label, value }) => (
                   <Pressable
                     key={value}
                     onPress={() => setLanguage(value)}
-                    style={[styles.langChip, {
-                      backgroundColor: language === value ? '#1e1e2820' : colors.secondary,
-                      borderColor: language === value ? '#1e1e2833' : 'transparent',
-                    }]}
+                    style={[
+                      styles.langChip,
+                      {
+                        backgroundColor: language === value ? colors.primary : colors.secondary,
+                        borderColor: language === value ? colors.primary : BORDER_COLOR,
+                      },
+                    ]}
                   >
-                    <Text style={[styles.langChipText, {
-                      color: language === value ? '#2d2d42' : colors.mutedForeground,
-                      fontFamily: 'Inter_600SemiBold',
-                    }]}>{label}</Text>
+                    <Text style={[styles.langChipText, { color: language === value ? '#fff' : colors.mutedForeground }]}>
+                      {label}
+                    </Text>
                   </Pressable>
                 ))}
               </View>
             </View>
           </View>
-          <View style={[styles.menuItem, { flexDirection: R, borderTopWidth: 1, borderTopColor: colors.border }]}>
-            <View style={[styles.menuIcon, { backgroundColor: colors.secondary + 'B3' }]}>
-              <Settings size={18} color={colors.foreground} strokeWidth={2} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.menuLabel, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.settings_label}</Text>
-              <Text style={[styles.menuSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>{t.push_notifs}</Text>
-            </View>
-            <ChevronRight size={16} color={colors.mutedForeground} strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
-          </View>
-        </GlassView>
+        </View>
 
-        <GlassView style={[styles.menuGroup, { marginTop: 12 }]} borderRadius={20}>
-          <Pressable
-            onPress={() => router.push('/shuttle/history' as any)}
-            style={({ pressed }) => [styles.menuItem, { flexDirection: R, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: pressed ? colors.secondary + '66' : 'transparent' }]}
-          >
-            <View style={[styles.menuIcon, { backgroundColor: colors.secondary + 'B3' }]}>
-              <Clock size={18} color={colors.foreground} strokeWidth={2} />
-            </View>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={[styles.menuLabel, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.trip_history}</Text>
-              <Text style={[styles.menuSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>{t.history_subtitle}</Text>
-            </View>
-            <ChevronRight size={16} color={colors.mutedForeground} strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
-          </Pressable>
-          <MenuItem icon="target" label={t.bonus_targets} onPress={() => router.push('/bonus-targets')} colors={colors} isRTL={isRTL} />
-          <MenuItem icon="help-circle" label={t.help_support} sub="Shuttle operations" onPress={() => router.push('/support')} colors={colors} isRTL={isRTL} />
-          <MenuItem icon="shield" label={t.safety_toolkit} sub="Emergency, verification" onPress={() => router.push('/safety')} colors={colors} isRTL={isRTL} last />
-        </GlassView>
+        {/* Help & Safety */}
+        <SectionHeader label={t.help_safety} colors={colors} isRTL={isRTL} />
+        <View style={styles.card}>
+          <MenuRow
+            icon={<Clock size={18} color={colors.foreground} strokeWidth={2} />}
+            label={t.trip_history}
+            sub={t.history_subtitle}
+            onPress={() => router.push('/shuttle/history' as never)}
+            colors={colors}
+            isRTL={isRTL}
+          />
+          <View style={[styles.divider, { backgroundColor: BORDER_COLOR }]} />
+          <MenuRow
+            icon={<Target size={18} color={colors.foreground} strokeWidth={2} />}
+            label={t.bonus_targets}
+            onPress={() => router.push('/bonus-targets')}
+            colors={colors}
+            isRTL={isRTL}
+          />
+          <View style={[styles.divider, { backgroundColor: BORDER_COLOR }]} />
+          <MenuRow
+            icon={<HelpCircle size={18} color={colors.foreground} strokeWidth={2} />}
+            label={t.help_support}
+            onPress={() => router.push('/support')}
+            colors={colors}
+            isRTL={isRTL}
+          />
+          <View style={[styles.divider, { backgroundColor: BORDER_COLOR }]} />
+          <MenuRow
+            icon={<Shield size={18} color={colors.foreground} strokeWidth={2} />}
+            label={t.safety_toolkit}
+            onPress={() => router.push('/safety')}
+            colors={colors}
+            isRTL={isRTL}
+            last
+          />
+        </View>
 
-        <Pressable onPress={async () => { await logout(); router.replace('/login'); }} style={({ pressed }) => [{ transform: [{ scale: pressed ? 0.98 : 1 }], marginTop: 12 }]}>
-          <GlassView style={[styles.signOutBtn, { flexDirection: R }]} borderRadius={20}>
-            <LogOut size={20} color={colors.destructive} strokeWidth={2} />
-            <Text style={[styles.signOutText, { color: colors.destructive, fontFamily: 'Inter_700Bold' }]}>{t.sign_out}</Text>
-          </GlassView>
+        {/* Sign out */}
+        <Pressable
+          onPress={async () => { await logout(); router.replace('/login'); }}
+          style={({ pressed }) => [styles.signOutBtn, { backgroundColor: pressed ? '#fef2f2' : '#fff', flexDirection: R }]}
+        >
+          <LogOut size={19} color={colors.destructive} strokeWidth={2} />
+          <Text style={[styles.signOutText, { color: colors.destructive }]}>{t.sign_out}</Text>
         </Pressable>
 
-        <Text style={[styles.version, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>VeeGo Driver · Shuttle · v{Constants.expoConfig?.version ?? '—'}</Text>
+        <Text style={[styles.version, { color: colors.mutedForeground }]}>
+          VeeGo Driver · Shuttle · v{Constants.expoConfig?.version ?? '—'}
+        </Text>
       </ScrollView>
+
+      {/* ── Avatar Change Request Modal ─────────────────────────────── */}
+      <Modal
+        visible={showAvatarModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowAvatarModal(false)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setShowAvatarModal(false)} />
+        <View style={[styles.modalSheet, { backgroundColor: '#fff', paddingBottom: insets.bottom + 24 }]}>
+          {/* Handle */}
+          <View style={[styles.modalHandle, { backgroundColor: BORDER_COLOR }]} />
+
+          <Text style={[styles.modalTitle, { color: '#0D1117', textAlign: TA }]}>
+            {t.change_photo_modal_title}
+          </Text>
+
+          {/* Reason input */}
+          <Text style={[styles.modalFieldLabel, { color: '#6B7280', textAlign: TA }]}>
+            {t.change_photo_reason_label}
+          </Text>
+          <TextInput
+            value={avatarReason}
+            onChangeText={setAvatarReason}
+            placeholder={t.change_photo_reason_placeholder}
+            placeholderTextColor="#9CA3AF"
+            multiline
+            numberOfLines={3}
+            textAlignVertical="top"
+            textAlign={isRTL ? 'right' : 'left'}
+            style={[
+              styles.modalTextInput,
+              { borderColor: BORDER_COLOR, color: '#0D1117', writingDirection: isRTL ? 'rtl' : 'ltr' },
+            ]}
+          />
+
+          {/* Photo picker */}
+          <Pressable
+            onPress={handleSelectPhoto}
+            style={({ pressed }) => [
+              styles.photoPickerBtn,
+              {
+                backgroundColor: pressed ? '#F5F6F8' : '#fff',
+                borderColor: selectedImageUri ? '#1e1e28' : BORDER_COLOR,
+                flexDirection: R,
+              },
+            ]}
+          >
+            {selectedImageUri ? (
+              <Image
+                source={{ uri: selectedImageUri }}
+                style={styles.selectedThumb}
+                contentFit="cover"
+              />
+            ) : (
+              <Camera size={20} color="#6B7280" strokeWidth={2} />
+            )}
+            <Text style={[styles.photoPickerText, { color: selectedImageUri ? '#0D1117' : '#6B7280', textAlign: TA }]}>
+              {selectedImageUri ? (selectedImageUri.split('/').pop() ?? t.select_new_photo) : t.select_new_photo}
+            </Text>
+          </Pressable>
+
+          {/* Submit */}
+          <Pressable
+            onPress={handleSubmitAvatarRequest}
+            disabled={avatarSubmitting}
+            style={[styles.submitBtn, { backgroundColor: '#1e1e28', opacity: avatarSubmitting ? 0.6 : 1 }]}
+          >
+            {avatarSubmitting
+              ? <ActivityIndicator size="small" color="#fff" />
+              : <Text style={styles.submitBtnText}>{t.submit_request}</Text>}
+          </Pressable>
+
+          {/* Cancel */}
+          <Pressable onPress={() => setShowAvatarModal(false)} style={styles.cancelLink}>
+            <Text style={[styles.cancelLinkText, { color: '#6B7280' }]}>{t.cancel}</Text>
+          </Pressable>
+        </View>
+      </Modal>
     </View>
   );
 }
 
-function MiniStat({ label, value, icon, colors }: { label: string; value: string; icon?: React.ReactNode; colors: ReturnType<typeof useColors> }) {
+// ─── Sub-components ──────────────────────────────────────────────────────────
+
+function SectionHeader({
+  label, colors, isRTL,
+}: {
+  label: string;
+  colors: ReturnType<typeof useColors>;
+  isRTL: boolean;
+}) {
   return (
-    <View style={[styles.miniStat, { backgroundColor: colors.secondary + '99' }]}>
-      <View style={styles.miniStatValue}>
-        {icon}
-        <Text style={[styles.miniStatValueText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{value}</Text>
-      </View>
-      <Text style={[styles.miniStatLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>{label}</Text>
-    </View>
+    <Text style={[
+      styles.sectionHeader,
+      { color: colors.mutedForeground, textAlign: isRTL ? 'right' : 'left' },
+    ]}>
+      {label}
+    </Text>
   );
 }
 
-function MenuItem({ icon, label, sub, highlight, onPress, colors, isRTL, last }: { icon: string; label: string; sub?: string; highlight?: boolean; onPress?: () => void; colors: ReturnType<typeof useColors>; isRTL: boolean; last?: boolean }) {
+function MenuRow({
+  icon, label, sub, subColor, onPress, colors, isRTL, last,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  sub?: string;
+  subColor?: string;
+  onPress?: () => void;
+  colors: ReturnType<typeof useColors>;
+  isRTL: boolean;
+  last?: boolean;
+}) {
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
   const TA = isRTL ? 'right' as const : 'left' as const;
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [styles.menuItem, { flexDirection: R }, !last && { borderBottomWidth: 1, borderBottomColor: colors.border }, { backgroundColor: pressed ? colors.secondary + '66' : 'transparent' }]}
+      style={({ pressed }) => [
+        styles.menuRow,
+        { flexDirection: R, backgroundColor: pressed ? colors.secondary + '55' : 'transparent' },
+      ]}
     >
-      <View style={[styles.menuIcon, { backgroundColor: colors.secondary + 'B3' }]}>
-        <FeatherIcon name={icon} size={18} color={colors.foreground} />
+      <View style={[styles.menuIconWrap, { backgroundColor: colors.secondary }]}>
+        {icon}
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={[styles.menuLabel, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{label}</Text>
-        {sub && <Text style={[styles.menuSub, { color: highlight ? colors.accent : colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]} numberOfLines={1}>{sub}</Text>}
+        <Text style={[styles.menuLabel, { color: colors.foreground, textAlign: TA }]} numberOfLines={1}>
+          {label}
+        </Text>
+        {sub !== undefined && (
+          <Text
+            style={[styles.menuSub, { color: subColor ?? colors.mutedForeground, textAlign: TA }]}
+            numberOfLines={1}
+          >
+            {sub}
+          </Text>
+        )}
       </View>
-      <ChevronRight size={16} color={colors.mutedForeground} strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
+      <ChevronRight
+        size={16}
+        color={colors.mutedForeground}
+        strokeWidth={2}
+        style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }}
+      />
     </Pressable>
   );
 }
 
+// ─── Styles ──────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  pageTitle: { fontSize: 24, marginBottom: 16 },
-  referralCard: {},
-  referralCardInner: { alignItems: 'center', gap: 12, padding: 16 },
-  referralIconWrap: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  referralLabel: { fontSize: 10, textTransform: 'uppercase', letterSpacing: 1 },
-  referralCode: { fontSize: 22, marginTop: 4, letterSpacing: 2 },
-  referralHint: { fontSize: 11, marginTop: 4 },
-  copyBtn: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  copiedMsg: { fontSize: 12, paddingBottom: 12 },
-  profileCard: {},
-  profileCardInner: { padding: 20, alignItems: 'center' },
+  root: { flex: 1 },
+  pageTitle: {
+    fontSize: 24,
+    fontFamily: 'Inter_700Bold',
+    marginBottom: 16,
+  },
+
+  // White card
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: CARD_RADIUS,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+    marginBottom: 8,
+    overflow: 'hidden',
+  },
+
+  // Group 1 — Master Driver Card
+  avatarRow: { alignItems: 'center', paddingTop: 24, paddingBottom: 8 },
   avatarWrap: { position: 'relative' },
-  avatar: { width: 96, height: 96, borderRadius: 48, borderWidth: 4 },
-  shuttleBadge: { position: 'absolute', bottom: -4, right: -4, width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', elevation: 4, shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.4, shadowRadius: 8 },
-  driverName: { fontSize: 20, marginTop: 12 },
-  driverMeta: { fontSize: 12, marginTop: 4 },
-  statsGrid: { gap: 8, marginTop: 20, width: '100%' },
-  miniStat: { flex: 1, borderRadius: 16, paddingVertical: 10, paddingHorizontal: 4, alignItems: 'center' },
-  miniStatValue: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  miniStatValueText: { fontSize: 14 },
-  miniStatLabel: { fontSize: 10, letterSpacing: 1, textTransform: 'uppercase', marginTop: 4 },
-  menuGroup: {},
-  menuItem: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16 },
-  menuIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  menuLabel: { fontSize: 14 },
-  menuSub: { fontSize: 12, marginTop: 2 },
-  langRow: { flexDirection: 'row', gap: 6, marginTop: 8 },
-  langChip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, borderWidth: 1 },
-  langChipText: { fontSize: 11 },
-  signOutBtn: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16 },
-  signOutText: { fontSize: 14 },
-  version: { fontSize: 12, textAlign: 'center', marginTop: 16 },
+  avatar: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: '#EAEDF2',
+  },
+  cameraOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  driverName: {
+    fontSize: 20,
+    fontFamily: 'Inter_700Bold',
+    marginTop: 8,
+    paddingHorizontal: 20,
+  },
+  driverMeta: {
+    fontSize: 13,
+    fontFamily: 'Inter_400Regular',
+    marginTop: 4,
+    marginBottom: 12,
+  },
+  ratingPill: {
+    alignSelf: 'center',
+    borderRadius: 24,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    gap: 5,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  ratingText: {
+    fontSize: 15,
+    fontFamily: 'Inter_700Bold',
+  },
+  ratingLabel: {
+    fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+  },
+
+  // Read-only locked row
+  lockedRow: {
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+  },
+  lockedLabel: {
+    fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    flex: 1,
+  },
+  lockedValue: {
+    fontSize: 13,
+    fontFamily: 'Inter_600SemiBold',
+  },
+
+  // Referral code
+  referralCard: {
+    alignItems: 'center',
+    gap: 12,
+    padding: 16,
+  },
+  referralIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  referralTitle: {
+    fontSize: 11,
+    fontFamily: 'Inter_600SemiBold',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  referralCode: {
+    fontSize: 22,
+    fontFamily: 'Inter_700Bold',
+    marginTop: 4,
+    letterSpacing: 2,
+  },
+  referralHint: {
+    fontSize: 11,
+    fontFamily: 'Inter_400Regular',
+    marginTop: 3,
+  },
+  copyBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  copiedMsg: {
+    fontSize: 12,
+    fontFamily: 'Inter_600SemiBold',
+    textAlign: 'center',
+    marginTop: -4,
+    marginBottom: 8,
+  },
+
+  // Section header
+  sectionHeader: {
+    fontSize: 11,
+    fontFamily: 'Inter_600SemiBold',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginTop: 8,
+    marginBottom: 6,
+    paddingHorizontal: 4,
+  },
+
+  // Menu rows
+  menuRow: {
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  menuIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menuLabel: {
+    fontSize: 14,
+    fontFamily: 'Inter_600SemiBold',
+  },
+  menuSub: {
+    fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    marginTop: 2,
+  },
+  divider: {
+    height: 1,
+    marginHorizontal: 16,
+  },
+
+  // Language chips
+  langRow: {
+    gap: 6,
+    marginTop: 8,
+    flexWrap: 'wrap',
+  },
+  langChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  langChipText: {
+    fontSize: 12,
+    fontFamily: 'Inter_600SemiBold',
+  },
+
+  // Bonus targets
+  bonusRow: {
+    padding: 16,
+    gap: 10,
+  },
+  bonusTitle: {
+    fontSize: 14,
+    fontFamily: 'Inter_600SemiBold',
+    flex: 1,
+  },
+  bonusAmount: {
+    fontSize: 13,
+    fontFamily: 'Inter_700Bold',
+  },
+  bonusSub: {
+    fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    marginTop: 2,
+    marginBottom: 8,
+  },
+  progressTrack: {
+    height: 6,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: 6,
+    borderRadius: 4,
+  },
+  emptyBonus: {
+    fontSize: 13,
+    fontFamily: 'Inter_400Regular',
+    padding: 20,
+  },
+
+  // Sign out
+  signOutBtn: {
+    alignItems: 'center',
+    gap: 12,
+    padding: 16,
+    borderRadius: CARD_RADIUS,
+    borderWidth: 1,
+    borderColor: 'rgba(232,84,84,0.15)',
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  signOutText: {
+    fontSize: 14,
+    fontFamily: 'Inter_700Bold',
+  },
+
+  version: {
+    fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    textAlign: 'center',
+    marginTop: 12,
+  },
+
+  // Avatar change modal
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  modalSheet: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontFamily: 'Inter_700Bold',
+    marginBottom: 20,
+  },
+  modalFieldLabel: {
+    fontSize: 12,
+    fontFamily: 'Inter_600SemiBold',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: 8,
+  },
+  modalTextInput: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 14,
+    fontFamily: 'Inter_400Regular',
+    minHeight: 88,
+    marginBottom: 16,
+  },
+  photoPickerBtn: {
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 20,
+  },
+  selectedThumb: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: '#EAEDF2',
+  },
+  photoPickerText: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: 'Inter_400Regular',
+  },
+  submitBtn: {
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 15,
+    marginBottom: 10,
+  },
+  submitBtnText: {
+    color: '#fff',
+    fontSize: 15,
+    fontFamily: 'Inter_700Bold',
+  },
+  cancelLink: {
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  cancelLinkText: {
+    fontSize: 14,
+    fontFamily: 'Inter_400Regular',
+  },
 });

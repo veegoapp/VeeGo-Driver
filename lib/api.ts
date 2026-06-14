@@ -35,6 +35,28 @@ export interface ShuttleCompleteResponse {
   };
 }
 
+// Enriched driver profile returned by GET /driver/profile
+export interface DriverProfileEnriched {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  avatar: string | null;
+  rating: number;
+  trips: number;
+  referralCode: string;
+  vehicle: { make: string; model: string; plate: string } | null;
+  documentStatus: 'accepted' | 'pending' | 'rejected' | null;
+  bonusTargets: Array<{
+    id: string;
+    title: string;
+    targetTrips: number;
+    currentTrips: number;
+    bonusAmount: number;
+    completed: boolean;
+  }>;
+}
+
 // Fix 8: callback invoked when server returns 403 account_suspended
 type SuspendedCallback = () => void;
 let _onAccountSuspended: SuspendedCallback | null = null;
@@ -195,6 +217,78 @@ export const endpoints = {
 
   driver: {
     me: () => api.get('/driver/me'),
+
+    // TODO: Backend Integration — GET /driver/profile
+    // Returns an enriched driver profile combining identity, vehicle, documents, referral code,
+    // and bonus milestone progress in a single response.
+    //
+    // EXPECTED RESPONSE:
+    //   {
+    //     id:           string,
+    //     name:         string,
+    //     phone:        string,
+    //     email:        string,
+    //     avatar:       string | null,
+    //     rating:       number,
+    //     trips:        number,
+    //     referralCode: string,           — unique peer-to-peer trip-referral code (e.g. "VGO-A1B2")
+    //     vehicle: {
+    //       make:   string,
+    //       model:  string,
+    //       plate:  string,
+    //     } | null,
+    //     documentStatus: 'accepted' | 'pending' | 'rejected' | null,
+    //     bonusTargets: Array<{
+    //       id:          string,
+    //       title:       string,
+    //       targetTrips: number,
+    //       currentTrips:number,
+    //       bonusAmount: number,
+    //       completed:   boolean,
+    //     }>,
+    //   }
+    //
+    // FALLBACK: If this endpoint is unavailable the profile screen falls back to GET /driver/me
+    // and degrades gracefully — bonus and doc-status blocks show skeleton placeholders.
+    profile: () => api.get<DriverProfileEnriched>('/driver/profile'),
+
+    // TODO: Backend Integration — POST /driver/profile/avatar-request
+    // Sends a multipart form-data payload to request a profile photo change.
+    // An Admin must manually approve the new photo before it goes live.
+    //
+    // MULTIPART FIELDS:
+    //   newAvatarImage  — image file (JPEG/PNG, max 5 MB)
+    //   changeReason    — string (required, min 10 chars)
+    //
+    // SUCCESS RESPONSE (201):
+    //   { requestId: string, status: 'pending', message: string }
+    //
+    // ERROR RESPONSES:
+    //   400 — missing fields or invalid file type
+    //   409 — a pending request already exists for this driver
+    //   413 — file exceeds the 5 MB limit
+    requestAvatarChange: async (formData: FormData) => {
+      const token = await getToken();
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+      try {
+        const response = await fetch(`${API_BASE_URL}/driver/profile/avatar-request`, {
+          method: 'POST',
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+          body: formData,
+          signal: controller.signal,
+        });
+        if (!response.ok) {
+          let errorBody: unknown = null;
+          try { errorBody = await response.json(); } catch { /* empty */ }
+          throw new ApiError(response.status, response.statusText, errorBody);
+        }
+        return response.json();
+      } finally {
+        clearTimeout(timeout);
+      }
+    },
+
     updateMe: (data: unknown) => api.patch('/driver/me', data),
     goOnline: () => api.patch('/driver/status/online'),
     goOffline: () => api.patch('/driver/status/offline'),
