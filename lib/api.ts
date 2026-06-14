@@ -327,6 +327,30 @@ export const endpoints = {
 
     noShowBooking: (bookingId: string) =>
       api.patch(`/driver/bookings/${bookingId}/no-show`),
+
+    // TODO: Backend Integration - POST /shuttle/route-bookings/:id/refer
+    // Body: { driverCode: string } — submits a trip referral to another driver by their unique code
+    referTrip: (bookingId: string, driverCode: string) =>
+      api.post(`/shuttle/route-bookings/${bookingId}/refer`, { driverCode }),
+
+    // TODO: Backend Integration - POST /shuttle/referrals/:id/accept
+    // Second driver accepts the incoming referral; backend shifts trip ownership and notifies Driver 1
+    acceptReferral: (referralId: string) =>
+      api.post(`/shuttle/referrals/${referralId}/accept`),
+
+    // TODO: Backend Integration - POST /shuttle/referrals/:id/decline
+    // Second driver declines; backend notifies Driver 1 of the rejection
+    declineReferral: (referralId: string) =>
+      api.post(`/shuttle/referrals/${referralId}/decline`),
+
+    // TODO: Backend Integration - POST /shuttle/route-bookings/:id/final-cancel
+    // Body: { reason: string } — triggers passenger push notifications + Admin Dashboard alert for manual re-assignment
+    // NOTE: Penalty rules are calculated and applied automatically from the backend
+    cancelBookingFinal: (bookingId: string, reason: string) =>
+      api.post(`/shuttle/route-bookings/${bookingId}/final-cancel`, { reason }),
+
+    // TODO: Backend Integration - GET /driver/me/referral-code — fetches this driver's unique referral code
+    myReferralCode: () => api.get<{ code: string }>('/driver/me/referral-code'),
   },
 
   notifications: {

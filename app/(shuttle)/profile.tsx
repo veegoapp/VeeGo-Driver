@@ -1,10 +1,10 @@
 import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { ChevronRight, GitBranch, LogOut, Settings, Star } from 'lucide-react-native';
+import { Check, ChevronRight, Copy, GitBranch, LogOut, Settings, Star } from 'lucide-react-native';
 import { FeatherIcon } from '@/lib/iconMap';
-import React from 'react';
-import { ActivityIndicator, Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { ActivityIndicator, Alert, Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { GlassView } from '@/components/GlassView';
@@ -42,11 +42,35 @@ export default function ShuttleProfileScreen() {
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
   const TA = isRTL ? 'right' as const : 'left' as const;
 
+  const [copied, setCopied] = useState(false);
+
   const { data: driverRaw, isLoading } = useQuery<DriverProfile>({
     queryKey: ['driver'],
     queryFn: endpoints.driver.me as () => Promise<DriverProfile>,
   });
   const driver = driverRaw;
+
+  // TODO: Backend Integration - Fetch this driver's unique referral code from GET /driver/me/referral-code
+  // For now, derive a placeholder from the driver's ID or use a fixed format
+  const driverCode: string = driver?.id
+    ? `VGO-${driver.id.slice(0, 4).toUpperCase()}`
+    : 'VGO-XXXX';
+
+  const handleCopyCode = async () => {
+    try {
+      // Web: use native clipboard API
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(driverCode);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2500);
+        return;
+      }
+      // Native: fallback Alert so the user can see and copy the code
+      Alert.alert(t.referral_code_section, driverCode);
+    } catch {
+      Alert.alert(t.referral_code_section, driverCode);
+    }
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -90,7 +114,45 @@ export default function ShuttleProfileScreen() {
           </View>
         </GlassView>
 
-        <GlassView style={[styles.menuGroup, { marginTop: 20 }]} borderRadius={20}>
+        {/* Referral Code Section */}
+        <GlassView style={[styles.referralCard, { marginTop: 20 }]} borderRadius={20}>
+          <View style={[styles.referralCardInner, { flexDirection: R }]}>
+            <View style={[styles.referralIconWrap, { backgroundColor: '#1e1e2812' }]}>
+              <GitBranch size={18} color="#2d2d42" strokeWidth={2} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.referralLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
+                {t.referral_code_section}
+              </Text>
+              <Text style={[styles.referralCode, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
+                {/* TODO: Backend Integration - Fetch from GET /driver/me/referral-code */}
+                {driverCode}
+              </Text>
+              <Text style={[styles.referralHint, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>
+                {t.referral_code_copy_hint}
+              </Text>
+            </View>
+            <Pressable
+              onPress={handleCopyCode}
+              style={({ pressed }) => [
+                styles.copyBtn,
+                { backgroundColor: pressed ? '#1e1e2820' : '#1e1e2810', borderColor: '#1e1e2825' },
+              ]}
+              hitSlop={8}
+            >
+              {copied
+                ? <Check size={16} color="#16a34a" strokeWidth={2.5} />
+                : <Copy size={16} color="#2d2d42" strokeWidth={2} />}
+            </Pressable>
+          </View>
+          {copied && (
+            <Text style={[styles.copiedMsg, { color: '#16a34a', fontFamily: 'Inter_600SemiBold', textAlign: 'center' }]}>
+              {t.code_copied}
+            </Text>
+          )}
+        </GlassView>
+
+        <GlassView style={[styles.menuGroup, { marginTop: 12 }]} borderRadius={20}>
           <MenuItem icon="user" label={t.personal_info} sub={driver?.phone ?? driver?.email ?? driver?.name ?? '—'} onPress={() => router.push('/personal-info')} colors={colors} isRTL={isRTL} />
           <MenuItem
             icon="truck"
@@ -200,6 +262,14 @@ function MenuItem({ icon, label, sub, highlight, onPress, colors, isRTL, last }:
 const styles = StyleSheet.create({
   container: { flex: 1 },
   pageTitle: { fontSize: 24, marginBottom: 16 },
+  referralCard: {},
+  referralCardInner: { alignItems: 'center', gap: 12, padding: 16 },
+  referralIconWrap: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  referralLabel: { fontSize: 10, textTransform: 'uppercase', letterSpacing: 1 },
+  referralCode: { fontSize: 22, marginTop: 4, letterSpacing: 2 },
+  referralHint: { fontSize: 11, marginTop: 4 },
+  copyBtn: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  copiedMsg: { fontSize: 12, paddingBottom: 12 },
   profileCard: {},
   profileCardInner: { padding: 20, alignItems: 'center' },
   avatarWrap: { position: 'relative' },

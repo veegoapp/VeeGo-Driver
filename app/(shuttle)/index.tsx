@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import * as Location from 'expo-location';
-import { AlertTriangle, ArrowRight, Bell, Calendar, Clock, GitBranch, Navigation, RefreshCw, Users, Wifi, WifiOff, X } from 'lucide-react-native';
+import { AlertTriangle, ArrowRight, Bell, Calendar, ChevronRight, Clock, GitBranch, Navigation, RefreshCw, Users, Wifi, WifiOff, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -21,7 +21,7 @@ import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { endpoints } from '@/lib/api';
-import { useShuttle, type ShuttleBooking } from '@/lib/shuttleContext';
+import { useShuttle, type ShuttleBooking, type ShuttleLine } from '@/lib/shuttleContext';
 import { useSocket } from '@/lib/socketContext';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
 
@@ -429,7 +429,8 @@ export default function ShuttleHomeScreen() {
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
           <StatItem label={t.routes} value={String(allLines.length)} colors={colors} />
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <StatItem label={t.net_earnings} value={`${todayEarnings} DT`} highlight colors={colors} />
+          {/* TODO: Backend Integration - Currency symbol (جنيه / EGP) should come from tenant config */}
+          <StatItem label={t.net_earnings} value={`${todayEarnings} جنيه`} highlight colors={colors} />
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
           <StatItem label={t.active} value={String(allLines.filter(l => l.status === 'in-progress').length)} colors={colors} />
         </GlassView>
@@ -542,15 +543,30 @@ export default function ShuttleHomeScreen() {
             </Text>
           </GlassView>
         ) : (
-          <View style={{ gap: 8 }}>
-            {upcomingBookings.map(booking => (
-              <UpcomingTripCard key={booking.id} booking={booking} colors={colors} />
-            ))}
+          <View style={{ gap: 10 }}>
+            {upcomingBookings.map(booking => {
+              const line = allLines.find(l => String(l.id) === String(booking.routeId));
+              return (
+                <UpcomingTripCard
+                  key={booking.id}
+                  booking={booking}
+                  line={line}
+                  colors={colors}
+                  isRTL={isRTL}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/shuttle/trip-details' as any,
+                      params: { bookingId: booking.id, routeId: String(booking.routeId) },
+                    })
+                  }
+                />
+              );
+            })}
           </View>
         )}
 
-        {/* No active booking */}
-        {(!activeLine || !online) && (
+        {/* No active booking — only shown when there are no upcoming or active trips */}
+        {upcomingBookings.length === 0 && !activeLine && (
           <GlassView style={[styles.noLineCard, { marginTop: 16 }]} borderRadius={20}>
             <GitBranch size={32} color={colors.mutedForeground} strokeWidth={2} />
             <Text style={[styles.noLineTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.no_booking}</Text>
@@ -571,32 +587,85 @@ export default function ShuttleHomeScreen() {
   );
 }
 
-function UpcomingTripCard({ booking, colors }: { booking: ShuttleBooking; colors: ReturnType<typeof useColors> }) {
+function UpcomingTripCard({
+  booking,
+  line,
+  colors,
+  isRTL,
+  onPress,
+}: {
+  booking: ShuttleBooking;
+  line?: ShuttleLine;
+  colors: ReturnType<typeof useColors>;
+  isRTL: boolean;
+  onPress: () => void;
+}) {
+  const { t } = useI18n();
+  const TA = isRTL ? 'right' as const : 'left' as const;
+  const R = isRTL ? 'row-reverse' as const : 'row' as const;
   return (
-    <GlassView style={styles.upcomingCard} borderRadius={16}>
-      <View style={[styles.upcomingAccent, { backgroundColor: '#1e1e28' }]} />
-      <View style={{ flex: 1, gap: 4 }}>
-        <Text style={[styles.upcomingRouteName, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]} numberOfLines={1}>
-          {booking.routeName}
-        </Text>
-        <View style={styles.upcomingMeta}>
-          <Clock size={12} color={colors.mutedForeground} strokeWidth={2} />
-          <Text style={[styles.upcomingMetaText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-            {booking.departureTime}
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [{ opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.99 : 1 }] }]}
+    >
+      <GlassView style={[styles.upcomingCard, { alignItems: 'flex-start' }]} borderRadius={16}>
+        <View style={[styles.upcomingAccent, { backgroundColor: '#1e1e28', alignSelf: 'stretch', height: undefined }]} />
+        <View style={{ flex: 1, gap: 6 }}>
+          {/* Route name — TODO: Use translated backend fields (routeNameAr, fromAr, toAr) here */}
+          <Text style={[styles.upcomingRouteName, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]} numberOfLines={1}>
+            {booking.routeName}
           </Text>
-          <Text style={[styles.upcomingMetaDot, { color: colors.border }]}>·</Text>
-          <Calendar size={12} color={colors.mutedForeground} strokeWidth={2} />
-          <Text style={[styles.upcomingMetaText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-            Week of {booking.weekStart}
-          </Text>
+          {/* From → To */}
+          {line && (
+            <Text style={[{ fontSize: 12, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]} numberOfLines={1}>
+              {/* TODO: Use translated backend fields (routeNameAr, fromAr, toAr) here */}
+              {line.from} → {line.to}
+            </Text>
+          )}
+          {/* Date & Exact Time */}
+          <View style={[styles.upcomingMeta, { flexDirection: R }]}>
+            <Calendar size={12} color={colors.mutedForeground} strokeWidth={2} />
+            <Text style={[styles.upcomingMetaText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
+              {/* TODO: Backend Integration - Use trip.date (exact trip date) not just weekStart */}
+              {booking.weekStart}
+            </Text>
+            <Text style={[styles.upcomingMetaDot, { color: colors.border }]}>·</Text>
+            <Clock size={12} color={colors.mutedForeground} strokeWidth={2} />
+            <Text style={[styles.upcomingMetaText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
+              {booking.departureTime}
+            </Text>
+          </View>
+          {/* Vehicle / Line info + Passenger Count */}
+          <View style={[{ flexDirection: R, gap: 6, flexWrap: 'wrap', marginTop: 2 }]}>
+            {line && line.vehicleType !== 'Unknown' && (
+              <View style={[styles.vehicleBadge, { backgroundColor: '#1e1e2810', borderColor: '#1e1e2820' }]}>
+                <Text style={[styles.vehicleBadgeText, { color: '#2d2d42', fontFamily: 'Inter_600SemiBold' }]}>
+                  {/* TODO: Backend Integration - Use vehicle model + plate number from trip data */}
+                  {line.vehicleType} · {line.lineNumber}
+                </Text>
+              </View>
+            )}
+            {line && (
+              <View style={[styles.seatBadge, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+                <Users size={11} color={colors.mutedForeground} strokeWidth={2} />
+                <Text style={[styles.seatBadgeText, { color: colors.foreground, fontFamily: 'Inter_600SemiBold' }]}>
+                  {/* TODO: Backend Integration - Fetch real-time booked/total passenger count for this trip */}
+                  {t.passengers_label_count}: {line.bookedSeats} / {line.totalSeats}
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
-      </View>
-      <View style={[styles.upcomingStatusBadge, { backgroundColor: '#1e1e2812', borderColor: '#1e1e2825' }]}>
-        <Text style={[styles.upcomingStatusText, { color: '#2d2d42', fontFamily: 'Inter_700Bold' }]}>
-          {booking.status === 'active' ? 'Active' : 'Booked'}
-        </Text>
-      </View>
-    </GlassView>
+        <View style={{ alignItems: 'center', justifyContent: 'space-between', alignSelf: 'stretch', paddingTop: 2 }}>
+          <View style={[styles.upcomingStatusBadge, { backgroundColor: '#1e1e2812', borderColor: '#1e1e2825' }]}>
+            <Text style={[styles.upcomingStatusText, { color: '#2d2d42', fontFamily: 'Inter_700Bold' }]}>
+              {booking.status === 'active' ? t.active : 'محجوز'}
+            </Text>
+          </View>
+          <ChevronRight size={16} color={colors.mutedForeground} strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
+        </View>
+      </GlassView>
+    </Pressable>
   );
 }
 
