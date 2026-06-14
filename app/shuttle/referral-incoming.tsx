@@ -14,7 +14,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Calendar, Check, ChevronLeft, Clock, Users, X } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -30,6 +30,7 @@ import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
+import { useReferral } from '@/lib/referralContext';
 
 type Params = {
   referralId: string;
@@ -70,6 +71,13 @@ export default function ReferralIncomingScreen() {
   const [accepting, setAccepting] = useState(false);
   const [declining, setDeclining] = useState(false);
   const [resolved, setResolved] = useState<'accepted' | 'declined' | null>(null);
+
+  const { dismissReferral } = useReferral();
+
+  // Auto-clear the badge for this referral as soon as the screen is viewed
+  useEffect(() => {
+    if (referralId) dismissReferral(referralId);
+  }, [referralId]);
 
   const handleAccept = async () => {
     setAccepting(true);

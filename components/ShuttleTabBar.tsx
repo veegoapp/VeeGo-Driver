@@ -4,6 +4,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { Animated, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
+import { useReferral } from '@/lib/referralContext';
 
 type TabBarProps = {
   state: { index: number; routes: Array<{ key: string; name: string }> };
@@ -19,6 +20,9 @@ const SHUTTLE_TABS = [
   { name: 'profile', label: 'Profile', Icon: User },
 ] as const;
 
+/** Index of the Home tab in SHUTTLE_TABS — badge is shown here. */
+const HOME_TAB_INDEX = 0;
+
 const CONTAINER_PX = 12;
 const PILL_PX = 8;
 
@@ -28,6 +32,9 @@ export function ShuttleTabBar({ state, navigation }: TabBarProps) {
   const activeIndex = state.index;
   const [tabWidth, setTabWidth] = useState(0);
   const pillX = useRef(new Animated.Value(0)).current;
+
+  // Incoming referral badge count — drives the red dot on the Home tab icon
+  const { incomingReferralsCount } = useReferral();
 
   useEffect(() => {
     if (tabWidth <= 0) return;
@@ -71,6 +78,7 @@ export function ShuttleTabBar({ state, navigation }: TabBarProps) {
         {SHUTTLE_TABS.map((item, index) => {
           const isActive = state.index === index;
           const route = state.routes[index];
+          const showBadge = index === HOME_TAB_INDEX && incomingReferralsCount > 0;
 
           const onPress = () => {
             const event = navigation.emit({
@@ -90,11 +98,21 @@ export function ShuttleTabBar({ state, navigation }: TabBarProps) {
               onPress={onPress}
               testID={`shuttle-tab-${item.name}`}
             >
-              <item.Icon
-                size={20}
-                color={isActive ? '#fff' : colors.mutedForeground}
-                strokeWidth={2}
-              />
+              {/* Icon with optional referral badge */}
+              <View style={styles.iconWrap}>
+                <item.Icon
+                  size={20}
+                  color={isActive ? '#fff' : colors.mutedForeground}
+                  strokeWidth={2}
+                />
+                {showBadge && (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>
+                      {incomingReferralsCount > 9 ? '9+' : String(incomingReferralsCount)}
+                    </Text>
+                  </View>
+                )}
+              </View>
               <Text
                 style={[
                   styles.tabLabel,
@@ -146,6 +164,29 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 8,
     gap: 2,
+  },
+  iconWrap: {
+    position: 'relative',
+  },
+  badge: {
+    position: 'absolute',
+    top: -5,
+    right: -8,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#EF4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+    borderWidth: 1.5,
+    borderColor: '#fff',
+  },
+  badgeText: {
+    fontSize: 9,
+    color: '#fff',
+    fontFamily: 'Inter_700Bold',
+    lineHeight: 12,
   },
   tabLabel: {
     fontSize: 10,

@@ -51,6 +51,13 @@ export const SOCKET_EVENTS = {
   SHUTTLE_BOOKING_REASSIGNED: "shuttle:booking:reassigned",
   SHUTTLE_RENEWAL_CONFIRMED:  "shuttle:renewal:confirmed",
 
+  // TODO: Backend Integration - Connect to production Socket.io server and bind real event listeners
+  // Server → Driver 2: a colleague (Driver 1) has submitted a trip-referral request
+  // Payload: IncomingReferralPayload (see lib/referralContext.tsx)
+  SHUTTLE_INCOMING_REFERRAL:  "shuttle:referral:incoming",
+  // Server → Driver 2: Driver 1 has cancelled or withdrawn the referral request before Driver 2 responded
+  SHUTTLE_REFERRAL_CANCELLED: "shuttle:referral:cancelled",
+
   // Server → Driver/User: notifications
   NOTIFICATION_NEW:         "notification:new",
 

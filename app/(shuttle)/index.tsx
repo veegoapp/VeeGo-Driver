@@ -22,6 +22,7 @@ import { useI18n } from '@/lib/i18nContext';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { endpoints } from '@/lib/api';
 import { useShuttle, type ShuttleBooking, type ShuttleLine } from '@/lib/shuttleContext';
+import { useReferral } from '@/lib/referralContext';
 import { useSocket } from '@/lib/socketContext';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
 
@@ -64,6 +65,7 @@ export default function ShuttleHomeScreen() {
   const driverData = driverRaw as any;
 
   const { activeLine, stops, currentStopIndex, allLines, renewalBooking, myBookings, tripCancelledBanner, dismissTripCancelledBanner } = useShuttle();
+  const { incomingReferralsCount, pendingReferrals } = useReferral();
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -530,6 +532,53 @@ export default function ShuttleHomeScreen() {
           </Animated.View>
         )}
 
+        {/* Incoming Referral Banner — shown when a colleague has sent a trip-referral request */}
+        {/* TODO: Backend Integration - Connect to production Socket.io server and bind real event listeners */}
+        {incomingReferralsCount > 0 && (() => {
+          const first = pendingReferrals[0];
+          return (
+            <Pressable
+              onPress={() =>
+                router.push({
+                  pathname: '/shuttle/referral-incoming' as any,
+                  params: {
+                    referralId: first.referralId,
+                    bookingId: first.bookingId,
+                    routeName: first.routeName,
+                    departureTime: first.departureTime,
+                    fromStation: first.fromStation,
+                    toStation: first.toStation,
+                    passengerCount: first.passengerCount ?? '',
+                    totalSeats: first.totalSeats ?? '',
+                    lineNumber: first.lineNumber ?? '',
+                    vehicleType: first.vehicleType ?? '',
+                    weekStart: first.weekStart ?? '',
+                  },
+                })
+              }
+              style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1, marginTop: 12 }]}
+            >
+              <GlassView style={[styles.referralBanner, { backgroundColor: '#FFF7ED', borderColor: '#FED7AA' }]} borderRadius={16}>
+                <View style={[styles.referralBannerPulse, { backgroundColor: '#F97316' }]} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[{ fontSize: 14, color: '#92400E', fontFamily: 'Inter_700Bold', textAlign: TA }]}>
+                    {incomingReferralsCount === 1 ? t.referral_incoming_title : `${incomingReferralsCount} ${t.referral_incoming_title}`}
+                  </Text>
+                  <Text style={[{ fontSize: 12, color: '#B45309', fontFamily: 'Inter_400Regular', marginTop: 2, textAlign: TA }]}>
+                    {t.referral_incoming_sub}
+                  </Text>
+                </View>
+                <View style={[styles.referralBannerBadge, { backgroundColor: '#F97316' }]}>
+                  <Text style={[styles.referralBannerBadgeText, { fontFamily: 'Inter_700Bold' }]}>
+                    {incomingReferralsCount > 9 ? '9+' : String(incomingReferralsCount)}
+                  </Text>
+                </View>
+                <ChevronRight size={16} color="#92400E" strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
+              </GlassView>
+            </Pressable>
+          );
+        })()}
+
         {/* Upcoming Trips section */}
         <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA, marginTop: 24 }]}>
           {t.upcoming_trips}
@@ -755,6 +804,10 @@ const styles = StyleSheet.create({
   upcomingMetaDot: { fontSize: 14 },
   upcomingStatusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1 },
   upcomingStatusText: { fontSize: 11, letterSpacing: 0.5 },
+  referralBanner: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, borderWidth: 1.5 },
+  referralBannerPulse: { width: 8, height: 8, borderRadius: 4 },
+  referralBannerBadge: { minWidth: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
+  referralBannerBadgeText: { fontSize: 11, color: '#fff' },
   noLineCard: { alignItems: 'center', padding: 28, gap: 10 },
   noLineTitle: { fontSize: 16, marginTop: 4 },
   noLineSub: { fontSize: 13, textAlign: 'center', lineHeight: 20 },
