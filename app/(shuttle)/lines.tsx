@@ -9,6 +9,7 @@ import {
   RefreshControl, ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useLocalSearchParams } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
@@ -104,6 +105,8 @@ export default function ShuttleLinesScreen() {
   const headerAnim = useRef(new Animated.Value(0)).current;
   const queryClient = useQueryClient();
 
+  const { openRouteId } = useLocalSearchParams<{ openRouteId?: string }>();
+
   const [search, setSearch] = useState('');
   const [bookingRoute, setBookingRoute] = useState<ShuttleRoute | null>(null);
 
@@ -112,6 +115,14 @@ export default function ShuttleLinesScreen() {
   const [selectedSlot, setSelectedSlot] = useState<BackendSlot | null>(null);
 
   const { routes, myBookings, listLoading: contextLoading, error: contextError, refetch } = useShuttle();
+
+  // Deep-link from slot_released toast: auto-open booking sheet for the given route
+  useEffect(() => {
+    if (!openRouteId || routes.length === 0) return;
+    const target = routes.find(r => String(r.id) === openRouteId);
+    if (target) setBookingRoute(target);
+  }, [openRouteId, routes]);
+
   const [refreshing, setRefreshing] = useState(false);
 
 

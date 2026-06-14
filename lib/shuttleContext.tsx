@@ -259,6 +259,13 @@ function buildLine(route: BackendRoute, trip: BackendTrip | undefined): ShuttleL
   };
 }
 
+// ─── Slot-released alert payload ──────────────────────────────────────────────
+
+export type SlotReleasedAlert = {
+  routeId: string | number;
+  routeName: string;
+};
+
 // ─── Context type ─────────────────────────────────────────────────────────────
 
 type ShuttleContextType = {
@@ -289,6 +296,9 @@ type ShuttleContextType = {
   stationCoords: Array<{ latitude: number; longitude: number }>;
   // Resets all in-trip state (stop index, passengers, startedTripId) after trip completion
   resetTrip: () => void;
+  // Real-time slot-released toast (populated by socket event, consumed by layout)
+  slotReleasedAlert: SlotReleasedAlert | null;
+  dismissSlotReleasedAlert: () => void;
 };
 
 const ShuttleContext = createContext<ShuttleContextType>({
@@ -312,6 +322,8 @@ const ShuttleContext = createContext<ShuttleContextType>({
   setStartedTripId: () => {},
   stationCoords: [],
   resetTrip: () => {},
+  slotReleasedAlert: null,
+  dismissSlotReleasedAlert: () => {},
 });
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
@@ -324,6 +336,8 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
   const [tripCancelledBanner, setTripCancelledBanner] = useState<string | null>(null);
   // Gap A: optimistic tripId stored immediately on Start Trip press
   const [startedTripId, setStartedTripId] = useState<string | null>(null);
+  // Real-time slot-released toast state
+  const [slotReleasedAlert, setSlotReleasedAlert] = useState<SlotReleasedAlert | null>(null);
 
   // ── Queries ──────────────────────────────────────────────────────────────
 
@@ -522,11 +536,17 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
     };
 
     // Real-time slot availability: a slot was freed up
-    const handleSlotReleased = (data?: { routeId?: string | number }) => {
+    const handleSlotReleased = (data?: { routeId?: string | number; routeName?: string }) => {
       if (data?.routeId != null) {
         queryClient.invalidateQueries({ queryKey: ['shuttle-available-weeks', data.routeId] });
       } else {
         queryClient.invalidateQueries({ queryKey: ['shuttle-available-weeks'] });
+      }
+      if (data?.routeId != null) {
+        setSlotReleasedAlert({
+          routeId: data.routeId,
+          routeName: data.routeName ?? '',
+        });
       }
     };
 
@@ -565,6 +585,7 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
   };
 
   const dismissTripCancelledBanner = () => setTripCancelledBanner(null);
+  const dismissSlotReleasedAlert = () => setSlotReleasedAlert(null);
 
   // Gap A + B: resets all in-trip local state after trip completion
   const resetTrip = () => {
@@ -597,6 +618,8 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
         setStartedTripId,
         stationCoords,
         resetTrip,
+        slotReleasedAlert,
+        dismissSlotReleasedAlert,
       }}
     >
       {children}
