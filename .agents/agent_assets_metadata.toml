@@ -24,3 +24,9 @@ id = "FXl9lEk2r7N5eGXfHUYfK"
 uri = "file://audit_driver_app.md"
 type = "text"
 title = "VeeGo Driver App — Technical Audit Report"
+
+[[outputs]]
+id = "ImMxeUww19aKHQKOL9qfD"
+uri = "file://COMPLETE_BACKEND_INTEGRATION_TODO_REPORT.md"
+type = "text"
+title = "Complete Backend Integration TODO Report"
