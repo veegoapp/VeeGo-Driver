@@ -1,5 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { router, useNavigation } from 'expo-router';
 import { AlertCircle, ArrowRight, Check, ChevronLeft, Clock, Map, Navigation, Phone, Users } from 'lucide-react-native';
 import React, { useRef, useEffect, useState } from 'react';
 import { Alert, Animated, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -11,7 +11,7 @@ import { useShuttle } from '@/lib/shuttleContext';
 import { useI18n } from '@/lib/i18nContext';
 import { useSocket } from '@/lib/socketContext';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
-import { endpoints } from '@/lib/api';
+import { endpoints, type ShuttleCompleteResponse } from '@/lib/api';
 
 export default function ShuttleTripActiveScreen() {
   const colors = useColors();
@@ -19,6 +19,7 @@ export default function ShuttleTripActiveScreen() {
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
   const { t, isRTL } = useI18n();
   const { socket } = useSocket();
+  const navigation = useNavigation();
   const { activeLine, stops, currentStopIndex, passengers, nextStop, stationCoords } = useShuttle();
   const currentStop = stops[currentStopIndex];
   const completedCount = currentStopIndex;
@@ -26,10 +27,42 @@ export default function ShuttleTripActiveScreen() {
 
   // Task 2: station status per stop — reset when stop changes
   const [stationStatus, setStationStatus] = useState<'navigating' | 'arrived'>('navigating');
-  const [stationActionLoading, setStationActionLoading] = useState(false);
+  // Split loading states — each action owns its own flag independently
+  const [isArrivingLoading, setIsArrivingLoading] = useState(false);
+  const [isCompletingLoading, setIsCompletingLoading] = useState(false);
 
   // Task 3a: station timeout banner
   const [stationTimeoutVisible, setStationTimeoutVisible] = useState(false);
+
+  // Debounce ref: prevents duplicate SHUTTLE_STATION_TIMEOUT events from advancing the stop twice
+  const timeoutProcessingRef = useRef(false);
+
+  // ── Exit guard: intercept back-press while a trip is active ─────────────────
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e: any) => {
+      if (!activeLine) return; // no active trip — allow navigation freely
+      e.preventDefault();
+      Alert.alert(
+        'رحلة جارية حالياً!',
+        'هل أنت متأكد أنك تريد مغادرة شاشة الملاحة؟ الرحلة لا تزال جارية في الخلفية.',
+        [
+          { text: 'إلغاء', style: 'cancel' },
+          {
+            text: 'خروج',
+            style: 'destructive',
+            onPress: () => navigation.dispatch(e.data.action),
+          },
+        ]
+      );
+    });
+    return unsubscribe;
+  }, [navigation, activeLine]);
+
+  // Safe back handler — routes through the beforeRemove guard above
+  // instead of calling router.back() imperatively (which bypasses the listener)
+  const handleSafeBack = () => {
+    navigation.goBack();
+  };
 
   useEffect(() => {
     Animated.spring(cardAnim, { toValue: 1, useNativeDriver: true, stiffness: 300, damping: 28 }).start();
@@ -44,11 +77,15 @@ export default function ShuttleTripActiveScreen() {
 
     const handleStationTimeout = (data: { tripId?: string; stationId?: string }) => {
       const tripId = activeLine?.tripId;
-      if (!data.tripId || data.tripId === tripId) {
-        setStationTimeoutVisible(true);
-        // Auto-advance to next station
-        nextStop();
-      }
+      if (data.tripId && data.tripId !== tripId) return; // not our trip
+      // Debounce guard: ignore duplicate events fired within the same stop
+      if (timeoutProcessingRef.current) return;
+      timeoutProcessingRef.current = true;
+      setStationTimeoutVisible(true);
+      // Auto-advance to next station (no API call here — backend owns station
+      // completion on timeout; see HARDENING_FEASIBILITY_REPORT.md §Proposal 5)
+      nextStop();
+      timeoutProcessingRef.current = false;
     };
 
     socket.on(SOCKET_EVENTS.SHUTTLE_STATION_TIMEOUT, handleStationTimeout);
@@ -61,15 +98,15 @@ export default function ShuttleTripActiveScreen() {
   const handleStationArrived = async () => {
     const tripId = activeLine?.tripId;
     const stationId = currentStop?.id;
-    if (!tripId || !stationId || stationActionLoading) return;
-    setStationActionLoading(true);
+    if (!tripId || !stationId || isArrivingLoading) return;
+    setIsArrivingLoading(true);
     try {
       await endpoints.trips.stationArrived(tripId, stationId);
       setStationStatus('arrived');
     } catch {
       Alert.alert(t.error, t.station_action_error);
     } finally {
-      setStationActionLoading(false);
+      setIsArrivingLoading(false);
     }
   };
 
@@ -77,38 +114,48 @@ export default function ShuttleTripActiveScreen() {
   const handleStationCompleted = async () => {
     const tripId = activeLine?.tripId;
     const stationId = currentStop?.id;
-    if (!tripId || !stationId || stationActionLoading) return;
-    setStationActionLoading(true);
+    if (!tripId || !stationId || isCompletingLoading) return;
+    setIsCompletingLoading(true);
     try {
       await endpoints.trips.stationCompleted(tripId, stationId);
       setStationStatus('navigating');
     } catch {
       Alert.alert(t.error, t.station_action_error);
     } finally {
-      setStationActionLoading(false);
+      setIsCompletingLoading(false);
     }
   };
 
   const handleCompleteStop = async () => {
     if (!currentStop) return;
     cardAnim.setValue(0);
-    try {
-      const checkedIds = passengers.filter(p => p.checkedIn).map(p => p.id);
-      await Promise.allSettled(checkedIds.map(id => endpoints.shuttle.boardBooking(id)));
-    } catch {
-      // best-effort
-    }
+    const checkedPassengers = passengers.filter(p => p.checkedIn);
+    const results = await Promise.allSettled(
+      checkedPassengers.map(p => endpoints.shuttle.boardBooking(p.id))
+    );
+    // Advance the stop regardless of boarding outcomes
     nextStop();
+    // Surface any failures non-blocking — after the stop has already advanced
+    const failed = results
+      .map((r, i) => (r.status === 'rejected' ? checkedPassengers[i] : null))
+      .filter((p): p is NonNullable<typeof p> => p !== null);
+    if (failed.length > 0) {
+      const names = failed.map(p => p.name || p.id).join('، ');
+      Alert.alert(
+        'تعذر تسجيل بعض الركاب',
+        `لم يتم تسجيل الصعود للركاب التاليين:\n${names}`,
+      );
+    }
   };
 
   const handleFinishRoute = async () => {
     if (!activeLine) return;
     try {
       // TODO: Backend Integration - POST /shuttle/lines/:id/complete
-      // Expected response: { earnedAmount: number, walletBalance: number }
-      const result = await endpoints.shuttle.complete(activeLine.id);
-      const earned = (result as any)?.earnedAmount ?? (result as any)?.data?.earnedAmount;
-      const balance = (result as any)?.walletBalance ?? (result as any)?.data?.walletBalance;
+      // Returns: ShuttleCompleteResponse { earnedAmount, walletBalance }
+      const result = await endpoints.shuttle.complete(activeLine.id) as ShuttleCompleteResponse;
+      const earned = result?.earnedAmount ?? result?.data?.earnedAmount;
+      const balance = result?.walletBalance ?? result?.data?.walletBalance;
       router.replace({
         pathname: '/shuttle/trip-complete' as any,
         params: {
@@ -133,7 +180,7 @@ export default function ShuttleTripActiveScreen() {
         style={{ flex: 1 }}
       >
         <View style={styles.topBar}>
-          <Pressable onPress={() => router.back()} style={[styles.backBtn, { backgroundColor: colors.glass, borderColor: colors.border }]}>
+          <Pressable onPress={handleSafeBack} style={[styles.backBtn, { backgroundColor: colors.glass, borderColor: colors.border }]}>
             <ChevronLeft size={20} color={colors.foreground} strokeWidth={2} />
           </Pressable>
           <View style={{ flex: 1 }}>
@@ -231,30 +278,30 @@ export default function ShuttleTripActiveScreen() {
               {stationStatus === 'navigating' ? (
                 <Pressable
                   onPress={handleStationArrived}
-                  disabled={stationActionLoading}
+                  disabled={isArrivingLoading}
                   style={[styles.stationActionBtn, {
-                    backgroundColor: stationActionLoading ? colors.secondary : colors.accent + '22',
+                    backgroundColor: isArrivingLoading ? colors.secondary : colors.accent + '22',
                     borderColor: colors.accent,
                     marginTop: 12,
                   }]}
                 >
-                  <Check size={16} color={stationActionLoading ? colors.mutedForeground : colors.accent} strokeWidth={2} />
-                  <Text style={[styles.stationActionText, { color: stationActionLoading ? colors.mutedForeground : colors.accent, fontFamily: 'Inter_700Bold' }]}>
+                  <Check size={16} color={isArrivingLoading ? colors.mutedForeground : colors.accent} strokeWidth={2} />
+                  <Text style={[styles.stationActionText, { color: isArrivingLoading ? colors.mutedForeground : colors.accent, fontFamily: 'Inter_700Bold' }]}>
                     {t.station_arrived_btn}
                   </Text>
                 </Pressable>
               ) : (
                 <Pressable
                   onPress={handleStationCompleted}
-                  disabled={stationActionLoading}
+                  disabled={isCompletingLoading}
                   style={[styles.stationActionBtn, {
-                    backgroundColor: stationActionLoading ? colors.secondary : colors.primary + '22',
+                    backgroundColor: isCompletingLoading ? colors.secondary : colors.primary + '22',
                     borderColor: colors.primary,
                     marginTop: 12,
                   }]}
                 >
-                  <Check size={16} color={stationActionLoading ? colors.mutedForeground : colors.primary} strokeWidth={2} />
-                  <Text style={[styles.stationActionText, { color: stationActionLoading ? colors.mutedForeground : colors.primary, fontFamily: 'Inter_700Bold' }]}>
+                  <Check size={16} color={isCompletingLoading ? colors.mutedForeground : colors.primary} strokeWidth={2} />
+                  <Text style={[styles.stationActionText, { color: isCompletingLoading ? colors.mutedForeground : colors.primary, fontFamily: 'Inter_700Bold' }]}>
                     {t.station_completed_btn}
                   </Text>
                 </Pressable>

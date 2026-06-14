@@ -23,6 +23,18 @@ class ApiError extends Error {
   }
 }
 
+// Typed envelope for POST /shuttle/lines/:id/complete
+// Backend has historically returned fields at root level AND nested under data —
+// both paths are guarded at the call site. Keep the double-fallback in trip-active.tsx.
+export interface ShuttleCompleteResponse {
+  earnedAmount?: number;
+  walletBalance?: number;
+  data?: {
+    earnedAmount?: number;
+    walletBalance?: number;
+  };
+}
+
 // Fix 8: callback invoked when server returns 403 account_suspended
 type SuspendedCallback = () => void;
 let _onAccountSuspended: SuspendedCallback | null = null;

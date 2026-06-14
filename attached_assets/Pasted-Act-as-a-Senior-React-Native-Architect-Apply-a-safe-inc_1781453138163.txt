@@ -1,0 +1,131 @@
+Act as a Senior React Native Architect. Apply a safe incremental refactor only to the following files:
+
+- "app/shuttle/trip-active.tsx"
+- "app/(shuttle)/index.tsx"
+- (optional types only) "lib/api.ts"
+
+⚠️ Rules:
+
+- Do NOT change backend contracts
+- Do NOT introduce new API endpoints
+- Do NOT modify navigation structure beyond guards
+- Do NOT refactor unrelated UI or styling
+- Ensure zero TypeScript errors
+
+---
+
+1. Active Trip Exit Guard (MUST IMPLEMENT)
+
+Inside "app/shuttle/trip-active.tsx":
+
+- Use "useNavigation()" from expo-router
+- Attach "beforeRemove" listener
+- If trip is active:
+  - call "e.preventDefault()"
+  - show Arabic native Alert:
+
+Title:
+"رحلة جارية حالياً!"
+
+Message:
+"هل أنت متأكد أنك تريد مغادرة شاشة الملاحة؟ الرحلة لا تزال جارية في الخلفية."
+
+Buttons:
+
+- "إلغاء" → cancel navigation
+
+- "خروج" → allow navigation via "navigation.dispatch(e.data.action)"
+
+- Replace raw "router.back()" button with a safe handler that triggers the same guard logic (no bypass via imperative navigation)
+
+---
+
+2. Split Loading States (SAFE LOCAL REFACTOR)
+
+In "trip-active.tsx":
+
+Replace:
+"stationActionLoading"
+
+With:
+
+- "isArrivingLoading"
+- "isCompletingLoading"
+
+Rules:
+
+- Arrive button uses "isArrivingLoading"
+- Complete button uses "isCompletingLoading"
+- Ensure mutual exclusivity is preserved
+- No changes to context or external state
+
+---
+
+3. Boarding Failure Visibility (NON-BLOCKING)
+
+In "handleCompleteStop()":
+
+- Keep current "Promise.allSettled" logic
+- AFTER calling "nextStop()":
+  - inspect results
+  - collect failed "boardBooking" calls
+  - if any failures exist:
+    - show a non-blocking Arabic Alert:
+      "تعذر تسجيل بعض الركاب"
+      with list of failed passenger IDs (or names if available)
+    - DO NOT prevent stop progression
+
+---
+
+4. Timeout Debounce Guard (SAFE GUARD ONLY)
+
+In "SHUTTLE_STATION_TIMEOUT" handler:
+
+- Add a "useRef" flag like:
+  "timeoutProcessingRef"
+
+Rules:
+
+- If already processing → ignore duplicate event
+- Set flag before executing "nextStop()"
+- Reset flag after execution completes
+- DO NOT call any API here (no backend changes yet)
+
+---
+
+5. Typed Completion Response (TYPE ONLY)
+
+In "lib/api.ts" or shared types file:
+
+Add:
+
+export interface ShuttleCompleteResponse {
+  earnedAmount?: number;
+  walletBalance?: number;
+  data?: {
+    earnedAmount?: number;
+    walletBalance?: number;
+  };
+}
+
+Keep existing runtime fallback logic in "trip-active.tsx" unchanged.
+
+---
+
+6. Safety Constraints
+
+- Do NOT touch backend logic
+- Do NOT add no-show implementation
+- Do NOT modify boarding API behavior
+- Do NOT change map/location logic
+- Preserve all UI/UX exactly as-is
+
+---
+
+OUTPUT REQUIREMENT
+
+Return only:
+
+- Modified code
+- Minimal necessary changes
+- No explanation unless critical for compilation safety
