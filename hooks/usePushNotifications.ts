@@ -12,14 +12,14 @@ function safeSetNotificationHandler() {
     Notifications.setNotificationHandler({
       handleNotification: async () => ({
         shouldPlaySound: true,
-        shouldSetBadge: false,
+        shouldSetBadge: true,
         shouldShowAlert: true,
         shouldShowBanner: true,
         shouldShowList: true,
       }),
     });
   } catch {
-    // expo-notifications not available in this environment
+    // expo-notifications not available in this environment (Expo Go SDK 53)
   }
 }
 
@@ -37,13 +37,22 @@ export function usePushNotifications(onRideRequest?: () => void) {
     let cancelled = false;
 
     registerForPushNotifications().then(t => {
-      if (!cancelled) setToken(t ?? null);
+      if (!cancelled) {
+        setToken(t ?? null);
+        if (t) {
+          // TODO: Backend Integration - Save Expo Push Token
+          // Send `t` (the Expo push token string) to your backend so it can
+          // deliver push notifications to this device when the app is backgrounded or closed.
+          // Example: endpoints.driver.savePushToken({ token: t })
+        }
+      }
     });
 
     try {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const Notifications = require('expo-notifications');
 
+      // Fired while the app is FOREGROUNDED — update in-app state / badges
       notificationListener.current = Notifications.addNotificationReceivedListener(
         (notification: { request: { content: { data: Record<string, unknown> } } }) => {
           const data = notification.request.content.data;
@@ -51,10 +60,12 @@ export function usePushNotifications(onRideRequest?: () => void) {
         },
       );
 
+      // Fired when the driver TAPS the notification from system tray (background / closed)
       responseListener.current = Notifications.addNotificationResponseReceivedListener(
         (response: { notification: { request: { content: { data: Record<string, unknown> } } } }) => {
           const data = response.notification.request.content.data;
 
+          // --- On-demand ride request ---
           if (data?.type === 'ride_request') {
             if (data.rideId) {
               router.push(`/ride/${data.rideId}` as any);
@@ -64,38 +75,62 @@ export function usePushNotifications(onRideRequest?: () => void) {
             return;
           }
 
+          // --- Active shuttle trip ---
           if (data?.type === 'shuttle_trip' && data.tripId) {
             router.push('/shuttle/trip-active');
             return;
           }
 
-          // Fix 7: rate passengers after shuttle trip
+          // --- Shuttle trip referral (deep-link into referral-incoming screen) ---
+          // Notification payload must include all IncomingReferralPayload fields
+          // as top-level data keys alongside `type: "shuttle_referral"`.
+          if (data?.type === 'shuttle_referral') {
+            router.push({
+              pathname: '/shuttle/referral-incoming',
+              params: {
+                referralId:    String(data.referralId    ?? ''),
+                bookingId:     String(data.bookingId     ?? ''),
+                routeName:     String(data.routeName     ?? ''),
+                departureTime: String(data.departureTime ?? ''),
+                fromStation:   String(data.fromStation   ?? ''),
+                toStation:     String(data.toStation     ?? ''),
+                ...(data.passengerCount != null && { passengerCount: String(data.passengerCount) }),
+                ...(data.totalSeats     != null && { totalSeats:     String(data.totalSeats)     }),
+                ...(data.lineNumber     != null && { lineNumber:     String(data.lineNumber)     }),
+                ...(data.vehicleType    != null && { vehicleType:    String(data.vehicleType)    }),
+                ...(data.weekStart      != null && { weekStart:      String(data.weekStart)      }),
+              },
+            } as any);
+            return;
+          }
+
+          // --- Rate passengers after shuttle trip ---
           if (data?.type === 'rate_passengers' && data.tripId) {
             router.push({ pathname: '/shuttle/rate-passengers', params: { tripId: String(data.tripId) } } as any);
             return;
           }
 
-          // Fix 8: offence notification routing
+          // --- Offence: account suspended ---
           if (data?.type === 'suspension' || data?.category === 'suspension') {
             router.replace('/suspended');
             return;
           }
 
+          // --- Offence: fine deduction ---
           if (data?.type === 'fine' || data?.category === 'fine') {
-            // Navigate to wallet — the deduction will be visible there
             router.push('/(tabs)/wallet' as any);
             return;
           }
 
+          // --- Offence: warning ---
           if (data?.type === 'warning' || data?.category === 'warning') {
-            // Navigate to wallet (or offences screen if one exists)
             router.push('/(tabs)/wallet' as any);
             return;
           }
         },
       );
     } catch {
-      // expo-notifications unavailable
+      // expo-notifications unavailable (Expo Go SDK 53)
     }
 
     return () => {
@@ -113,15 +148,24 @@ async function registerForPushNotifications(): Promise<string | undefined> {
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const Notifications = require('expo-notifications');
+
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
+
     if (existingStatus !== 'granted') {
       const { status } = await Notifications.requestPermissionsAsync();
       finalStatus = status;
     }
+
     if (finalStatus !== 'granted') return undefined;
+
+    // Retrieve the Expo push token bound to this device + app.
+    // TODO: Backend Integration - Save Expo Push Token
+    // Forward this token to your backend immediately after retrieval:
+    //   POST /driver/push-token  { token: tokenData.data }
+    // The backend uses it to call Expo's push API when the driver is backgrounded.
     const tokenData = await Notifications.getExpoPushTokenAsync();
-    return tokenData.data;
+    return tokenData.data as string;
   } catch {
     return undefined;
   }

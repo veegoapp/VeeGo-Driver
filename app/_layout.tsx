@@ -18,6 +18,7 @@ import { AuthProvider, useAuth } from '@/lib/authContext';
 import { SocketProvider } from '@/lib/socketContext';
 import { navigateAfterAuth } from '@/lib/postAuthRouter';
 import { setOnAccountSuspended } from '@/lib/api';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -40,6 +41,17 @@ const PRE_AUTH_SCREENS = new Set(['login', 'language-select', 'onboarding', 'ind
 // Any other protected route will NOT kick them back — the pending screen
 // itself has a logout button.
 const PENDING_SCREENS = new Set(['pending-approval', 'register-documents']);
+
+/**
+ * PushNotificationsBridge — zero-render component.
+ * Mounts the push notification listeners inside the router context so that
+ * deep-link navigation (router.push) works correctly when the driver taps a
+ * notification from the system tray while the app is backgrounded or closed.
+ */
+function PushNotificationsBridge() {
+  usePushNotifications();
+  return null;
+}
 
 function RootLayoutNav() {
   const { token, isLoading } = useAuth();
@@ -81,33 +93,38 @@ function RootLayoutNav() {
   if (isLoading) return null;
 
   return (
-    <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
-      <Stack.Screen name="language-select" />
-      <Stack.Screen name="index" />
-      <Stack.Screen name="login" />
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="(shuttle)" options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="ride/[rideId]" />
-      <Stack.Screen name="ratings" />
-      <Stack.Screen name="settings" />
-      <Stack.Screen name="support" />
-      <Stack.Screen name="safety" />
-      <Stack.Screen name="documents" />
-      <Stack.Screen name="vehicle" />
-      <Stack.Screen name="messages" />
-      <Stack.Screen name="shuttle/trip-active" />
-      <Stack.Screen name="shuttle/boarding" />
-      <Stack.Screen name="onboarding" />
-      <Stack.Screen name="service-select" />
-      <Stack.Screen name="register-info" />
-      <Stack.Screen name="selfie" />
-      <Stack.Screen name="suspended" options={{ gestureEnabled: false }} />
-      <Stack.Screen name="shuttle/rate-passengers" options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="register-vehicle" />
-      <Stack.Screen name="register-documents" />
-      <Stack.Screen name="pending-approval" />
-      <Stack.Screen name="forgot-password" options={{ animation: 'slide_from_right' }} />
-    </Stack>
+    <>
+      <PushNotificationsBridge />
+      <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
+        <Stack.Screen name="language-select" />
+        <Stack.Screen name="index" />
+        <Stack.Screen name="login" />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="(shuttle)" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="ride/[rideId]" />
+        <Stack.Screen name="ratings" />
+        <Stack.Screen name="settings" />
+        <Stack.Screen name="support" />
+        <Stack.Screen name="safety" />
+        <Stack.Screen name="documents" />
+        <Stack.Screen name="vehicle" />
+        <Stack.Screen name="messages" />
+        <Stack.Screen name="shuttle/trip-active" />
+        <Stack.Screen name="shuttle/boarding" />
+        <Stack.Screen name="shuttle/trip-details" />
+        <Stack.Screen name="shuttle/referral-incoming" options={{ animation: 'slide_from_bottom', gestureEnabled: true }} />
+        <Stack.Screen name="onboarding" />
+        <Stack.Screen name="service-select" />
+        <Stack.Screen name="register-info" />
+        <Stack.Screen name="selfie" />
+        <Stack.Screen name="suspended" options={{ gestureEnabled: false }} />
+        <Stack.Screen name="shuttle/rate-passengers" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="register-vehicle" />
+        <Stack.Screen name="register-documents" />
+        <Stack.Screen name="pending-approval" />
+        <Stack.Screen name="forgot-password" options={{ animation: 'slide_from_right' }} />
+      </Stack>
+    </>
   );
 }
 
@@ -127,6 +144,14 @@ export default function RootLayout() {
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#2d2d42',
         sound: 'default',
+      });
+      Notifications.setNotificationChannelAsync('shuttle-referrals', {
+        name: 'Shuttle Referrals',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 300, 200, 300],
+        lightColor: '#f97316',
+        sound: 'default',
+        description: 'Trip referral requests from colleagues',
       });
     }
   }, []);

@@ -1,0 +1,19 @@
+Act as a Senior React Native (Expo) Architect. I am starting a new chat session with you to continue our work on the VeeGo Driver App (Shuttle Service). The codebase already contains the previous phases, including the i18n keys, the referral context, and the Socket.io bridge for the notification badge/banner.
+
+Please proceed with the following two immediate tasks:
+
+### Task 1: Implement Push Notification Support (Deep-Linking)
+- Implement full Push Notification support using `expo-notifications` so that the referral badge and banner also trigger when the app is backgrounded or closed.
+- Set up the deep-linking configuration so that when a driver taps the notification from the system tray, it deep-links directly into the incoming referral screen: `app/shuttle/referral-incoming.tsx`.
+- Ensure proper permission handling, token generation logic (with clear `// TODO: Backend Integration - Save Expo Push Token` comments), and cleanup on unmount.
+- Maintain the clean, minimalist white theme layout and strict TypeScript typing.
+
+### Task 2: Codebase Audit & Trip Cycle Breakdown
+While delivering the push notification feature, please audit the existing codebase files and provide a technical breakdown of the active Trip/Shuttle Execution Cycle currently implemented from the driver's perspective. 
+
+Please answer the following:
+1. What currently happens in the code when the driver presses "بدء الرحلة" (Start Trip) in `trip-details.tsx`? Is there an active Live Trip Navigation Screen (`live-trip.tsx` or similar) already scaffolded?
+2. How are the fixed route stations and passenger manifests currently structured in the files for an active trip?
+3. If this In-Trip/Navigation cycle is missing or just a placeholder, briefly pitch your proposed architecture for it (Map integration for fixed routes, passenger check-in mechanism, and wallet earnings completion workflow) so we can implement it next.
+
+Let's deliver Task 1 and get the breakdown for Task 2. Proceed with the implementation.

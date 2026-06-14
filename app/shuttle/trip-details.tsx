@@ -290,6 +290,9 @@ export default function TripDetailsScreen() {
             disabled={!isStartEnabled}
             onPress={() => {
               // TODO: Backend Integration - Call PATCH /driver/trips/:tripId/start to begin the trip
+              // before navigating. Replace `bookingId` with the real tripId once the backend returns it.
+              // Example: await endpoints.trips.start(bookingId!)
+              router.push('/shuttle/trip-active' as any);
             }}
             style={({ pressed }) => [{ borderRadius: 16, overflow: 'hidden', opacity: !isStartEnabled ? 1 : pressed ? 0.88 : 1 }]}
           >
