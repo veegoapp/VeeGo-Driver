@@ -1,0 +1,23 @@
+Act as a Senior React Native Architect. We need to implement full Native Right-to-Left (RTL) layout mirroring, dynamic icon flipping, and backend dynamic data localization when the user switches the application language to Arabic.
+​Please perform a comprehensive refactor across lib/i18nContext.tsx, lib/api.ts, and core layout navigation configurations handling the following specifications:
+​1. Native RTL Layout Integration & Engine Force
+​Inside lib/i18nContext.tsx, hook into React Native's I18nManager.
+​When the language changes to Arabic ('ar'), execute the native layout force logic.
+​Conversely, when switched to English ('en'), force RTL to false.
+​Ensure an imperative fallback or notification (such as Updates.reloadAsync() if Expo Updates is present, or a structural clean state trigger) explaining that an application reload is enforced to flush the native OS layout engine caches accurately.
+​Use this logic for the engine configuration:
+
+I18nManager.allowRTL(true);
+I18nManager.forceRTL(true);
+2.Dynamic Icon Mirroring Component Utility
+Create or export a clean styling helper or wrapper component for directional icons (e.g., chevron arrows, back triggers, progress forward indicators).
+Apply a dynamic scale transformation based on the active language state to auto-flip contextual iconography seamlessly without breaking absolute tracking coordinates.
+Use this style transformation matrix:
+style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }}
+3. Dynamic Backend Data Translation & Explicit // TODOs
+​Since entity attributes (Route Names, Trip Details, Station Titles) are localized directly on the server database, update lib/api.ts to support this architecture natively.
+​Axios Middleware / Header Contract: Inject an Accept-Language header into our global API client instance that reactively passes the currently selected language code (ar or en) on every network request.
+​Fallback Data Contracts & // TODOs: In lib/api.ts and structural contexts, write clear explicit // TODO: Backend Integration comments documenting data mappings:
+​Expect localized string envelopes from the server, mapping rendering fallbacks like: station.name_ar ?? station.name or reading the translated responses directly when the server obeys the Accept-Language header.
+​Document placeholder structural models for localized routes, blocks, and lines.
+​Ensure absolute TypeScript compilation safety, zero layout drift, and strict adherence to our minimalist clean white design guidelines across both RTL and LTR view modes. Proceed with full execution!

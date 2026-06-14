@@ -1,5 +1,44 @@
 import { getToken, getRefreshToken, saveToken, deleteToken, deleteRefreshToken } from './auth';
 
+// ── Language / Accept-Language ─────────────────────────────────────────────────
+// Updated by lib/i18nContext whenever the driver switches language.
+// Every outgoing request reads this and injects the header so the backend can
+// return localized strings (route names, station titles, trip details, etc.)
+// without the client needing to perform any post-processing.
+//
+// TODO: Backend Integration — Accept-Language contract
+//   All entity responses that contain user-visible text should honour the
+//   Accept-Language request header and return the matching locale.
+//
+//   LOCALIZED FIELD CONVENTIONS (choose one pattern and apply it consistently):
+//
+//   Option A — Header-driven single field (preferred):
+//     The server returns the already-resolved string in the primary field name.
+//     e.g. GET /shuttle/lines  →  { name: "خط القاهرة" }  (when lang = 'ar')
+//
+//   Option B — Dual-field envelope (fallback-safe):
+//     The server always returns both locales; the client picks the right one.
+//     e.g. { name_en: "Cairo Line", name_ar: "خط القاهرة" }
+//     Client rendering pattern:  station.name_ar ?? station.name_en ?? station.name
+//
+//   Affected endpoints:
+//     GET  /shuttle/lines          → line.name, line.description
+//     GET  /shuttle/lines/:id      → same + stations[].name
+//     GET  /shuttle/timeslots/:id  → timeslot.label
+//     GET  /driver/trips           → trip.routeName, trip.origin, trip.destination
+//     GET  /driver/trips/:id       → same + stations[].name, stations[].address
+//     GET  /services/control       → service.message, service.eta
+let _acceptLanguage = 'en';
+
+/**
+ * Called by lib/i18nContext whenever the driver selects a different language.
+ * Updates the module-level header value reactively so all subsequent API
+ * requests carry the correct Accept-Language without requiring a provider re-mount.
+ */
+export function setApiLanguage(lang: string): void {
+  _acceptLanguage = lang;
+}
+
 const _rawApiUrl = process.env.EXPO_PUBLIC_API_URL;
 if (!_rawApiUrl) {
   throw new Error(
@@ -116,6 +155,11 @@ async function request<T>(
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
+    // Reactive locale header — updated by setApiLanguage() whenever the driver
+    // switches language. The backend uses this to return localized entity strings
+    // (route names, station titles, trip details). See the Accept-Language TODO
+    // block at the top of this file for the full backend integration contract.
+    'Accept-Language': _acceptLanguage,
   };
 
   if (token) {
@@ -395,6 +439,42 @@ export const endpoints = {
 
   shuttle: {
     // ── Routes ──────────────────────────────────────────────────────────────
+    //
+    // TODO: Backend Integration — Localized route & station names
+    //
+    // All shuttle line and station responses contain user-visible text that must
+    // be localized. The global request() function already injects the
+    // Accept-Language header on every call (see top of file). The backend should:
+    //
+    //   1. Read the Accept-Language header ('ar' | 'en') on each request.
+    //   2. Return the resolved locale string in the primary field (Option A), OR
+    //      return both locales and let the client pick (Option B — shown below).
+    //
+    // SHUTTLE LINE RESPONSE SHAPE (Option B — dual-field, fallback-safe):
+    //   {
+    //     id:           string | number,
+    //     name:         string,          ← resolved by header (Option A)
+    //     name_en?:     string,          ← English fallback  (Option B)
+    //     name_ar?:     string,          ← Arabic  fallback  (Option B)
+    //     description?: string,
+    //     description_en?: string,
+    //     description_ar?: string,
+    //     origin:       string,
+    //     destination:  string,
+    //     stations: Array<{
+    //       id:       string | number,
+    //       name:     string,            ← resolved by header (Option A)
+    //       name_en?: string,            ← fallback (Option B)
+    //       name_ar?: string,            ← fallback (Option B)
+    //       address?: string,
+    //       order:    number,
+    //     }>,
+    //   }
+    //
+    // CLIENT RENDERING PATTERN (Option B dual-field):
+    //   const lineName    = line.name_ar    ?? line.name_en    ?? line.name    ?? '';
+    //   const stationName = station.name_ar ?? station.name_en ?? station.name ?? '';
+    //   (swap name_ar / name_en based on active locale from useI18n())
     lines: () => api.get('/shuttle/lines'),
     line: (lineId: string) => api.get(`/shuttle/lines/${lineId}`),
 

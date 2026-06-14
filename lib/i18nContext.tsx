@@ -1,4 +1,7 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { Alert, I18nManager, View, ViewStyle } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { setApiLanguage } from './api';
 
 export type Language = 'en' | 'ar';
 
@@ -1030,6 +1033,21 @@ const ar: typeof en = {
 
 export type Translations = typeof en;
 
+// ── Persistence key ────────────────────────────────────────────────────────────
+const LANG_STORAGE_KEY = 'veego_language';
+
+// ── Apply I18nManager RTL engine state ────────────────────────────────────────
+// Must be called any time the language preference changes.
+// The OS layout engine caches the RTL flag at process start, so a full app
+// restart is required for the change to take effect across all native views.
+function applyRTLEngine(lang: Language): void {
+  const isArabic = lang === 'ar';
+  I18nManager.allowRTL(isArabic);
+  I18nManager.forceRTL(isArabic);
+}
+
+// ── Context ────────────────────────────────────────────────────────────────────
+
 type I18nContextValue = {
   language: Language | null;
   setLanguage: (lang: Language) => void;
@@ -1047,8 +1065,43 @@ const I18nContext = createContext<I18nContextValue>({
 export function I18nProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState<Language | null>(null);
 
-  const setLanguage = (lang: Language) => {
+  // Load persisted language on mount and sync I18nManager silently (no alert at boot)
+  useEffect(() => {
+    AsyncStorage.getItem(LANG_STORAGE_KEY)
+      .then((stored) => {
+        if (stored === 'ar' || stored === 'en') {
+          setLanguageState(stored);
+          applyRTLEngine(stored);
+          setApiLanguage(stored);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const setLanguage = (lang: Language): void => {
     setLanguageState(lang);
+
+    // Persist preference
+    AsyncStorage.setItem(LANG_STORAGE_KEY, lang).catch(() => {});
+
+    // Propagate to API client so every subsequent request carries the correct Accept-Language header
+    setApiLanguage(lang);
+
+    // Force native RTL layout engine
+    applyRTLEngine(lang);
+
+    // The OS layout engine caches the RTL flag at process start.
+    // A full app restart is required for native views to flip correctly.
+    // expo-updates (Updates.reloadAsync) would handle this automatically in
+    // standalone builds — but since it is not installed in this project, we
+    // inform the driver and let them restart manually.
+    Alert.alert(
+      lang === 'ar' ? 'مطلوب إعادة التشغيل' : 'Restart Required',
+      lang === 'ar'
+        ? 'أغلق التطبيق وأعد فتحه لتفعيل تخطيط اللغة العربية بالكامل.'
+        : 'Please close and reopen the app to fully apply the new language layout.',
+      [{ text: lang === 'ar' ? 'حسناً' : 'OK' }],
+    );
   };
 
   const t = language === 'ar' ? ar : en;
@@ -1063,4 +1116,52 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
 
 export function useI18n() {
   return useContext(I18nContext);
+}
+
+// ── RTL Icon Utilities ─────────────────────────────────────────────────────────
+//
+// Use these whenever you render a directional icon (chevrons, arrows, progress
+// indicators). The scaleX flip mirrors the icon horizontally for RTL layouts
+// without affecting absolute position tracking or z-ordering.
+//
+// Usage — wrapper component:
+//   <DirectionalIcon isRTL={isRTL}><ArrowRight size={18} color="#1e1e28" /></DirectionalIcon>
+//
+// Usage — inline style helper:
+//   <ArrowRight style={rtlIconStyle(isRTL)} />
+//   const style = useRTLIconStyle();   // reads isRTL from context automatically
+
+export interface DirectionalIconProps {
+  isRTL: boolean;
+  children: React.ReactNode;
+  style?: ViewStyle;
+}
+
+/** Wraps any icon component and mirrors it horizontally when the layout is RTL. */
+export function DirectionalIcon({ isRTL, children, style }: DirectionalIconProps) {
+  return (
+    <View style={[rtlIconStyle(isRTL), style]} pointerEvents="none">
+      {children}
+    </View>
+  );
+}
+
+/**
+ * Returns a style object that flips an icon for RTL layouts.
+ * Apply directly to an icon's `style` prop when a wrapper View is unwanted.
+ */
+export function rtlIconStyle(isRTL: boolean): { transform: [{ scaleX: number }] } {
+  return { transform: [{ scaleX: isRTL ? -1 : 1 }] };
+}
+
+/**
+ * Hook that reads `isRTL` from context and returns the directional flip style.
+ * Use inside any component that already has access to the I18n context.
+ *
+ *   const flipStyle = useRTLIconStyle();
+ *   <ArrowRight style={flipStyle} />
+ */
+export function useRTLIconStyle(): { transform: [{ scaleX: number }] } {
+  const { isRTL } = useI18n();
+  return rtlIconStyle(isRTL);
 }
