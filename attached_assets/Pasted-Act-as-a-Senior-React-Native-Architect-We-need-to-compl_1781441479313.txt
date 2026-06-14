@@ -1,0 +1,35 @@
+Act as a Senior React Native Architect. We need to completely refactor the Shuttle Routes discovery and booking lifecycle (`app/shuttle/routes` or the lines listing screen) to match our real-world operational logic. 
+
+Currently, the UI has a critical logical flaw: when a driver books a specific slot inside a route, the entire route card updates its state to "Yours" and locks the driver out from the route entirely. This is incorrect. Routes must remain public and accessible globally for all drivers to explore other available times, dates, and upcoming weeks.
+
+Please re-architect the flow according to these specifications:
+
+### 1. Public Route Exploration UI (Refactor Listing & Details)
+- **Global Visibility:** The routes list must always be active, unlocked, and fetchable for all drivers. 
+- **Dynamic Details Modal/Screen:** Clicking any route must display its core info (stations, route details) AND a new **Weekly Scheduler View**.
+- **The Week-Based Selector:** Drivers cannot book single days. The UI must group slots by the **"Upcoming Work Week" (Sunday to Thursday as a single 5-day block)**.
+- **Visual States for Slots:**
+  - **Available:** Driver can tap to book the entire 5-day block for that specific time slot.
+  - **Booked (Dammed/Disabled):** If you or any other driver has already booked that 5-day block for that specific slot, show it as dimmed/disabled, displaying the name or placeholder of the driver holding it. It cannot be clicked.
+
+### 2. The 5-Day Weekly Booking Logic (Sunday - Thursday)
+- When a driver taps an available slot and presses "Confirm Booking", the app must handle the booking as a **Full Week Commitment (Sunday to Thursday)**.
+- **// TODO for Backend:** Even though the backend database stores individual daily schedules (to accommodate passengers booking 1, 2, or 3 days), the driver app MUST fire an API payload that maps the driver's ID across the entire 5-day array (Sunday through Thursday) for that week block simultaneously to prevent data conflicts.
+- On success, save the week's trips to the driver's `upcomingBookings` state.
+
+### 3. Priority Retention & Wednesday Notification Flow (7:00 AM Cairo Time)
+Implement the infrastructure and explicit `// TODO: Backend Integration` schemas for the loyalty/retention system:
+- **Wednesday 7:00 AM Trigger:** Every Wednesday at 7:00 AM Cairo Time, the active driver holding a route gets a high-priority Push Notification: *"هل تحب تجديد حجز هذا الخط للاسبوع القادم؟"*.
+- **10-Hour Grace Period Lockout:** 
+  - If the driver clicks **"Confirm"**, the backend locks the same slot for them for the next week block.
+  - If the driver clicks **"Decline"** OR fails to take action within **10 hours (Deadline: Wednesday 5:00 PM Cairo Time)**, the slot is automatically released.
+- **Global Broadcast Release:** The instant a slot becomes active/released on Wednesday afternoon, a global real-time push notification is broadcasted to ALL drivers: *"خط [اسم الخط] متاح للحجز الآن!"*. Tapping this notification must deep-link directly into this route's booking details screen.
+
+### Execution Plan:
+1. Update the route listing UI to remove the total card lockdown state when a single slot is booked. Keep the "Tap to book" or details link alive.
+2. Build/Update the Slot Selector within the route flow to render week blocks (Sunday - Thursday) instead of isolated single dates.
+3. Heavily document the `lib/api.ts` with the specific backend contracts for:
+   - `POST /shuttle/lines/:id/book-week` (Payload: `{ slotId, startSundayDate, endThursdayDate }`)
+   - Socket/Cron specs for the Wednesday 7:00 AM notification and the 10-hour timeout logic.
+
+Ensure zero TypeScript compilation errors and preserve the clean, minimalist white layout theme. Proceed with the implementation.

@@ -307,6 +307,126 @@ export const endpoints = {
     bookingDetail: (id: string) => api.get(`/shuttle/route-bookings/${id}`),
     createBooking: (data: { routeId: string | number; timeSlotId: string | number; weekStart: string }) =>
       api.post('/shuttle/route-bookings', data),
+
+    // ── bookWeek ────────────────────────────────────────────────────────────
+    // TODO: Backend Integration — implement POST /shuttle/lines/:id/book-week
+    //
+    // PURPOSE:
+    //   Atomically reserves a timeslot across all 5 working days (Sun–Thu) of a
+    //   given work week for a single driver. Even though the passenger-facing
+    //   backend stores individual DailySchedule rows (so passengers can book 1–5
+    //   days), the driver booking must cover the entire block simultaneously to
+    //   prevent partial-week conflicts and race conditions.
+    //
+    // ROUTE:   POST /shuttle/lines/:routeId/book-week
+    //
+    // PAYLOAD:
+    //   {
+    //     slotId:          number   — ID of the BackendSlot (timeslot template)
+    //     startSundayDate: string   — "YYYY-MM-DD", always a Sunday (from server)
+    //     endThursdayDate: string   — "YYYY-MM-DD", always a Thursday (from server)
+    //     daysArray:       string[] — always ["sunday","monday","tuesday","wednesday","thursday"]
+    //                                 Explicit array so the backend can map the
+    //                                 driver's ID across every DailySchedule row
+    //                                 in one transaction.
+    //   }
+    //
+    // SUCCESS RESPONSE (200 / 201):
+    //   {
+    //     bookingId:   string   — newly created ShuttleRouteBooking ID
+    //     weekStart:   string   — "YYYY-MM-DD" (echoed back)
+    //     weekEnd:     string   — "YYYY-MM-DD" (echoed back)
+    //     departure:   string   — "HH:MM"
+    //     renewalDeadline: string — ISO8601 — next Wednesday 17:00 Cairo time;
+    //                               the deadline by which the driver must confirm
+    //                               or reject renewal before the slot is released.
+    //   }
+    //
+    // ERROR RESPONSES:
+    //   409 Conflict  — slotId is already taken for this week block (race condition).
+    //                   Frontend shows "Slot Taken" alert and re-fetches available weeks.
+    //   400 Bad Request — invalid slotId, wrong week dates, or route not found.
+    //   403 Forbidden   — driver is suspended or has exceeded active-booking limits.
+    //
+    // BACKEND IMPLEMENTATION NOTES:
+    //   1. Wrap all DailySchedule upserts in a single DB transaction.
+    //   2. Use a SELECT FOR UPDATE lock on the slot row to prevent race conditions.
+    //   3. After committing, emit the socket event `slot_taken` to ALL connected
+    //      drivers so their open booking sheets update in real-time:
+    //        socket.to('drivers').emit('slot_taken', { routeId, slotId, weekStart, takenByDriverName })
+    //   4. Schedule the Wednesday 7:00 AM Cairo renewal cron (see below).
+    //
+    // ── WEDNESDAY RETENTION CRON (7:00 AM EET / Cairo = UTC+2) ─────────────
+    // TODO: Backend Integration — implement the weekly renewal cron job
+    //
+    //   TRIGGER:  Every Wednesday at 05:00 UTC (= 07:00 Cairo / EET, UTC+2)
+    //   TARGET:   All drivers with an active ShuttleRouteBooking whose weekEnd
+    //             falls in the upcoming week (i.e., the booking is for next week).
+    //
+    //   ACTION:
+    //     For each qualifying booking:
+    //     1. Set booking.renewalStatus = 'pending' on the DB record.
+    //     2. Set booking.renewalDeadline = that Wednesday at 17:00 Cairo time.
+    //     3. Send a high-priority Expo push notification to the driver's device:
+    //          title:  "تجديد حجز الخط"
+    //          body:   "هل تحب تجديد حجز هذا الخط للاسبوع القادم؟"
+    //          data: {
+    //            type:      "renewal_prompt",
+    //            bookingId: string,
+    //            routeId:   number,
+    //            routeName: string,
+    //            slotId:    number,
+    //            weekStart: string,   — start of the NEW upcoming week
+    //            deadline:  string,   — ISO8601 of Wednesday 17:00 Cairo
+    //          }
+    //     The driver app handles this in usePushNotifications.ts and navigates
+    //     to the bookings tab where the renewal banner is shown.
+    //
+    // ── 10-HOUR GRACE PERIOD (Deadline: Wednesday 17:00 Cairo) ──────────────
+    // TODO: Backend Integration — implement grace period enforcement
+    //
+    //   CONFIRM path (driver taps "Confirm Renewal"):
+    //     POST /shuttle/route-bookings/:id/confirm-renewal (already exists)
+    //     Backend atomically books the same slot for the NEXT week block,
+    //     sets renewalStatus = 'confirmed', and cancels the expiry job.
+    //
+    //   DECLINE / TIMEOUT path:
+    //     - If driver POSTs to /shuttle/route-bookings/:id/decline-renewal, OR
+    //     - If the cron fires at Wednesday 17:00 UTC+2 and renewalStatus is
+    //       still 'pending':
+    //       1. Set renewalStatus = 'declined' / 'expired'.
+    //       2. Release the slot (isTaken = false for next week block).
+    //       3. Broadcast to ALL drivers via Expo push:
+    //            title: "خط متاح الآن"
+    //            body:  "خط [routeName] متاح للحجز الآن!"
+    //            data: {
+    //              type:    "slot_released",
+    //              routeId: number,
+    //              routeName: string,
+    //              slotId:  number,
+    //              weekStart: string,  — newly available week block
+    //            }
+    //          The driver app deep-links into the route's booking sheet on tap
+    //          (handled in usePushNotifications.ts → router.push lines screen
+    //           and opens the booking sheet for that routeId).
+    //       4. Emit socket event `slot_released` to all connected drivers:
+    //            socket.to('drivers').emit('slot_released', { routeId, slotId, weekStart })
+    //
+    // ── SOCKET EVENTS SUMMARY (driver app must listen for these) ────────────
+    //   slot_taken    → another driver booked a slot; refresh available-weeks cache
+    //   slot_released → a slot opened up; show in-app toast + refresh cache
+    //   renewal_prompt → Wednesday morning reminder (also sent as push notification)
+    // ─────────────────────────────────────────────────────────────────────────
+    bookWeek: (
+      routeId: string | number,
+      data: {
+        slotId: string | number;
+        startSundayDate: string;
+        endThursdayDate: string;
+        daysArray: string[];
+      }
+    ) => api.post(`/shuttle/lines/${routeId}/book-week`, data),
+
     cancelBooking: (id: string) => api.del(`/shuttle/route-bookings/${id}`),
     confirmRenewal: (id: string) => api.post(`/shuttle/route-bookings/${id}/confirm-renewal`),
 

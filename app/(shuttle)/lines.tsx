@@ -32,8 +32,14 @@ type BackendSlot = {
   departureTime: string; // "HH:MM"
   totalSeats: number | null;
   availableSeats: number | null;
+  // isBooked  — THIS driver has a confirmed booking for this slot in this week block
   isBooked: boolean;
+  // isTaken   — ANY other driver has claimed this slot for this week block
   isTaken: boolean;
+  // TODO: Backend Integration — include driver's display name when isTaken = true
+  // Backend should return: takenByDriverName: string | null
+  // Use a masked format for privacy, e.g. "Ahmed M." (first name + last initial)
+  takenByDriverName?: string | null;
 };
 
 type AvailableWeeksResponse = {
@@ -174,30 +180,45 @@ export default function ShuttleLinesScreen() {
 
   // ── Mutations ──────────────────────────────────────────────────────────────
 
+  // ── Book-Week mutation ─────────────────────────────────────────────────────
+  // Fires POST /shuttle/lines/:id/book-week committing the driver to the full
+  // Sun–Thu 5-day block. See endpoints.shuttle.bookWeek for the full contract.
   const bookMutation = useMutation({
-    mutationFn: ({ routeId, timeSlotId, weekStart }: {
+    mutationFn: ({
+      routeId,
+      slotId,
+      startSundayDate,
+      endThursdayDate,
+    }: {
       routeId: string | number;
-      timeSlotId: string | number;
-      weekStart: string;
-    }) => endpoints.shuttle.createBooking({ routeId, timeSlotId, weekStart }),
+      slotId: string | number;
+      startSundayDate: string;
+      endThursdayDate: string;
+    }) =>
+      endpoints.shuttle.bookWeek(routeId, {
+        slotId,
+        startSundayDate,
+        endThursdayDate,
+        daysArray: ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday'],
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shuttle-available-weeks', bookingRoute?.id] });
       queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['shuttle-lines'] });
-      setBookingRoute(null);
-      setSelectedWeek(null);
+      // Keep the sheet open — driver can still browse other weeks/slots.
+      // Only reset the slot selection so the sheet reflects the new state.
       setSelectedSlot(null);
       Alert.alert(
-        '✅ Booked!',
-        'Your weekly slot is confirmed. This trip will now appear in your schedule.',
-        [{ text: 'OK' }]
+        '✅ Week Committed!',
+        'Your 5-day slot (Sun – Thu) is confirmed. It will appear in your upcoming bookings.\n\nYou will receive a renewal prompt next Wednesday at 7:00 AM.',
+        [{ text: 'Got it' }]
       );
     },
     onError: (err: unknown) => {
       if (err instanceof ApiError && err.status === 409) {
         Alert.alert(
           'Slot Taken',
-          'This time slot has just been booked by another driver. Please choose a different time.',
+          'This slot was just claimed by another driver. Please choose a different time or week.',
           [{ text: 'OK' }]
         );
       } else if (err instanceof ApiError && err.status === 400) {
@@ -219,27 +240,33 @@ export default function ShuttleLinesScreen() {
   const handleBook = () => {
     if (!bookingRoute || !selectedWeek || !selectedSlot) return;
     const weekLabel = formatWeekLabel(selectedWeek.weekStart, selectedWeek.weekEnd);
-    const lines = [
+    const confirmLines = [
       `Route: ${bookingRoute.name}`,
       `Direction: ${bookingRoute.from} → ${bookingRoute.to}`,
       `Week: ${weekLabel}  (Sun – Thu)`,
       `Departure: ${selectedSlot.departureTime}`,
       bookingRoute.stationCount ? `Stations: ${bookingRoute.stationCount} stops` : '',
-    ].filter(Boolean);
+      '',
+      'This commits you to the full 5-day work week.',
+      'Other drivers will see this slot as reserved.',
+    ].filter(l => l !== undefined);
     Alert.alert(
-      'Confirm Booking',
-      lines.join('\n') + '\n\nOther drivers will see this slot as reserved.',
+      'Confirm 5-Day Booking',
+      confirmLines.join('\n'),
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Confirm',
+          text: 'Confirm Week',
           style: 'default',
           onPress: () =>
             bookMutation.mutate({
               routeId: bookingRoute.id,
-              timeSlotId: selectedSlot.id,
-              // weekStart comes directly from the server — no client-side date math
-              weekStart: selectedWeek.weekStart,
+              slotId: selectedSlot.id,
+              // startSundayDate / endThursdayDate come directly from the server.
+              // Never generate these client-side — the backend owns the canonical
+              // week boundaries to avoid timezone drift.
+              startSundayDate: selectedWeek.weekStart,
+              endThursdayDate: selectedWeek.weekEnd,
             }),
         },
       ]
@@ -542,7 +569,7 @@ export default function ShuttleLinesScreen() {
                             )}
                             {takenByOther && !bookedByMe && (
                               <Text style={[styles.timeChipTaken, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-                                Taken
+                                {slot.takenByDriverName ?? 'Driver'}
                               </Text>
                             )}
                             {!isDisabled && slot.availableSeats !== null && slot.availableSeats !== undefined && (
@@ -620,7 +647,11 @@ function RouteCard({
     }).start();
   }, []);
 
-  const isBooked = myBookings.some(b =>
+  // Informational: does this driver hold an active booking on this route?
+  // NOTE: this flag is purely visual (badge color). It NEVER blocks the card.
+  // Routes are globally public — all drivers can always open any route to
+  // explore other weeks and slots.
+  const hasActiveBooking = myBookings.some(b =>
     String(b.routeId) === String(route.id) &&
     b.status !== 'cancelled' &&
     b.status !== 'completed'
@@ -628,13 +659,19 @@ function RouteCard({
   const availableSlots = route.timeslots.filter(ts => !ts.isBooked).length;
   const totalSlots = route.timeslots.length;
 
-  const statusConfig = isBooked
-    ? { text: 'Yours', bg: '#22c55e20', color: '#16a34a' }
+  // Status badge is purely informational — it does not control interactivity
+  const badge = hasActiveBooking
+    ? { text: 'Booked ✓', bg: '#22c55e20', color: '#16a34a' }
     : availableSlots === 0 && totalSlots > 0
     ? { text: 'Full', bg: colors.secondary, color: colors.mutedForeground }
     : { text: 'Available', bg: '#3D52D520', color: '#3D52D5' };
 
-  const canBook = !isBooked && (availableSlots > 0 || totalSlots === 0);
+  // CTA label changes based on context but the card is ALWAYS tappable
+  const ctaLabel = hasActiveBooking
+    ? 'View slots →'
+    : availableSlots === 0 && totalSlots > 0
+    ? 'View weeks →'
+    : 'Tap to book →';
 
   return (
     <Animated.View style={{
@@ -642,14 +679,14 @@ function RouteCard({
       transform: [{ translateX: anim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }],
     }}>
       <Pressable
-        onPress={canBook ? onBook : undefined}
-        style={({ pressed }) => [{ transform: [{ scale: pressed && canBook ? 0.99 : 1 }] }]}
+        onPress={onBook}
+        style={({ pressed }) => [{ transform: [{ scale: pressed ? 0.99 : 1 }] }]}
       >
         <GlassView style={styles.lineCard} borderRadius={20}>
           <View style={styles.lineCardHeader}>
-            <View style={[styles.lineNumberBadge, { backgroundColor: isBooked ? '#22c55e20' : colors.secondary }]}>
+            <View style={[styles.lineNumberBadge, { backgroundColor: hasActiveBooking ? '#22c55e20' : colors.secondary }]}>
               <Text style={[styles.lineNumberText, {
-                color: isBooked ? '#16a34a' : colors.mutedForeground,
+                color: hasActiveBooking ? '#16a34a' : colors.mutedForeground,
                 fontFamily: 'Inter_700Bold',
               }]}>
                 R{String(route.id).padStart(2, '0')}
@@ -663,9 +700,9 @@ function RouteCard({
                 {route.from} → {route.to}
               </Text>
             </View>
-            <View style={[styles.statusBadge, { backgroundColor: statusConfig.bg }]}>
-              <Text style={[styles.statusText, { color: statusConfig.color, fontFamily: 'Inter_700Bold' }]}>
-                {statusConfig.text}
+            <View style={[styles.statusBadge, { backgroundColor: badge.bg }]}>
+              <Text style={[styles.statusText, { color: badge.color, fontFamily: 'Inter_700Bold' }]}>
+                {badge.text}
               </Text>
             </View>
           </View>
@@ -685,13 +722,11 @@ function RouteCard({
                 </Text>
               </View>
             )}
-            {canBook && (
-              <View style={[styles.lineStat, { marginLeft: 'auto' as any }]}>
-                <Text style={[styles.lineStatText, { color: '#3D52D5', fontFamily: 'Inter_600SemiBold' }]}>
-                  Tap to book →
-                </Text>
-              </View>
-            )}
+            <View style={[styles.lineStat, { marginLeft: 'auto' as any }]}>
+              <Text style={[styles.lineStatText, { color: '#3D52D5', fontFamily: 'Inter_600SemiBold' }]}>
+                {ctaLabel}
+              </Text>
+            </View>
           </View>
         </GlassView>
       </Pressable>
