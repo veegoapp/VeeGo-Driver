@@ -238,6 +238,24 @@ export const api = {
 
 export { ApiError };
 
+// ─── Financial Analytics types ────────────────────────────────────────────────
+// Used by app/shuttle/earnings.tsx to render the financial dashboard.
+
+export interface FinancialTransaction {
+  id: string;
+  date: string;         // ISO8601 timestamp of the completed trip
+  cashReceived: number; // physical cash the driver collected from passengers (EGP)
+  appCommission: number;// platform split-fee deducted from that run (EGP)
+  routeName?: string;   // optional human-readable route label
+}
+
+export interface FinancialAnalytics {
+  totalCash: number;      // sum of cashReceived across all transactions in the range
+  appCommission: number;  // sum of appCommission across all transactions in the range
+  netProfit: number;      // totalCash - appCommission (server-computed for accuracy)
+  transactions: FinancialTransaction[];
+}
+
 export const endpoints = {
   auth: {
     logout: () => request<void>('POST', '/driver/auth/logout'),
@@ -806,6 +824,45 @@ export const endpoints = {
     //   404 — driver has no targets configured yet → return [] gracefully
     //   503 — service unavailable → screen degrades to empty placeholder
     list: () => api.get<BonusTarget[]>('/driver/bonus-targets'),
+  },
+
+  // TODO: Backend Integration — Financial Analytics endpoint
+  //
+  // GET /driver/financial-analytics?range=today|week|month
+  //
+  // PURPOSE:
+  //   Returns the driver's cash-based financial summary for the requested
+  //   time window, powering the Earnings screen dashboard.
+  //
+  // QUERY PARAMS:
+  //   range — required — one of: 'today' | 'week' | 'month'
+  //
+  // EXPECTED RESPONSE (200):
+  //   {
+  //     totalCash:    number,   — sum of all cashReceived in the range (EGP)
+  //     appCommission:number,   — sum of all platform split-fees in the range (EGP)
+  //     netProfit:    number,   — totalCash - appCommission (server-computed)
+  //     transactions: Array<{
+  //       id:           string,
+  //       date:         string,  — ISO8601 timestamp of completed trip
+  //       cashReceived: number,  — cash the driver collected from passengers (EGP)
+  //       appCommission:number,  — platform commission deducted from that run (EGP)
+  //       routeName?:   string,  — optional human-readable route label
+  //     }>,
+  //   }
+  //
+  // ERROR RESPONSES:
+  //   400 — invalid or missing range param
+  //   401 — token expired (auto-refreshed by request())
+  //   404 — driver has no completed trips yet → return { totalCash:0, appCommission:0, netProfit:0, transactions:[] }
+  //   503 — service unavailable → screen degrades to error state with retry button
+  //
+  // SECURITY NOTE:
+  //   Only return data for the authenticated driver (derived from JWT sub claim).
+  //   Never accept a driverId in the query string.
+  financialAnalytics: {
+    summary: (range: 'today' | 'week' | 'month') =>
+      api.get<FinancialAnalytics>(`/driver/financial-analytics?range=${range}`),
   },
 };
 

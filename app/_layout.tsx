@@ -115,6 +115,7 @@ function RootLayoutNav() {
         <Stack.Screen name="shuttle/referral-incoming" options={{ animation: 'slide_from_bottom', gestureEnabled: true }} />
         <Stack.Screen name="shuttle/trip-complete" options={{ animation: 'fade', gestureEnabled: false }} />
         <Stack.Screen name="shuttle/history" options={{ animation: 'slide_from_right', gestureEnabled: true }} />
+        <Stack.Screen name="shuttle/earnings" options={{ animation: 'slide_from_right', gestureEnabled: true }} />
         <Stack.Screen name="onboarding" />
         <Stack.Screen name="service-select" />
         <Stack.Screen name="register-info" />

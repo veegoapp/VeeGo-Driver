@@ -17,6 +17,7 @@ import {
   Shield,
   Star,
   Target,
+  TrendingUp,
   Truck,
 } from 'lucide-react-native';
 import React, { useState } from 'react';
@@ -349,6 +350,20 @@ export default function ShuttleProfileScreen() {
             sub={documentStatus !== null ? `${t.verification_status_label}: ${docStatusLabel}` : '—'}
             subColor={documentStatus !== null ? docStatusColor : colors.mutedForeground}
             onPress={() => router.push('/documents')}
+            colors={colors}
+            isRTL={isRTL}
+            last
+          />
+        </View>
+
+        {/* Financial Analytics */}
+        <SectionHeader label={isRTL ? 'المركزي المالي' : 'Financial Analytics'} colors={colors} isRTL={isRTL} />
+        <View style={styles.card}>
+          <MenuRow
+            icon={<TrendingUp size={18} color={colors.foreground} strokeWidth={2} />}
+            label={isRTL ? 'الأرباح والعمولات' : t.earnings}
+            sub={isRTL ? 'كاش · عمولة · صافي الأرباح' : 'Cash · Commission · Net Profit'}
+            onPress={() => router.push('/shuttle/earnings' as never)}
             colors={colors}
             isRTL={isRTL}
             last
