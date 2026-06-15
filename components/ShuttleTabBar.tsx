@@ -56,7 +56,7 @@ export function ShuttleTabBar({ state, navigation }: TabBarProps) {
         style={[styles.pill, { backgroundColor: colors.glassStrong, borderColor: colors.border }]}
         onLayout={e => {
           const innerW = e.nativeEvent.layout.width - PILL_PX * 2;
-          setTabWidth(innerW / SHUTTLE_TABS.length);
+          setTabWidth(innerW / SHUTTLE_TAB_NAMES.length);
         }}
       >
         {tabWidth > 0 && (
