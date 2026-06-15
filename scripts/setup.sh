@@ -18,39 +18,48 @@ fi
 
 echo "✅  BACKEND_URL found: $BACKEND_URL"
 
-# ── 2. Verify the backend is reachable ─────────────────────────────────────
+# ── 2. Verify backend connectivity ─────────────────────────────────────
 echo ""
 echo "🔗  Checking backend connectivity..."
 HTTP_STATUS=$(curl -o /dev/null -s -w "%{http_code}" --max-time 8 "$BACKEND_URL/health" 2>/dev/null || echo "000")
+
 if [ "$HTTP_STATUS" = "000" ]; then
-  echo "⚠️   WARNING: Backend did not respond at $BACKEND_URL/health"
-  echo "    The app will start but login will fail until the backend is running."
+  echo "⚠️  WARNING: Backend did not respond at $BACKEND_URL/health"
 else
   echo "✅  Backend responded (HTTP $HTTP_STATUS)."
 fi
 
-# ── 3. Write .env file ─────────────────────────────────────────────────────
+# ── 3. Write .env ─────────────────────────────────────────────────────
 echo ""
 echo "📝  Writing .env..."
 cat > .env << EOF
 EXPO_PUBLIC_API_URL=${BACKEND_URL}
 EOF
-echo "✅  EXPO_PUBLIC_API_URL=${BACKEND_URL}"
+
+echo "✅  .env created"
 
 # ── 4. Install dependencies ────────────────────────────────────────────────
 echo ""
-echo "📦  Installing dependencies..."
+echo "📦 Installing dependencies..."
 pnpm install
-echo "✅  Dependencies installed."
+echo "✅ Dependencies installed."
 
-# ── 5. Start Expo (tunnel, clean cache) ────────────────────────────────────
+# ── 5. Clean old processes ────────────────────────────────────────────────
 echo ""
-echo "🚀  Starting Expo (tunnel + clear cache)..."
-echo ""
+echo "🧹 Cleaning previous processes..."
 
-# Kill any lingering Metro / Expo processes so port 8081 is free
 pkill -f "expo start" 2>/dev/null || true
-pkill -f "metro"      2>/dev/null || true
-sleep 1
+pkill -f "metro" 2>/dev/null || true
+sleep 2
 
-EXPO_DEBUG=1 EXPO_USE_FAST_RESOLVER=1 exec pnpm exec expo start --tunnel --clear
+# ── 6. Expo Tunnel Startup (FIXED) ────────────────────────────────────────
+echo ""
+echo "🚀 Starting Expo (stable tunnel mode)..."
+echo ""
+
+export EXPO_USE_FAST_RESOLVER=1
+export EXPO_DEBUG=1
+export EXPO_NO_TELEMETRY=1
+export NODE_OPTIONS=--max_old_space_size=4096
+
+exec pnpm exec expo start --tunnel --clear
