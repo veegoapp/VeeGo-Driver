@@ -53,14 +53,15 @@ pkill -f "expo start" 2>/dev/null || true
 pkill -f "metro" 2>/dev/null || true
 sleep 2
 
-# ── 6. Expo Tunnel Startup (FIXED) ────────────────────────────────────────
+# ── 6. Expo Tunnel Startup (CLEAN MODE) ────────────────────────────────────────
 echo ""
-echo "🚀 Starting Expo (stable tunnel mode)..."
+echo "🚀 Starting Expo (clean mode)..."
 echo ""
 
 export EXPO_USE_FAST_RESOLVER=1
-export EXPO_DEBUG=1
+export EXPO_DEBUG=0
 export EXPO_NO_TELEMETRY=1
+export METRO_LOG_LEVEL=warn
 export NODE_OPTIONS=--max_old_space_size=4096
 
 exec pnpm exec expo start --tunnel --clear
