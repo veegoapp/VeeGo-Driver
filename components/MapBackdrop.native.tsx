@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 
@@ -15,8 +15,10 @@ export interface MapBackdropProps {
   dropoff?: { latitude: number; longitude: number };
   driverLocation?: { latitude: number; longitude: number };
   surgeZones?: SurgeZone[];
-  /** Gap C: ordered station coordinates for the fixed shuttle route polyline */
   routePolyline?: Array<{ latitude: number; longitude: number }>;
+  stationStatuses?: ('pending' | 'current' | 'completed')[];
+  approachCircle?: { latitude: number; longitude: number; radius: number } | null;
+  focusTarget?: { latitude: number; longitude: number; zoom?: number } | null;
 }
 
 function buildHtml(
@@ -25,10 +27,10 @@ function buildHtml(
   driverLocation: MapBackdropProps['driverLocation'],
   surgeZones: SurgeZone[],
   routePolyline: MapBackdropProps['routePolyline'],
+  stationStatuses: ('pending' | 'current' | 'completed')[],
 ): string {
   const ridePts = [driverLocation, pickup, dropoff].filter(Boolean) as Array<{ latitude: number; longitude: number }>;
   const stationPts = routePolyline?.length ? routePolyline : [];
-  // Use ride points for center if available; otherwise center on stations
   const centerPts = ridePts.length > 0 ? ridePts : stationPts;
   const center = centerPts.length
     ? [
@@ -42,10 +44,10 @@ function buildHtml(
   const driverJson = driverLocation ? JSON.stringify([driverLocation.longitude, driverLocation.latitude]) : 'null';
   const surgeJson = JSON.stringify(surgeZones);
   const centerJson = JSON.stringify(center);
-  // Gap C: serialize station coordinates as [[lng, lat], ...]
   const routePolylineJson = routePolyline?.length
     ? JSON.stringify(routePolyline.map(p => [p.longitude, p.latitude]))
     : 'null';
+  const stationStatusesJson = JSON.stringify(stationStatuses);
 
   return `<!DOCTYPE html>
 <html>
@@ -69,6 +71,9 @@ function buildHtml(
   var surgeZones = ${surgeJson};
   var center = ${centerJson};
   var routePolyline = ${routePolylineJson};
+  var stationStatuses = ${stationStatusesJson};
+  var stationMarkers = [];
+  var approachReady = false;
 
   var map = new maplibregl.Map({
     container: 'map',
@@ -91,7 +96,7 @@ function buildHtml(
   });
 
   function geoCircle(lat, lng, radiusM, steps) {
-    steps = steps || 48;
+    steps = steps || 64;
     var coords = [];
     for (var i = 0; i <= steps; i++) {
       var angle = (i / steps) * 2 * Math.PI;
@@ -112,10 +117,7 @@ function buildHtml(
           type: 'Feature',
           id: z.id,
           properties: { multiplier: z.multiplier },
-          geometry: {
-            type: 'Polygon',
-            coordinates: [geoCircle(z.latitude, z.longitude, z.radius)]
-          }
+          geometry: { type: 'Polygon', coordinates: [geoCircle(z.latitude, z.longitude, z.radius)] }
         };
       })
     };
@@ -127,8 +129,38 @@ function buildHtml(
     return el;
   }
 
-  function stationSvg(n) {
-    return '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28"><circle cx="14" cy="14" r="12" fill="#1e1e28" stroke="white" stroke-width="2.5"/><text x="14" y="18.5" text-anchor="middle" fill="white" font-size="10" font-family="sans-serif" font-weight="bold">' + n + '</text></svg>';
+  function stationSvg(n, status) {
+    if (status === 'current') {
+      return '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">' +
+        '<circle cx="20" cy="20" r="17" fill="rgba(245,158,11,0.25)"/>' +
+        '<circle cx="20" cy="20" r="13" fill="#f59e0b" stroke="white" stroke-width="3"/>' +
+        '<text x="20" y="25" text-anchor="middle" fill="white" font-size="12" font-family="sans-serif" font-weight="bold">' + n + '</text>' +
+        '</svg>';
+    }
+    if (status === 'completed') {
+      return '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">' +
+        '<circle cx="12" cy="12" r="10" fill="#374151" stroke="#6b7280" stroke-width="2"/>' +
+        '<text x="12" y="16" text-anchor="middle" fill="#9ca3af" font-size="9" font-family="sans-serif" font-weight="bold">' + n + '</text>' +
+        '</svg>';
+    }
+    return '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28">' +
+      '<circle cx="14" cy="14" r="12" fill="#1e1e28" stroke="white" stroke-width="2.5"/>' +
+      '<text x="14" y="18.5" text-anchor="middle" fill="white" font-size="10" font-family="sans-serif" font-weight="bold">' + n + '</text>' +
+      '</svg>';
+  }
+
+  function rebuildStationMarkers(statuses) {
+    stationMarkers.forEach(function(m) { m.remove(); });
+    stationMarkers = [];
+    if (!routePolyline) return;
+    routePolyline.forEach(function(pt, idx) {
+      var st = (statuses && statuses[idx]) ? statuses[idx] : 'pending';
+      var anchor = st === 'current' ? 'center' : 'center';
+      var m = new maplibregl.Marker({ element: makeSvgEl(stationSvg(idx + 1, st)), anchor: anchor })
+        .setLngLat(pt)
+        .addTo(map);
+      stationMarkers.push(m);
+    });
   }
 
   var PICKUP_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36"><circle cx="14" cy="14" r="12" fill="#22c55e" stroke="white" stroke-width="2.5"/><text x="14" y="18.5" text-anchor="middle" fill="white" font-size="11" font-family="sans-serif" font-weight="bold">P</text><line x1="14" y1="26" x2="14" y2="34" stroke="#22c55e" stroke-width="2" stroke-linecap="round"/></svg>';
@@ -163,7 +195,7 @@ function buildHtml(
   }
 
   map.on('load', function() {
-    // ── Surge zones ───────────────────────────────────────────────────────
+    // ── Surge zones ────────────────────────────────────────────────────────
     map.addSource('surge-zones', { type: 'geojson', data: buildSurgeGeoJSON(surgeZones) });
     map.addLayer({
       id: 'surge-fill', type: 'fill', source: 'surge-zones',
@@ -183,7 +215,6 @@ function buildHtml(
       }
     });
 
-    // Surge labels
     surgeZones.forEach(function(z) {
       var stroke = z.multiplier >= 2.0 ? 'rgba(239,68,68,0.6)' : z.multiplier >= 1.5 ? 'rgba(249,115,22,0.6)' : 'rgba(213,178,61,0.6)';
       var el = document.createElement('div');
@@ -192,7 +223,24 @@ function buildHtml(
       new maplibregl.Marker({ element: el, anchor: 'center' }).setLngLat([z.longitude, z.latitude]).addTo(map);
     });
 
-    // ── On-demand ride markers (pickup / dropoff) ─────────────────────────
+    // ── Approach circle (initially hidden) ─────────────────────────────────
+    map.addSource('approach-circle', {
+      type: 'geojson',
+      data: { type: 'Feature', geometry: { type: 'Polygon', coordinates: [[]] }, properties: {} }
+    });
+    map.addLayer({
+      id: 'approach-fill', type: 'fill', source: 'approach-circle',
+      paint: { 'fill-color': '#f59e0b', 'fill-opacity': 0.10 },
+      layout: { visibility: 'none' }
+    });
+    map.addLayer({
+      id: 'approach-stroke', type: 'line', source: 'approach-circle',
+      paint: { 'line-color': '#f59e0b', 'line-width': 2.5, 'line-dasharray': [5, 4] },
+      layout: { visibility: 'none' }
+    });
+    approachReady = true;
+
+    // ── On-demand ride markers ─────────────────────────────────────────────
     if (pickup) {
       new maplibregl.Marker({ element: makeSvgEl(PICKUP_SVG), anchor: 'bottom' })
         .setLngLat(pickup).setPopup(new maplibregl.Popup({ offset: 20, closeButton: false }).setText('Pickup')).addTo(map);
@@ -202,7 +250,7 @@ function buildHtml(
         .setLngLat(dropoff).setPopup(new maplibregl.Popup({ offset: 20, closeButton: false }).setText('Dropoff')).addTo(map);
     }
 
-    // ── Driver marker ─────────────────────────────────────────────────────
+    // ── Driver marker ──────────────────────────────────────────────────────
     var driverLoc = driver || pickup;
     if (driverLoc) {
       driverMarker = new maplibregl.Marker({ element: makeSvgEl(DRIVER_SVG), anchor: 'bottom' })
@@ -225,58 +273,32 @@ function buildHtml(
       }, 200);
     }
 
-    // ── On-demand ride route (pickup → dropoff) ───────────────────────────
+    // ── On-demand ride route ───────────────────────────────────────────────
     var routePts = [driver || pickup, pickup, dropoff].filter(Boolean);
     if (routePts.length >= 2) {
       var straightCoords = routePts.map(function(p) { return p; });
-
       function drawRoute(coords) {
         if (map.getSource('route')) {
           map.getSource('route').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: coords }, properties: {} });
         } else {
-          map.addSource('route', {
-            type: 'geojson',
-            data: { type: 'Feature', geometry: { type: 'LineString', coordinates: coords }, properties: {} }
-          });
-          map.addLayer({
-            id: 'route-casing', type: 'line', source: 'route',
-            layout: { 'line-join': 'round', 'line-cap': 'round' },
-            paint: { 'line-color': '#ffffff', 'line-width': 6, 'line-opacity': 0.4 }
-          });
-          map.addLayer({
-            id: 'route-line', type: 'line', source: 'route',
-            layout: { 'line-join': 'round', 'line-cap': 'round' },
-            paint: { 'line-color': '#6366f1', 'line-width': 3.5, 'line-opacity': 0.9 }
-          });
+          map.addSource('route', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: coords }, properties: {} } });
+          map.addLayer({ id: 'route-casing', type: 'line', source: 'route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#ffffff', 'line-width': 6, 'line-opacity': 0.4 } });
+          map.addLayer({ id: 'route-line', type: 'line', source: 'route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#6366f1', 'line-width': 3.5, 'line-opacity': 0.9 } });
         }
       }
-
       drawRoute(straightCoords);
       (function() {
         var c = straightCoords.map(function(p) { return p[0] + ',' + p[1]; }).join(';');
-        fetch('https://router.project-osrm.org/route/v1/driving/' + c + '?overview=full&geometries=geojson', {
-          signal: AbortSignal.timeout(5000)
-        })
+        fetch('https://router.project-osrm.org/route/v1/driving/' + c + '?overview=full&geometries=geojson', { signal: AbortSignal.timeout(5000) })
           .then(function(res) { return res.ok ? res.json() : null; })
-          .then(function(data) {
-            if (data && data.code === 'Ok' && data.routes && data.routes.length) {
-              drawRoute(data.routes[0].geometry.coordinates);
-            }
-          })
+          .then(function(data) { if (data && data.code === 'Ok' && data.routes && data.routes.length) drawRoute(data.routes[0].geometry.coordinates); })
           .catch(function() {});
       })();
     }
 
-    // ── Gap C: Shuttle fixed-route polyline ───────────────────────────────
-    // Renders numbered station markers and the full route line when the driver
-    // is in active-trip mode.  Uses a separate source/layer from the ride route.
+    // ── Shuttle fixed-route polyline + station markers ─────────────────────
     if (routePolyline && routePolyline.length >= 2) {
-      // Numbered station circle markers
-      routePolyline.forEach(function(pt, idx) {
-        new maplibregl.Marker({ element: makeSvgEl(stationSvg(idx + 1)), anchor: 'center' })
-          .setLngLat(pt)
-          .addTo(map);
-      });
+      rebuildStationMarkers(stationStatuses);
 
       function drawShuttleRoute(coords) {
         var geoData = { type: 'Feature', geometry: { type: 'LineString', coordinates: coords }, properties: {} };
@@ -284,43 +306,26 @@ function buildHtml(
           map.getSource('shuttle-route').setData(geoData);
         } else {
           map.addSource('shuttle-route', { type: 'geojson', data: geoData });
-          map.addLayer({
-            id: 'shuttle-casing', type: 'line', source: 'shuttle-route',
-            layout: { 'line-join': 'round', 'line-cap': 'round' },
-            paint: { 'line-color': '#ffffff', 'line-width': 5, 'line-opacity': 0.35 }
-          });
-          map.addLayer({
-            id: 'shuttle-line', type: 'line', source: 'shuttle-route',
-            layout: { 'line-join': 'round', 'line-cap': 'round' },
-            paint: { 'line-color': '#6366f1', 'line-width': 3.5, 'line-opacity': 0.88 }
-          });
+          map.addLayer({ id: 'shuttle-casing', type: 'line', source: 'shuttle-route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#ffffff', 'line-width': 5, 'line-opacity': 0.35 } });
+          map.addLayer({ id: 'shuttle-line', type: 'line', source: 'shuttle-route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#6366f1', 'line-width': 3.5, 'line-opacity': 0.88 } });
         }
       }
 
-      // Draw straight-line immediately, then upgrade with OSRM road route
       drawShuttleRoute(routePolyline);
       (function() {
         var c = routePolyline.map(function(p) { return p[0] + ',' + p[1]; }).join(';');
-        fetch('https://router.project-osrm.org/route/v1/driving/' + c + '?overview=full&geometries=geojson', {
-          signal: AbortSignal.timeout(8000)
-        })
+        fetch('https://router.project-osrm.org/route/v1/driving/' + c + '?overview=full&geometries=geojson', { signal: AbortSignal.timeout(8000) })
           .then(function(res) { return res.ok ? res.json() : null; })
-          .then(function(data) {
-            if (data && data.code === 'Ok' && data.routes && data.routes.length) {
-              drawShuttleRoute(data.routes[0].geometry.coordinates);
-            }
-          })
+          .then(function(data) { if (data && data.code === 'Ok' && data.routes && data.routes.length) drawShuttleRoute(data.routes[0].geometry.coordinates); })
           .catch(function() {});
       })();
 
-      // Fit the viewport to encompass all stations
       var stBounds = new maplibregl.LngLatBounds();
       routePolyline.forEach(function(pt) { stBounds.extend(pt); });
       map.fitBounds(stBounds, { padding: 80, maxZoom: 14, duration: 700 });
-      return; // skip the generic fitBounds below when in shuttle mode
+      return;
     }
 
-    // Fit bounds (on-demand ride mode)
     var allPts = [driver, pickup, dropoff].filter(Boolean);
     if (allPts.length > 1) {
       var bounds = new maplibregl.LngLatBounds();
@@ -329,10 +334,11 @@ function buildHtml(
     }
   });
 
-  // Listen for driver location updates from RN (live tracking)
+  // ── postMessage bridge ─────────────────────────────────────────────────────
   window.addEventListener('message', function(e) {
     try {
       var msg = JSON.parse(e.data);
+
       if (msg.type === 'driverLocation' && driverMarker) {
         var newPos = [msg.lng, msg.lat];
         if (prevPos && !(prevPos[0] === newPos[0] && prevPos[1] === newPos[1])) {
@@ -340,6 +346,33 @@ function buildHtml(
         }
         prevPos = newPos;
         driverMarker.setLngLat(newPos);
+      }
+
+      if (msg.type === 'updateStationStatuses' && msg.statuses) {
+        stationStatuses = msg.statuses;
+        rebuildStationMarkers(msg.statuses);
+      }
+
+      if (msg.type === 'setApproachCircle') {
+        if (!approachReady) return;
+        var src = map.getSource('approach-circle');
+        if (!src) return;
+        if (msg.show && msg.lat != null && msg.lng != null) {
+          src.setData({
+            type: 'Feature',
+            geometry: { type: 'Polygon', coordinates: [geoCircle(msg.lat, msg.lng, msg.radius || 500)] },
+            properties: {}
+          });
+          map.setLayoutProperty('approach-fill', 'visibility', 'visible');
+          map.setLayoutProperty('approach-stroke', 'visibility', 'visible');
+        } else {
+          map.setLayoutProperty('approach-fill', 'visibility', 'none');
+          map.setLayoutProperty('approach-stroke', 'visibility', 'none');
+        }
+      }
+
+      if (msg.type === 'focusLocation' && msg.lat != null && msg.lng != null) {
+        map.flyTo({ center: [msg.lng, msg.lat], zoom: msg.zoom || 16, duration: 800 });
       }
     } catch(_) {}
   });
@@ -349,12 +382,21 @@ function buildHtml(
 </html>`;
 }
 
-export function MapBackdrop({ pickup, dropoff, driverLocation, surgeZones = [], routePolyline }: MapBackdropProps) {
+export function MapBackdrop({
+  pickup, dropoff, driverLocation, surgeZones = [], routePolyline,
+  stationStatuses, approachCircle, focusTarget,
+}: MapBackdropProps) {
   const webviewRef = useRef<WebView>(null);
   const lastLocUpdate = useRef(0);
 
-  const html = buildHtml(pickup, dropoff, driverLocation, surgeZones, routePolyline);
+  // Stable HTML: only rebuilds when the route or surges change (prevents WebView remount)
+  const html = useMemo(
+    () => buildHtml(pickup, dropoff, driverLocation, surgeZones, routePolyline, stationStatuses ?? []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [JSON.stringify(routePolyline), JSON.stringify(surgeZones)],
+  );
 
+  // Live driver location via postMessage (avoids rebuilding HTML)
   useEffect(() => {
     const now = Date.now();
     if (now - lastLocUpdate.current < 1500) return;
@@ -364,6 +406,34 @@ export function MapBackdrop({ pickup, dropoff, driverLocation, surgeZones = [], 
       JSON.stringify({ type: 'driverLocation', lat: driverLocation.latitude, lng: driverLocation.longitude })
     );
   }, [driverLocation?.latitude, driverLocation?.longitude]);
+
+  // Dynamic station status updates
+  useEffect(() => {
+    if (!stationStatuses || !webviewRef.current) return;
+    webviewRef.current.postMessage(
+      JSON.stringify({ type: 'updateStationStatuses', statuses: stationStatuses })
+    );
+  }, [JSON.stringify(stationStatuses)]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Approach circle show/hide
+  useEffect(() => {
+    if (!webviewRef.current) return;
+    if (approachCircle) {
+      webviewRef.current.postMessage(
+        JSON.stringify({ type: 'setApproachCircle', show: true, lat: approachCircle.latitude, lng: approachCircle.longitude, radius: approachCircle.radius })
+      );
+    } else {
+      webviewRef.current.postMessage(JSON.stringify({ type: 'setApproachCircle', show: false }));
+    }
+  }, [approachCircle?.latitude, approachCircle?.longitude, approachCircle?.radius, approachCircle == null]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Focus camera on target
+  useEffect(() => {
+    if (!focusTarget || !webviewRef.current) return;
+    webviewRef.current.postMessage(
+      JSON.stringify({ type: 'focusLocation', lat: focusTarget.latitude, lng: focusTarget.longitude, zoom: focusTarget.zoom ?? 16 })
+    );
+  }, [focusTarget?.latitude, focusTarget?.longitude]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">

@@ -1,0 +1,63 @@
+Rebuild the entire shuttle Driver Trip Experience with the following requirements. This is NOT a mock or demo — it must be implemented on the real production flow.
+
+1. MAP-FIRST UI (Main Screen)
+- The entire trip screen must be based on a live map (route map).
+- The full route must be drawn on the map.
+- All stations must be shown as markers on the route.
+- Each stop must have a clear visual marker (dot/pin).
+- Important pickup/drop-off stations must be highlighted with a larger, more visible marker.
+
+2. APPROACH ALERT SYSTEM (500m Rule)
+- When the driver is 500 meters away from the next stop:
+  - Trigger an in-app alert immediately.
+  - Highlight the upcoming station on the map.
+  - Draw a visible circle/radius around the stop area to guide the driver.
+
+3. ARRIVAL BEHAVIOR (STOP MODE)
+- When the driver arrives at a station:
+  - Switch UI into "Stop Mode".
+  - Only show passenger list for this specific station.
+  - Hide all other station passenger data.
+  - Show only relevant actions for this stop.
+
+4. PASSENGER MANAGEMENT (PER STOP)
+- Display only passengers assigned to the current station.
+- Each passenger must have status:
+  - Not Arrived
+  - Boarded
+  - Skipped / No-show
+- Driver must be able to update passenger status in real time.
+
+5. STOP TIMER SYSTEM
+- When stop mode is activated:
+  - Start a countdown timer based on predefined stop duration.
+  - Driver cannot proceed until:
+    - Timer ends OR
+    - Driver manually presses "Next Stop".
+
+6. NAVIGATION FLOW
+- Add a clear "Next Stop" button.
+- On click:
+  - Move to next station in sequence.
+  - Update trip state in backend.
+  - Refresh map focus to next stop.
+
+7. UI/UX PRINCIPLE
+- Driver should NEVER see full passenger lists or full station workflows at once.
+- Only 3 states exist:
+  - En route (map + next stop only)
+  - Approaching stop (alert + highlight)
+  - At stop (passenger management only)
+
+8. BACKEND AUDIT (IMPORTANT)
+After implementing the above:
+- Review all required backend data.
+- Identify missing endpoints or fields such as:
+  - ETA per station
+  - distanceToNextStop
+  - passengerListByStop
+  - stopDurationConfig
+  - liveTripStateSync
+- Generate a clear report of missing APIs/data contracts needed.
+
+Implement this on the real trip flow architecture, not static UI or sample data.

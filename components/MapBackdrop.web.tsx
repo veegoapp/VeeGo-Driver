@@ -16,8 +16,10 @@ export interface MapBackdropProps {
   dropoff?: { latitude: number; longitude: number };
   driverLocation?: { latitude: number; longitude: number };
   surgeZones?: SurgeZone[];
-  /** Gap C: ordered station coordinates for the fixed shuttle route polyline */
   routePolyline?: Array<{ latitude: number; longitude: number }>;
+  stationStatuses?: ('pending' | 'current' | 'completed')[];
+  approachCircle?: { latitude: number; longitude: number; radius: number } | null;
+  focusTarget?: { latitude: number; longitude: number; zoom?: number } | null;
 }
 
 const DEFAULT_CENTER: [number, number] = [31.2357, 30.0444];
@@ -58,25 +60,35 @@ function makeSvgEl(svg: string): HTMLElement {
   return el;
 }
 
-function stationSvg(n: number): string {
+function stationSvg(n: number, status: 'pending' | 'current' | 'completed'): string {
+  if (status === 'current') {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
+  <circle cx="20" cy="20" r="17" fill="rgba(245,158,11,0.25)"/>
+  <circle cx="20" cy="20" r="13" fill="#f59e0b" stroke="white" stroke-width="3"/>
+  <text x="20" y="25" text-anchor="middle" fill="white" font-size="12" font-family="sans-serif" font-weight="bold">${n}</text>
+</svg>`;
+  }
+  if (status === 'completed') {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+  <circle cx="12" cy="12" r="10" fill="#374151" stroke="#6b7280" stroke-width="2"/>
+  <text x="12" y="16" text-anchor="middle" fill="#9ca3af" font-size="9" font-family="sans-serif" font-weight="bold">${n}</text>
+</svg>`;
+  }
   return `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28">
   <circle cx="14" cy="14" r="12" fill="#1e1e28" stroke="white" stroke-width="2.5"/>
-  <text x="14" y="18.5" text-anchor="middle" fill="white" font-size="10"
-    font-family="sans-serif" font-weight="bold">${n}</text>
+  <text x="14" y="18.5" text-anchor="middle" fill="white" font-size="10" font-family="sans-serif" font-weight="bold">${n}</text>
 </svg>`;
 }
 
 const PICKUP_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36">
   <circle cx="14" cy="14" r="12" fill="#22c55e" stroke="white" stroke-width="2.5"/>
-  <text x="14" y="18.5" text-anchor="middle" fill="white" font-size="11"
-    font-family="sans-serif" font-weight="bold">P</text>
+  <text x="14" y="18.5" text-anchor="middle" fill="white" font-size="11" font-family="sans-serif" font-weight="bold">P</text>
   <line x1="14" y1="26" x2="14" y2="34" stroke="#22c55e" stroke-width="2" stroke-linecap="round"/>
 </svg>`;
 
 const DROPOFF_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36">
   <circle cx="14" cy="14" r="12" fill="#ef4444" stroke="white" stroke-width="2.5"/>
-  <text x="14" y="18.5" text-anchor="middle" fill="white" font-size="11"
-    font-family="sans-serif" font-weight="bold">D</text>
+  <text x="14" y="18.5" text-anchor="middle" fill="white" font-size="11" font-family="sans-serif" font-weight="bold">D</text>
   <line x1="14" y1="26" x2="14" y2="34" stroke="#ef4444" stroke-width="2" stroke-linecap="round"/>
 </svg>`;
 
@@ -88,13 +100,7 @@ const DRIVER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="38" height="4
   <line x1="19" y1="32" x2="19" y2="44" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round"/>
 </svg>`;
 
-function surgeColors(multiplier: number): { fill: string; stroke: string } {
-  if (multiplier >= 2.0) return { fill: 'rgba(239,68,68,0.14)', stroke: 'rgba(239,68,68,0.55)' };
-  if (multiplier >= 1.5) return { fill: 'rgba(249,115,22,0.14)', stroke: 'rgba(249,115,22,0.55)' };
-  return { fill: 'rgba(213,178,61,0.13)', stroke: 'rgba(213,178,61,0.55)' };
-}
-
-function geoCirclePolygon(lat: number, lng: number, radiusMeters: number, steps = 48): number[][] {
+function geoCirclePolygon(lat: number, lng: number, radiusMeters: number, steps = 64): number[][] {
   const coords: number[][] = [];
   for (let i = 0; i <= steps; i++) {
     const angle = (i / steps) * 2 * Math.PI;
@@ -122,16 +128,25 @@ function buildSurgeGeoJSON(zones: SurgeZone[]): GeoJSON.FeatureCollection {
   };
 }
 
-export function MapBackdrop({ pickup, dropoff, driverLocation, surgeZones = [], routePolyline }: MapBackdropProps) {
+function surgeColors(multiplier: number): { fill: string; stroke: string } {
+  if (multiplier >= 2.0) return { fill: 'rgba(239,68,68,0.14)', stroke: 'rgba(239,68,68,0.55)' };
+  if (multiplier >= 1.5) return { fill: 'rgba(249,115,22,0.14)', stroke: 'rgba(249,115,22,0.55)' };
+  return { fill: 'rgba(213,178,61,0.13)', stroke: 'rgba(213,178,61,0.55)' };
+}
+
+export function MapBackdrop({
+  pickup, dropoff, driverLocation, surgeZones = [], routePolyline,
+  stationStatuses, approachCircle, focusTarget,
+}: MapBackdropProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const driverMarkerRef = useRef<maplibregl.Marker | null>(null);
   const lastLocUpdate = useRef(0);
   const surgeReadyRef = useRef(false);
   const surgeMarkersRef = useRef<maplibregl.Marker[]>([]);
-  // Gap C: refs for shuttle route layer and station markers
   const shuttleRouteReadyRef = useRef(false);
   const shuttleMarkersRef = useRef<maplibregl.Marker[]>([]);
+  const approachReadyRef = useRef(false);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -156,44 +171,31 @@ export function MapBackdrop({ pickup, dropoff, driverLocation, surgeZones = [], 
     mapRef.current = map;
 
     map.on('load', async () => {
-      // ── Surge zone layers ──────────────────────────────────────────────
+      // ── Surge layers ────────────────────────────────────────────────────
       map.addSource('surge-zones', { type: 'geojson', data: buildSurgeGeoJSON([]) });
-      map.addLayer({
-        id: 'surge-fill', type: 'fill', source: 'surge-zones',
-        paint: {
-          'fill-color': ['interpolate', ['linear'], ['get', 'multiplier'],
-            1.0, 'rgba(213,178,61,0.13)', 1.5, 'rgba(249,115,22,0.14)', 2.0, 'rgba(239,68,68,0.14)'],
-          'fill-opacity': 1,
-        },
-      });
-      map.addLayer({
-        id: 'surge-stroke', type: 'line', source: 'surge-zones',
-        paint: {
-          'line-color': ['interpolate', ['linear'], ['get', 'multiplier'],
-            1.0, 'rgba(213,178,61,0.6)', 1.5, 'rgba(249,115,22,0.6)', 2.0, 'rgba(239,68,68,0.6)'],
-          'line-width': 1.5, 'line-dasharray': [4, 3],
-        },
-      });
+      map.addLayer({ id: 'surge-fill', type: 'fill', source: 'surge-zones', paint: { 'fill-color': ['interpolate', ['linear'], ['get', 'multiplier'], 1.0, 'rgba(213,178,61,0.13)', 1.5, 'rgba(249,115,22,0.14)', 2.0, 'rgba(239,68,68,0.14)'], 'fill-opacity': 1 } });
+      map.addLayer({ id: 'surge-stroke', type: 'line', source: 'surge-zones', paint: { 'line-color': ['interpolate', ['linear'], ['get', 'multiplier'], 1.0, 'rgba(213,178,61,0.6)', 1.5, 'rgba(249,115,22,0.6)', 2.0, 'rgba(239,68,68,0.6)'], 'line-width': 1.5, 'line-dasharray': [4, 3] } });
       surgeReadyRef.current = true;
 
-      // Gap C: empty shuttle-route source/layers — populated by routePolyline effect below
+      // ── Shuttle route layers ─────────────────────────────────────────────
       map.addSource('shuttle-route', {
         type: 'geojson',
         data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] }, properties: {} },
       });
-      map.addLayer({
-        id: 'shuttle-casing', type: 'line', source: 'shuttle-route',
-        layout: { 'line-join': 'round', 'line-cap': 'round' },
-        paint: { 'line-color': '#ffffff', 'line-width': 5, 'line-opacity': 0.35 },
-      });
-      map.addLayer({
-        id: 'shuttle-line', type: 'line', source: 'shuttle-route',
-        layout: { 'line-join': 'round', 'line-cap': 'round' },
-        paint: { 'line-color': '#6366f1', 'line-width': 3.5, 'line-opacity': 0.88 },
-      });
+      map.addLayer({ id: 'shuttle-casing', type: 'line', source: 'shuttle-route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#ffffff', 'line-width': 5, 'line-opacity': 0.35 } });
+      map.addLayer({ id: 'shuttle-line', type: 'line', source: 'shuttle-route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#6366f1', 'line-width': 3.5, 'line-opacity': 0.88 } });
       shuttleRouteReadyRef.current = true;
 
-      // ── On-demand ride markers ─────────────────────────────────────────
+      // ── Approach circle layers (initially hidden) ─────────────────────────
+      map.addSource('approach-circle', {
+        type: 'geojson',
+        data: { type: 'Feature', geometry: { type: 'Polygon', coordinates: [[]] }, properties: {} },
+      });
+      map.addLayer({ id: 'approach-fill', type: 'fill', source: 'approach-circle', paint: { 'fill-color': '#f59e0b', 'fill-opacity': 0.10 }, layout: { visibility: 'none' } });
+      map.addLayer({ id: 'approach-stroke', type: 'line', source: 'approach-circle', paint: { 'line-color': '#f59e0b', 'line-width': 2.5, 'line-dasharray': [5, 4] }, layout: { visibility: 'none' } });
+      approachReadyRef.current = true;
+
+      // ── On-demand ride markers ───────────────────────────────────────────
       if (pickup) {
         new maplibregl.Marker({ element: makeSvgEl(PICKUP_SVG), anchor: 'bottom' })
           .setLngLat([pickup.longitude, pickup.latitude])
@@ -216,31 +218,17 @@ export function MapBackdrop({ pickup, dropoff, driverLocation, surgeZones = [], 
         driverMarkerRef.current = marker;
       }
 
-      // ── On-demand ride route ───────────────────────────────────────────
+      // ── On-demand ride route ─────────────────────────────────────────────
       const routePts = [driverLocation ?? pickup, pickup, dropoff]
         .filter(Boolean) as Array<{ latitude: number; longitude: number }>;
-
       if (routePts.length >= 2) {
         const straightCoords = routePts.map((p) => [p.longitude, p.latitude] as [number, number]);
         const routeCoords = (await fetchOSRMRoute(straightCoords)) ?? straightCoords;
-
-        map.addSource('route', {
-          type: 'geojson',
-          data: { type: 'Feature', geometry: { type: 'LineString', coordinates: routeCoords }, properties: {} },
-        });
-        map.addLayer({
-          id: 'route-casing', type: 'line', source: 'route',
-          layout: { 'line-join': 'round', 'line-cap': 'round' },
-          paint: { 'line-color': '#ffffff', 'line-width': 6, 'line-opacity': 0.4 },
-        });
-        map.addLayer({
-          id: 'route-line', type: 'line', source: 'route',
-          layout: { 'line-join': 'round', 'line-cap': 'round' },
-          paint: { 'line-color': '#6366f1', 'line-width': 3.5, 'line-opacity': 0.9 },
-        });
+        map.addSource('route', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: routeCoords }, properties: {} } });
+        map.addLayer({ id: 'route-casing', type: 'line', source: 'route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#ffffff', 'line-width': 6, 'line-opacity': 0.4 } });
+        map.addLayer({ id: 'route-line', type: 'line', source: 'route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#6366f1', 'line-width': 3.5, 'line-opacity': 0.9 } });
       }
 
-      // Fit bounds (on-demand ride mode; shuttle mode overrides in the effect below)
       if (!routePolyline?.length) {
         const allPoints = [driverLocation, pickup, dropoff].filter(Boolean) as Array<{ latitude: number; longitude: number }>;
         if (allPoints.length > 1) {
@@ -254,6 +242,7 @@ export function MapBackdrop({ pickup, dropoff, driverLocation, surgeZones = [], 
     return () => {
       surgeReadyRef.current = false;
       shuttleRouteReadyRef.current = false;
+      approachReadyRef.current = false;
       surgeMarkersRef.current.forEach(m => m.remove());
       surgeMarkersRef.current = [];
       shuttleMarkersRef.current.forEach(m => m.remove());
@@ -264,73 +253,105 @@ export function MapBackdrop({ pickup, dropoff, driverLocation, surgeZones = [], 
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Update surge zone fills when zones change
+  // Surge zones update
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !surgeReadyRef.current) return;
-
     const source = map.getSource('surge-zones') as maplibregl.GeoJSONSource | undefined;
     if (!source) return;
     source.setData(buildSurgeGeoJSON(surgeZones));
-
     surgeMarkersRef.current.forEach(m => m.remove());
     surgeMarkersRef.current = [];
-
     surgeZones.forEach(z => {
       const { stroke } = surgeColors(z.multiplier);
       const el = document.createElement('div');
-      el.style.cssText = [
-        'display:flex', 'align-items:center', 'gap:3px',
-        'background:rgba(20,20,30,0.82)', 'backdrop-filter:blur(6px)',
-        'border-radius:20px', 'padding:3px 8px',
-        `border:1.5px solid ${stroke}`,
-        'pointer-events:none', 'white-space:nowrap',
-      ].join(';');
+      el.style.cssText = ['display:flex', 'align-items:center', 'gap:3px', 'background:rgba(20,20,30,0.82)', 'backdrop-filter:blur(6px)', 'border-radius:20px', 'padding:3px 8px', `border:1.5px solid ${stroke}`, 'pointer-events:none', 'white-space:nowrap'].join(';');
       el.innerHTML = `<span style="font-size:11px;color:#D5B23D">⚡</span><span style="font-size:11px;font-weight:700;color:#fff;font-family:sans-serif">${z.multiplier.toFixed(1)}×</span>`;
-      const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
-        .setLngLat([z.longitude, z.latitude])
-        .addTo(map);
+      const marker = new maplibregl.Marker({ element: el, anchor: 'center' }).setLngLat([z.longitude, z.latitude]).addTo(map);
       surgeMarkersRef.current.push(marker);
     });
   }, [surgeZones]);
 
-  // Gap C: draw/update the shuttle fixed-route polyline and station markers
+  // Shuttle route + station markers update
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !shuttleRouteReadyRef.current) return;
     if (!routePolyline?.length) return;
 
     const coords = routePolyline.map((p) => [p.longitude, p.latitude] as [number, number]);
-
-    // Draw straight-line route immediately
     const source = map.getSource('shuttle-route') as maplibregl.GeoJSONSource | undefined;
-    if (source) {
-      source.setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: coords }, properties: {} });
-    }
+    if (source) source.setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: coords }, properties: {} });
 
-    // Replace station markers
+    // Rebuild station markers with current statuses
     shuttleMarkersRef.current.forEach(m => m.remove());
     shuttleMarkersRef.current = [];
     routePolyline.forEach((pt, idx) => {
-      const marker = new maplibregl.Marker({ element: makeSvgEl(stationSvg(idx + 1)), anchor: 'center' })
+      const status = stationStatuses?.[idx] ?? 'pending';
+      const marker = new maplibregl.Marker({ element: makeSvgEl(stationSvg(idx + 1, status)), anchor: 'center' })
         .setLngLat([pt.longitude, pt.latitude])
         .addTo(map);
       shuttleMarkersRef.current.push(marker);
     });
 
-    // Fit viewport to all stations
     const bounds = new maplibregl.LngLatBounds();
     routePolyline.forEach((p) => bounds.extend([p.longitude, p.latitude]));
     map.fitBounds(bounds, { padding: 80, maxZoom: 14, duration: 700 });
 
-    // Upgrade to OSRM road-snapped route asynchronously
     fetchOSRMRoute(coords).then((osrmCoords) => {
       if (!osrmCoords) return;
       const src = mapRef.current?.getSource('shuttle-route') as maplibregl.GeoJSONSource | undefined;
       src?.setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: osrmCoords }, properties: {} });
     });
-  }, [routePolyline]);
+  }, [routePolyline]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Station statuses update (without rebuilding route)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !routePolyline?.length) return;
+    // Only update markers if the route is already drawn
+    if (!shuttleRouteReadyRef.current) return;
+    shuttleMarkersRef.current.forEach(m => m.remove());
+    shuttleMarkersRef.current = [];
+    routePolyline.forEach((pt, idx) => {
+      const status = stationStatuses?.[idx] ?? 'pending';
+      const marker = new maplibregl.Marker({ element: makeSvgEl(stationSvg(idx + 1, status)), anchor: 'center' })
+        .setLngLat([pt.longitude, pt.latitude])
+        .addTo(map);
+      shuttleMarkersRef.current.push(marker);
+    });
+  }, [stationStatuses]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Approach circle update
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !approachReadyRef.current) return;
+    const source = map.getSource('approach-circle') as maplibregl.GeoJSONSource | undefined;
+    if (!source) return;
+    if (approachCircle) {
+      source.setData({
+        type: 'Feature',
+        geometry: {
+          type: 'Polygon',
+          coordinates: [geoCirclePolygon(approachCircle.latitude, approachCircle.longitude, approachCircle.radius)],
+        },
+        properties: {},
+      });
+      map.setLayoutProperty('approach-fill', 'visibility', 'visible');
+      map.setLayoutProperty('approach-stroke', 'visibility', 'visible');
+    } else {
+      map.setLayoutProperty('approach-fill', 'visibility', 'none');
+      map.setLayoutProperty('approach-stroke', 'visibility', 'none');
+    }
+  }, [approachCircle]);
+
+  // Focus camera
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !focusTarget) return;
+    map.flyTo({ center: [focusTarget.longitude, focusTarget.latitude], zoom: focusTarget.zoom ?? 16, duration: 800 });
+  }, [focusTarget?.latitude, focusTarget?.longitude]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Driver location update
   useEffect(() => {
     const now = Date.now();
     if (now - lastLocUpdate.current < 1500) return;
@@ -341,7 +362,7 @@ export function MapBackdrop({ pickup, dropoff, driverLocation, surgeZones = [], 
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-      {/* @ts-ignore — plain div is valid in Expo Web (browser context) */}
+      {/* @ts-ignore — plain div is valid in Expo Web */}
       <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
     </View>
   );
