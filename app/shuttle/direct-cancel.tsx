@@ -12,12 +12,12 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
-import { endpoints } from '@/lib/api';
-import { useQueryClient } from '@tanstack/react-query';
+import { endpoints, ApiError } from '@/lib/api';
+import { useShuttle } from '@/lib/shuttleContext';
 
 type Params = {
   bookingId: string;
@@ -43,10 +43,10 @@ export default function DirectCancelScreen() {
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
   const queryClient = useQueryClient();
 
+  const { refetch } = useShuttle();
   const { bookingId, routeName, departureTime } = useLocalSearchParams<Params>();
 
   const [selectedReason, setSelectedReason] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
   const [cancelled, setCancelled] = useState(false);
 
   const { data: previewData } = useQuery({
@@ -56,11 +56,31 @@ export default function DirectCancelScreen() {
     retry: 1,
   });
 
-  const handleConfirmCancel = async () => {
+  const cancelMutation = useMutation({
+    mutationFn: () => endpoints.shuttle.cancelBookingFinal(bookingId!, selectedReason!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['shuttle-driver-trips'] });
+      refetch();
+      setCancelled(true);
+    },
+    onError: (err) => {
+      const apiErr = err instanceof ApiError ? err : null;
+      const body = apiErr?.body as Record<string, unknown> | null;
+      const msg =
+        (typeof body?.error === 'string' ? body.error : null) ??
+        (typeof body?.message === 'string' ? body.message : null) ??
+        'فشل إلغاء الرحلة. يرجى المحاولة مجدداً أو التواصل مع الدعم.';
+      Alert.alert('', msg);
+    },
+  });
+
+  const handleConfirmCancel = () => {
     if (!selectedReason) {
       Alert.alert('', 'يرجى اختيار سبب الإلغاء أولاً.');
       return;
     }
+    if (cancelMutation.isPending) return;
 
     Alert.alert(
       'تأكيد الإلغاء النهائي',
@@ -70,27 +90,7 @@ export default function DirectCancelScreen() {
         {
           text: 'نعم، إلغاء',
           style: 'destructive',
-          onPress: async () => {
-            setLoading(true);
-            try {
-              // TODO: Backend Integration - POST /shuttle/route-bookings/:id/final-cancel
-              // Backend should:
-              //   1. Cancel the booking and mark it as cancelled
-              //   2. Send push notifications to all booked passengers informing them
-              //   3. Trigger an Admin Dashboard alert for manual re-assignment
-              // TODO: Penalties rules will be calculated and applied automatically from the backend
-              await endpoints.shuttle.cancelBookingFinal(bookingId!, selectedReason);
-              // Invalidate bookings so the home screen refreshes
-              queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
-              queryClient.invalidateQueries({ queryKey: ['shuttle-driver-trips'] });
-              setCancelled(true);
-            } catch {
-              // TODO: Backend Integration - Surface specific error codes (e.g., too late to cancel, penalty applied)
-              Alert.alert('', 'فشل إلغاء الرحلة. يرجى المحاولة مجدداً أو التواصل مع الدعم.');
-            } finally {
-              setLoading(false);
-            }
-          },
+          onPress: () => cancelMutation.mutate(),
         },
       ]
     );
@@ -208,16 +208,16 @@ export default function DirectCancelScreen() {
       <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 20), borderTopColor: colors.border, backgroundColor: colors.background }]}>
         <Pressable
           onPress={handleConfirmCancel}
-          disabled={loading || !selectedReason}
+          disabled={cancelMutation.isPending || !selectedReason}
           style={({ pressed }) => [
             styles.confirmBtn,
             {
               backgroundColor: selectedReason ? '#DC2626' : colors.secondary,
-              opacity: pressed ? 0.88 : loading ? 0.7 : 1,
+              opacity: pressed ? 0.88 : cancelMutation.isPending ? 0.7 : 1,
             },
           ]}
         >
-          {loading ? (
+          {cancelMutation.isPending ? (
             <ActivityIndicator size="small" color="#fff" />
           ) : (
             <Text style={[styles.confirmBtnText, { color: selectedReason ? '#fff' : colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>
