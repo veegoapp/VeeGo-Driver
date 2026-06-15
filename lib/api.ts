@@ -419,6 +419,13 @@ export const endpoints = {
       api.post<RideMessage>(`/rides/${rideId}/messages`, { text }),
     sos: (rideId: string, data: { latitude: number; longitude: number; notes?: string }) =>
       api.post(`/rides/${rideId}/sos`, data),
+    history: (page = 1, limit = 20, status?: 'completed' | 'cancelled') => {
+      const params = [`page=${page}`, `limit=${limit}`];
+      if (status) params.push(`status=${status}`);
+      return api.get<{ data: RideHistoryItem[]; total: number; page: number }>(
+        `/driver/rides/history?${params.join('&')}`
+      );
+    },
   },
 
   trips: {
@@ -909,6 +916,21 @@ export interface RideMessage {
   senderRole: 'driver' | 'passenger';
   text: string;
   sentAt: string;
+}
+
+export interface RideHistoryItem {
+  id: string;
+  riderName: string;
+  riderAvatar?: string;
+  pickupAddress: string;
+  dropoffAddress: string;
+  fare: number;
+  duration?: string;
+  distance?: string;
+  completedAt: string;
+  status: 'completed' | 'cancelled';
+  riderRating?: number;
+  myRating?: number;
 }
 
 export interface DriverPromotion {

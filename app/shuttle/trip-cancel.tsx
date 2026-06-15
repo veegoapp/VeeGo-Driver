@@ -1,7 +1,8 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { ChevronLeft, ArrowRight, X } from 'lucide-react-native';
+import { ChevronLeft, ArrowRight, X, AlertCircle } from 'lucide-react-native';
 import React from 'react';
 import {
+  ActivityIndicator,
   Platform,
   Pressable,
   StyleSheet,
@@ -9,9 +10,11 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useQuery } from '@tanstack/react-query';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
+import { endpoints } from '@/lib/api';
 
 type Params = {
   bookingId: string;
@@ -30,6 +33,16 @@ export default function TripCancelScreen() {
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
 
   const { bookingId, routeName, departureTime, fromStation, toStation } = useLocalSearchParams<Params>();
+
+  const { data: previewData, isLoading: previewLoading } = useQuery({
+    queryKey: ['cancel-preview', bookingId],
+    queryFn: () => endpoints.shuttle.cancelPreview(bookingId!),
+    enabled: !!bookingId,
+    retry: 1,
+    staleTime: 60_000,
+  });
+
+  const hasPenalty = previewData != null && previewData.penaltyAmount > 0;
 
   const handleRefer = () => {
     router.push({
@@ -65,7 +78,6 @@ export default function TripCancelScreen() {
             <View style={[styles.summaryDot, { backgroundColor: '#1e1e28' }]} />
             <View style={{ flex: 1 }}>
               <Text style={[{ fontSize: 15, color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
-                {/* TODO: Use translated backend fields (routeNameAr, fromAr, toAr) here */}
                 {routeName ?? '—'}
               </Text>
               <Text style={[{ fontSize: 13, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', marginTop: 3, textAlign: TA }]}>
@@ -75,8 +87,40 @@ export default function TripCancelScreen() {
           </View>
         </GlassView>
 
+        {/* Penalty preview banner */}
+        {(previewLoading || previewData != null) && (
+          <View style={[
+            styles.penaltyBanner,
+            { backgroundColor: hasPenalty ? '#FEF2F2' : '#F0FDF4', borderColor: hasPenalty ? '#FCA5A5' : '#86efac' },
+          ]}>
+            {previewLoading ? (
+              <ActivityIndicator size="small" color={colors.mutedForeground} />
+            ) : (
+              <>
+                <AlertCircle size={16} color={hasPenalty ? '#DC2626' : '#16a34a'} strokeWidth={2} />
+                <Text style={[{
+                  fontSize: 13,
+                  fontFamily: 'Inter_700Bold',
+                  color: hasPenalty ? '#DC2626' : '#15803d',
+                  flex: 1,
+                  textAlign: TA,
+                }]}>
+                  {hasPenalty
+                    ? `Cancellation penalty: ${previewData!.penaltyAmount} EGP`
+                    : 'No penalty applies to this cancellation'}
+                </Text>
+                {previewData?.minutesUntilDeparture != null && (
+                  <Text style={{ fontSize: 11, color: hasPenalty ? '#991B1B' : '#166534', fontFamily: 'Inter_400Regular' }}>
+                    {previewData.minutesUntilDeparture}m left
+                  </Text>
+                )}
+              </>
+            )}
+          </View>
+        )}
+
         {/* Choice title */}
-        <Text style={[styles.choiceTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA, marginTop: 28 }]}>
+        <Text style={[styles.choiceTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA, marginTop: 20 }]}>
           {t.cancel_options_title}
         </Text>
 
@@ -97,6 +141,12 @@ export default function TripCancelScreen() {
                 <Text style={[styles.optionSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>
                   {t.refer_to_driver_sub}
                 </Text>
+                {/* No penalty for referral */}
+                {previewData != null && (
+                  <Text style={[{ fontSize: 11, color: '#15803d', fontFamily: 'Inter_700Bold', marginTop: 5, textAlign: TA }]}>
+                    ✓ No penalty
+                  </Text>
+                )}
               </View>
               <ArrowRight size={18} color={colors.mutedForeground} strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
             </GlassView>
@@ -118,6 +168,27 @@ export default function TripCancelScreen() {
                 <Text style={[styles.optionSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>
                   {t.direct_cancel_sub}
                 </Text>
+                {/* Penalty amount sourced from backend */}
+                {previewLoading && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 5 }}>
+                    <ActivityIndicator size="small" color="#DC2626" />
+                    <Text style={{ fontSize: 11, color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }}>
+                      Checking penalty...
+                    </Text>
+                  </View>
+                )}
+                {!previewLoading && hasPenalty && (
+                  <View style={[styles.penaltyTag, { backgroundColor: '#FEE2E2' }]}>
+                    <Text style={{ fontSize: 12, color: '#DC2626', fontFamily: 'Inter_700Bold' }}>
+                      {previewData!.penaltyAmount} EGP penalty
+                    </Text>
+                  </View>
+                )}
+                {!previewLoading && previewData != null && !hasPenalty && (
+                  <Text style={[{ fontSize: 11, color: '#15803d', fontFamily: 'Inter_700Bold', marginTop: 5, textAlign: TA }]}>
+                    No penalty for this cancellation
+                  </Text>
+                )}
               </View>
               <ArrowRight size={18} color="#DC2626" strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
             </GlassView>
@@ -142,6 +213,17 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 17 },
   tripSummary: { padding: 16 },
   summaryDot: { width: 10, height: 10, borderRadius: 5 },
+  penaltyBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 14,
+    minHeight: 40,
+  },
   choiceTitle: { fontSize: 18 },
   optionCard: {
     alignItems: 'center',
@@ -157,4 +239,11 @@ const styles = StyleSheet.create({
   },
   optionTitle: { fontSize: 16 },
   optionSub: { fontSize: 13, marginTop: 3, lineHeight: 18 },
+  penaltyTag: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginTop: 6,
+  },
 });
