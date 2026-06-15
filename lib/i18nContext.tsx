@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Alert, I18nManager, View, ViewStyle } from 'react-native';
+import { I18nManager, View, ViewStyle } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setApiLanguage } from './api';
 
@@ -1398,6 +1398,35 @@ function applyRTLEngine(lang: Language): void {
   I18nManager.forceRTL(isArabic);
 }
 
+// ── Automatic app restart ─────────────────────────────────────────────────────
+// Uses expo-updates as the primary mechanism (works in Expo Go + standalone).
+// Falls back to RN's DevSettings.reload() in development if expo-updates throws.
+// Must only be called AFTER language is persisted to AsyncStorage.
+function triggerAppRestart(): void {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const Updates = require('expo-updates');
+    // reloadAsync() is async — we fire-and-forget; the process will be killed
+    // by the OS before any subsequent JS runs.
+    (Updates.reloadAsync as () => Promise<void>)().catch(() => {
+      devSettingsReload();
+    });
+  } catch {
+    devSettingsReload();
+  }
+}
+
+function devSettingsReload(): void {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { NativeModules } = require('react-native');
+    NativeModules.DevSettings?.reload?.();
+  } catch {
+    // No restart path available — user must restart manually.
+    // This should never be reached in a normal Expo Go / standalone build.
+  }
+}
+
 // ── i18n Safety Layer ─────────────────────────────────────────────────────────
 //
 // getTranslation(key, locale)
@@ -1473,29 +1502,29 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const setLanguage = (lang: Language): void => {
-    setLanguageState(lang);
+    // Edge case: no-op if language is already set to the same value
+    if (lang === language) return;
 
-    // Persist preference
-    AsyncStorage.setItem(LANG_STORAGE_KEY, lang).catch(() => {});
-
-    // Propagate to API client so every subsequent request carries the correct Accept-Language header
-    setApiLanguage(lang);
-
-    // Force native RTL layout engine
+    // 1. Apply RTL engine flags immediately so they're in place before the restart
     applyRTLEngine(lang);
 
-    // The OS layout engine caches the RTL flag at process start.
-    // A full app restart is required for native views to flip correctly.
-    // expo-updates (Updates.reloadAsync) would handle this automatically in
-    // standalone builds — but since it is not installed in this project, we
-    // inform the driver and let them restart manually.
-    Alert.alert(
-      lang === 'ar' ? 'مطلوب إعادة التشغيل' : 'Restart Required',
-      lang === 'ar'
-        ? 'أغلق التطبيق وأعد فتحه لتفعيل تخطيط اللغة العربية بالكامل.'
-        : 'Please close and reopen the app to fully apply the new language layout.',
-      [{ text: lang === 'ar' ? 'حسناً' : 'OK' }],
-    );
+    // 2. Propagate to API client
+    setApiLanguage(lang);
+
+    // 3. Update React state (brief optimistic update visible before restart)
+    setLanguageState(lang);
+
+    // 4. Persist THEN restart — order matters: the rebooted app reads AsyncStorage
+    //    at boot, so the value must be written before the process is killed.
+    AsyncStorage.setItem(LANG_STORAGE_KEY, lang)
+      .then(() => {
+        triggerAppRestart();
+      })
+      .catch(() => {
+        // If persist fails we still restart so the RTL flags take effect;
+        // on next boot the language will fall back to the previous stored value.
+        triggerAppRestart();
+      });
   };
 
   const t = makeSafeTranslations(language ?? 'en');
