@@ -102,17 +102,13 @@ function formatCurrency(amount: number | string | undefined): string {
   return `${n.toFixed(0)} جنيه`;
 }
 
-// Returns current UTC epoch ms. Using Date.now() is correct for deadline diffs
-// because the deadline ISO comes from the server in UTC and Date.now() is always
-// UTC epoch — unaffected by the device's local timezone setting.
-// The Cairo boundary (Wed 17:00 GMT+3) is enforced server-side; the client only
-// counts down against the server-issued deadline timestamp.
-function getUtcNowMs(): number {
-  return Date.now();
-}
-
-function formatCountdown(deadlineIso: string): string {
-  const ms = new Date(deadlineIso).getTime() - getUtcNowMs();
+// Countdown is display-only. renewalDeadline is NEVER used for logic decisions.
+// The backend status field is the single source of truth for all UI state.
+function formatCountdown(deadlineIso: string | undefined | null): string {
+  if (!deadlineIso) return '--';
+  const t = Date.parse(deadlineIso);
+  if (isNaN(t)) return '--';
+  const ms = t - Date.now();
   if (ms <= 0) return 'انتهى الوقت';
   const h = Math.floor(ms / 3600000);
   const m = Math.floor((ms % 3600000) / 60000);
@@ -139,10 +135,6 @@ export default function BookingsScreen() {
   const [declineModalId, setDeclineModalId] = useState<string | null>(null);
   const TRIP_LIMIT = 10;
 
-  // Debounce guard: prevents a second Alert from opening while the first is still
-  // visible (e.g. fast double-tap on slow connections). Reset after mutation settles.
-  const renewalAlertOpen = useRef(false);
-
   // ── Queries ────────────────────────────────────────────────────────────────
 
   // TODO: Backend Integration - GET /shuttle/driver/my-trips
@@ -162,7 +154,7 @@ export default function BookingsScreen() {
   // ── Derived booking lists ──────────────────────────────────────────────────
 
   const upcomingBookings = myBookings.filter(
-    b => b.status !== 'completed' && b.status !== 'cancelled'
+    b => b.status === 'active' || b.status === 'pending_renewal'
   );
   const filteredUpcoming = upcomingBookings.filter(b => {
     const bucket = getWeekBucket(b.weekStart);
@@ -175,71 +167,70 @@ export default function BookingsScreen() {
     mutationFn: (id: string) => endpoints.shuttle.confirmRenewal(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
+      refetch();
       Alert.alert('', 'تم تأكيد حجزك للأسبوع القادم بنجاح');
     },
     onError: (err) => {
-      const msg = err instanceof ApiError && err.status === 409
-        ? 'تم حجز هذا الموعد بالفعل من قِبل سائق آخر.'
-        : 'تعذّر تأكيد التجديد. يرجى المحاولة مجدداً.';
+      const apiErr = err instanceof ApiError ? err : null;
+      const body = apiErr?.body as Record<string, unknown> | null;
+      const msg =
+        (typeof body?.error === 'string' ? body.error : null) ??
+        (typeof body?.message === 'string' ? body.message : null) ??
+        (apiErr?.status === 409 ? 'تم حجز هذا الموعد بالفعل من قِبل سائق آخر.' : null) ??
+        'تعذّر تأكيد التجديد. يرجى المحاولة مجدداً.';
       Alert.alert('', msg);
     },
   });
 
-  // TODO: Backend Integration - decline-renewal mutation
-  // POST /shuttle/route-bookings/:id/decline-renewal
-  // On success: backend releases the slot, broadcasts slot_released event,
-  // and pushes "slot available" notification to all drivers.
   const declineRenewalMutation = useMutation({
     mutationFn: (id: string) => endpoints.shuttle.declineRenewal(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['shuttle-available-weeks'] });
+      refetch();
     },
-    onError: () => {
-      Alert.alert('', 'تعذّر الاعتذار عن الخط. يرجى المحاولة مجدداً.');
+    onError: (err) => {
+      const apiErr = err instanceof ApiError ? err : null;
+      const body = apiErr?.body as Record<string, unknown> | null;
+      const msg =
+        (typeof body?.error === 'string' ? body.error : null) ??
+        (typeof body?.message === 'string' ? body.message : null) ??
+        'تعذّر الاعتذار عن الخط. يرجى المحاولة مجدداً.';
+      Alert.alert('', msg);
     },
   });
 
-  const handleConfirmRenewal = (bookingId: string) => {
-    // Double-tap guard: block if an alert is already open or a mutation is in flight
-    if (renewalAlertOpen.current || renewalPending) return;
-    renewalAlertOpen.current = true;
+  const handleConfirmRenewal = (booking: ShuttleBooking) => {
+    if (booking.status !== 'pending_renewal') {
+      Alert.alert('', 'التجديد غير متاح في الوقت الحالي.');
+      return;
+    }
+    if (confirmRenewalMutation.isPending || declineRenewalMutation.isPending) return;
     Alert.alert(
       'تأكيد التجديد',
       'سيتم تأكيد حجزك لنفس الموعد في الأسبوع القادم.',
       [
-        {
-          text: 'رجوع',
-          style: 'cancel',
-          onPress: () => { renewalAlertOpen.current = false; },
-        },
+        { text: 'رجوع', style: 'cancel' },
         {
           text: 'تأكيد التجديد',
-          onPress: () => {
-            renewalAlertOpen.current = false;
-            confirmRenewalMutation.mutate(bookingId);
-          },
+          onPress: () => confirmRenewalMutation.mutate(booking.id),
         },
       ]
     );
   };
 
   const handleDeclineRenewal = (bookingId: string) => {
-    // Double-tap guard: block if an alert is already open or a mutation is in flight
-    if (renewalAlertOpen.current || renewalPending) return;
-    renewalAlertOpen.current = true;
+    if (declineRenewalMutation.isPending || confirmRenewalMutation.isPending) return;
     setDeclineModalId(bookingId);
   };
 
   const handleDeclineModalClose = () => {
-    renewalAlertOpen.current = false;
     setDeclineModalId(null);
   };
 
   const handleDeclineConfirm = () => {
     if (!declineModalId) return;
     const id = declineModalId;
-    renewalAlertOpen.current = false;
     setDeclineModalId(null);
     declineRenewalMutation.mutate(id);
   };
@@ -252,6 +243,7 @@ export default function BookingsScreen() {
   };
 
   const renewalPending = confirmRenewalMutation.isPending || declineRenewalMutation.isPending;
+  // renewalPending kept for button disabled states inside mutations
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -279,13 +271,13 @@ export default function BookingsScreen() {
           المواعيد الأسبوعية والرحلات المكتملة
         </Text>
 
-        {/* Wednesday renewal banner */}
-        {renewalBooking && renewalBooking.renewalDeadline && (
+        {/* Renewal banner — visible only when backend status is pending_renewal */}
+        {renewalBooking && (
           <RenewalBanner
             booking={renewalBooking}
             confirmPending={confirmRenewalMutation.isPending}
             declinePending={declineRenewalMutation.isPending}
-            onConfirm={() => handleConfirmRenewal(renewalBooking.id)}
+            onConfirm={() => handleConfirmRenewal(renewalBooking)}
             onDecline={() => handleDeclineRenewal(renewalBooking.id)}
           />
         )}
@@ -583,16 +575,15 @@ function RenewalBanner({
   onConfirm: () => void;
   onDecline: () => void;
 }) {
+  // countdown is display-only — never drives UI state
   const [countdown, setCountdown] = useState(() =>
-    formatCountdown(booking.renewalDeadline!)
+    formatCountdown(booking.renewalDeadline)
   );
-  // useRef ensures the interval ID is stable across re-renders and clearInterval
-  // is always called with the correct ID on unmount — prevents memory leaks.
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     intervalRef.current = setInterval(() => {
-      setCountdown(formatCountdown(booking.renewalDeadline!));
+      setCountdown(formatCountdown(booking.renewalDeadline));
     }, 1000);
     return () => {
       if (intervalRef.current !== null) {
@@ -602,7 +593,7 @@ function RenewalBanner({
     };
   }, [booking.renewalDeadline]);
 
-  const expired = countdown === 'انتهى الوقت';
+  const countdownExpired = countdown === 'انتهى الوقت' || countdown === '--';
 
   return (
     <View style={styles.renewalBanner}>
@@ -610,7 +601,7 @@ function RenewalBanner({
       <View style={styles.renewalHeaderRow}>
         <AlertTriangle size={16} color="#D97706" strokeWidth={2.5} />
         <Text style={styles.renewalTitle}>تجديد الحجز الأسبوعي</Text>
-        {!expired && (
+        {!countdownExpired && (
           <View style={styles.countdownPill}>
             <Clock size={10} color="#92400E" strokeWidth={2.5} />
             <Text style={styles.countdownText}>{countdown}</Text>
@@ -631,43 +622,41 @@ function RenewalBanner({
         هل تريد تجديد حجز هذا الخط للأسبوع القادم؟ يجب التأكيد قبل انتهاء الموعد.
       </Text>
 
-      {/* Actions */}
-      {!expired && (
-        <View style={styles.renewalActions}>
-          <Pressable
-            onPress={onConfirm}
-            disabled={confirmPending || declinePending}
-            style={({ pressed }) => [
-              styles.renewalConfirmBtn,
-              { opacity: pressed || confirmPending ? 0.8 : 1 },
-            ]}
-          >
-            {confirmPending ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <>
-                <RefreshCw size={14} color="#fff" strokeWidth={2.5} />
-                <Text style={styles.renewalConfirmLabel}>تأكيد التجديد</Text>
-              </>
-            )}
-          </Pressable>
+      {/* Actions — always rendered; visibility driven by booking.status === 'pending_renewal' */}
+      <View style={styles.renewalActions}>
+        <Pressable
+          onPress={onConfirm}
+          disabled={confirmPending || declinePending}
+          style={({ pressed }) => [
+            styles.renewalConfirmBtn,
+            { opacity: pressed || confirmPending ? 0.8 : 1 },
+          ]}
+        >
+          {confirmPending ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <>
+              <RefreshCw size={14} color="#fff" strokeWidth={2.5} />
+              <Text style={styles.renewalConfirmLabel}>تأكيد التجديد</Text>
+            </>
+          )}
+        </Pressable>
 
-          <Pressable
-            onPress={onDecline}
-            disabled={confirmPending || declinePending}
-            style={({ pressed }) => [
-              styles.renewalDeclineBtn,
-              { opacity: pressed || declinePending ? 0.8 : 1 },
-            ]}
-          >
-            {declinePending ? (
-              <ActivityIndicator size="small" color="#92400E" />
-            ) : (
-              <Text style={styles.renewalDeclineLabel}>اعتذار عن الخط</Text>
-            )}
-          </Pressable>
-        </View>
-      )}
+        <Pressable
+          onPress={onDecline}
+          disabled={confirmPending || declinePending}
+          style={({ pressed }) => [
+            styles.renewalDeclineBtn,
+            { opacity: pressed || declinePending ? 0.8 : 1 },
+          ]}
+        >
+          {declinePending ? (
+            <ActivityIndicator size="small" color="#92400E" />
+          ) : (
+            <Text style={styles.renewalDeclineLabel}>اعتذار عن الخط</Text>
+          )}
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -681,9 +670,8 @@ function BookingCard({
   colors: ReturnType<typeof useColors>;
   onPress: () => void;
 }) {
-  const hasRenewal =
-    !!booking.renewalDeadline &&
-    new Date(booking.renewalDeadline).getTime() > Date.now();
+  // hasRenewal is display-only (pill badge) — driven by backend status
+  const hasRenewal = booking.status === 'pending_renewal';
 
   const bucket = getWeekBucket(booking.weekStart);
   const weekLabel =

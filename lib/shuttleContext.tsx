@@ -393,10 +393,7 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
   const myBookings: ShuttleBooking[] = extractBookings(bookingsRaw);
 
   const renewalBooking: ShuttleBooking | null =
-    myBookings.find(b => {
-      if (!b.renewalDeadline) return false;
-      return new Date(b.renewalDeadline).getTime() > Date.now();
-    }) ?? null;
+    myBookings.find(b => b.status === 'pending_renewal') ?? null;
 
   // Trip execution layer (unchanged logic)
   const driverTrips = extractTrips(tripsRaw);
