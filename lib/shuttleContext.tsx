@@ -135,6 +135,23 @@ type BackendStation = {
   direction: string;
 };
 
+type StationPassenger = {
+  bookingId: number;
+  userId: number;
+  seatCount: number;
+  status: string;
+  boardingStationId: number | null;
+  userName: string;
+  userPhone: string;
+};
+
+type BackendStationWithPassengers = BackendStation & {
+  progress: { status: string; arrivedAt?: string; completedAt?: string } | null;
+  status: 'pending' | 'arrived' | 'completed';
+  passengers: StationPassenger[];
+  unassignedPassengers: StationPassenger[];
+};
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function mapStatus(s: string): 'upcoming' | 'in-progress' | 'completed' {
@@ -205,6 +222,13 @@ function extractBookings(raw: unknown): ShuttleBooking[] {
   if (Array.isArray(raw)) return (raw as RawDriverBooking[]).map(normalizeBooking);
   const r = raw as { data?: RawDriverBooking[]; bookings?: RawDriverBooking[] };
   return (r.data ?? r.bookings ?? []).map(normalizeBooking);
+}
+
+function extractTripStations(raw: unknown): BackendStationWithPassengers[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw as BackendStationWithPassengers[];
+  const r = raw as { data?: BackendStationWithPassengers[] };
+  return r.data ?? [];
 }
 
 function mapRoute(route: BackendRoute): ShuttleRoute {
@@ -422,30 +446,29 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
 
   const activeLine = allLines.find(l => l.status === 'in-progress') ?? null;
 
-  // Active trip station / passenger loading
+  const activeTripId = activeLine?.tripId;
+
+  // Load per-station passenger lists from GET /driver/trips/:id/stations (NEW endpoint)
   const {
-    data: activeLineDetailRaw,
+    data: tripStationsRaw,
     isLoading: stationsLoading,
     error: stationsError,
   } = useQuery({
-    queryKey: ['shuttle-line-detail', activeLine?.id],
-    queryFn: () => endpoints.shuttle.line(activeLine!.id) as Promise<unknown>,
-    enabled: !!activeLine,
+    queryKey: ['shuttle-trip-stations', activeTripId],
+    queryFn: () => endpoints.trips.stations(activeTripId!),
+    enabled: !!activeTripId,
+    refetchInterval: 30000,
   });
 
-  const activeDetail =
-    (activeLineDetailRaw as { data?: { stations?: BackendStation[] } } | undefined)?.data ??
-    (activeLineDetailRaw as { stations?: BackendStation[] } | undefined);
-  const activeStations: BackendStation[] =
-    (activeDetail as { stations?: BackendStation[] } | undefined)?.stations ?? [];
+  const tripStations: BackendStationWithPassengers[] = extractTripStations(tripStationsRaw);
 
-  // Gap C: ordered lat/lng coordinates for each active route station (must follow activeStations)
-  const stationCoords: Array<{ latitude: number; longitude: number }> = activeStations.map(st => ({
+  // Gap C: ordered lat/lng coordinates for each active route station
+  const stationCoords: Array<{ latitude: number; longitude: number }> = tripStations.map(st => ({
     latitude: st.latitude,
     longitude: st.longitude,
   }));
 
-  const stops: ShuttleStop[] = activeStations.map((st, idx) => ({
+  const stops: ShuttleStop[] = tripStations.map((st, idx) => ({
     id: String(st.id),
     name: st.name,
     address: st.name,
@@ -456,29 +479,36 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
       idx < currentStopIndex ? 'completed' : idx === currentStopIndex ? 'arrived' : 'pending',
   }));
 
-  const activeTripId = activeLine?.tripId;
-  const { data: tripDetailRaw, isLoading: detailLoading, error: detailError } = useQuery({
-    queryKey: ['shuttle-active-trip', activeTripId],
-    queryFn: () => endpoints.trips.detail(activeTripId!) as Promise<BackendTrip>,
-    enabled: !!activeTripId,
-  });
-
+  // Load per-station passengers whenever the active trip stations data or current stop changes.
+  // Merges server-reported status (boarded/absent) with any local optimistic updates.
   useEffect(() => {
-    const bookings = (tripDetailRaw as BackendTrip | undefined)?.bookings ?? [];
-    if (bookings.length > 0) {
-      setPassengers(
-        bookings.map((b, i) => ({
-          id: b.id,
-          name: b.passengerName ?? `Passenger ${i + 1}`,
-          avatar: b.passengerAvatar ?? '',
-          phone: b.passengerPhone ?? '—',
-          ticket: b.id.slice(0, 8).toUpperCase(),
-          checkedIn: false,
+    if (!tripStations.length || currentStopIndex >= tripStations.length) return;
+    const station = tripStations[currentStopIndex];
+    const allPassengers = [
+      ...station.passengers,
+      ...(currentStopIndex === 0 ? (station.unassignedPassengers ?? []) : []),
+    ];
+    if (allPassengers.length === 0) return;
+    setPassengers(prev => {
+      const prevMap = new Map(prev.map(p => [p.id, p]));
+      return allPassengers.map(sp => {
+        const existing = prevMap.get(String(sp.bookingId));
+        return {
+          id: String(sp.bookingId),
+          name: sp.userName || 'Passenger',
+          avatar: '',
+          phone: sp.userPhone || '—',
+          ticket: String(sp.bookingId).slice(0, 8).toUpperCase(),
+          checkedIn:
+            sp.status === 'boarded' ? true :
+            sp.status === 'absent' ? false :
+            (existing?.checkedIn ?? false),
           luggage: false,
-        }))
-      );
-    }
-  }, [tripDetailRaw]);
+        };
+      });
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tripStationsRaw, currentStopIndex]);
 
   // ── Socket: shuttle trip events ───────────────────────────────────────────
 
@@ -604,7 +634,7 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
         currentStopIndex,
         passengers,
         loading:
-          routesLoading || bookingsLoading || tripsLoading || stationsLoading || detailLoading,
+          routesLoading || bookingsLoading || tripsLoading || stationsLoading,
         listLoading: routesLoading || bookingsLoading,
         error: (routesError ?? bookingsError) as Error | null,
         refetch,

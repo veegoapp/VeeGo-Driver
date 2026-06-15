@@ -3,3 +3,4 @@
 - [Backend URL wiring](backend-url-wiring.md) — BACKEND_URL secret → setup.sh writes .env → EXPO_PUBLIC_API_URL; use pnpm exec expo start not npx
 - [Shuttle referral architecture](shuttle-referral-arch.md) — ReferralContext + ShuttleReferralBridge pattern for badge state; new Expo Router paths need `as any` cast until the app rebuilds its route types
 - [Backend readiness fixes](backend-readiness-fixes.md) — 9 mobile-side fixes applied after backend audit; key patterns: guard phase advance on API success, faceDetected field check, shuttle:booking:created over referral events
+- [Backend contract v2 alignment](backend-contract-v2.md) — FINAL contract changes: driver/status PATCH, boardBooking path, stations endpoint with passengers, trip start/complete via trips endpoints not shuttle

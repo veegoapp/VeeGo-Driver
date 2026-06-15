@@ -354,16 +354,10 @@ export default function TripDetailsScreen() {
               if (!bookingId || starting) return;
               setStarting(true);
               try {
-                // TODO: Backend Integration - POST /shuttle/route-bookings/:id/start
-                // Marks the booking as active and creates the trip instance on the backend.
-                // Expected response shape: { tripId: string }
-                const result = await endpoints.shuttle.start(bookingId);
-                const tripId =
-                  (result as any)?.tripId ??
-                  (result as any)?.data?.tripId ??
-                  null;
-                if (tripId) setStartedTripId(String(tripId));
-                // Background refetch so context picks up the new activeLine status
+                const tripId = line?.tripId;
+                if (!tripId) throw new Error('No trip assigned to this route yet');
+                await endpoints.trips.start(String(tripId));
+                setStartedTripId(String(tripId));
                 refetch();
                 router.push('/shuttle/trip-active' as any);
               } catch {

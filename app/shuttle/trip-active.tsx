@@ -187,9 +187,9 @@ export default function ShuttleTripActiveScreen() {
   const handleFinishRoute = async () => {
     if (!activeLine) return;
     try {
-      // TODO: Backend Integration - POST /shuttle/lines/:id/complete
-      // Returns: ShuttleCompleteResponse { earnedAmount, walletBalance }
-      const result = await endpoints.shuttle.complete(activeLine.id) as ShuttleCompleteResponse;
+      const tripId = activeLine.tripId;
+      if (!tripId) throw new Error('No active trip ID');
+      const result = await endpoints.trips.complete(tripId) as ShuttleCompleteResponse;
       const earned = result?.earnedAmount ?? result?.data?.earnedAmount;
       const balance = result?.walletBalance ?? result?.data?.walletBalance;
       router.replace({

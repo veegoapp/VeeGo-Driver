@@ -149,7 +149,7 @@ function SignInForm({ isRTL, onSuccess }: { isRTL: boolean; onSuccess: (at: stri
     setLoading(true);
     try {
       const result = await endpoints.auth.driverLogin(credential.trim(), password);
-      const at = result.accessToken as string;
+      const at = (result.accessToken ?? result.token) as string;
       const rt = result.refreshToken as string;
       // Check isActive — pending drivers see the approval screen instead of the dashboard.
       let isActive = true;
@@ -276,7 +276,7 @@ function SignUpForm({ isRTL, onSuccess }: { isRTL: boolean; onSuccess: (at: stri
         licenseNumber: licenseNumber.trim() || undefined,
         nationalId: nationalId.trim() || undefined,
       });
-      onSuccess(result.accessToken as string, result.refreshToken as string);
+      onSuccess((result.accessToken ?? result.token) as string, result.refreshToken as string);
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {

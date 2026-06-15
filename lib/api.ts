@@ -260,11 +260,11 @@ export const endpoints = {
   auth: {
     logout: () => request<void>('POST', '/driver/auth/logout'),
     driverLogin: (credential: string, password: string) =>
-      request<{ accessToken: string; refreshToken: string; user: Record<string, unknown>; driver: Record<string, unknown> }>(
+      request<{ token?: string; accessToken?: string; refreshToken: string; user?: Record<string, unknown>; driver: Record<string, unknown> }>(
         'POST', '/driver/auth/login', { credential, password }
       ),
     driverRegister: (data: { name: string; email: string; phone: string; password: string; licenseNumber?: string; nationalId?: string }) =>
-      request<{ accessToken: string; refreshToken: string; user: Record<string, unknown>; driver: Record<string, unknown> }>(
+      request<{ token?: string; accessToken?: string; refreshToken: string; user?: Record<string, unknown>; driver: Record<string, unknown> }>(
         'POST', '/driver/auth/register', data
       ),
     forgotPassword: (credential: string) =>
@@ -352,8 +352,10 @@ export const endpoints = {
     },
 
     updateMe: (data: unknown) => api.patch('/driver/me', data),
-    goOnline: () => api.patch('/driver/status/online'),
-    goOffline: () => api.patch('/driver/status/offline'),
+    goOnline: () => api.patch('/driver/status', { status: 'online' }),
+    goOffline: () => api.patch('/driver/status', { status: 'offline' }),
+    updateStatus: (status: 'online' | 'offline' | 'busy' | 'suspended') =>
+      api.patch('/driver/status', { status }),
     updateLocation: (data: { latitude: number; longitude: number; speed?: number; heading?: number; tripId?: string | number }) =>
       api.patch('/driver/location', {
         ...data,
@@ -447,6 +449,7 @@ export const endpoints = {
     cancel: (tripId: string, reason: string) =>
       api.patch(`/driver/trips/${tripId}/cancel`, { reason }),
     stations: (tripId: string) => api.get(`/driver/trips/${tripId}/stations`),
+    stationsEta: (tripId: string) => api.get(`/driver/trips/${tripId}/stations/eta`),
     stationArrived: (tripId: string, stationId: string) =>
       api.patch(`/driver/trips/${tripId}/stations/${stationId}/arrived`),
     stationCompleted: (tripId: string, stationId: string) =>
@@ -695,9 +698,9 @@ export const endpoints = {
     // Returns: { earnedAmount: number, walletBalance: number }
     complete: (lineId: string) => api.post(`/shuttle/lines/${lineId}/complete`),
     passengers: (tripId: string) => api.get(`/shuttle/trips/${tripId}/passengers`),
-    // Fix 4: include stationId to trigger the 60-second timer on the backend
+    // PATCH /driver/bookings/:id/board — marks passenger as boarded
     boardBooking: (bookingId: string, stationId?: string | number) =>
-      api.post(`/shuttle/bookings/${bookingId}/board`, stationId != null ? { stationId } : {}),
+      api.patch(`/driver/bookings/${bookingId}/board`, stationId != null ? { stationId } : {}),
 
     driverTrips: (page = 1, limit = 10) =>
       api.get(`/shuttle/driver/my-trips?page=${page}&limit=${limit}`),
