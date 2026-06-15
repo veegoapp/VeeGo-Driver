@@ -3,28 +3,28 @@ import { AlertOctagon, HeadphonesIcon } from 'lucide-react-native';
 import React from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useI18n } from '@/lib/i18nContext';
 
 export default function SuspendedScreen() {
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
   const botPad = Platform.OS === 'web' ? 34 : insets.bottom;
+  const { t } = useI18n();
 
   return (
     <View style={[s.root, { paddingTop: topPad, paddingBottom: botPad + 24 }]}>
       <View style={s.iconWrap}>
         <AlertOctagon size={64} color="#ef4444" strokeWidth={1.5} />
       </View>
-      <Text style={s.title}>تم إيقاف حسابك</Text>
-      <Text style={s.body}>
-        تم إيقاف حسابك بسبب تكرار الغياب. تواصل مع الدعم لإعادة التفعيل.
-      </Text>
+      <Text style={s.title}>{t.account_suspended_title}</Text>
+      <Text style={s.body}>{t.account_suspended_body}</Text>
       <Pressable
         style={s.btn}
         onPress={() => router.push('/support')}
         accessibilityRole="button"
       >
         <HeadphonesIcon size={18} color="#fff" strokeWidth={2} />
-        <Text style={s.btnText}>Contact Support</Text>
+        <Text style={s.btnText}>{t.help_support}</Text>
       </Pressable>
     </View>
   );

@@ -87,7 +87,7 @@ export default function HistoryDetailScreen() {
           <ArrowLeft size={22} color={colors.foreground} strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
         </Pressable>
         <Text style={[styles.headerTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-          تفاصيل الرحلة
+          {t.trip_detail_title}
         </Text>
         <View style={{ width: 40 }} />
       </View>
@@ -100,7 +100,7 @@ export default function HistoryDetailScreen() {
         <View style={{ marginTop: 24 }}>
           <View style={[styles.completedBadge, { flexDirection: R }]}>
             <CheckCircle2 size={14} color="#16a34a" strokeWidth={2} />
-            <Text style={[styles.completedText, { fontFamily: 'Inter_700Bold' }]}>مكتملة</Text>
+            <Text style={[styles.completedText, { fontFamily: 'Inter_700Bold' }]}>{t.completed_label}</Text>
           </View>
           <Text style={[styles.routeName, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA, marginTop: 8 }]}>
             {routeName ?? '—'}
@@ -123,7 +123,7 @@ export default function HistoryDetailScreen() {
                   +{earned.toLocaleString('ar-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </Text>
                 <Text style={[{ fontSize: 11, color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>
-                  جنيه
+                  {t.egp}
                 </Text>
               </View>
             ) : (
@@ -223,7 +223,7 @@ export default function HistoryDetailScreen() {
           <GlassView style={[styles.emptyStations, { marginTop: 12 }]} borderRadius={16}>
             <MapPin size={24} color={colors.mutedForeground} strokeWidth={1.5} />
             <Text style={[{ fontSize: 13, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: 'center', marginTop: 8 }]}>
-              لا تتوفر تفاصيل المحطات لهذه الرحلة
+              {t.no_station_details}
             </Text>
           </GlassView>
         ) : (

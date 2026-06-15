@@ -117,20 +117,20 @@ const ALL_MODELS: VehicleModel[] = [
 ];
 
 const COLORS: ColorOption[] = [
-  { id: 'white',   label: 'أبيض',      hex: '#FFFFFF' },
-  { id: 'black',   label: 'أسود',      hex: '#1e1e28' },
-  { id: 'silver',  label: 'فضي',       hex: '#C0C0C0' },
-  { id: 'gray',    label: 'رمادي',     hex: '#808080' },
-  { id: 'red',     label: 'أحمر',      hex: '#E53935' },
-  { id: 'blue',    label: 'أزرق',      hex: '#1565C0' },
-  { id: 'green',   label: 'أخضر',      hex: '#388E3C' },
-  { id: 'beige',   label: 'بيج',       hex: '#D4B896' },
-  { id: 'brown',   label: 'بني',       hex: '#795548' },
-  { id: 'gold',    label: 'ذهبي',      hex: '#FFC107' },
-  { id: 'orange',  label: 'برتقالي',   hex: '#F57C00' },
-  { id: 'maroon',  label: 'كستنائي',   hex: '#880E4F' },
-  { id: 'navy',    label: 'كحلي',      hex: '#0D1B4B' },
-  { id: 'pearl',   label: 'لؤلؤي',     hex: '#F5F0E8' },
+  { id: 'white',   label: 'White',    hex: '#FFFFFF' },
+  { id: 'black',   label: 'Black',    hex: '#1e1e28' },
+  { id: 'silver',  label: 'Silver',   hex: '#C0C0C0' },
+  { id: 'gray',    label: 'Gray',     hex: '#808080' },
+  { id: 'red',     label: 'Red',      hex: '#E53935' },
+  { id: 'blue',    label: 'Blue',     hex: '#1565C0' },
+  { id: 'green',   label: 'Green',    hex: '#388E3C' },
+  { id: 'beige',   label: 'Beige',    hex: '#D4B896' },
+  { id: 'brown',   label: 'Brown',    hex: '#795548' },
+  { id: 'gold',    label: 'Gold',     hex: '#FFC107' },
+  { id: 'orange',  label: 'Orange',   hex: '#F57C00' },
+  { id: 'maroon',  label: 'Maroon',   hex: '#880E4F' },
+  { id: 'navy',    label: 'Navy',     hex: '#0D1B4B' },
+  { id: 'pearl',   label: 'Pearl',    hex: '#F5F0E8' },
 ];
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -159,6 +159,7 @@ function SearchableDropdown({
   disabled = false,
   isRTL = false,
 }: SearchableDropdownProps) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const insets = useSafeAreaInsets();
@@ -236,7 +237,7 @@ function SearchableDropdown({
             <Search size={15} color="#5e5e72" style={{ flexShrink: 0 }} />
             <TextInput
               style={[dd.searchInput, { textAlign: isRTL ? 'right' : 'left' }]}
-              placeholder="بحث…"
+              placeholder={t.search_placeholder}
               placeholderTextColor="#c3c3cc"
               value={query}
               onChangeText={setQuery}
@@ -255,7 +256,7 @@ function SearchableDropdown({
             contentContainerStyle={{ paddingHorizontal: 16 }}
             ListEmptyComponent={
               <View style={dd.empty}>
-                <Text style={dd.emptyText}>لا توجد نتائج</Text>
+                <Text style={dd.emptyText}>{t.no_results_dropdown}</Text>
               </View>
             }
             renderItem={({ item }) => {
@@ -287,7 +288,7 @@ function SearchableDropdown({
 
 export default function VehicleSpecsScreen() {
   const insets = useSafeAreaInsets();
-  const { isRTL } = useI18n();
+  const { isRTL, t } = useI18n();
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
   const botPad = Platform.OS === 'web' ? 34 : insets.bottom;
 
@@ -315,9 +316,26 @@ export default function VehicleSpecsScreen() {
     [],
   );
 
+  const COLOR_LABELS: Record<string, string> = {
+    white: t.color_white,
+    black: t.color_black,
+    silver: t.color_silver,
+    gray: t.color_gray,
+    red: t.color_red,
+    blue: t.color_blue,
+    green: t.color_green,
+    beige: t.color_beige,
+    brown: t.color_brown,
+    gold: t.color_gold,
+    orange: t.color_orange,
+    maroon: t.color_maroon,
+    navy: t.color_navy,
+    pearl: t.color_pearl,
+  };
+
   const colorItems: DropdownItem[] = useMemo(
-    () => COLORS.map((c) => ({ id: c.id, label: c.label, colorHex: c.hex })),
-    [],
+    () => COLORS.map((c) => ({ id: c.id, label: COLOR_LABELS[c.id] ?? c.label, colorHex: c.hex })),
+    [COLOR_LABELS],
   );
 
   const canContinue =
@@ -362,9 +380,9 @@ export default function VehicleSpecsScreen() {
 
         {/* Header */}
         <View style={s.header}>
-          <Text style={[s.title, { textAlign: isRTL ? 'right' : 'left' }]}>تفاصيل المركبة</Text>
+          <Text style={[s.title, { textAlign: isRTL ? 'right' : 'left' }]}>{t.vehicle_specs_title}</Text>
           <Text style={[s.sub, { textAlign: isRTL ? 'right' : 'left' }]}>
-            اختر بيانات سيارتك بدقة — لا يمكن كتابة النص مباشرة
+            {t.vehicle_specs_sub}
           </Text>
         </View>
 
@@ -373,10 +391,10 @@ export default function VehicleSpecsScreen() {
           {/* Brand */}
           <View style={s.fieldBlock}>
             <Text style={[s.label, { textAlign: isRTL ? 'right' : 'left' }]}>
-              الشركة المصنعة
+              {t.manufacturer_label}
             </Text>
             <SearchableDropdown
-              placeholder="اختر الشركة المصنعة"
+              placeholder={t.select_make}
               value={selectedBrand?.name ?? null}
               items={brandItems}
               isRTL={isRTL}
@@ -391,10 +409,10 @@ export default function VehicleSpecsScreen() {
           {/* Model */}
           <View style={s.fieldBlock}>
             <Text style={[s.label, { textAlign: isRTL ? 'right' : 'left' }]}>
-              الموديل
+              {t.car_model_label}
             </Text>
             <SearchableDropdown
-              placeholder={selectedBrand ? 'اختر الموديل' : 'اختر الشركة أولاً'}
+              placeholder={selectedBrand ? t.car_model_placeholder : t.select_make_first}
               value={selectedModel?.name ?? null}
               items={modelItems}
               disabled={!selectedBrand}
@@ -409,10 +427,10 @@ export default function VehicleSpecsScreen() {
           {/* Year */}
           <View style={s.fieldBlock}>
             <Text style={[s.label, { textAlign: isRTL ? 'right' : 'left' }]}>
-              سنة الصنع
+              {t.car_year_label}
             </Text>
             <SearchableDropdown
-              placeholder="اختر سنة الصنع"
+              placeholder={t.select_year_placeholder}
               value={selectedYear}
               items={yearItems}
               isRTL={isRTL}
@@ -423,11 +441,11 @@ export default function VehicleSpecsScreen() {
           {/* Color */}
           <View style={s.fieldBlock}>
             <Text style={[s.label, { textAlign: isRTL ? 'right' : 'left' }]}>
-              لون المركبة
+              {t.color_label}
             </Text>
             <SearchableDropdown
-              placeholder="اختر لون المركبة"
-              value={selectedColor?.label ?? null}
+              placeholder={t.color_label}
+              value={selectedColor ? COLOR_LABELS[selectedColor.id] ?? selectedColor.label : null}
               items={colorItems}
               isRTL={isRTL}
               onSelect={(item) => {
@@ -444,7 +462,7 @@ export default function VehicleSpecsScreen() {
             <View style={[s.summaryRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
               <View style={[s.colorDot, { backgroundColor: selectedColor.hex, borderWidth: selectedColor.id === 'white' ? 1 : 0, borderColor: '#e5e5ea' }]} />
               <Text style={s.summaryText} numberOfLines={2}>
-                {selectedColor.label} {selectedBrand.name} {selectedModel.name} — {selectedYear}
+                {COLOR_LABELS[selectedColor.id] ?? selectedColor.label} {selectedBrand.name} {selectedModel.name} — {selectedYear}
               </Text>
             </View>
           </View>
@@ -467,7 +485,7 @@ export default function VehicleSpecsScreen() {
             <ActivityIndicator color="white" size="small" />
           ) : (
             <>
-              <Text style={s.continueBtnText}>متابعة</Text>
+              <Text style={s.continueBtnText}>{t.continue_label}</Text>
               <ArrowRight size={18} color="white" strokeWidth={2} />
             </>
           )}

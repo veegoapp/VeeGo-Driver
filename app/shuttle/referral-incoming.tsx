@@ -89,7 +89,7 @@ export default function ReferralIncomingScreen() {
       await endpoints.shuttle.acceptReferral(referralId!);
       setResolved('accepted');
     } catch {
-      Alert.alert('', 'فشل قبول الرحلة. يرجى المحاولة مجدداً.');
+      Alert.alert('', t.accept_trip_failed);
     } finally {
       setAccepting(false);
     }
@@ -104,7 +104,7 @@ export default function ReferralIncomingScreen() {
       await endpoints.shuttle.declineReferral(referralId!);
       setResolved('declined');
     } catch {
-      Alert.alert('', 'فشل رفض الرحلة. يرجى المحاولة مجدداً.');
+      Alert.alert('', t.decline_trip_failed);
     } finally {
       setDeclining(false);
     }
@@ -117,17 +117,17 @@ export default function ReferralIncomingScreen() {
           <Check size={36} color="#16a34a" strokeWidth={2.5} />
         </View>
         <Text style={[styles.resolvedTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-          تم قبول الرحلة!
+          {t.referral_accepted_title}
         </Text>
         <Text style={[styles.resolvedSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
           {/* TODO: Backend Integration - The trip will now appear in your upcoming trips list */}
-          ستجد الرحلة في قائمة رحلاتك القادمة.
+          {t.referral_accepted_sub}
         </Text>
         <Pressable
           onPress={() => router.replace('/(shuttle)/' as any)}
           style={[styles.resolvedBtn, { backgroundColor: '#16a34a' }]}
         >
-          <Text style={[styles.resolvedBtnText, { fontFamily: 'Inter_700Bold' }]}>العودة للرئيسية</Text>
+          <Text style={[styles.resolvedBtnText, { fontFamily: 'Inter_700Bold' }]}>{t.return_home}</Text>
         </Pressable>
       </View>
     );
@@ -140,17 +140,17 @@ export default function ReferralIncomingScreen() {
           <X size={36} color="#DC2626" strokeWidth={2.5} />
         </View>
         <Text style={[styles.resolvedTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-          تم رفض الطلب
+          {t.referral_declined_title}
         </Text>
         <Text style={[styles.resolvedSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
           {/* TODO: Backend Integration - Driver 1 will be notified of the decline */}
-          تم إشعار السائق الأول برفضك للطلب.
+          {t.referral_declined_sub}
         </Text>
         <Pressable
           onPress={() => router.replace('/(shuttle)/' as any)}
           style={[styles.resolvedBtn, { backgroundColor: '#1e1e28' }]}
         >
-          <Text style={[styles.resolvedBtnText, { fontFamily: 'Inter_700Bold' }]}>العودة للرئيسية</Text>
+          <Text style={[styles.resolvedBtnText, { fontFamily: 'Inter_700Bold' }]}>{t.return_home}</Text>
         </Pressable>
       </View>
     );

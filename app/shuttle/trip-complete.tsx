@@ -83,10 +83,10 @@ export default function TripCompleteScreen() {
         {/* ── Title & subtitle ─────────────────────────────────────────── */}
         <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }], alignItems: 'center', gap: 6, marginTop: 20 }}>
           <Text style={[styles.title, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: 'center' }]}>
-            رحلة مكتملة!
+            {t.trip_completed_title}
           </Text>
           <Text style={[styles.subtitle, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: 'center' }]}>
-            أحسنت! تم إتمام الرحلة بنجاح.
+            {t.trip_completed_sub}
           </Text>
         </Animated.View>
 
@@ -101,13 +101,13 @@ export default function TripCompleteScreen() {
             <View style={{ flex: 1 }}>
               <Text style={[styles.cardLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
                 {/* TODO: Backend Integration - earnedAmount from completion response */}
-                أرباح هذه الرحلة
+                {t.trip_earnings_label}
               </Text>
               <View style={[{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'baseline', gap: 6 }]}>
                 <Text style={[styles.cardAmount, { color: '#16a34a', fontFamily: 'Inter_700Bold' }]}>
                   {earned != null ? earned.toLocaleString('ar-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
                 </Text>
-                <Text style={[styles.cardCurrency, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>جنيه</Text>
+                <Text style={[styles.cardCurrency, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>{t.egp}</Text>
               </View>
             </View>
           </GlassView>
@@ -120,13 +120,13 @@ export default function TripCompleteScreen() {
             <View style={{ flex: 1 }}>
               <Text style={[styles.cardLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
                 {/* TODO: Backend Integration - walletBalance from completion response */}
-                رصيد المحفظة الحالي
+                {t.wallet_balance_label}
               </Text>
               <View style={[{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'baseline', gap: 6 }]}>
                 <Text style={[styles.cardAmount, { color: '#2563eb', fontFamily: 'Inter_700Bold' }]}>
                   {balance != null ? balance.toLocaleString('ar-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
                 </Text>
-                <Text style={[styles.cardCurrency, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>جنيه</Text>
+                <Text style={[styles.cardCurrency, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>{t.egp}</Text>
               </View>
             </View>
           </GlassView>
@@ -152,7 +152,7 @@ export default function TripCompleteScreen() {
             style={styles.ctaBtn}
           >
             <Home size={20} color="#fff" strokeWidth={2} />
-            <Text style={[styles.ctaBtnText, { fontFamily: 'Inter_700Bold' }]}>العودة للرئيسية</Text>
+            <Text style={[styles.ctaBtnText, { fontFamily: 'Inter_700Bold' }]}>{t.return_home}</Text>
           </LinearGradient>
         </Pressable>
       </Animated.View>

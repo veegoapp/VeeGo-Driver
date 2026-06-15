@@ -49,12 +49,12 @@ export default function ShuttleTripActiveScreen() {
     const unsubscribe = navigation.addListener('beforeRemove', (e: any) => {
       e.preventDefault();
       Alert.alert(
-        'رحلة جارية حالياً!',
-        'هل أنت متأكد أنك تريد مغادرة شاشة الملاحة؟ الرحلة لا تزال جارية في الخلفية.',
+        t.trip_active_exit_title,
+        t.trip_active_exit_body,
         [
-          { text: 'إلغاء', style: 'cancel' },
+          { text: t.cancel, style: 'cancel' },
           {
-            text: 'خروج',
+            text: t.exit_label,
             style: 'destructive',
             onPress: () => navigation.dispatch(e.data.action),
           },
@@ -171,10 +171,10 @@ export default function ShuttleTripActiveScreen() {
       .map((r, i) => (r.status === 'rejected' ? checkedPassengers[i] : null))
       .filter((p): p is NonNullable<typeof p> => p !== null);
     if (failed.length > 0) {
-      const names = failed.map(p => p.name || p.id).join('، ');
+      const names = failed.map(p => p.name || p.id).join(' · ');
       Alert.alert(
-        'تعذر تسجيل بعض الركاب',
-        `لم يتم تسجيل الصعود للركاب التاليين:\n${names}`,
+        t.board_partial_failed_title,
+        t.board_partial_failed_body.replace('{names}', names),
       );
     }
   };

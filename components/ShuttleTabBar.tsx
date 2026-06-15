@@ -5,6 +5,7 @@ import { Animated, Platform, Pressable, StyleSheet, Text, View } from 'react-nat
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { useReferral } from '@/lib/referralContext';
+import { useI18n } from '@/lib/i18nContext';
 
 type TabBarProps = {
   state: { index: number; routes: Array<{ key: string; name: string }> };
@@ -12,12 +13,12 @@ type TabBarProps = {
   navigation: { emit: (args: any) => { defaultPrevented: boolean }; navigate: (name: string) => void };
 };
 
-const SHUTTLE_TABS = [
-  { name: 'index', label: 'Home', Icon: Radio },
-  { name: 'lines', label: 'Lines', Icon: GitBranch },
-  { name: 'bookings', label: 'Bookings', Icon: Bookmark },
-  { name: 'wallet', label: 'Wallet', Icon: CreditCard },
-  { name: 'profile', label: 'Profile', Icon: User },
+const SHUTTLE_TAB_NAMES = [
+  { name: 'index', Icon: Radio, key: 'home' as const },
+  { name: 'lines', Icon: GitBranch, key: 'routes' as const },
+  { name: 'bookings', Icon: Bookmark, key: 'my_bookings' as const },
+  { name: 'wallet', Icon: CreditCard, key: 'wallet' as const },
+  { name: 'profile', Icon: User, key: 'profile' as const },
 ] as const;
 
 /** Index of the Home tab in SHUTTLE_TABS — badge is shown here. */
@@ -29,6 +30,7 @@ const PILL_PX = 8;
 export function ShuttleTabBar({ state, navigation }: TabBarProps) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { t } = useI18n();
   const activeIndex = state.index;
   const [tabWidth, setTabWidth] = useState(0);
   const pillX = useRef(new Animated.Value(0)).current;
@@ -75,7 +77,7 @@ export function ShuttleTabBar({ state, navigation }: TabBarProps) {
           </Animated.View>
         )}
 
-        {SHUTTLE_TABS.map((item, index) => {
+        {SHUTTLE_TAB_NAMES.map((item, index) => {
           const isActive = state.index === index;
           const route = state.routes[index];
           const showBadge = index === HOME_TAB_INDEX && incomingReferralsCount > 0;
@@ -119,7 +121,7 @@ export function ShuttleTabBar({ state, navigation }: TabBarProps) {
                   { color: isActive ? '#fff' : colors.mutedForeground, fontFamily: 'Inter_600SemiBold' },
                 ]}
               >
-                {item.label}
+                {t[item.key]}
               </Text>
             </Pressable>
           );

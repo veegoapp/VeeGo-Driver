@@ -432,7 +432,7 @@ export default function ShuttleHomeScreen() {
           <StatItem label={t.routes} value={String(allLines.length)} colors={colors} />
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
           {/* TODO: Backend Integration - Currency symbol (جنيه / EGP) should come from tenant config */}
-          <StatItem label={t.net_earnings} value={`${todayEarnings} جنيه`} highlight colors={colors} />
+          <StatItem label={t.net_earnings} value={`${todayEarnings} ${t.egp}`} highlight colors={colors} />
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
           <StatItem label={t.active} value={String(allLines.filter(l => l.status === 'in-progress').length)} colors={colors} />
         </GlassView>
@@ -718,7 +718,7 @@ function UpcomingTripCard({
         <View style={{ alignItems: 'center', justifyContent: 'space-between', alignSelf: 'stretch', paddingTop: 2 }}>
           <View style={[styles.upcomingStatusBadge, { backgroundColor: '#1e1e2812', borderColor: '#1e1e2825' }]}>
             <Text style={[styles.upcomingStatusText, { color: '#2d2d42', fontFamily: 'Inter_700Bold' }]}>
-              {booking.status === 'active' ? t.active : 'محجوز'}
+              {booking.status === 'active' ? t.active : t.status_booked}
             </Text>
           </View>
           <ChevronRight size={16} color={colors.mutedForeground} strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />

@@ -230,11 +230,11 @@ export default function TripHistoryScreen() {
                     <Text style={[styles.summaryAmount, { fontFamily: 'Inter_700Bold' }]}>
                       {totalEarned.toLocaleString('ar-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </Text>
-                    <Text style={[styles.summaryCurrency, { fontFamily: 'Inter_600SemiBold' }]}>جنيه</Text>
+                    <Text style={[styles.summaryCurrency, { fontFamily: 'Inter_600SemiBold' }]}>{t.egp}</Text>
                   </View>
                   {serverTotal != null && allTrips.length < serverTotal && (
                     <Text style={[{ fontSize: 10, color: 'rgba(255,255,255,0.5)', fontFamily: 'Inter_400Regular', marginTop: 2, textAlign: TA }]}>
-                      {allTrips.length} / {serverTotal} محملة
+                      {allTrips.length} / {serverTotal} {t.loaded_label}
                     </Text>
                   )}
                 </View>
@@ -311,7 +311,7 @@ export default function TripHistoryScreen() {
                   <>
                     <ChevronDown size={16} color={colors.mutedForeground} strokeWidth={2} />
                     <Text style={[styles.loadMoreText, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>
-                      تحميل المزيد · {allTrips.length} / {serverTotal}
+                      {t.load_more_label} · {allTrips.length} / {serverTotal}
                     </Text>
                   </>
                 )}
@@ -321,7 +321,7 @@ export default function TripHistoryScreen() {
             {/* ── End of list marker ──────────────────────────────────── */}
             {!hasNextPage && allTrips.length > 0 && serverTotal != null && (
               <Text style={[styles.endLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-                تم عرض جميع الرحلات ({serverTotal})
+                {t.all_trips_shown.replace('{n}', String(serverTotal))}
               </Text>
             )}
           </View>
@@ -402,7 +402,7 @@ function TripCard({
             {trip.completedAt ? (
               <Text style={[styles.cardTime, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
                 {formatTime(trip.completedAt, locale)}
-                {trip.passengerCount != null ? ` · ${trip.passengerCount} راكب` : ''}
+                {trip.passengerCount != null ? ` · ${trip.passengerCount} ${t.pax_one}` : ''}
               </Text>
             ) : null}
           </View>
@@ -415,7 +415,7 @@ function TripCard({
                   +{trip.earnedAmount.toLocaleString('ar-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </Text>
                 <Text style={[styles.earnedCurrency, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>
-                  {t.history_earned} · جنيه
+                  {t.history_earned} · {t.egp}
                 </Text>
               </>
             ) : (

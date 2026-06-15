@@ -124,11 +124,22 @@ function getRange(preset: Preset): { start: Date | null; end: Date | null } {
 }
 
 // ── HTML generation ────────────────────────────────────────────────────────────
+type I18nStrings = {
+  export_earnings_report: string; export_generated: string;
+  export_total_earned: string; export_egp_currency: string; export_currency_symbol: string;
+  export_total_trips: string; export_completed_trips: string;
+  export_total_passengers: string; export_passengers_unit: string;
+  export_no_trips: string; export_auto_generated: string;
+  export_col_route: string; export_col_date: string;
+  export_col_passengers: string; export_col_earned: string;
+};
+
 function buildHtml(
   trips: NormalizedTrip[],
   preset: Preset,
   presetLabel: string,
   isRTL: boolean,
+  strings: I18nStrings,
 ): string {
   const dir = isRTL ? 'rtl' : 'ltr';
   const now = new Date();
@@ -151,7 +162,7 @@ function buildHtml(
         })
       : '';
     const earned = t.earnedAmount != null
-      ? `${t.earnedAmount.toFixed(2)} ${isRTL ? 'ج.م' : 'EGP'}`
+      ? `${t.earnedAmount.toFixed(2)} ${strings.export_currency_symbol}`
       : '—';
     const pax = t.passengerCount != null ? String(t.passengerCount) : '—';
     const bg = i % 2 === 0 ? '#ffffff' : '#f8f8fc';
@@ -165,11 +176,10 @@ function buildHtml(
       </tr>`;
   }).join('');
 
-  const col1 = isRTL ? '#' : '#';
-  const col2 = isRTL ? 'المسار' : 'Route';
-  const col3 = isRTL ? 'التاريخ' : 'Date';
-  const col4 = isRTL ? 'الركاب' : 'Passengers';
-  const col5 = isRTL ? 'الأرباح' : 'Earned';
+  const col2 = strings.export_col_route;
+  const col3 = strings.export_col_date;
+  const col4 = strings.export_col_passengers;
+  const col5 = strings.export_col_earned;
 
   return `<!DOCTYPE html>
 <html dir="${dir}" lang="${isRTL ? 'ar' : 'en'}">
@@ -189,30 +199,30 @@ function buildHtml(
   <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #1e1e28;padding-bottom:20px;margin-bottom:24px;flex-direction:${isRTL ? 'row-reverse' : 'row'}">
     <div>
       <div style="font-size:22px;font-weight:800;color:#1e1e28;letter-spacing:-0.5px">VeeGo Driver</div>
-      <div style="font-size:12px;color:#888;margin-top:2px">${isRTL ? 'تقرير الأرباح' : 'Earnings Report'}</div>
+      <div style="font-size:12px;color:#888;margin-top:2px">${strings.export_earnings_report}</div>
     </div>
     <div style="text-align:${isRTL ? 'left' : 'right'}">
       <div style="font-size:13px;font-weight:600;color:#1e1e28">${presetLabel}</div>
-      <div style="font-size:11px;color:#999;margin-top:2px">${isRTL ? 'تاريخ التصدير:' : 'Generated:'} ${dateStr}</div>
+      <div style="font-size:11px;color:#999;margin-top:2px">${strings.export_generated} ${dateStr}</div>
     </div>
   </div>
 
   <!-- Summary cards -->
   <div style="display:flex;gap:16px;margin-bottom:28px;flex-direction:${isRTL ? 'row-reverse' : 'row'}">
     <div style="flex:1;background:#1e1e28;border-radius:12px;padding:18px 20px">
-      <div style="font-size:11px;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px">${isRTL ? 'إجمالي الأرباح' : 'Total Earned'}</div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px">${strings.export_total_earned}</div>
       <div style="font-size:26px;font-weight:800;color:#4ade80">${totalEarned.toFixed(2)}</div>
-      <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:2px">${isRTL ? 'جنيه مصري' : 'EGP'}</div>
+      <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:2px">${strings.export_egp_currency}</div>
     </div>
     <div style="flex:1;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:18px 20px">
-      <div style="font-size:11px;color:#16a34a;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px">${isRTL ? 'إجمالي الرحلات' : 'Total Trips'}</div>
+      <div style="font-size:11px;color:#16a34a;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px">${strings.export_total_trips}</div>
       <div style="font-size:26px;font-weight:800;color:#1e1e28">${trips.length}</div>
-      <div style="font-size:12px;color:#888;margin-top:2px">${isRTL ? 'رحلة مكتملة' : 'completed trips'}</div>
+      <div style="font-size:12px;color:#888;margin-top:2px">${strings.export_completed_trips}</div>
     </div>
     <div style="flex:1;background:#fafafa;border:1px solid #e8e8f0;border-radius:12px;padding:18px 20px">
-      <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px">${isRTL ? 'إجمالي الركاب' : 'Total Passengers'}</div>
+      <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px">${strings.export_total_passengers}</div>
       <div style="font-size:26px;font-weight:800;color:#1e1e28">${totalPassengers}</div>
-      <div style="font-size:12px;color:#888;margin-top:2px">${isRTL ? 'راكب' : 'passengers'}</div>
+      <div style="font-size:12px;color:#888;margin-top:2px">${strings.export_passengers_unit}</div>
     </div>
   </div>
 
@@ -220,19 +230,19 @@ function buildHtml(
   <table style="width:100%;border-collapse:collapse;border-radius:10px;overflow:hidden;border:1px solid #e8e8f0">
     <thead>
       <tr style="background:#1e1e28">
-        <th style="padding:12px 14px;color:#fff;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;text-align:${isRTL ? 'right' : 'left'};width:36px">${col1}</th>
+        <th style="padding:12px 14px;color:#fff;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;text-align:${isRTL ? 'right' : 'left'};width:36px">#</th>
         <th style="padding:12px 14px;color:#fff;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;text-align:${isRTL ? 'right' : 'left'}">${col2}</th>
         <th style="padding:12px 14px;color:#fff;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;text-align:${isRTL ? 'right' : 'left'}">${col3}</th>
         <th style="padding:12px 14px;color:#fff;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;text-align:center">${col4}</th>
         <th style="padding:12px 14px;color:#fff;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;text-align:${isRTL ? 'left' : 'right'}">${col5}</th>
       </tr>
     </thead>
-    <tbody>${rows || `<tr><td colspan="5" style="padding:24px;text-align:center;color:#aaa;font-size:13px">${isRTL ? 'لا توجد رحلات في هذا النطاق' : 'No trips in this range'}</td></tr>`}</tbody>
+    <tbody>${rows || `<tr><td colspan="5" style="padding:24px;text-align:center;color:#aaa;font-size:13px">${strings.export_no_trips}</td></tr>`}</tbody>
   </table>
 
   <!-- Footer -->
   <div style="margin-top:24px;text-align:center;font-size:11px;color:#bbb">
-    VeeGo Driver · ${isRTL ? 'تقرير آلي — غير رسمي' : 'Auto-generated report — not an official document'}
+    VeeGo Driver · ${strings.export_auto_generated}
   </div>
 </div>
 </body>
@@ -299,7 +309,7 @@ export default function HistoryExportScreen() {
       const all = await fetchAllTrips();
       const filtered = filterByPreset(all, selectedPreset);
 
-      const html = buildHtml(filtered, selectedPreset, String(selectedLabel), isRTL);
+      const html = buildHtml(filtered, selectedPreset, String(selectedLabel), isRTL, t);
 
       if (Platform.OS === 'web') {
         const win = window.open('', '_blank');
@@ -320,16 +330,13 @@ export default function HistoryExportScreen() {
           });
         } else {
           Alert.alert(
-            isRTL ? 'تم إنشاء الملف' : 'PDF Ready',
-            isRTL ? `تم حفظ الملف في:\n${uri}` : `Saved to:\n${uri}`,
+            t.export_pdf_ready,
+            t.export_saved_to.replace('{uri}', uri),
           );
         }
       }
     } catch (err) {
-      Alert.alert(
-        isRTL ? 'خطأ' : 'Error',
-        isRTL ? 'حدث خطأ أثناء إنشاء الملف' : 'Failed to generate PDF',
-      );
+      Alert.alert(t.export_error, t.export_failed);
     } finally {
       setGenerating(false);
     }
@@ -364,7 +371,7 @@ export default function HistoryExportScreen() {
 
         {/* Preset chips */}
         <Text style={[styles.sectionLabel, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA, marginBottom: 12 }]}>
-          {isRTL ? 'النطاق الزمني' : 'Date Range'}
+          {t.export_date_range}
         </Text>
         <View style={[styles.presetsGrid, { flexDirection: R }]}>
           {PRESETS.map((p) => {
@@ -399,9 +406,7 @@ export default function HistoryExportScreen() {
         <GlassView style={[styles.infoCard, { flexDirection: R, marginTop: 24 }]} borderRadius={14}>
           <View style={{ flex: 1 }}>
             <Text style={[{ fontSize: 12, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA, lineHeight: 18 }]}>
-              {isRTL
-                ? 'سيتم تحميل جميع الرحلات المكتملة وتصفيتها حسب النطاق المختار. قد يستغرق ذلك لحظة.'
-                : 'All completed trips will be loaded and filtered by the selected range. This may take a moment.'}
+              {t.export_info_note}
             </Text>
           </View>
         </GlassView>

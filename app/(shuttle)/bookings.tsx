@@ -16,6 +16,7 @@ import { useSocket } from '@/lib/socketContext';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
 import { useShuttle, type ShuttleBooking } from '@/lib/shuttleContext';
 import { endpoints, ApiError } from '@/lib/api';
+import { useI18n } from '@/lib/i18nContext';
 
 const TAB_BAR_HEIGHT = 96;
 
@@ -79,12 +80,12 @@ function getWeekBucket(weekStart: string): WeekBucket {
   return 'other';
 }
 
-function formatWeekRange(weekStart: string, weekEnd?: string): string {
+function formatWeekRange(weekStart: string, weekEnd?: string, locale = 'ar-EG'): string {
   if (!weekStart) return '—';
   try {
     const s = new Date(weekStart + 'T00:00:00Z');
     const fmtDay = (d: Date) =>
-      d.toLocaleDateString('ar-EG', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+      d.toLocaleDateString(locale, { day: 'numeric', month: 'short', timeZone: 'UTC' });
     if (weekEnd) {
       const e = new Date(weekEnd + 'T00:00:00Z');
       return `${fmtDay(s)} — ${fmtDay(e)}`;
@@ -95,12 +96,14 @@ function formatWeekRange(weekStart: string, weekEnd?: string): string {
   }
 }
 
-function formatCurrency(amount: number | string | undefined): string {
+function formatCurrency(amount: number | string | undefined, egp = 'EGP'): string {
   if (amount == null) return '—';
   const n = parseFloat(String(amount));
   if (isNaN(n)) return '—';
-  return `${n.toFixed(0)} جنيه`;
+  return `${n.toFixed(0)} ${egp}`;
 }
+
+const COUNTDOWN_EXPIRED = '__EXPIRED__';
 
 // Countdown is display-only. renewalDeadline is NEVER used for logic decisions.
 // The backend status field is the single source of truth for all UI state.
@@ -109,7 +112,7 @@ function formatCountdown(deadlineIso: string | undefined | null): string {
   const t = Date.parse(deadlineIso);
   if (isNaN(t)) return '--';
   const ms = t - Date.now();
-  if (ms <= 0) return 'انتهى الوقت';
+  if (ms <= 0) return COUNTDOWN_EXPIRED;
   const h = Math.floor(ms / 3600000);
   const m = Math.floor((ms % 3600000) / 60000);
   const s = Math.floor((ms % 60000) / 1000);
@@ -123,6 +126,9 @@ export default function BookingsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
+  const { t, isRTL, language } = useI18n();
+  const TA = isRTL ? 'right' as const : 'left' as const;
+  const locale = language === 'ar' ? 'ar-EG' : 'en-GB';
 
   const { myBookings, renewalBooking, refetch } = useShuttle();
   const queryClient = useQueryClient();
@@ -168,7 +174,7 @@ export default function BookingsScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
       refetch();
-      Alert.alert('', 'تم تأكيد حجزك للأسبوع القادم بنجاح');
+      Alert.alert('', t.renewal_confirmed_success);
     },
     onError: (err) => {
       const apiErr = err instanceof ApiError ? err : null;
@@ -176,8 +182,8 @@ export default function BookingsScreen() {
       const msg =
         (typeof body?.error === 'string' ? body.error : null) ??
         (typeof body?.message === 'string' ? body.message : null) ??
-        (apiErr?.status === 409 ? 'تم حجز هذا الموعد بالفعل من قِبل سائق آخر.' : null) ??
-        'تعذّر تأكيد التجديد. يرجى المحاولة مجدداً.';
+        (apiErr?.status === 409 ? t.renewal_conflict_error : null) ??
+        t.renewal_failed_error;
       Alert.alert('', msg);
     },
   });
@@ -195,24 +201,24 @@ export default function BookingsScreen() {
       const msg =
         (typeof body?.error === 'string' ? body.error : null) ??
         (typeof body?.message === 'string' ? body.message : null) ??
-        'تعذّر الاعتذار عن الخط. يرجى المحاولة مجدداً.';
+        t.decline_renewal_failed;
       Alert.alert('', msg);
     },
   });
 
   const handleConfirmRenewal = (booking: ShuttleBooking) => {
     if (booking.status !== 'pending_renewal') {
-      Alert.alert('', 'التجديد غير متاح في الوقت الحالي.');
+      Alert.alert('', t.renewal_not_available);
       return;
     }
     if (confirmRenewalMutation.isPending || declineRenewalMutation.isPending) return;
     Alert.alert(
-      'تأكيد التجديد',
-      'سيتم تأكيد حجزك لنفس الموعد في الأسبوع القادم.',
+      t.confirm_renewal_title,
+      t.confirm_renewal_body,
       [
-        { text: 'رجوع', style: 'cancel' },
+        { text: t.back, style: 'cancel' },
         {
-          text: 'تأكيد التجديد',
+          text: t.confirm_renewal_title,
           onPress: () => confirmRenewalMutation.mutate(booking.id),
         },
       ]
@@ -264,11 +270,11 @@ export default function BookingsScreen() {
         }
       >
         {/* Page header */}
-        <Text style={[styles.pageTitle, { color: colors.foreground }]}>
-          حجوزاتي
+        <Text style={[styles.pageTitle, { color: colors.foreground, textAlign: TA }]}>
+          {t.my_bookings}
         </Text>
-        <Text style={[styles.pageSub, { color: colors.mutedForeground }]}>
-          المواعيد الأسبوعية والرحلات المكتملة
+        <Text style={[styles.pageSub, { color: colors.mutedForeground, textAlign: TA }]}>
+          {t.weekly_schedule_subtitle}
         </Text>
 
         {/* Renewal banner — visible only when backend status is pending_renewal */}
@@ -285,14 +291,14 @@ export default function BookingsScreen() {
         {/* Main tabs */}
         <View style={[styles.mainTabRow, { borderColor: colors.border }]}>
           <MainTabBtn
-            label="الرحلات القادمة"
+            label={t.upcoming_trips}
             count={upcomingBookings.length}
             active={mainTab === 'upcoming'}
             onPress={() => setMainTab('upcoming')}
             colors={colors}
           />
           <MainTabBtn
-            label="الرحلات المكتملة"
+            label={t.completed_trips_tab}
             count={driverTripsTotal || driverTrips.length}
             active={mainTab === 'completed'}
             onPress={() => setMainTab('completed')}
@@ -306,13 +312,13 @@ export default function BookingsScreen() {
             {/* Week filter chips */}
             <View style={styles.weekFilterRow}>
               <WeekFilterBtn
-                label="الأسبوع الحالي"
+                label={t.current_week}
                 active={weekFilter === 'current'}
                 onPress={() => setWeekFilter('current')}
                 colors={colors}
               />
               <WeekFilterBtn
-                label="الأسبوع القادم"
+                label={t.next_week_label}
                 active={weekFilter === 'next'}
                 onPress={() => setWeekFilter('next')}
                 colors={colors}
@@ -323,7 +329,7 @@ export default function BookingsScreen() {
               <View style={styles.smartEmptyState}>
                 <Calendar size={40} color={colors.mutedForeground} strokeWidth={1.2} />
                 <Text style={[styles.smartEmptyTitle, { color: colors.foreground }]}>
-                  لا توجد رحلات مجدولة في هذا الأسبوع
+                  {t.no_scheduled_trips_week}
                 </Text>
                 <Pressable
                   onPress={() => router.push('/(shuttle)/lines')}
@@ -336,7 +342,7 @@ export default function BookingsScreen() {
                   ]}
                 >
                   <Text style={styles.smartEmptyCtaText}>
-                    تصفح الخطوط المتاحة واحجز أسبوعك الآن ←
+                    {t.browse_available_book}
                   </Text>
                 </Pressable>
               </View>
@@ -366,10 +372,10 @@ export default function BookingsScreen() {
               <View style={styles.emptyState}>
                 <CheckCircle size={36} color={colors.mutedForeground} strokeWidth={1.5} />
                 <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
-                  لا توجد رحلات مكتملة بعد
+                  {t.no_completed_trips_yet}
                 </Text>
                 <Text style={[styles.emptySub, { color: colors.mutedForeground }]}>
-                  ستظهر هنا الرحلات التي قمت بتسييرها
+                  {t.completed_trips_appear}
                 </Text>
               </View>
             ) : (
@@ -386,12 +392,12 @@ export default function BookingsScreen() {
                         onPress={() => setTripPage(p => Math.max(1, p - 1))}
                       >
                         <Text style={[styles.pageBtnText, { color: colors.foreground }]}>
-                          السابق
+                          {t.prev_page}
                         </Text>
                       </Pressable>
                     )}
                     <Text style={[styles.pageIndicator, { color: colors.mutedForeground }]}>
-                      صفحة {tripPage}
+                      {t.page_label_prefix} {tripPage}
                     </Text>
                     {hasMoreTrips && (
                       <Pressable
@@ -399,7 +405,7 @@ export default function BookingsScreen() {
                         onPress={() => setTripPage(p => p + 1)}
                       >
                         <Text style={[styles.pageBtnText, { color: colors.foreground }]}>
-                          التالي
+                          {t.next_page}
                         </Text>
                       </Pressable>
                     )}
@@ -445,10 +451,10 @@ export default function BookingsScreen() {
             </View>
             <View style={styles.dialogBody}>
               <Text style={[styles.dialogTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: 'center' }]}>
-                الاعتذار عن الخط
+                {t.decline_route_title}
               </Text>
               <Text style={[styles.dialogBodyText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: 'center' }]}>
-                هل أنت متأكد من الاعتذار عن هذا الخط للأسبوع القادم؟ سيتم تحرير الموعد لسائقين آخرين فوراً.
+                {t.decline_route_body}
               </Text>
             </View>
             <View style={[styles.dialogButtons, { borderTopColor: colors.border }]}>
@@ -456,7 +462,7 @@ export default function BookingsScreen() {
                 onPress={handleDeclineModalClose}
                 style={({ pressed }) => [styles.dialogBtnSecondary, { backgroundColor: pressed ? colors.secondary : '#fff', borderColor: colors.border }]}
               >
-                <Text style={[styles.dialogBtnLabel, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>رجوع</Text>
+                <Text style={[styles.dialogBtnLabel, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.back}</Text>
               </Pressable>
               <Pressable
                 onPress={handleDeclineConfirm}
@@ -464,7 +470,7 @@ export default function BookingsScreen() {
               >
                 {declineRenewalMutation.isPending
                   ? <ActivityIndicator color="#fff" size="small" />
-                  : <Text style={[styles.dialogBtnLabel, { color: '#fff', fontFamily: 'Inter_700Bold' }]}>اعتذار عن الخط</Text>
+                  : <Text style={[styles.dialogBtnLabel, { color: '#fff', fontFamily: 'Inter_700Bold' }]}>{t.decline_renewal_label}</Text>
                 }
               </Pressable>
             </View>
@@ -575,6 +581,8 @@ function RenewalBanner({
   onConfirm: () => void;
   onDecline: () => void;
 }) {
+  const { t, isRTL } = useI18n();
+  const locale = isRTL ? 'ar-EG' : 'en-GB';
   // countdown is display-only — never drives UI state
   const [countdown, setCountdown] = useState(() =>
     formatCountdown(booking.renewalDeadline)
@@ -593,14 +601,14 @@ function RenewalBanner({
     };
   }, [booking.renewalDeadline]);
 
-  const countdownExpired = countdown === 'انتهى الوقت' || countdown === '--';
+  const countdownExpired = countdown === COUNTDOWN_EXPIRED || countdown === '--';
 
   return (
     <View style={styles.renewalBanner}>
       {/* Header row */}
       <View style={styles.renewalHeaderRow}>
         <AlertTriangle size={16} color="#D97706" strokeWidth={2.5} />
-        <Text style={styles.renewalTitle}>تجديد الحجز الأسبوعي</Text>
+        <Text style={styles.renewalTitle}>{t.weekly_renewal_title}</Text>
         {!countdownExpired && (
           <View style={styles.countdownPill}>
             <Clock size={10} color="#92400E" strokeWidth={2.5} />
@@ -615,11 +623,11 @@ function RenewalBanner({
       </Text>
       <Text style={styles.renewalRouteMeta}>
         {booking.departureTime}
-        {booking.weekStart ? `  ·  ${formatWeekRange(booking.weekStart, booking.weekEnd)}` : ''}
+        {booking.weekStart ? `  ·  ${formatWeekRange(booking.weekStart, booking.weekEnd, locale)}` : ''}
       </Text>
 
       <Text style={styles.renewalBody}>
-        هل تريد تجديد حجز هذا الخط للأسبوع القادم؟ يجب التأكيد قبل انتهاء الموعد.
+        {t.weekly_renewal_body}
       </Text>
 
       {/* Actions — always rendered; visibility driven by booking.status === 'pending_renewal' */}
@@ -637,7 +645,7 @@ function RenewalBanner({
           ) : (
             <>
               <RefreshCw size={14} color="#fff" strokeWidth={2.5} />
-              <Text style={styles.renewalConfirmLabel}>تأكيد التجديد</Text>
+              <Text style={styles.renewalConfirmLabel}>{t.confirm_renewal_title}</Text>
             </>
           )}
         </Pressable>
@@ -653,7 +661,7 @@ function RenewalBanner({
           {declinePending ? (
             <ActivityIndicator size="small" color="#92400E" />
           ) : (
-            <Text style={styles.renewalDeclineLabel}>اعتذار عن الخط</Text>
+            <Text style={styles.renewalDeclineLabel}>{t.decline_renewal_label}</Text>
           )}
         </Pressable>
       </View>
@@ -670,13 +678,15 @@ function BookingCard({
   colors: ReturnType<typeof useColors>;
   onPress: () => void;
 }) {
+  const { t, isRTL } = useI18n();
+  const locale = isRTL ? 'ar-EG' : 'en-GB';
   // hasRenewal is display-only (pill badge) — driven by backend status
   const hasRenewal = booking.status === 'pending_renewal';
 
   const bucket = getWeekBucket(booking.weekStart);
   const weekLabel =
-    bucket === 'current' ? 'الأسبوع الحالي' :
-    bucket === 'next' ? 'الأسبوع القادم' : '';
+    bucket === 'current' ? t.current_week :
+    bucket === 'next' ? t.next_week_label : '';
 
   return (
     <Pressable
@@ -700,7 +710,7 @@ function BookingCard({
             <Text style={[styles.dot, { color: colors.border }]}>·</Text>
             <Calendar size={11} color={colors.mutedForeground} strokeWidth={2} />
             <Text style={[styles.metaText, { color: colors.mutedForeground }]}>
-              {formatWeekRange(booking.weekStart, booking.weekEnd)}
+              {formatWeekRange(booking.weekStart, booking.weekEnd, locale)}
             </Text>
           </View>
         </View>
@@ -716,7 +726,7 @@ function BookingCard({
           {hasRenewal && (
             <View style={[styles.renewalPill, { backgroundColor: '#FEF3C718' }]}>
               <AlertTriangle size={9} color="#D97706" strokeWidth={2.5} />
-              <Text style={styles.renewalPillText}>تجديد</Text>
+              <Text style={styles.renewalPillText}>{t.renew_label}</Text>
             </View>
           )}
         </View>
@@ -733,14 +743,15 @@ function CompletedTripCard({
   trip: DriverTrip;
   colors: ReturnType<typeof useColors>;
 }) {
+  const { t } = useI18n();
   // TODO: Backend Integration - Surface revenueAmount (gross) vs earnings (net after fees)
   // When backend returns both fields, show them side by side in the card.
-  const netEarnings = formatCurrency(trip.earnings);
+  const netEarnings = formatCurrency(trip.earnings, t.egp);
   const passengersLabel =
     trip.boardedPassengers != null && trip.totalPassengers != null
-      ? `${trip.boardedPassengers} / ${trip.totalPassengers} راكب`
+      ? `${trip.boardedPassengers} / ${trip.totalPassengers} ${t.pax_one}`
       : trip.boardedPassengers != null
-      ? `${trip.boardedPassengers} راكب`
+      ? `${trip.boardedPassengers} ${t.pax_one}`
       : '—';
 
   return (
@@ -751,7 +762,7 @@ function CompletedTripCard({
           style={[styles.bookingCardRoute, { color: colors.foreground }]}
           numberOfLines={1}
         >
-          {trip.routeName ?? 'رحلة شاتل'}
+          {trip.routeName ?? t.shuttle_trip_default}
         </Text>
         <View style={styles.metaRow}>
           {trip.date && (
@@ -776,7 +787,7 @@ function CompletedTripCard({
         </Text>
         <View style={[styles.completedBadge, { backgroundColor: '#22c55e18' }]}>
           <CheckCircle size={9} color="#16a34a" strokeWidth={2.5} />
-          <Text style={[styles.completedBadgeText, { color: '#16a34a' }]}>مكتملة</Text>
+          <Text style={[styles.completedBadgeText, { color: '#16a34a' }]}>{t.completed_label}</Text>
         </View>
       </View>
     </View>
@@ -795,6 +806,8 @@ function BookingDetailSheet({
 }) {
   const queryClient = useQueryClient();
   const { socket } = useSocket();
+  const { t, isRTL } = useI18n();
+  const locale = isRTL ? 'ar-EG' : 'en-GB';
 
   // TODO: Backend Integration - GET /shuttle/route-bookings/:id/detail
   // Returns live passenger count + threshold status for this week block.
@@ -897,7 +910,7 @@ function BookingDetailSheet({
           <Text style={[styles.sheetMeta, { color: colors.mutedForeground }]}>
             {booking.departureTime}
             {booking.weekStart
-              ? `  ·  ${formatWeekRange(booking.weekStart, booking.weekEnd)}`
+              ? `  ·  ${formatWeekRange(booking.weekStart, booking.weekEnd, locale)}`
               : ''}
           </Text>
         </View>
@@ -937,9 +950,7 @@ function BookingDetailSheet({
                 { color: thresholdMet ? '#16a34a' : '#D97706' },
               ]}
             >
-              {thresholdMet
-                ? 'نشط — اكتمل الحد الأدنى للركاب'
-                : 'بانتظار اكتمال الحد الأدنى للركاب'}
+              {thresholdMet ? t.threshold_met_status : t.threshold_waiting_status}
             </Text>
           </View>
         ) : (
@@ -952,7 +963,7 @@ function BookingDetailSheet({
           >
             <GitBranch size={14} color={colors.mutedForeground} strokeWidth={2} />
             <Text style={[styles.thresholdBadgeText, { color: colors.mutedForeground }]}>
-              الحجز مؤكد — في انتظار بيانات الركاب
+              {t.booking_confirmed_waiting}
             </Text>
           </View>
         )}
@@ -968,7 +979,7 @@ function BookingDetailSheet({
             <View style={styles.passengerCardHeader}>
               <Users size={14} color={colors.mutedForeground} strokeWidth={2} />
               <Text style={[styles.passengerCardTitle, { color: colors.foreground }]}>
-                الركاب المحجوزون
+                {t.booked_passengers_label}
               </Text>
               <Pressable
                 onPress={() => refetchDetail()}
@@ -988,7 +999,7 @@ function BookingDetailSheet({
                 {' / '}{totalSeats}
               </Text>
               <Text style={[styles.passengerLabel, { color: colors.mutedForeground }]}>
-                راكب
+                {t.pax_one}
               </Text>
             </View>
 
@@ -1008,7 +1019,7 @@ function BookingDetailSheet({
             {/* Threshold marker label */}
             {minRequired != null && (
               <Text style={[styles.thresholdHint, { color: colors.mutedForeground }]}>
-                الحد الأدنى المطلوب: {minRequired} راكب
+                {t.min_required_passengers.replace('{n}', String(minRequired))}
               </Text>
             )}
           </View>
@@ -1023,21 +1034,21 @@ function BookingDetailSheet({
         >
           <InfoRow
             icon={<Clock size={14} color={colors.mutedForeground} strokeWidth={2} />}
-            label="وقت المغادرة"
+            label={t.departure_time_label}
             value={booking.departureTime}
             colors={colors}
           />
           <View style={[styles.infoDivider, { backgroundColor: colors.border }]} />
           <InfoRow
             icon={<Calendar size={14} color={colors.mutedForeground} strokeWidth={2} />}
-            label="الفترة الأسبوعية"
-            value={formatWeekRange(booking.weekStart, booking.weekEnd)}
+            label={t.weekly_period_label}
+            value={formatWeekRange(booking.weekStart, booking.weekEnd, locale)}
             colors={colors}
           />
           <View style={[styles.infoDivider, { backgroundColor: colors.border }]} />
           <InfoRow
             icon={<GitBranch size={14} color={colors.mutedForeground} strokeWidth={2} />}
-            label="رقم الحجز"
+            label={t.booking_number_label}
             value={`#${booking.id.slice(0, 8).toUpperCase()}`}
             colors={colors}
           />
@@ -1060,7 +1071,7 @@ function BookingDetailSheet({
             >
               <Trash2 size={16} color="#DC2626" strokeWidth={2} />
               <Text style={[styles.actionBtnLabel, { color: '#DC2626' }]}>
-                إلغاء الرحلة
+                {t.cancel_trip_label}
               </Text>
             </Pressable>
 
@@ -1078,7 +1089,7 @@ function BookingDetailSheet({
             >
               <Send size={16} color="#2563EB" strokeWidth={2} />
               <Text style={[styles.actionBtnLabel, { color: '#2563EB' }]}>
-                تحويل الرحلة لسائق آخر
+                {t.refer_driver_label}
               </Text>
             </Pressable>
           </View>

@@ -8,6 +8,7 @@ import { useServiceGuard } from '@/hooks/useServiceGuard';
 import { ServiceBlockedScreen } from '@/components/ServiceBlockedScreen';
 import { ReferralProvider } from '@/lib/referralContext';
 import { useShuttleSocket } from '@/hooks/useShuttleSocket';
+import { useI18n } from '@/lib/i18nContext';
 
 function ShuttleReferralBridge() {
   useShuttleSocket();
@@ -21,6 +22,7 @@ function SlotReleasedToast() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
+  const { t } = useI18n();
 
   const translateY = useRef(new Animated.Value(-120)).current;
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -77,8 +79,8 @@ function SlotReleasedToast() {
   if (!slotReleasedAlert) return null;
 
   const label = slotReleasedAlert.routeName
-    ? `خط ${slotReleasedAlert.routeName} متاح للحجز الآن!`
-    : 'خط متاح للحجز الآن!';
+    ? t.slot_available_route.replace('{name}', slotReleasedAlert.routeName)
+    : t.slot_available;
 
   return (
     <Animated.View
@@ -93,7 +95,7 @@ function SlotReleasedToast() {
         <Text style={styles.toastText} numberOfLines={2}>
           {label}
         </Text>
-        <Text style={styles.tapHint}>اضغط للحجز</Text>
+        <Text style={styles.tapHint}>{t.tap_to_book_hint}</Text>
       </Pressable>
     </Animated.View>
   );

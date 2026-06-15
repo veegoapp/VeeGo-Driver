@@ -220,7 +220,7 @@ export default function TripDetailsScreen() {
             <View style={[styles.statusDot, { backgroundColor: '#1e1e28' }]} />
             <Text style={[styles.statusText, { color: '#2d2d42', fontFamily: 'Inter_700Bold' }]}>
               {/* TODO: Backend Integration - Fetch real trip status from backend (confirmed, pending, etc.) */}
-              {effectiveBooking?.status === 'active' ? t.active : 'محجوز'}
+              {effectiveBooking?.status === 'active' ? t.active : t.status_booked}
             </Text>
           </View>
         </View>
@@ -367,7 +367,7 @@ export default function TripDetailsScreen() {
                 refetch();
                 router.push('/shuttle/trip-active' as any);
               } catch {
-                Alert.alert('', 'تعذّر بدء الرحلة. يرجى المحاولة مجدداً.');
+                Alert.alert('', t.start_trip_failed);
               } finally {
                 setStarting(false);
               }

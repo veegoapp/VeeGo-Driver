@@ -333,7 +333,7 @@ export default function ShuttleProfileScreen() {
 
         {/* ── GROUP 2: Core Operations & Earnings ───────────────────── */}
         {/* Vehicle & Documents combined */}
-        <SectionHeader label={isRTL ? 'المركبة والوثائق' : 'Vehicle & Documents'} colors={colors} isRTL={isRTL} />
+        <SectionHeader label={t.vehicle_documents} colors={colors} isRTL={isRTL} />
         <View style={styles.card}>
           <MenuRow
             icon={<Truck size={18} color={colors.foreground} strokeWidth={2} />}
@@ -357,12 +357,12 @@ export default function ShuttleProfileScreen() {
         </View>
 
         {/* Financial Analytics */}
-        <SectionHeader label={isRTL ? 'المركزي المالي' : 'Financial Analytics'} colors={colors} isRTL={isRTL} />
+        <SectionHeader label={t.financial_analytics_section} colors={colors} isRTL={isRTL} />
         <View style={styles.card}>
           <MenuRow
             icon={<TrendingUp size={18} color={colors.foreground} strokeWidth={2} />}
-            label={isRTL ? 'الأرباح والعمولات' : t.earnings}
-            sub={isRTL ? 'كاش · عمولة · صافي الأرباح' : 'Cash · Commission · Net Profit'}
+            label={t.earnings_commissions_label}
+            sub={t.cash_commission_net}
             onPress={() => router.push('/shuttle/earnings' as never)}
             colors={colors}
             isRTL={isRTL}

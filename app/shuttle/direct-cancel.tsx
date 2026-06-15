@@ -78,25 +78,25 @@ export default function DirectCancelScreen() {
       const msg =
         (typeof body?.error === 'string' ? body.error : null) ??
         (typeof body?.message === 'string' ? body.message : null) ??
-        'فشل إلغاء الرحلة. يرجى المحاولة مجدداً أو التواصل مع الدعم.';
+        t.cancel_trip_failed;
       Alert.alert('', msg);
     },
   });
 
   const handleConfirmCancel = () => {
     if (!selectedReason) {
-      Alert.alert('', 'يرجى اختيار سبب الإلغاء أولاً.');
+      Alert.alert('', t.select_reason_first);
       return;
     }
     if (cancelMutation.isPending) return;
 
     Alert.alert(
-      'تأكيد الإلغاء النهائي',
-      'هل أنت متأكد تماماً من إلغاء هذه الرحلة؟ لا يمكن التراجع عن هذا الإجراء.',
+      t.confirm_final_cancel_title,
+      t.confirm_final_cancel_body,
       [
         { text: t.cancel, style: 'cancel' },
         {
-          text: 'نعم، إلغاء',
+          text: t.yes_cancel,
           style: 'destructive',
           onPress: () => cancelMutation.mutate(),
         },
@@ -113,10 +113,10 @@ export default function DirectCancelScreen() {
     const penaltyKnown = penaltyAmount !== null;
 
     const penaltyLine = hasPenalty
-      ? `غرامة الإلغاء: ${penaltyAmount} جنيه مخصومة من المحفظة.`
+      ? t.cancel_penalty_line.replace('{n}', String(penaltyAmount))
       : penaltyKnown
-        ? 'لا توجد غرامة على هذا الإلغاء.'
-        : 'تم إشعار الركاب بإلغاء الرحلة. سيقوم الإداريون بإعادة التعيين يدوياً.';
+        ? t.no_penalty_line
+        : t.passengers_notified;
 
     return (
       <View style={[styles.container, styles.successWrap, { backgroundColor: colors.background }]}>
@@ -124,15 +124,15 @@ export default function DirectCancelScreen() {
           <Check size={36} color={hasPenalty ? '#DC2626' : '#16a34a'} strokeWidth={2.5} />
         </View>
         <Text style={[{ fontSize: 20, color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: 'center' }]}>
-          تم إلغاء الرحلة
+          {t.trip_cancelled_title}
         </Text>
         {hasPenalty && (
           <View style={[styles.penaltyBadge, { backgroundColor: '#FEF2F2', borderColor: '#FCA5A5' }]}>
             <Text style={{ fontSize: 18, color: '#DC2626', fontFamily: 'Inter_700Bold', textAlign: 'center' }}>
-              {penaltyAmount} جنيه
+              {penaltyAmount} {t.egp}
             </Text>
             <Text style={{ fontSize: 12, color: '#991B1B', fontFamily: 'Inter_400Regular', textAlign: 'center', marginTop: 2 }}>
-              غرامة الإلغاء
+              {t.cancellation_penalty_label}
             </Text>
           </View>
         )}
@@ -143,7 +143,7 @@ export default function DirectCancelScreen() {
           onPress={() => router.replace('/(shuttle)/' as any)}
           style={[styles.doneBtn, { backgroundColor: '#1e1e28' }]}
         >
-          <Text style={[styles.doneBtnText, { fontFamily: 'Inter_700Bold' }]}>العودة للرئيسية</Text>
+          <Text style={[styles.doneBtnText, { fontFamily: 'Inter_700Bold' }]}>{t.return_home}</Text>
         </Pressable>
       </View>
     );
@@ -171,17 +171,17 @@ export default function DirectCancelScreen() {
           <AlertTriangle size={20} color="#DC2626" strokeWidth={2} />
           <View style={{ flex: 1 }}>
             <Text style={[{ fontSize: 14, color: '#DC2626', fontFamily: 'Inter_700Bold', textAlign: TA }]}>
-              إلغاء نهائي للرحلة
+              {t.final_cancel_banner}
             </Text>
             {previewData != null ? (
               <Text style={[{ fontSize: 12, color: '#991B1B', fontFamily: 'Inter_700Bold', marginTop: 3, textAlign: TA }]}>
                 {previewData.penaltyAmount > 0
-                  ? `غرامة الإلغاء: ${previewData.penaltyAmount} جنيه`
-                  : 'لا توجد غرامة على هذا الإلغاء'}
+                  ? t.cancel_penalty_preview.replace('{n}', String(previewData.penaltyAmount))
+                  : t.no_penalty_preview}
               </Text>
             ) : null}
             <Text style={[{ fontSize: 12, color: '#991B1B', fontFamily: 'Inter_400Regular', marginTop: 3, textAlign: TA }]}>
-              سيتم إشعار جميع الركاب وسيقوم الإداريون بإعادة التعيين.
+              {t.passengers_admin_reassign}
             </Text>
           </View>
         </GlassView>
@@ -202,8 +202,7 @@ export default function DirectCancelScreen() {
           {t.cancel_reasons_title}
         </Text>
         <Text style={[{ fontSize: 13, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA, marginTop: 4, marginBottom: 14 }]}>
-          {/* TODO: Backend Integration - أشهر أسباب الرفض */}
-          اختر السبب الأكثر ملاءمةً لإلغاء رحلتك.
+          {t.choose_cancel_reason}
         </Text>
 
         <GlassView style={{ overflow: 'hidden' }} borderRadius={16}>

@@ -118,7 +118,7 @@ export default function EarningsScreen() {
 
         <View style={{ flex: 1, paddingHorizontal: 12 }}>
           <Text style={[styles.headerTitle, { color: colors.foreground, textAlign: TA }]}>
-            {'المركزي المالي'}
+            {t.financial_hub}
           </Text>
           <Text style={[styles.headerSub, { color: colors.mutedForeground, textAlign: TA }]}>
             {t.earnings}
@@ -173,7 +173,7 @@ export default function EarningsScreen() {
           <View style={styles.centeredBlock}>
             <ActivityIndicator size="large" color="#3D52D5" />
             <Text style={[styles.loadingLabel, { color: colors.mutedForeground }]}>
-              {'جاري التحميل…'}
+              {t.loading_label}
             </Text>
           </View>
         )}
@@ -183,17 +183,17 @@ export default function EarningsScreen() {
           <View style={[styles.errorCard, { backgroundColor: '#FEF2F2', borderColor: '#FECACA' }]}>
             <AlertCircle size={28} color="#DC2626" strokeWidth={2} />
             <Text style={[styles.errorTitle, { color: '#DC2626', textAlign: 'center' }]}>
-              {'تعذّر تحميل البيانات المالية'}
+              {t.financial_load_failed}
             </Text>
             <Text style={[styles.errorSub, { color: '#EF4444', textAlign: 'center' }]}>
-              {(error instanceof Error) ? error.message : 'حدث خطأ غير متوقع'}
+              {(error instanceof Error) ? error.message : t.unexpected_error}
             </Text>
             <Pressable
               onPress={() => refetch()}
               style={styles.retryBtn}
             >
               <RefreshCw size={14} color="#fff" strokeWidth={2} />
-              <Text style={styles.retryBtnLabel}>{'إعادة المحاولة'}</Text>
+              <Text style={styles.retryBtnLabel}>{t.retry_label}</Text>
             </Pressable>
           </View>
         )}
@@ -209,7 +209,7 @@ export default function EarningsScreen() {
                 </View>
                 <View style={{ flex: 1, paddingHorizontal: 12 }}>
                   <Text style={[styles.summaryLabel, { color: colors.mutedForeground, textAlign: TA }]}>
-                    {'إجمالي الكاش المستلم'}
+                    {t.total_cash_received}
                   </Text>
                   <Text style={[styles.summaryAmount, { color: '#16A34A', textAlign: TA }]}>
                     {formatCurrency(totalCash, t.egp)}
@@ -224,7 +224,7 @@ export default function EarningsScreen() {
                 </View>
                 <View style={{ flex: 1, paddingHorizontal: 12 }}>
                   <Text style={[styles.summaryLabel, { color: colors.mutedForeground, textAlign: TA }]}>
-                    {'عمولة التطبيق وعلينا'}
+                    {t.app_commission}
                   </Text>
                   <Text style={[styles.summaryAmount, { color: '#EA580C', textAlign: TA }]}>
                     {'− ' + formatCurrency(commission, t.egp)}
@@ -239,7 +239,7 @@ export default function EarningsScreen() {
                 </View>
                 <View style={{ flex: 1, paddingHorizontal: 12 }}>
                   <Text style={[styles.summaryLabel, { color: colors.mutedForeground, textAlign: TA }]}>
-                    {'صافي أرباحك'}
+                    {t.net_profit_label}
                   </Text>
                   <Text style={[styles.summaryAmount, { color: '#3D52D5', textAlign: TA }]}>
                     {formatCurrency(netProfit, t.egp)}
@@ -250,17 +250,17 @@ export default function EarningsScreen() {
 
             {/* ── Transaction ledger ──────────────────────────────────── */}
             <Text style={[styles.sectionTitle, { color: colors.foreground, textAlign: TA }]}>
-              {'سجل المعاملات المالية'}
+              {t.financial_transactions}
             </Text>
 
             {transactions.length === 0 ? (
               <View style={[styles.emptyCard, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
                 <Wallet size={32} color={colors.mutedForeground} strokeWidth={1.5} />
                 <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
-                  {'لا توجد معاملات'}
+                  {t.no_transactions}
                 </Text>
                 <Text style={[styles.emptySub, { color: colors.mutedForeground }]}>
-                  {'ستظهر تفاصيل رحلاتك المكتملة هنا'}
+                  {t.transactions_appear_here}
                 </Text>
               </View>
             ) : (
@@ -292,7 +292,7 @@ export default function EarningsScreen() {
                   <View style={styles.txAmounts}>
                     <View style={[styles.txAmountRow, { flexDirection: flex }]}>
                       <Text style={[styles.txAmountLabel, { color: colors.mutedForeground }]}>
-                        {'كاش '}
+                        {t.cash_label}
                       </Text>
                       <Text style={[styles.txAmountValue, { color: '#16A34A' }]}>
                         {formatCurrency(tx.cashReceived, t.egp)}
@@ -300,7 +300,7 @@ export default function EarningsScreen() {
                     </View>
                     <View style={[styles.txAmountRow, { flexDirection: flex }]}>
                       <Text style={[styles.txAmountLabel, { color: colors.mutedForeground }]}>
-                        {'عمولة '}
+                        {t.commission_label}
                       </Text>
                       <Text style={[styles.txAmountValue, { color: '#EA580C' }]}>
                         {'− ' + formatCurrency(tx.appCommission, t.egp)}

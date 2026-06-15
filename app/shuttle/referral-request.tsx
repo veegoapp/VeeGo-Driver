@@ -53,7 +53,7 @@ export default function ReferralRequestScreen() {
       setSubmitted(true);
     } catch {
       // TODO: Backend Integration - Surface specific error codes (driver not found, already booked, etc.)
-      Alert.alert('', 'فشل إرسال الطلب. تأكد من الكود وحاول مجدداً.');
+      Alert.alert('', t.referral_send_failed);
     } finally {
       setLoading(false);
     }
@@ -104,13 +104,13 @@ export default function ReferralRequestScreen() {
               </Text>
               <Text style={[{ fontSize: 13, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: 'center', lineHeight: 20 }]}>
                 {/* TODO: Backend Integration - Subscribe to referral:accepted / referral:declined socket events to update this state */}
-                سيتم إشعارك بمجرد رد السائق على الطلب.
+                {t.referral_notification_sub}
               </Text>
               <Pressable
                 onPress={() => router.replace('/(shuttle)/' as any)}
                 style={[styles.doneBtn, { backgroundColor: '#1e1e28' }]}
               >
-                <Text style={[styles.doneBtnText, { fontFamily: 'Inter_700Bold' }]}>العودة للرئيسية</Text>
+                <Text style={[styles.doneBtnText, { fontFamily: 'Inter_700Bold' }]}>{t.return_home}</Text>
               </Pressable>
             </View>
           ) : (
@@ -121,7 +121,7 @@ export default function ReferralRequestScreen() {
               </Text>
               <Text style={[{ fontSize: 13, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA, marginTop: 4, marginBottom: 12 }]}>
                 {/* TODO: Backend Integration - Driver code format to be confirmed from backend (e.g., VGO-XXXX) */}
-                أدخل الكود الخاص بالسائق البديل لإرسال طلب تحويل الرحلة إليه.
+                {t.driver_code_hint}
               </Text>
               <GlassView style={[styles.inputWrap, { borderColor: colors.border }]} borderRadius={14}>
                 <TextInput

@@ -15,6 +15,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
+import { useI18n } from '@/lib/i18nContext';
 import { endpoints, ApiError } from '@/lib/api';
 
 type Passenger = {
@@ -34,6 +35,7 @@ type BackendPassenger = {
 
 export default function RatePassengersScreen() {
   const colors = useColors();
+  const { t } = useI18n();
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
   const botPad = Platform.OS === 'web' ? 34 : insets.bottom;
@@ -124,7 +126,7 @@ export default function RatePassengersScreen() {
       <View style={[s.center, { backgroundColor: colors.background }]}>
         <Text style={{ fontSize: 48 }}>⭐</Text>
         <Text style={[s.doneTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-          شكراً! تم إرسال تقييماتك.
+          {t.ratings_sent}
         </Text>
       </View>
     );
