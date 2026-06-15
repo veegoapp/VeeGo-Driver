@@ -31,6 +31,9 @@ export default function ShuttleTripActiveScreen() {
   const [isArrivingLoading, setIsArrivingLoading] = useState(false);
   const [isCompletingLoading, setIsCompletingLoading] = useState(false);
 
+  // Live seat count — updated in real time by booking:passenger_updated socket event
+  const [liveSeats, setLiveSeats] = useState<{ bookedSeats: number; totalSeats: number } | null>(null);
+
   // Task 3a: station timeout banner
   const [stationTimeoutVisible, setStationTimeoutVisible] = useState(false);
 
@@ -77,6 +80,27 @@ export default function ShuttleTripActiveScreen() {
     // permanently block the guard for all subsequent stops.
     timeoutProcessingRef.current = false;
   }, [currentStopIndex]);
+
+  // Listen for real-time seat count updates from the server
+  useEffect(() => {
+    if (!socket) return;
+
+    const handlePassengerUpdated = (payload: {
+      bookingId: number;
+      tripId: number;
+      bookedSeats: number;
+      totalSeats: number;
+    }) => {
+      const tripId = activeLine?.tripId;
+      if (tripId && String(payload.tripId) !== String(tripId)) return;
+      setLiveSeats({ bookedSeats: payload.bookedSeats, totalSeats: payload.totalSeats });
+    };
+
+    socket.on(SOCKET_EVENTS.BOOKING_PASSENGER_UPDATED, handlePassengerUpdated);
+    return () => {
+      socket.off(SOCKET_EVENTS.BOOKING_PASSENGER_UPDATED, handlePassengerUpdated);
+    };
+  }, [socket, activeLine?.tripId]);
 
   // Task 3a: listen for shuttle:station:timeout
   useEffect(() => {
@@ -200,6 +224,14 @@ export default function ShuttleTripActiveScreen() {
               {completedCount}/{stops.length}
             </Text>
           </GlassView>
+          {liveSeats && (
+            <GlassView style={styles.stopBadge} borderRadius={20}>
+              <Users size={14} color={colors.foreground} strokeWidth={2} />
+              <Text style={[styles.stopBadgeText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
+                {liveSeats.bookedSeats}/{liveSeats.totalSeats}
+              </Text>
+            </GlassView>
+          )}
         </View>
 
         {/* Task 3a: station timeout banner */}

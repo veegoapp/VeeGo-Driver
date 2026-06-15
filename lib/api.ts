@@ -657,7 +657,7 @@ export const endpoints = {
     // Used by BookingDetailSheet for live passenger counter + threshold badge.
     // Socket channel: listen for `booking:passenger_updated` event (scoped to booking room)
     //   payload: { bookingId: string, bookedSeats: number, thresholdMet: boolean }
-    bookingDetail: (id: string) =>
+    bookingLiveDetail: (id: string) =>
       api.get(`/shuttle/route-bookings/${id}/detail`),
 
     // ── Active Trip Management ───────────────────────────────────────────────
@@ -690,7 +690,7 @@ export const endpoints = {
       api.post('/shuttle/ratings', { tripId, rateeId, stars }),
 
     noShowBooking: (bookingId: string) =>
-      api.patch(`/driver/bookings/${bookingId}/no-show`),
+      api.patch(`/driver/bookings/${bookingId}/absent`),
 
     // TODO: Backend Integration - POST /shuttle/route-bookings/:id/refer
     // Body: { driverCode: string } — submits a trip referral to another driver by their unique code
@@ -713,12 +713,27 @@ export const endpoints = {
     cancelBookingFinal: (bookingId: string, reason: string) =>
       api.post(`/shuttle/route-bookings/${bookingId}/final-cancel`, { reason }),
 
+    cancelPreview: (bookingId: string) =>
+      api.get<{ penaltyAmount: number; minutesUntilDeparture: number }>(
+        `/shuttle/route-bookings/${bookingId}/cancel-preview`
+      ),
+
+    tripDetail: (bookingId: string) =>
+      api.get<{
+        bookingId: number;
+        tripDatetime: string;
+        routeName: string;
+        bookedSeats: number;
+        totalSeats: number;
+        stations: Array<{ id: number; name: string; order: number; eta: string }>;
+      }>(`/shuttle/route-bookings/${bookingId}/trip-detail`),
+
     // TODO: Backend Integration - GET /driver/me/referral-code — fetches this driver's unique referral code
     myReferralCode: () => api.get<{ code: string }>('/driver/me/referral-code'),
   },
 
   notifications: {
-    list: () => api.get('/notifications'),
+    list: () => api.get('/driver/notifications'),
     markRead: (id: string) => api.patch(`/notifications/${id}/read`),
     markAllRead: () => api.patch('/notifications/read-all'),
   },

@@ -62,6 +62,9 @@ export const SOCKET_EVENTS = {
   // Server → Driver 2: Driver 1 has cancelled or withdrawn the referral request before Driver 2 responded
   SHUTTLE_REFERRAL_CANCELLED: "shuttle:referral:cancelled",
 
+  // Server → Driver: real-time seat count update for active shuttle trip
+  BOOKING_PASSENGER_UPDATED: "booking:passenger_updated",
+
   // Server → Driver/User: notifications
   NOTIFICATION_NEW:         "notification:new",
 

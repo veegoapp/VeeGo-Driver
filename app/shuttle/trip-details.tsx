@@ -44,19 +44,16 @@ export default function TripDetailsScreen() {
   const booking = myBookings.find(b => b.id === bookingId);
   const line = allLines.find(l => String(l.id) === String(routeId));
 
-  // TODO: Backend Integration - Fetch full trip details including stations list and real-time passenger count
-  const { data: lineDetailRaw, isLoading: stationsLoading } = useQuery({
-    queryKey: ['shuttle-line-detail-trip', routeId],
-    queryFn: () => endpoints.shuttle.line(routeId!) as Promise<unknown>,
-    enabled: !!routeId,
+  const { data: tripDetailData, isLoading: stationsLoading } = useQuery({
+    queryKey: ['shuttle-trip-detail', bookingId],
+    queryFn: () => endpoints.shuttle.tripDetail(bookingId!),
+    enabled: !!bookingId,
   });
 
   const stations: Station[] = useMemo(() => {
-    if (!lineDetailRaw) return [];
-    const d = lineDetailRaw as { data?: { stations?: Station[] }; stations?: Station[] };
-    const raw = d?.data?.stations ?? (d as { stations?: Station[] })?.stations ?? [];
-    return raw as Station[];
-  }, [lineDetailRaw]);
+    if (!tripDetailData?.stations) return [];
+    return tripDetailData.stations as Station[];
+  }, [tripDetailData]);
 
   // Re-check start-eligibility every minute so button auto-enables
   const [, setTick] = useState(0);
@@ -114,13 +111,19 @@ export default function TripDetailsScreen() {
     );
   }
 
-  const routeName = booking?.routeName ?? line?.name ?? '—';
+  const routeName = tripDetailData?.routeName ?? booking?.routeName ?? line?.name ?? '—';
   const from = line?.from ?? '—';
   const to = line?.to ?? '—';
   const departureTime = booking?.departureTime ?? line?.departure ?? '—';
-  const weekStart = booking?.weekStart ?? '—';
-  const bookedSeats = line?.bookedSeats ?? 0;
-  const totalSeats = line?.totalSeats ?? 0;
+  const tripDatetime = tripDetailData?.tripDatetime ?? null;
+  const tripDate = tripDatetime
+    ? new Date(tripDatetime).toLocaleDateString('en-GB', {
+        weekday: 'short', day: 'numeric', month: 'short',
+        timeZone: 'Africa/Cairo',
+      })
+    : (booking?.weekStart ?? '—');
+  const bookedSeats = tripDetailData?.bookedSeats ?? (line?.bookedSeats ?? 0);
+  const totalSeats = tripDetailData?.totalSeats ?? (line?.totalSeats ?? 0);
   const vehicleType = line?.vehicleType ?? '—';
   const lineNumber = line?.lineNumber ?? '—';
 
@@ -172,8 +175,7 @@ export default function TripDetailsScreen() {
               {t.date}
             </Text>
             <Text style={[styles.infoCardValue, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-              {/* TODO: Backend Integration - Use exact trip date from backend */}
-              {weekStart}
+              {tripDate}
             </Text>
           </GlassView>
           <GlassView style={styles.infoCard} borderRadius={16}>

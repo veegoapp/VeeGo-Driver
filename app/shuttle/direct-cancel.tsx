@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useQuery } from '@tanstack/react-query';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
@@ -47,6 +48,13 @@ export default function DirectCancelScreen() {
   const [selectedReason, setSelectedReason] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [cancelled, setCancelled] = useState(false);
+
+  const { data: previewData } = useQuery({
+    queryKey: ['cancel-preview', bookingId],
+    queryFn: () => endpoints.shuttle.cancelPreview(bookingId!),
+    enabled: !!bookingId,
+    retry: 1,
+  });
 
   const handleConfirmCancel = async () => {
     if (!selectedReason) {
@@ -135,8 +143,14 @@ export default function DirectCancelScreen() {
             <Text style={[{ fontSize: 14, color: '#DC2626', fontFamily: 'Inter_700Bold', textAlign: TA }]}>
               إلغاء نهائي للرحلة
             </Text>
+            {previewData != null ? (
+              <Text style={[{ fontSize: 12, color: '#991B1B', fontFamily: 'Inter_700Bold', marginTop: 3, textAlign: TA }]}>
+                {previewData.penaltyAmount > 0
+                  ? `غرامة الإلغاء: ${previewData.penaltyAmount} جنيه`
+                  : 'لا توجد غرامة على هذا الإلغاء'}
+              </Text>
+            ) : null}
             <Text style={[{ fontSize: 12, color: '#991B1B', fontFamily: 'Inter_400Regular', marginTop: 3, textAlign: TA }]}>
-              {/* TODO: Backend Integration - Show penalty details (if applicable) from backend config */}
               سيتم إشعار جميع الركاب وسيقوم الإداريون بإعادة التعيين.
             </Text>
           </View>
