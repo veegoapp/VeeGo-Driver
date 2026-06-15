@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { ArrowLeft, CheckCircle2, ChevronDown, ChevronRight, Clock, TrendingUp } from 'lucide-react-native';
+import { ArrowLeft, CheckCircle2, ChevronDown, ChevronRight, Clock, Download, TrendingUp } from 'lucide-react-native';
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import {
   ActivityIndicator,
@@ -205,6 +205,13 @@ export default function TripHistoryScreen() {
               {t.history_subtitle}
             </Text>
           </View>
+          <Pressable
+            onPress={() => router.push('/shuttle/history-export' as any)}
+            hitSlop={12}
+            style={({ pressed }) => [styles.backBtn, { backgroundColor: pressed ? colors.secondary : colors.secondary + '99' }]}
+          >
+            <Download size={20} color={colors.foreground} strokeWidth={2} />
+          </Pressable>
         </View>
 
         {/* ── Summary banner ─────────────────────────────────────────── */}
