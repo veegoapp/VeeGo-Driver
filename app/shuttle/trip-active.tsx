@@ -160,23 +160,28 @@ export default function ShuttleTripActiveScreen() {
   const handleCompleteStop = async () => {
     if (!currentStop) return;
     cardAnim.setValue(0);
-    const checkedPassengers = passengers.filter(p => p.checkedIn);
-    const results = await Promise.allSettled(
-      checkedPassengers.map(p => endpoints.shuttle.boardBooking(p.id))
-    );
-    // Advance the stop regardless of boarding outcomes
-    nextStop();
-    // Surface any failures non-blocking — after the stop has already advanced
-    const failed = results
-      .map((r, i) => (r.status === 'rejected' ? checkedPassengers[i] : null))
-      .filter((p): p is NonNullable<typeof p> => p !== null);
-    if (failed.length > 0) {
-      const names = failed.map(p => p.name || p.id).join(' · ');
-      Alert.alert(
-        t.board_partial_failed_title,
-        t.board_partial_failed_body.replace('{names}', names),
+    // Only fire boarding API calls when a real trip is active (tripId defined).
+    // In demo mode tripId is intentionally undefined — skip network calls entirely.
+    const tripId = activeLine?.tripId;
+    if (tripId) {
+      const checkedPassengers = passengers.filter(p => p.checkedIn);
+      const results = await Promise.allSettled(
+        checkedPassengers.map(p => endpoints.shuttle.boardBooking(p.id))
       );
+      // Surface any failures non-blocking — after the stop has already advanced
+      const failed = results
+        .map((r, i) => (r.status === 'rejected' ? checkedPassengers[i] : null))
+        .filter((p): p is NonNullable<typeof p> => p !== null);
+      if (failed.length > 0) {
+        const names = failed.map(p => p.name || p.id).join(' · ');
+        Alert.alert(
+          t.board_partial_failed_title,
+          t.board_partial_failed_body.replace('{names}', names),
+        );
+      }
     }
+    // Advance the stop regardless (demo reducer handles this locally)
+    nextStop();
   };
 
   const handleFinishRoute = async () => {

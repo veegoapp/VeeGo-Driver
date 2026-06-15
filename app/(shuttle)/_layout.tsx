@@ -4,7 +4,7 @@ import { Animated, Platform, Pressable, StyleSheet, Text, View } from 'react-nat
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ShuttleTabBar } from '@/components/ShuttleTabBar';
 import { useShuttle, type SlotReleasedAlert } from '@/lib/shuttleContext';
-import { DemoGate, useDemoMode } from '@/lib/demo';
+import { useDemoMode } from '@/lib/demo';
 import { useServiceGuard } from '@/hooks/useServiceGuard';
 import { ServiceBlockedScreen } from '@/components/ServiceBlockedScreen';
 import { ReferralProvider } from '@/lib/referralContext';
@@ -115,21 +115,19 @@ function ShuttleLayoutContent() {
   return (
     <ReferralProvider>
       <ShuttleReferralBridge />
-      <DemoGate>
-        <View style={styles.root}>
-          <Tabs
-            tabBar={(props) => <ShuttleTabBar {...(props as any)} />}
-            screenOptions={{ headerShown: false }}
-          >
-            <Tabs.Screen name="index" options={{ title: 'Home' }} />
-            <Tabs.Screen name="lines" options={{ title: 'Lines' }} />
-            <Tabs.Screen name="bookings" options={{ title: 'Bookings' }} />
-            <Tabs.Screen name="wallet" options={{ title: 'Wallet' }} />
-            <Tabs.Screen name="profile" options={{ title: 'Profile' }} />
-          </Tabs>
-          <SlotReleasedToast />
-        </View>
-      </DemoGate>
+      <View style={styles.root}>
+        <Tabs
+          tabBar={(props) => <ShuttleTabBar {...(props as any)} />}
+          screenOptions={{ headerShown: false }}
+        >
+          <Tabs.Screen name="index" options={{ title: 'Home' }} />
+          <Tabs.Screen name="lines" options={{ title: 'Lines' }} />
+          <Tabs.Screen name="bookings" options={{ title: 'Bookings' }} />
+          <Tabs.Screen name="wallet" options={{ title: 'Wallet' }} />
+          <Tabs.Screen name="profile" options={{ title: 'Profile' }} />
+        </Tabs>
+        <SlotReleasedToast />
+      </View>
     </ReferralProvider>
   );
 }

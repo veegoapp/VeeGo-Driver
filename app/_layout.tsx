@@ -19,7 +19,7 @@ import { SocketProvider } from '@/lib/socketContext';
 import { navigateAfterAuth } from '@/lib/postAuthRouter';
 import { setOnAccountSuspended } from '@/lib/api';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
-import { DemoModeProvider, useDemoMode } from '@/lib/demo';
+import { DemoModeProvider, DemoGate, useDemoMode } from '@/lib/demo';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -181,7 +181,9 @@ export default function RootLayout() {
                   <ServiceProvider>
                     <SocketProvider>
                       <ServiceControlProvider>
-                        <RootLayoutNav />
+                        <DemoGate>
+                          <RootLayoutNav />
+                        </DemoGate>
                       </ServiceControlProvider>
                     </SocketProvider>
                   </ServiceProvider>
