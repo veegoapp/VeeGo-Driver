@@ -25,6 +25,7 @@ import { endpoints, ApiError } from '@/lib/api';
 import { api } from '@/lib/api';
 import { saveToken } from '@/lib/auth';
 import { navigateAfterAuth, saveServiceType } from '@/lib/postAuthRouter';
+import { useDemoMode } from '@/lib/demo';
 
 type Tab = 'signin' | 'signup';
 
@@ -154,6 +155,7 @@ function SignInForm({ isRTL, onSuccess }: { isRTL: boolean; onSuccess: (at: stri
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { enterDemoMode } = useDemoMode();
 
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
   const TA = isRTL ? 'right' as const : 'left' as const;

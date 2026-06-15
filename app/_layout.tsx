@@ -19,6 +19,7 @@ import { SocketProvider } from '@/lib/socketContext';
 import { navigateAfterAuth } from '@/lib/postAuthRouter';
 import { setOnAccountSuspended } from '@/lib/api';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { DemoModeProvider, useDemoMode } from '@/lib/demo';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -55,6 +56,7 @@ function PushNotificationsBridge() {
 
 function RootLayoutNav() {
   const { token, isLoading } = useAuth();
+  const { isDemoMode } = useDemoMode();
   const router = useRouter();
   const segments = useSegments();
 
@@ -73,7 +75,7 @@ function RootLayoutNav() {
     const currentScreen = segments[0] as string | undefined;
     const inPreAuthZone = !currentScreen || PRE_AUTH_SCREENS.has(currentScreen);
 
-    if (!token) {
+    if (!token && !isDemoMode) {
       // Unauthenticated user on a protected screen → send to login.
       if (!inPreAuthZone) {
         queryClient.clear();
@@ -169,6 +171,7 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) return null;
 
   return (
+    <DemoModeProvider>
     <AuthProvider>
       <SafeAreaProvider>
         <ErrorBoundary>
@@ -190,5 +193,6 @@ export default function RootLayout() {
         </ErrorBoundary>
       </SafeAreaProvider>
     </AuthProvider>
+    </DemoModeProvider>
   );
 }

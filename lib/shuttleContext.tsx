@@ -301,7 +301,7 @@ type ShuttleContextType = {
   dismissSlotReleasedAlert: () => void;
 };
 
-const ShuttleContext = createContext<ShuttleContextType>({
+export const ShuttleContext = createContext<ShuttleContextType>({
   routes: [],
   myBookings: [],
   renewalBooking: null,
