@@ -84,16 +84,16 @@ export function ServiceBlockedScreen({ status, serviceName }: Props) {
         <View style={s.divider} />
 
         <Text style={s.redirectLabel}>
-          Returning to services in{' '}
+          Returning to shuttle in{' '}
           <Text style={s.redirectCount}>{countdown}s</Text>
         </Text>
 
         <Pressable
           style={({ pressed }) => [s.backBtn, pressed && { opacity: 0.75 }]}
-          onPress={() => router.replace('/service-select')}
+          onPress={() => router.replace('/(shuttle)')}
         >
           <ArrowLeft size={16} color="#1e1e28" />
-          <Text style={s.backBtnText}>Back to Services</Text>
+          <Text style={s.backBtnText}>Back to Shuttle</Text>
         </Pressable>
       </View>
     </View>

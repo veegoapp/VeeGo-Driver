@@ -59,7 +59,7 @@ export function useServiceGuard(explicitType?: ServiceType): {
       wasBlockedRef.current = true;
       // Show the blocked UI briefly, then redirect.
       redirectTimerRef.current = setTimeout(() => {
-        router.replace('/service-select');
+        router.replace('/(shuttle)');
       }, 2800);
     }
 

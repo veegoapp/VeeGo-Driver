@@ -119,7 +119,6 @@ function RootLayoutNav() {
         <Stack.Screen name="shuttle/history" options={{ animation: 'slide_from_right', gestureEnabled: true }} />
         <Stack.Screen name="shuttle/earnings" options={{ animation: 'slide_from_right', gestureEnabled: true }} />
         <Stack.Screen name="onboarding" />
-        <Stack.Screen name="service-select" />
         <Stack.Screen name="register-info" />
         <Stack.Screen name="selfie" />
         <Stack.Screen name="suspended" options={{ gestureEnabled: false }} />

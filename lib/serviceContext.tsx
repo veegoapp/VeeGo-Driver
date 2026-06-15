@@ -31,7 +31,7 @@ export function ServiceProvider({ children }: { children: React.ReactNode }) {
   const { token } = useAuth();
   const userId = getUserIdFromToken(token);
 
-  const [serviceType, setServiceTypeState] = useState<ServiceType>('CAR');
+  const [serviceType, setServiceTypeState] = useState<ServiceType>('SHUTTLE');
   const [isDarkMode, setIsDarkModeState] = useState<boolean>(systemScheme === 'dark');
   const [loaded, setLoaded] = useState(false);
 
@@ -40,7 +40,7 @@ export function ServiceProvider({ children }: { children: React.ReactNode }) {
   // On a new login userId changes → the new user's stored choice is loaded.
   useEffect(() => {
     setLoaded(false);
-    setServiceTypeState('CAR');
+    setServiceTypeState('SHUTTLE');
 
     Promise.all([
       AsyncStorage.getItem('veego_theme'),

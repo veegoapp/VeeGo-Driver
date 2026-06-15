@@ -34,9 +34,10 @@ echo ""
 echo "📝  Writing .env..."
 cat > .env << EOF
 EXPO_PUBLIC_API_URL=${BACKEND_URL}
+EXPO_PUBLIC_DEMO_ENABLED=true
 EOF
 
-echo "✅  .env created"
+echo "✅  .env created with demo flag enabled"
 
 # ── 4. Install dependencies ────────────────────────────────────────────────
 echo ""
