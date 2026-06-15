@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { ArrowLeft, CheckCircle2, ChevronDown, Clock, TrendingUp } from 'lucide-react-native';
+import { ArrowLeft, CheckCircle2, ChevronDown, ChevronRight, Clock, TrendingUp } from 'lucide-react-native';
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import {
   ActivityIndicator,
@@ -26,6 +26,7 @@ type RawTrip = Record<string, unknown>;
 
 type NormalizedTrip = {
   id: string;
+  bookingId: string | null;
   routeName: string;
   completedAt: Date | null;
   earnedAmount: number | null;
@@ -67,6 +68,13 @@ function extractPassengerCount(raw: RawTrip): number | null {
   return isNaN(n) ? null : n;
 }
 
+function extractBookingId(raw: RawTrip): string | null {
+  const val =
+    raw.bookingId ?? raw.routeBookingId ?? raw.route_booking_id ?? raw.shuttleBookingId;
+  if (val == null) return null;
+  return String(val);
+}
+
 function normalizePage(raw: unknown): { trips: NormalizedTrip[]; total: number } {
   let arr: RawTrip[] = [];
   let total = 0;
@@ -87,6 +95,7 @@ function normalizePage(raw: unknown): { trips: NormalizedTrip[]; total: number }
 
   const trips = arr.map((item, idx) => ({
     id: String(item.id ?? idx),
+    bookingId: extractBookingId(item),
     routeName: extractRouteName(item),
     completedAt: extractDate(item),
     earnedAmount: extractEarning(item),
@@ -343,53 +352,73 @@ function TripCard({
     ]).start();
   }, []);
 
+  const handlePress = () => {
+    router.push({
+      pathname: '/shuttle/history-detail' as any,
+      params: {
+        tripId: trip.id,
+        bookingId: trip.bookingId ?? '',
+        routeName: trip.routeName,
+        completedAt: trip.completedAt ? trip.completedAt.toISOString() : '',
+        earnedAmount: trip.earnedAmount != null ? String(trip.earnedAmount) : '',
+        passengerCount: trip.passengerCount != null ? String(trip.passengerCount) : '',
+      },
+    });
+  };
+
   return (
     <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
-      <GlassView style={[styles.card, { flexDirection: R }]} borderRadius={18}>
+      <Pressable
+        onPress={handlePress}
+        style={({ pressed }) => [{ opacity: pressed ? 0.88 : 1, transform: [{ scale: pressed ? 0.99 : 1 }] }]}
+      >
+        <GlassView style={[styles.card, { flexDirection: R }]} borderRadius={18}>
 
-        {/* Icon */}
-        <View style={styles.cardIconWrap}>
-          <CheckCircle2 size={22} color="#16a34a" strokeWidth={2} />
-        </View>
+          {/* Icon */}
+          <View style={styles.cardIconWrap}>
+            <CheckCircle2 size={22} color="#16a34a" strokeWidth={2} />
+          </View>
 
-        {/* Route name + date */}
-        <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
-          <Text
-            style={[styles.cardRoute, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}
-            numberOfLines={1}
-          >
-            {trip.routeName}
-          </Text>
-          {trip.completedAt ? (
-            <Text style={[styles.cardDate, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>
-              {formatDate(trip.completedAt, locale)}
+          {/* Route name + date */}
+          <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
+            <Text
+              style={[styles.cardRoute, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}
+              numberOfLines={1}
+            >
+              {trip.routeName}
             </Text>
-          ) : null}
-          {trip.completedAt ? (
-            <Text style={[styles.cardTime, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
-              {formatTime(trip.completedAt, locale)}
-              {trip.passengerCount != null ? ` · ${trip.passengerCount} راكب` : ''}
-            </Text>
-          ) : null}
-        </View>
-
-        {/* Earned amount */}
-        <View style={[styles.earnedWrap, { alignItems: isRTL ? 'flex-start' : 'flex-end' }]}>
-          {trip.earnedAmount != null ? (
-            <>
-              <Text style={[styles.earnedAmount, { color: '#16a34a', fontFamily: 'Inter_700Bold' }]}>
-                +{trip.earnedAmount.toLocaleString('ar-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            {trip.completedAt ? (
+              <Text style={[styles.cardDate, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>
+                {formatDate(trip.completedAt, locale)}
               </Text>
-              <Text style={[styles.earnedCurrency, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>
-                {t.history_earned} · جنيه
+            ) : null}
+            {trip.completedAt ? (
+              <Text style={[styles.cardTime, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
+                {formatTime(trip.completedAt, locale)}
+                {trip.passengerCount != null ? ` · ${trip.passengerCount} راكب` : ''}
               </Text>
-            </>
-          ) : (
-            <Text style={[styles.earnedDash, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>—</Text>
-          )}
-        </View>
+            ) : null}
+          </View>
 
-      </GlassView>
+          {/* Earned amount + chevron */}
+          <View style={[styles.earnedWrap, { alignItems: isRTL ? 'flex-start' : 'flex-end' }]}>
+            {trip.earnedAmount != null ? (
+              <>
+                <Text style={[styles.earnedAmount, { color: '#16a34a', fontFamily: 'Inter_700Bold' }]}>
+                  +{trip.earnedAmount.toLocaleString('ar-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </Text>
+                <Text style={[styles.earnedCurrency, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>
+                  {t.history_earned} · جنيه
+                </Text>
+              </>
+            ) : (
+              <Text style={[styles.earnedDash, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>—</Text>
+            )}
+            <ChevronRight size={14} color={colors.mutedForeground} strokeWidth={2} style={{ marginTop: 4, transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
+          </View>
+
+        </GlassView>
+      </Pressable>
     </Animated.View>
   );
 }
