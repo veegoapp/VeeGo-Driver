@@ -48,6 +48,10 @@ export default function DirectCancelScreen() {
 
   const [selectedReason, setSelectedReason] = useState<string | null>(null);
   const [cancelled, setCancelled] = useState(false);
+  // null  = field absent from response (unknown)
+  // 0     = no penalty applied
+  // n > 0 = penalty amount deducted from wallet
+  const [penaltyAmount, setPenaltyAmount] = useState<number | null>(null);
 
   const { data: previewData } = useQuery({
     queryKey: ['cancel-preview', bookingId],
@@ -58,10 +62,14 @@ export default function DirectCancelScreen() {
 
   const cancelMutation = useMutation({
     mutationFn: () => endpoints.shuttle.cancelBookingFinal(bookingId!, selectedReason!),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['shuttle-driver-trips'] });
       refetch();
+      // Store penalty from backend response; keep null if field is absent.
+      const raw = data as { penaltyAmount?: unknown } | null;
+      const penalty = typeof raw?.penaltyAmount === 'number' ? raw.penaltyAmount : null;
+      setPenaltyAmount(penalty);
       setCancelled(true);
     },
     onError: (err) => {
@@ -97,17 +105,39 @@ export default function DirectCancelScreen() {
   };
 
   if (cancelled) {
+    // Derive penalty display from backend response.
+    // penaltyAmount === null  → field was absent → show generic success note
+    // penaltyAmount === 0     → backend confirmed no penalty
+    // penaltyAmount > 0       → real deduction; show exact amount
+    const hasPenalty = penaltyAmount !== null && penaltyAmount > 0;
+    const penaltyKnown = penaltyAmount !== null;
+
+    const penaltyLine = hasPenalty
+      ? `غرامة الإلغاء: ${penaltyAmount} جنيه مخصومة من المحفظة.`
+      : penaltyKnown
+        ? 'لا توجد غرامة على هذا الإلغاء.'
+        : 'تم إشعار الركاب بإلغاء الرحلة. سيقوم الإداريون بإعادة التعيين يدوياً.';
+
     return (
       <View style={[styles.container, styles.successWrap, { backgroundColor: colors.background }]}>
-        <View style={[styles.successIcon, { backgroundColor: '#FEF2F2' }]}>
-          <Check size={36} color="#DC2626" strokeWidth={2.5} />
+        <View style={[styles.successIcon, { backgroundColor: hasPenalty ? '#FEF2F2' : '#F0FDF4' }]}>
+          <Check size={36} color={hasPenalty ? '#DC2626' : '#16a34a'} strokeWidth={2.5} />
         </View>
         <Text style={[{ fontSize: 20, color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: 'center' }]}>
           تم إلغاء الرحلة
         </Text>
+        {hasPenalty && (
+          <View style={[styles.penaltyBadge, { backgroundColor: '#FEF2F2', borderColor: '#FCA5A5' }]}>
+            <Text style={{ fontSize: 18, color: '#DC2626', fontFamily: 'Inter_700Bold', textAlign: 'center' }}>
+              {penaltyAmount} جنيه
+            </Text>
+            <Text style={{ fontSize: 12, color: '#991B1B', fontFamily: 'Inter_400Regular', textAlign: 'center', marginTop: 2 }}>
+              غرامة الإلغاء
+            </Text>
+          </View>
+        )}
         <Text style={[{ fontSize: 14, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: 'center', lineHeight: 22 }]}>
-          {/* TODO: Backend Integration - Show penalty amount if applicable (from backend response) */}
-          تم إشعار الركاب بإلغاء الرحلة. سيقوم الإدارة بإعادة التعيين يدوياً.
+          {penaltyLine}
         </Text>
         <Pressable
           onPress={() => router.replace('/(shuttle)/' as any)}
@@ -282,6 +312,13 @@ const styles = StyleSheet.create({
   confirmBtnText: { fontSize: 15 },
   successWrap: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, gap: 16 },
   successIcon: { width: 96, height: 96, borderRadius: 48, alignItems: 'center', justifyContent: 'center' },
+  penaltyBadge: {
+    alignItems: 'center',
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
   doneBtn: { marginTop: 8, height: 50, paddingHorizontal: 36, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   doneBtnText: { color: '#fff', fontSize: 14 },
 });

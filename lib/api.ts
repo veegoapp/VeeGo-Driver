@@ -707,11 +707,16 @@ export const endpoints = {
     declineReferral: (referralId: string) =>
       api.post(`/shuttle/referrals/${referralId}/decline`),
 
-    // TODO: Backend Integration - POST /shuttle/route-bookings/:id/final-cancel
-    // Body: { reason: string } — triggers passenger push notifications + Admin Dashboard alert for manual re-assignment
-    // NOTE: Penalty rules are calculated and applied automatically from the backend
+    // POST /shuttle/route-bookings/:id/final-cancel
+    // Body:     { reason: string }
+    // Response: { success: boolean; penaltyAmount?: number; message?: string }
+    //   penaltyAmount — amount deducted from driver wallet (0 = no penalty, absent = unknown)
+    //   message       — optional human-readable note from backend (e.g. "Penalty waived")
     cancelBookingFinal: (bookingId: string, reason: string) =>
-      api.post(`/shuttle/route-bookings/${bookingId}/final-cancel`, { reason }),
+      api.post<{ success: boolean; penaltyAmount?: number; message?: string }>(
+        `/shuttle/route-bookings/${bookingId}/final-cancel`,
+        { reason }
+      ),
 
     cancelPreview: (bookingId: string) =>
       api.get<{ penaltyAmount: number; minutesUntilDeparture: number }>(
