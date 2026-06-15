@@ -1,20 +1,7 @@
-/**
- * TripHistoryScreen
- *
- * Lists all past completed shuttle trips for this driver.
- * Each card shows: route name, exact date & time, and the amount earned.
- *
- * TODO: Backend Integration - Connect to past trips history API
- * Endpoint: GET /shuttle/driver/my-trips?page=1&limit=20
- * Expected response shape:
- *   { trips: Array<{ id, routeName, lineName, completedAt, earnedAmount }> }
- *   OR { data: { trips: [...] } }
- *   OR { data: [...] }   (flat array)
- */
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { ArrowLeft, CheckCircle2, Clock, TrendingUp } from 'lucide-react-native';
-import React, { useRef } from 'react';
+import { ArrowLeft, CheckCircle2, ChevronDown, Clock, TrendingUp } from 'lucide-react-native';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -32,6 +19,8 @@ import { useColors } from '@/hooks/useColors';
 import { endpoints } from '@/lib/api';
 import { useI18n } from '@/lib/i18nContext';
 
+const PAGE_LIMIT = 20;
+
 // ── Shape normalisation ────────────────────────────────────────────────────────
 type RawTrip = Record<string, unknown>;
 
@@ -40,6 +29,7 @@ type NormalizedTrip = {
   routeName: string;
   completedAt: Date | null;
   earnedAmount: number | null;
+  passengerCount: number | null;
 };
 
 function extractRouteName(raw: RawTrip): string {
@@ -70,34 +60,55 @@ function extractEarning(raw: RawTrip): number | null {
   return isNaN(n) ? null : n;
 }
 
-function normalizeTrips(raw: unknown): NormalizedTrip[] {
+function extractPassengerCount(raw: RawTrip): number | null {
+  const val = raw.passengerCount ?? raw.passengers;
+  if (val == null) return null;
+  const n = parseInt(String(val), 10);
+  return isNaN(n) ? null : n;
+}
+
+function normalizePage(raw: unknown): { trips: NormalizedTrip[]; total: number } {
   let arr: RawTrip[] = [];
+  let total = 0;
+
   if (Array.isArray(raw)) {
     arr = raw as RawTrip[];
   } else if (raw && typeof raw === 'object') {
     const obj = raw as Record<string, unknown>;
+    if (typeof obj.total === 'number') total = obj.total;
     const inner = obj.trips ?? obj.data;
-    if (Array.isArray(inner)) arr = inner as RawTrip[];
-    else if (inner && typeof inner === 'object') {
+    if (Array.isArray(inner)) {
+      arr = inner as RawTrip[];
+    } else if (inner && typeof inner === 'object') {
       const nested = (inner as Record<string, unknown>).trips;
       if (Array.isArray(nested)) arr = nested as RawTrip[];
     }
   }
-  return arr.map((item, idx) => ({
+
+  const trips = arr.map((item, idx) => ({
     id: String(item.id ?? idx),
     routeName: extractRouteName(item),
     completedAt: extractDate(item),
     earnedAmount: extractEarning(item),
+    passengerCount: extractPassengerCount(item),
   }));
+
+  return { trips, total: total || trips.length };
 }
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 function formatDate(d: Date, locale: string): string {
-  return d.toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+  return d.toLocaleDateString(locale, {
+    weekday: 'short', day: 'numeric', month: 'short', year: 'numeric',
+    timeZone: 'Africa/Cairo',
+  });
 }
 
 function formatTime(d: Date, locale: string): string {
-  return d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleTimeString(locale, {
+    hour: '2-digit', minute: '2-digit',
+    timeZone: 'Africa/Cairo',
+  });
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
@@ -112,21 +123,55 @@ export default function TripHistoryScreen() {
 
   const headerAnim = useRef(new Animated.Value(0)).current;
 
+  const [page, setPage] = useState(1);
+  const [allTrips, setAllTrips] = useState<NormalizedTrip[]>([]);
+  const [serverTotal, setServerTotal] = useState<number | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+
   const { data: rawData, isLoading, isError, refetch } = useQuery({
-    queryKey: ['shuttle-trip-history'],
-    // TODO: Backend Integration - endpoints.shuttle.history() → GET /shuttle/driver/my-trips
-    queryFn: () => endpoints.shuttle.history(),
+    queryKey: ['shuttle-trip-history', page],
+    queryFn: () => endpoints.shuttle.history(page, PAGE_LIMIT),
     retry: 1,
   });
 
-  React.useEffect(() => {
-    if (!isLoading) {
+  useEffect(() => {
+    if (!rawData) return;
+    const { trips: newTrips, total } = normalizePage(rawData);
+    setServerTotal(total);
+    if (page === 1) {
+      setAllTrips(newTrips);
+    } else {
+      setAllTrips(prev => {
+        const existingIds = new Set(prev.map(t => t.id));
+        const fresh = newTrips.filter(t => !existingIds.has(t.id));
+        return [...prev, ...fresh];
+      });
+    }
+    setLoadingMore(false);
+  }, [rawData, page]);
+
+  useEffect(() => {
+    if (!isLoading && allTrips.length > 0) {
       Animated.spring(headerAnim, { toValue: 1, stiffness: 240, damping: 22, useNativeDriver: true }).start();
     }
-  }, [isLoading]);
+  }, [isLoading, allTrips.length]);
 
-  const trips = normalizeTrips(rawData);
-  const totalEarned = trips.reduce((s, t) => s + (t.earnedAmount ?? 0), 0);
+  const handleRefresh = useCallback(() => {
+    setPage(1);
+    setAllTrips([]);
+    setServerTotal(null);
+    refetch();
+  }, [refetch]);
+
+  const handleLoadMore = () => {
+    setLoadingMore(true);
+    setPage(prev => prev + 1);
+  };
+
+  const totalPages = serverTotal != null ? Math.ceil(serverTotal / PAGE_LIMIT) : 1;
+  const hasNextPage = page < totalPages;
+  const totalEarned = allTrips.reduce((s, trip) => s + (trip.earnedAmount ?? 0), 0);
+  const displayTotal = serverTotal ?? allTrips.length;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -153,8 +198,8 @@ export default function TripHistoryScreen() {
           </View>
         </View>
 
-        {/* ── Summary banner (total earned across all time) ─────────── */}
-        {!isLoading && !isError && trips.length > 0 && (
+        {/* ── Summary banner ─────────────────────────────────────────── */}
+        {!isLoading && !isError && allTrips.length > 0 && (
           <Animated.View style={{ opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }], marginBottom: 20 }}>
             <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.summaryCard}>
               <View style={[styles.summaryRow, { flexDirection: R }]}>
@@ -163,7 +208,7 @@ export default function TripHistoryScreen() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.summaryLabel, { fontFamily: 'Inter_700Bold', textAlign: TA }]}>
-                    {trips.length} {t.history_subtitle}
+                    {displayTotal} {t.history_subtitle}
                   </Text>
                   <View style={[{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'baseline', gap: 6, marginTop: 2 }]}>
                     <Text style={[styles.summaryAmount, { fontFamily: 'Inter_700Bold' }]}>
@@ -171,34 +216,39 @@ export default function TripHistoryScreen() {
                     </Text>
                     <Text style={[styles.summaryCurrency, { fontFamily: 'Inter_600SemiBold' }]}>جنيه</Text>
                   </View>
+                  {serverTotal != null && allTrips.length < serverTotal && (
+                    <Text style={[{ fontSize: 10, color: 'rgba(255,255,255,0.5)', fontFamily: 'Inter_400Regular', marginTop: 2, textAlign: TA }]}>
+                      {allTrips.length} / {serverTotal} محملة
+                    </Text>
+                  )}
                 </View>
               </View>
             </LinearGradient>
           </Animated.View>
         )}
 
-        {/* ── Loading ──────────────────────────────────────────────────── */}
-        {isLoading && (
+        {/* ── Initial loading ───────────────────────────────────────────── */}
+        {isLoading && page === 1 && (
           <View style={styles.centered}>
             <ActivityIndicator size="large" color={colors.primary} />
           </View>
         )}
 
         {/* ── Error ────────────────────────────────────────────────────── */}
-        {isError && !isLoading && (
+        {isError && !isLoading && allTrips.length === 0 && (
           <GlassView style={styles.emptyCard} borderRadius={20}>
             <Clock size={40} color={colors.mutedForeground} strokeWidth={1.5} />
             <Text style={[styles.emptyTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: 'center' }]}>
               {t.load_failed}
             </Text>
-            <Pressable onPress={() => refetch()} style={({ pressed }) => [styles.retryBtn, { backgroundColor: pressed ? '#1e1e2820' : '#1e1e2812', borderColor: '#1e1e2825' }]}>
+            <Pressable onPress={handleRefresh} style={({ pressed }) => [styles.retryBtn, { backgroundColor: pressed ? '#1e1e2820' : '#1e1e2812', borderColor: '#1e1e2825' }]}>
               <Text style={[{ fontFamily: 'Inter_700Bold', fontSize: 13, color: '#2d2d42' }]}>{t.back}</Text>
             </Pressable>
           </GlassView>
         )}
 
         {/* ── Empty state ───────────────────────────────────────────────── */}
-        {!isLoading && !isError && trips.length === 0 && (
+        {!isLoading && !isError && allTrips.length === 0 && (
           <GlassView style={styles.emptyCard} borderRadius={20}>
             <Clock size={40} color={colors.mutedForeground} strokeWidth={1.5} />
             <Text style={[styles.emptyTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: 'center', marginTop: 16 }]}>
@@ -211,9 +261,9 @@ export default function TripHistoryScreen() {
         )}
 
         {/* ── Trip cards ────────────────────────────────────────────────── */}
-        {!isLoading && !isError && trips.length > 0 && (
+        {allTrips.length > 0 && (
           <View style={{ gap: 10 }}>
-            {trips.map((trip, idx) => (
+            {allTrips.map((trip, idx) => (
               <TripCard
                 key={trip.id}
                 trip={trip}
@@ -224,6 +274,40 @@ export default function TripHistoryScreen() {
                 t={t}
               />
             ))}
+
+            {/* ── Load More ───────────────────────────────────────────── */}
+            {hasNextPage && (
+              <Pressable
+                onPress={handleLoadMore}
+                disabled={loadingMore}
+                style={({ pressed }) => [
+                  styles.loadMoreBtn,
+                  {
+                    borderColor: colors.border,
+                    backgroundColor: pressed ? colors.secondary : 'transparent',
+                    opacity: loadingMore ? 0.6 : 1,
+                  },
+                ]}
+              >
+                {loadingMore ? (
+                  <ActivityIndicator size="small" color={colors.mutedForeground} />
+                ) : (
+                  <>
+                    <ChevronDown size={16} color={colors.mutedForeground} strokeWidth={2} />
+                    <Text style={[styles.loadMoreText, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>
+                      تحميل المزيد · {allTrips.length} / {serverTotal}
+                    </Text>
+                  </>
+                )}
+              </Pressable>
+            )}
+
+            {/* ── End of list marker ──────────────────────────────────── */}
+            {!hasNextPage && allTrips.length > 0 && serverTotal != null && (
+              <Text style={[styles.endLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
+                تم عرض جميع الرحلات ({serverTotal})
+              </Text>
+            )}
           </View>
         )}
       </ScrollView>
@@ -252,10 +336,10 @@ function TripCard({
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
   const TA = isRTL ? 'right' as const : 'left' as const;
 
-  React.useEffect(() => {
+  useEffect(() => {
     Animated.parallel([
-      Animated.spring(slideAnim, { toValue: 0, stiffness: 260, damping: 22, useNativeDriver: true, delay: idx * 40 }),
-      Animated.timing(fadeAnim,  { toValue: 1, duration: 300, useNativeDriver: true, delay: idx * 40 }),
+      Animated.spring(slideAnim, { toValue: 0, stiffness: 260, damping: 22, useNativeDriver: true, delay: Math.min(idx, 10) * 40 }),
+      Animated.timing(fadeAnim,  { toValue: 1, duration: 300, useNativeDriver: true, delay: Math.min(idx, 10) * 40 }),
     ]).start();
   }, []);
 
@@ -284,6 +368,7 @@ function TripCard({
           {trip.completedAt ? (
             <Text style={[styles.cardTime, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
               {formatTime(trip.completedAt, locale)}
+              {trip.passengerCount != null ? ` · ${trip.passengerCount} راكب` : ''}
             </Text>
           ) : null}
         </View>
@@ -336,4 +421,16 @@ const styles = StyleSheet.create({
   earnedAmount: { fontSize: 17 },
   earnedCurrency: { fontSize: 10, marginTop: 2 },
   earnedDash: { fontSize: 18 },
+  loadMoreBtn: {
+    height: 48,
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 4,
+  },
+  loadMoreText: { fontSize: 13 },
+  endLabel: { fontSize: 12, textAlign: 'center', marginTop: 8, marginBottom: 4 },
 });
