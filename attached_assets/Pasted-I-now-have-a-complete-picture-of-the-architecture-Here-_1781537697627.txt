@@ -1,0 +1,221 @@
+I now have a complete picture of the architecture. Here is the full technical design.
+
+Demo Trip Mode — Full Technical Design
+1. Architecture Philosophy
+The design rests on one rule: production code is not aware of demo mode. The screens (trip-active.tsx, boarding.tsx, trip-complete.tsx) are never touched. They consume useShuttle() — and in demo mode, that hook silently returns mock data and local action handlers instead of real API calls. The trick is that React Context lets you re-provide the same context interface with a completely different implementation underneath.
+
+2. Module Structure
+Everything lives in one self-contained folder that can be deleted atomically:
+
+lib/demo/
+  index.ts              — public API surface (isDemoMode, enterDemoMode, exitDemoMode)
+  DemoContext.tsx        — global flag: isDemoMode: boolean
+  DemoGate.tsx           — provider switcher: real ShuttleProvider vs. DemoShuttleProvider
+  DemoShuttleProvider.tsx — provides mock ShuttleContext value via useReducer
+  demoEngine.ts          — pure reducer + actions for demo state machine
+  mockData.ts            — all static mock data (line, stops, passengers, coordinates)
+
+Total surface area of changes to production files: 3 files, ~10 lines total.
+
+3. Production Code Changes (Exhaustive List)
+File	Change	Lines affected
+app/_layout.tsx	Wrap <ShuttleProvider> with <DemoGate>	~3
+app/_layout.tsx	Auth guard: !isAuthenticated && !isDemoMode	~1
+app/login.tsx	Add "Demo Trip" button at bottom of sign-in tab	~6
+That is the complete and exhaustive list. No other production file is modified.
+
+4. The DemoGate — Provider Switcher
+// lib/demo/DemoGate.tsx
+export function DemoGate({ children }) {
+  const { isDemoMode } = useDemoMode();
+  if (isDemoMode) {
+    return <DemoShuttleProvider>{children}</DemoShuttleProvider>;
+  }
+  return <ShuttleProvider>{children}</ShuttleProvider>;
+}
+
+In app/_layout.tsx, the single change is:
+
+// BEFORE:
+<ShuttleProvider>{children}</ShuttleProvider>
+// AFTER (the only change):
+<DemoGate>{children}</DemoGate>
+
+When isDemoMode is false (always in production unless the button is pressed), DemoGate renders the real ShuttleProvider with zero overhead. It is a transparent pass-through.
+
+5. Mock Data
+All fake data lives in lib/demo/mockData.ts. It conforms to the exact same TypeScript types the real providers use (ShuttleLine, ShuttleStop, BoardingPassenger), so no type gymnastics are needed anywhere.
+
+Mock trip: "Airport Express" — 3 stops, realistic Arabic/English passenger names, Arabic route names for RTL testing.
+
+Mock stops (3):
+
+Stop 1 — Al-Hamra Station: 3 passengers expected
+Stop 2 — Business District: 2 passengers expected, 2 from Stop 1 drop off here
+Stop 3 — King Abdulaziz Airport: 0 new passengers (terminus / drop-off only)
+Mock passengers per stop: each has id, name, ticket, checkedIn: false, luggageCount. All start un-boarded. The driver manually taps board/no-show, exactly like real trips.
+
+Mock route coordinates: A GeoJSON LineString for the map polyline between the 3 stop coordinates. MapBackdrop already renders route lines — no changes needed to the map component.
+
+Mock earnings: A static { amount: 85, currency: 'SAR', duration: '45 min' } shown on the trip-complete screen.
+
+6. Demo State Machine
+The state machine lives in lib/demo/demoEngine.ts as a pure useReducer — no side effects, no timers, no network.
+
+TRIP_DETAILS
+     ↓  (driver taps "Start Trip")
+NAVIGATING_TO_STOP_0
+     ↓  (driver taps "Arrived at Station")
+ARRIVED_AT_STOP_0
+     ↓  (driver taps "Manage Boarding" → router.push('/shuttle/boarding'))
+BOARDING_STOP_0      ← driver boards/marks no-show per passenger
+     ↓  (driver taps "Depart" → router.back())
+NAVIGATING_TO_STOP_1
+     ↓  ... (repeats for stops 1 and 2)
+TRIP_COMPLETED       → router.replace('/shuttle/trip-complete')
+
+State shape:
+
+type DemoState = {
+  currentStopIndex: number;               // 0, 1, 2
+  stops: ShuttleStop[];                   // all stops with live status
+  passengers: BoardingPassenger[];        // passengers for the current stop
+  phase: 'navigating' | 'arrived' | 'boarding' | 'completed';
+};
+
+Actions (pure, no async):
+
+MARK_ARRIVED — sets stops[currentStopIndex].status = 'arrived', phase = 'arrived'
+OPEN_BOARDING — sets phase = 'boarding', loads passengers for current stop
+BOARD_PASSENGER(id) — flips checkedIn = true for that passenger
+MARK_NO_SHOW(id) — marks passenger as no-show (checked out)
+COMPLETE_STOP — sets current stop to 'completed', advances currentStopIndex, phase = 'navigating'
+FINISH_TRIP — phase = 'completed'
+All state transitions are synchronous and instant. There are no timers or automatic progressions — the driver taps buttons exactly as they would in a real trip.
+
+7. DemoShuttleProvider — Context Override
+This is the heart of the isolation. It provides the exact same ShuttleContext value shape as the real ShuttleProvider but sourced entirely from local useReducer state:
+
+// lib/demo/DemoShuttleProvider.tsx
+function DemoShuttleProvider({ children }) {
+  const [state, dispatch] = useReducer(demoReducer, initialDemoState);
+  const router = useRouter();
+  const contextValue: ShuttleContextValue = {
+    // ── Data ────────────────────────────────────────────────────────
+    activeLine:        DEMO_LINE,
+    stops:             state.stops,
+    currentStopIndex:  state.currentStopIndex,
+    passengers:        state.passengers,
+    myBookings:        [DEMO_BOOKING],
+    allLines:          [DEMO_LINE],
+    isLoading:         false,
+    error:             null,
+    // ── Actions (no API calls — pure local dispatches) ────────────
+    handleStationArrived:   () => dispatch({ type: 'MARK_ARRIVED' }),
+    handleStationCompleted: () => {
+      dispatch({ type: 'COMPLETE_STOP' });
+      // If last stop, navigate to completion
+      if (state.currentStopIndex >= DEMO_STOPS.length - 1) {
+        dispatch({ type: 'FINISH_TRIP' });
+        router.replace('/shuttle/trip-complete');
+      }
+    },
+    handleBoardPassenger:   (id) => dispatch({ type: 'BOARD_PASSENGER', id }),
+    handleMarkNoShow:       (id) => dispatch({ type: 'MARK_NO_SHOW', id }),
+    handleFinishRoute:      () => {
+      dispatch({ type: 'FINISH_TRIP' });
+      router.replace('/shuttle/trip-complete');
+    },
+    // ── React Query stubs (no-ops — screens call these but nothing happens) ──
+    refetch:            () => Promise.resolve(),
+    invalidateBookings: () => {},
+  };
+  return (
+    <ShuttleContext.Provider value={contextValue}>
+      {children}
+    </ShuttleContext.Provider>
+  );
+}
+
+The screens call useShuttle() and get this value. They cannot tell the difference.
+
+8. Demo Button on the Login Screen
+The button appears only when EXPO_PUBLIC_DEMO_ENABLED=true (an env flag, default false in production). This means it is completely invisible in production builds by default — no conditional rendering in the component itself is even needed at bundle time.
+
+// app/login.tsx — the only change to this file
+{process.env.EXPO_PUBLIC_DEMO_ENABLED === 'true' && (
+  <TouchableOpacity
+    style={styles.demoButton}
+    onPress={() => {
+      enterDemoMode();                      // sets isDemoMode = true in DemoContext
+      router.replace('/(shuttle)');         // skip auth, go straight to shuttle home
+    }}
+  >
+    <Text style={styles.demoButtonText}>
+      {t.demo_trip_button ?? 'Demo Trip'}
+    </Text>
+  </TouchableOpacity>
+)}
+
+Pressing it:
+
+Calls enterDemoMode() which sets isDemoMode = true in DemoContext
+DemoGate switches to DemoShuttleProvider
+Auth guard (!isAuthenticated && !isDemoMode) is satisfied — no login required
+Driver is on the shuttle home screen, sees the mock active trip booking, taps into it
+9. Auth Context in Demo Mode
+The app's root layout has a redirect: if !isAuthenticated → router.replace('/login'). In demo mode, this redirect must be suppressed without modifying the auth logic:
+
+// app/_layout.tsx — the single additional change
+const { isDemoMode } = useDemoMode();
+// BEFORE:
+if (!isAuthenticated) router.replace('/login');
+// AFTER:
+if (!isAuthenticated && !isDemoMode) router.replace('/login');
+
+No mock auth token, no fake JWT, no auth context replacement. One boolean check.
+
+10. How Navigation Between Stops Works
+The existing trip-active.tsx screen calls handleStationArrived() and handleStationCompleted() from useShuttle(). In demo mode these dispatch to the local reducer. The screen reads stops[currentStopIndex] and renders the correct stop name, ETA, and passenger counts from the mock data. The map backdrop renders the mock GeoJSON route polyline. No screen code changes.
+
+For boarding: the existing boarding.tsx screen reads passengers from useShuttle(). In demo mode, passengers is the mock array for the current stop. The driver taps "Boarded" / "No-show" per passenger, which dispatches BOARD_PASSENGER / MARK_NO_SHOW. No screen code changes.
+
+11. Ensuring Zero Interference with Production
+Risk	Mitigation
+Demo context leaks into real sessions	DemoContext is initialized isDemoMode: false. enterDemoMode() is only callable from the button. exitDemoMode() resets it to false.
+Socket connects in demo mode	DemoShuttleProvider never initializes a socket. The real ShuttleProvider is not mounted in demo mode (DemoGate switches).
+API calls fire in demo mode	All action handlers in DemoShuttleProvider are pure local dispatches. There is no import of lib/api.ts in any demo file.
+Demo data pollutes real AsyncStorage	Mock data is never written to AsyncStorage. All demo state lives in useReducer (in-memory only). Exiting demo mode discards it entirely.
+TypeScript catches leakage	DemoShuttleProvider is typed to the same ShuttleContextValue interface — if the interface changes, TypeScript will flag the demo implementation at compile time.
+Bundle size in production	If EXPO_PUBLIC_DEMO_ENABLED !== 'true', Metro's dead-code elimination removes the button. The demo module is still bundled (it's imported by DemoGate) but DemoGate renders the real provider, so zero runtime cost.
+12. If You Ask Me to Remove Demo Mode Later — Exact Steps
+Step 1: Delete the folder:
+
+rm -rf lib/demo/
+
+Step 2: Revert app/_layout.tsx — two sub-changes:
+
+Replace <DemoGate> with <ShuttleProvider>
+Remove && !isDemoMode from the auth guard
+Remove the import { DemoGate, DemoModeProvider, useDemoMode } from '../lib/demo' line
+Step 3: Revert app/login.tsx:
+
+Remove the demo button block (the process.env.EXPO_PUBLIC_DEMO_ENABLED conditional)
+Remove the import { useDemoMode } from '../lib/demo' line
+Step 4 (optional): Remove EXPO_PUBLIC_DEMO_ENABLED from .env and Replit Secrets.
+
+Total: Delete 1 folder (6 files), 3 edits across 2 files. TypeScript will confirm zero remaining references via pnpm run typecheck showing no errors related to the deleted module.
+
+Guaranteed no side effects because:
+
+No demo logic was ever written inside shuttleContext.tsx, trip-active.tsx, boarding.tsx, or any other production file
+No demo data was ever written to AsyncStorage, the database, or any persistent store
+The demo button was only rendered when an env flag was set — removing it removes the only entry point
+13. Summary of Design Decisions
+Decision	Rationale
+Context re-provision over hook mocking	Cleanest isolation; screens need zero awareness of mode
+useReducer over Redux	No new dependency; state is local to demo session
+No timers / auto-advance	Mirrors real driver behavior; makes demo reliable and explainable
+Env flag gate on the button	Invisible in production builds; no accidental activation
+Single folder for all demo code	Atomic deletion = complete removal
+This is the complete design. Let me know if you want any part changed before I start building it.

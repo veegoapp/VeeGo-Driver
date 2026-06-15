@@ -253,6 +253,19 @@ function SignInForm({ isRTL, onSuccess }: { isRTL: boolean; onSuccess: (at: stri
       >
         <Text style={s.forgotText}>Forgot password?</Text>
       </TouchableOpacity>
+
+      {process.env.EXPO_PUBLIC_DEMO_ENABLED === 'true' && (
+        <TouchableOpacity
+          style={s.demoBtn}
+          activeOpacity={0.75}
+          onPress={() => {
+            enterDemoMode();
+            expoRouter.replace('/(shuttle)' as any);
+          }}
+        >
+          <Text style={s.demoBtnText}>Demo Trip</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -414,4 +427,9 @@ const s = StyleSheet.create({
   termsLink: { color: '#1e1e28', fontWeight: '600' },
   forgotBtn: { alignItems: 'center', paddingVertical: 4 },
   forgotText: { fontSize: 13, color: '#5e5e72', fontFamily: 'Inter_400Regular', textDecorationLine: 'underline' },
+  demoBtn: {
+    alignItems: 'center', paddingVertical: 10, marginTop: 4,
+    borderWidth: 1, borderColor: '#3D52D5', borderRadius: 14, borderStyle: 'dashed',
+  },
+  demoBtnText: { fontSize: 13, color: '#3D52D5', fontFamily: 'Inter_500Medium', letterSpacing: 0.2 },
 });
