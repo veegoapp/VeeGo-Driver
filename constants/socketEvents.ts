@@ -68,6 +68,17 @@ export const SOCKET_EVENTS = {
   // Server → Driver/User: notifications
   NOTIFICATION_NEW:         "notification:new",
 
+  // Server → Driver + Passenger: ride cancellation
+  RIDE_CANCELLED:           "ride:cancelled",
+
+  // Server → Driver + Passenger: in-trip chat message
+  RIDE_MESSAGE_NEW:         "ride:message:new",
+
+  // Driver → Server: SOS alert
+  DRIVER_SOS:               "driver:sos",
+  // Server → Driver: SOS acknowledgement
+  DRIVER_SOS_ACK:           "driver:sos:ack",
+
   // Server → Driver: misc
   ERROR:                    "error",
 

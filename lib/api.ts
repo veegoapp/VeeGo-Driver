@@ -394,11 +394,12 @@ export const endpoints = {
       }
     },
     ratings: () => api.get('/driver/me/ratings'),
+    promotions: () => api.get<DriverPromotion[]>('/driver/promotions'),
   },
 
   pushTokens: {
-    register: (platform: 'ios' | 'android' | 'web', token: string) =>
-      api.post('/users/me/push-token', { token, platform }),
+    register: (token: string) =>
+      api.post('/driver/push-token', { token }),
   },
 
   rides: {
@@ -412,6 +413,12 @@ export const endpoints = {
     active: () => api.get('/driver/rides/active'),
     rateRider: (rideId: string, rating: number) =>
       api.post(`/driver/rides/${rideId}/rate-rider`, { rating }),
+    messages: (rideId: string) =>
+      api.get<{ data: RideMessage[]; total: number }>(`/rides/${rideId}/messages`),
+    sendMessage: (rideId: string, text: string) =>
+      api.post<RideMessage>(`/rides/${rideId}/messages`, { text }),
+    sos: (rideId: string, data: { latitude: number; longitude: number; notes?: string }) =>
+      api.post(`/rides/${rideId}/sos`, data),
   },
 
   trips: {
@@ -442,6 +449,15 @@ export const endpoints = {
   earnings: {
     summary: () => api.get('/earnings/summary'),
     weekly: (weeks = 4) => api.get(`/earnings/weekly?weeks=${weeks}`),
+  },
+
+  safety: {
+    shareTrip: (data: { rideId?: string; contactPhone?: string }) =>
+      api.post<{ ok: boolean; message?: string }>('/driver/safety/share-trip', data),
+    rideCheck: (data: { rideId?: string; latitude: number; longitude: number }) =>
+      api.post<{ ok: boolean; message?: string }>('/driver/safety/ridecheck', data),
+    recording: (data: { rideId?: string; action: 'start' | 'stop' }) =>
+      api.post<{ recordingId?: string; status: string }>('/driver/safety/recording', data),
   },
 
   wallet: {
@@ -885,6 +901,26 @@ export const endpoints = {
       api.get<FinancialAnalytics>(`/driver/financial-analytics?range=${range}`),
   },
 };
+
+export interface RideMessage {
+  id: number;
+  rideId: number;
+  senderId: number;
+  senderRole: 'driver' | 'passenger';
+  text: string;
+  sentAt: string;
+}
+
+export interface DriverPromotion {
+  id: string;
+  title: string;
+  description: string;
+  bonusPercentage?: number;
+  bonusAmount?: number;
+  targetRides?: number;
+  validUntil?: string;
+  isActive: boolean;
+}
 
 // Exported bonus target shape — used by both the profile summary and the dedicated screen
 export interface BonusTarget {

@@ -1,10 +1,10 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Check, ChevronUp, Clock, MessageCircle, Navigation, Phone, Shield, Star } from 'lucide-react-native';
+import { AlertTriangle, Check, ChevronUp, Clock, MessageCircle, Navigation, Phone, Shield, Star } from 'lucide-react-native';
 import React, { useRef, useEffect, useState } from 'react';
-import { Animated, Image, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Animated, Image, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { MapBackdrop } from '@/components/MapBackdrop';
 import { GlassView } from '@/components/GlassView';
 import { ServiceBlockedScreen } from '@/components/ServiceBlockedScreen';
@@ -13,6 +13,8 @@ import { useServiceGuard } from '@/hooks/useServiceGuard';
 import { useWaitingCharge } from '@/hooks/useWaitingCharge';
 import { endpoints } from '@/lib/api';
 import { useI18n } from '@/lib/i18nContext';
+import { useSocket } from '@/lib/socketContext';
+import { SOCKET_EVENTS } from '@/constants/socketEvents';
 
 type Phase = 'to_pickup' | 'arrived' | 'in_trip' | 'completed';
 
@@ -47,9 +49,12 @@ export default function RideScreen() {
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
   const { isBlocked, status: serviceStatus } = useServiceGuard('CAR');
   const { rideId } = useLocalSearchParams<{ rideId: string }>();
+  const { socket } = useSocket();
+  const queryClient = useQueryClient();
   const [phase, setPhase] = useState<Phase>('to_pickup');
   const [rating, setRating] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [sosBusy, setSosBusy] = useState(false);
   const hasRecovered = useRef(false);
 
   const { data: rideRaw } = useQuery({
@@ -80,6 +85,22 @@ export default function RideScreen() {
     };
     setPhase(r.status ? (statusMap[r.status] ?? 'to_pickup') : 'to_pickup');
   }, [rideRaw]);
+
+  // Listen for ride cancellation while on this screen
+  useEffect(() => {
+    if (!socket || !rideId) return;
+    const handleCancelled = (data: { rideId?: string | number } | undefined) => {
+      const cancelledId = String(data?.rideId ?? '');
+      if (cancelledId && cancelledId !== rideId) return;
+      Alert.alert(
+        'Ride Cancelled',
+        'The rider has cancelled this trip.',
+        [{ text: 'OK', onPress: () => router.replace('/(tabs)') }],
+      );
+    };
+    socket.on(SOCKET_EVENTS.RIDE_CANCELLED, handleCancelled);
+    return () => { socket.off(SOCKET_EVENTS.RIDE_CANCELLED, handleCancelled); };
+  }, [socket, rideId]);
 
   // All hooks called above — safe to short-circuit for blocked service
   if (isBlocked) {
@@ -124,7 +145,6 @@ export default function RideScreen() {
     }
   }, [phase]);
 
-  // Pulse animation for the waiting charge ticker
   useEffect(() => {
     if (!waitingCharge || waitingCharge.capped) return;
     const loop = Animated.loop(
@@ -146,13 +166,49 @@ export default function RideScreen() {
     try {
       if (phase === 'to_pickup') await endpoints.rides.arrived(rideId ?? '');
       else if (phase === 'arrived') await endpoints.rides.start(rideId ?? '');
-      else if (phase === 'in_trip') await endpoints.rides.complete(rideId ?? '');
-    } catch {
-      // best-effort — proceed regardless
+      else if (phase === 'in_trip') {
+        await endpoints.rides.complete(rideId ?? '');
+        queryClient.invalidateQueries({ queryKey: ['earnings-summary'] });
+        queryClient.invalidateQueries({ queryKey: ['earnings-weekly'] });
+      }
+      setPhase(p.next);
+    } catch (err: unknown) {
+      const body = (err as { body?: { error?: string } })?.body;
+      Alert.alert('Action Failed', body?.error ?? 'Please try again.');
     } finally {
       setBusy(false);
     }
-    setPhase(p.next);
+  };
+
+  const handleSOS = async () => {
+    if (sosBusy) return;
+    setSosBusy(true);
+    try {
+      let latitude = 0;
+      let longitude = 0;
+      try {
+        const Location = await import('expo-location');
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          latitude = pos.coords.latitude;
+          longitude = pos.coords.longitude;
+        }
+      } catch {
+        // location unavailable — backend will use last known position
+      }
+
+      if (socket?.connected) {
+        socket.emit(SOCKET_EVENTS.DRIVER_SOS, { rideId: rideId ?? '', latitude, longitude });
+      } else {
+        await endpoints.rides.sos(rideId ?? '', { latitude, longitude });
+      }
+      Alert.alert('SOS Sent', 'The operations team has been alerted. Help is on the way.');
+    } catch {
+      Alert.alert('SOS Failed', 'Could not send SOS. Please call emergency services: 197');
+    } finally {
+      setSosBusy(false);
+    }
   };
 
   const handleDone = async () => {
@@ -241,7 +297,7 @@ export default function RideScreen() {
               </View>
               <Pressable
                 style={[styles.actionBtn, { backgroundColor: colors.primary + '26' }]}
-                onPress={() => router.push('/messages')}
+                onPress={() => router.push({ pathname: '/ride/chat', params: { rideId: rideId ?? '' } } as any)}
                 accessibilityLabel="Message rider"
               >
                 <MessageCircle size={20} color={colors.primary} strokeWidth={2} />
@@ -291,9 +347,20 @@ export default function RideScreen() {
               </LinearGradient>
             </Pressable>
 
-            <View style={styles.safetyRow}>
-              <Shield size={14} color={colors.mutedForeground} strokeWidth={2} />
-              <Text style={[styles.safetyText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>Safety toolkit · Trip recorded</Text>
+            <View style={styles.bottomRow}>
+              <View style={styles.safetyRow}>
+                <Shield size={14} color={colors.mutedForeground} strokeWidth={2} />
+                <Text style={[styles.safetyText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>Safety toolkit · Trip recorded</Text>
+              </View>
+              <Pressable
+                onPress={handleSOS}
+                disabled={sosBusy}
+                style={[styles.sosBtn, { opacity: sosBusy ? 0.6 : 1 }]}
+                accessibilityLabel="Send SOS"
+              >
+                <AlertTriangle size={14} color={colors.destructiveForeground} strokeWidth={2} />
+                <Text style={[styles.sosBtnText, { color: colors.destructiveForeground, fontFamily: 'Inter_700Bold' }]}>SOS</Text>
+              </Pressable>
             </View>
           </GlassView>
         </Animated.View>
@@ -343,6 +410,9 @@ const styles = StyleSheet.create({
   ctaBtn: { marginTop: 12, borderRadius: 16, overflow: 'hidden', elevation: 8, shadowColor: '#2d2d42', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 12 },
   ctaBtnGrad: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   ctaBtnText: { fontSize: 16 },
-  safetyRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 12 },
+  bottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 },
+  safetyRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   safetyText: { fontSize: 12 },
+  sosBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#ef4444', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
+  sosBtnText: { fontSize: 12 },
 });

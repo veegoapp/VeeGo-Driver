@@ -98,6 +98,15 @@ export default function SelfieScreen() {
         formData.append('tripId', params.tripId);
         const response = await endpoints.driver.checkin(formData);
         if (!response.ok) throw new Error('Checkin failed');
+        const result = await response.json() as { faceDetected?: boolean; message?: string };
+        if (result.faceDetected === false) {
+          setPhoto(null);
+          Alert.alert(
+            'No Face Detected',
+            result.message ?? 'We could not detect a face. Please ensure your face is clearly visible and retake the photo.',
+          );
+          return;
+        }
         if (intervalRef.current) clearInterval(intervalRef.current);
         setConfirmed(true);
         setTimeout(() => router.back(), 1200);

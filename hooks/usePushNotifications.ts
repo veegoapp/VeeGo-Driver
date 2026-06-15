@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import { router } from 'expo-router';
+import { endpoints } from '@/lib/api';
 
 export type PushToken = string | null;
 
@@ -40,10 +41,7 @@ export function usePushNotifications(onRideRequest?: () => void) {
       if (!cancelled) {
         setToken(t ?? null);
         if (t) {
-          // TODO: Backend Integration - Save Expo Push Token
-          // Send `t` (the Expo push token string) to your backend so it can
-          // deliver push notifications to this device when the app is backgrounded or closed.
-          // Example: endpoints.driver.savePushToken({ token: t })
+          endpoints.pushTokens.register(t).catch(() => {});
         }
       }
     });

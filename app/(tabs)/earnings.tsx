@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { ChevronRight, Download, Zap } from 'lucide-react-native';
+import { ChevronRight, Download, Tag, Zap } from 'lucide-react-native';
 import { FeatherIcon } from '@/lib/iconMap';
 import React, { useEffect, useRef } from 'react';
 import {
@@ -18,7 +18,7 @@ import { useQuery } from '@tanstack/react-query';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
-import { endpoints } from '@/lib/api';
+import { endpoints, type DriverPromotion } from '@/lib/api';
 
 type WeekDay = { day: string; amount: string | number };
 // FIX #5: updated to match spec response shape
@@ -57,6 +57,12 @@ export default function EarningsScreen() {
     queryKey: ['driver'],
     queryFn: endpoints.driver.me,
   });
+  const { data: promotionsRaw } = useQuery({
+    queryKey: ['driver-promotions'],
+    queryFn: () => endpoints.driver.promotions(),
+    retry: false,
+  });
+  const promotions: DriverPromotion[] = (promotionsRaw ?? []) as DriverPromotion[];
 
   // FIX #5: spec returns { weeklyBreakdown[] }, not a direct array
   const weekEarnings = ((weeklyRaw as { weeklyBreakdown?: WeekDay[] } | undefined)?.weeklyBreakdown ?? []);
@@ -157,9 +163,36 @@ export default function EarningsScreen() {
         </GlassView>
 
         <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.active_promotions}</Text>
-        <GlassView style={{ padding: 20, alignItems: 'center' }} borderRadius={20}>
-          <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 14 }}>No active promotions</Text>
-        </GlassView>
+        {promotions.length === 0 ? (
+          <GlassView style={{ padding: 20, alignItems: 'center' }} borderRadius={20}>
+            <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 14 }}>No active promotions</Text>
+          </GlassView>
+        ) : (
+          <View style={{ gap: 8 }}>
+            {promotions.filter(p => p.isActive).map(promo => (
+              <GlassView key={promo.id} style={styles.promoCard} borderRadius={20}>
+                <View style={[styles.promoIcon, { backgroundColor: colors.primary + '26' }]}>
+                  <Tag size={18} color={colors.primary} strokeWidth={2} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.promoTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{promo.title}</Text>
+                  <Text style={[styles.promoDesc, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>{promo.description}</Text>
+                  {(promo.bonusPercentage != null || promo.bonusAmount != null) && (
+                    <Text style={[styles.promoBonus, { color: colors.primary, fontFamily: 'Inter_700Bold' }]}>
+                      {promo.bonusPercentage != null ? `+${promo.bonusPercentage}% bonus` : `+${promo.bonusAmount} ${t.egp} bonus`}
+                      {promo.targetRides != null ? ` · ${promo.targetRides} trips` : ''}
+                    </Text>
+                  )}
+                  {promo.validUntil && (
+                    <Text style={[styles.promoExpiry, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
+                      Valid until {new Date(promo.validUntil).toLocaleDateString()}
+                    </Text>
+                  )}
+                </View>
+              </GlassView>
+            ))}
+          </View>
+        )}
 
         <Pressable onPress={() => router.push('/ratings')} style={({ pressed }) => [{ transform: [{ scale: pressed ? 0.98 : 1 }], marginTop: 20 }]}>
           <GlassView style={[styles.levelCard, { flexDirection: R }]} borderRadius={20}>
@@ -226,4 +259,10 @@ const styles = StyleSheet.create({
   levelIcon: { width: 48, height: 48, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   levelTitle: { fontSize: 14 },
   levelSub: { fontSize: 12, marginTop: 2 },
+  promoCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, padding: 16 },
+  promoIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
+  promoTitle: { fontSize: 14 },
+  promoDesc: { fontSize: 12, marginTop: 2 },
+  promoBonus: { fontSize: 13, marginTop: 6 },
+  promoExpiry: { fontSize: 11, marginTop: 4 },
 });
