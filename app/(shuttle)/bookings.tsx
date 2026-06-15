@@ -61,8 +61,26 @@ function getCurrentWeekSunday(): Date {
   return sun;
 }
 
-function toDateString(d: Date): string {
-  return d.toISOString().slice(0, 10);
+// Always produces a YYYY-MM-DD string from LOCAL date parts, not UTC.
+// toISOString() converts to UTC first, which causes off-by-one errors in
+// UTC+ timezones (e.g. Egypt UTC+2: local midnight → previous day in UTC).
+function toLocalDateString(d: Date): string {
+  const y = d.getFullYear();
+  const mo = String(d.getMonth() + 1).padStart(2, '0');
+  const dy = String(d.getDate()).padStart(2, '0');
+  return `${y}-${mo}-${dy}`;
+}
+
+// Normalises a weekStart value from the backend which may arrive as:
+//   "YYYY-MM-DD"              — already correct, just slice
+//   "YYYY-MM-DDTHH:mm:ss..."  — full ISO; parse and extract LOCAL date parts
+function normalizeWeekStart(weekStart: string): string {
+  if (!weekStart) return '';
+  if (weekStart.includes('T')) {
+    const d = new Date(weekStart);
+    if (!isNaN(d.getTime())) return toLocalDateString(d);
+  }
+  return weekStart.slice(0, 10);
 }
 
 type WeekBucket = 'current' | 'next' | 'other';
@@ -71,12 +89,10 @@ function getWeekBucket(weekStart: string): WeekBucket {
   const currentSun = getCurrentWeekSunday();
   const nextSun = new Date(currentSun);
   nextSun.setDate(currentSun.getDate() + 7);
-  const afterNextSun = new Date(nextSun);
-  afterNextSun.setDate(nextSun.getDate() + 7);
 
-  const ws = weekStart.slice(0, 10);
-  if (ws === toDateString(currentSun)) return 'current';
-  if (ws === toDateString(nextSun)) return 'next';
+  const ws = normalizeWeekStart(weekStart);
+  if (ws === toLocalDateString(currentSun)) return 'current';
+  if (ws === toLocalDateString(nextSun)) return 'next';
   return 'other';
 }
 
@@ -159,13 +175,30 @@ export default function BookingsScreen() {
 
   // ── Derived booking lists ──────────────────────────────────────────────────
 
+  // 'booked' is the confirmed-booking status returned by the backend;
+  // 'active' is an alias used in some backend versions;
+  // 'pending_renewal' means the driver must confirm for the next week.
   const upcomingBookings = myBookings.filter(
-    b => b.status === 'active' || b.status === 'pending_renewal'
+    b => b.status === 'booked' || b.status === 'active' || b.status === 'pending_renewal'
   );
   const filteredUpcoming = upcomingBookings.filter(b => {
     const bucket = getWeekBucket(b.weekStart);
     return bucket === weekFilter;
   });
+
+  if (__DEV__) {
+    const currentSunStr = toLocalDateString(getCurrentWeekSunday());
+    console.log('[Bookings] myBookings count:', myBookings.length);
+    console.log('[Bookings] currentWeekSunday (local):', currentSunStr);
+    myBookings.forEach(b => {
+      const normalized = normalizeWeekStart(b.weekStart);
+      const bucket = getWeekBucket(b.weekStart);
+      console.log(
+        `[Bookings] id=${b.id} status="${b.status}" weekStart="${b.weekStart}" → normalized="${normalized}" bucket="${bucket}"`
+      );
+    });
+    console.log('[Bookings] upcomingBookings:', upcomingBookings.length, '| weekFilter:', weekFilter, '| filteredUpcoming:', filteredUpcoming.length);
+  }
 
   // ── Mutations ──────────────────────────────────────────────────────────────
 
