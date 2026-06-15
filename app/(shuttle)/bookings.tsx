@@ -386,7 +386,20 @@ export default function BookingsScreen() {
                     key={b.id}
                     booking={b}
                     colors={colors}
-                    onPress={() => setSelectedBooking(b)}
+                    onPress={() =>
+                      router.push({
+                        pathname: '/shuttle/trip-details',
+                        params: {
+                          bookingId: String(b.id),
+                          routeId: String(b.routeId),
+                          routeName: b.routeName,
+                          departureTime: b.departureTime,
+                          weekStart: b.weekStart ?? '',
+                          weekEnd: b.weekEnd ?? '',
+                          status: b.status,
+                        },
+                      } as any)
+                    }
                   />
                 ))}
               </View>

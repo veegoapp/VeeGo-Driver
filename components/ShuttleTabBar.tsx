@@ -30,7 +30,7 @@ const PILL_PX = 8;
 export function ShuttleTabBar({ state, navigation }: TabBarProps) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { t } = useI18n();
+  const { t, isRTL } = useI18n();
   const activeIndex = state.index;
   const [tabWidth, setTabWidth] = useState(0);
   const pillX = useRef(new Animated.Value(0)).current;
@@ -40,13 +40,19 @@ export function ShuttleTabBar({ state, navigation }: TabBarProps) {
 
   useEffect(() => {
     if (tabWidth <= 0) return;
+    // In RTL mode flex reverses the visual order of tabs, so tab at LTR index 0
+    // appears on the far right. The pill uses an absolute `left` offset which is
+    // NOT affected by RTL flex, so we must mirror the index to match visuals.
+    const visualIndex = isRTL
+      ? SHUTTLE_TAB_NAMES.length - 1 - activeIndex
+      : activeIndex;
     Animated.spring(pillX, {
-      toValue: activeIndex * tabWidth,
+      toValue: visualIndex * tabWidth,
       stiffness: 380,
       damping: 32,
       useNativeDriver: false,
     }).start();
-  }, [activeIndex, tabWidth]);
+  }, [activeIndex, tabWidth, isRTL]);
 
   const bottomPadding = Platform.OS === 'web' ? 34 : insets.bottom;
 

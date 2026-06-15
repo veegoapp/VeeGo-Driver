@@ -64,7 +64,7 @@ export default function ShuttleHomeScreen() {
   });
   const driverData = driverRaw as any;
 
-  const { activeLine, stops, currentStopIndex, allLines, renewalBooking, myBookings, tripCancelledBanner, dismissTripCancelledBanner } = useShuttle();
+  const { activeLine, stops, currentStopIndex, allLines, renewalBooking, myBookings, tripCancelledBanner, dismissTripCancelledBanner, refetch } = useShuttle();
   const { incomingReferralsCount, pendingReferrals } = useReferral();
   const queryClient = useQueryClient();
 
@@ -77,7 +77,13 @@ export default function ShuttleHomeScreen() {
   useFocusEffect(
     useCallback(() => {
       refetchNotifications();
-    }, [refetchNotifications])
+      // Force-refresh shuttle bookings & lines when the screen gains focus so
+      // that trips deleted from the admin dashboard disappear immediately instead
+      // of waiting for the 60-second polling interval.
+      refetch();
+      queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['shuttle-lines'] });
+    }, [refetchNotifications, refetch, queryClient])
   );
   const currentStop = stops[currentStopIndex] ?? null;
   const nextStop = stops[currentStopIndex + 1] ?? null;

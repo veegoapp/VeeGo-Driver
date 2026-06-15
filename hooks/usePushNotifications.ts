@@ -7,6 +7,15 @@ export type PushToken = string | null;
 
 function safeSetNotificationHandler() {
   if (Platform.OS === 'web') return;
+  // expo-notifications logs its own console.error on Android inside Expo Go SDK 53
+  // ("remote notifications removed from Expo Go"). Suppress only that specific
+  // message so the overlay doesn't appear; restore console.error immediately after.
+  const _origError = console.error;
+  console.error = (...args: unknown[]) => {
+    const msg = typeof args[0] === 'string' ? args[0] : '';
+    if (msg.includes('expo-notifications')) return;
+    _origError.apply(console, args as Parameters<typeof console.error>);
+  };
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const Notifications = require('expo-notifications');
@@ -21,6 +30,8 @@ function safeSetNotificationHandler() {
     });
   } catch {
     // expo-notifications not available in this environment (Expo Go SDK 53)
+  } finally {
+    console.error = _origError;
   }
 }
 
