@@ -109,6 +109,8 @@ export default function ShuttleLinesScreen() {
 
   const [search, setSearch] = useState('');
   const [bookingRoute, setBookingRoute] = useState<ShuttleRoute | null>(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
   // selectedWeek is now a BackendWeek (from server) — never generated client-side
   const [selectedWeek, setSelectedWeek] = useState<BackendWeek | null>(null);
@@ -219,11 +221,7 @@ export default function ShuttleLinesScreen() {
       // Keep the sheet open — driver can still browse other weeks/slots.
       // Only reset the slot selection so the sheet reflects the new state.
       setSelectedSlot(null);
-      Alert.alert(
-        '✅ Week Committed!',
-        'Your 5-day slot (Sun – Thu) is confirmed. It will appear in your upcoming bookings.\n\nYou will receive a renewal prompt next Wednesday at 7:00 AM.',
-        [{ text: 'Got it' }]
-      );
+      setShowSuccessDialog(true);
     },
     onError: (err: unknown) => {
       if (err instanceof ApiError && err.status === 409) {
@@ -250,38 +248,21 @@ export default function ShuttleLinesScreen() {
 
   const handleBook = () => {
     if (!bookingRoute || !selectedWeek || !selectedSlot) return;
-    const weekLabel = formatWeekLabel(selectedWeek.weekStart, selectedWeek.weekEnd);
-    const confirmLines = [
-      `Route: ${bookingRoute.name}`,
-      `Direction: ${bookingRoute.from} → ${bookingRoute.to}`,
-      `Week: ${weekLabel}  (Sun – Thu)`,
-      `Departure: ${selectedSlot.departureTime}`,
-      bookingRoute.stationCount ? `Stations: ${bookingRoute.stationCount} stops` : '',
-      '',
-      'This commits you to the full 5-day work week.',
-      'Other drivers will see this slot as reserved.',
-    ].filter(l => l !== undefined);
-    Alert.alert(
-      'Confirm 5-Day Booking',
-      confirmLines.join('\n'),
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Confirm Week',
-          style: 'default',
-          onPress: () =>
-            bookMutation.mutate({
-              routeId: bookingRoute.id,
-              slotId: selectedSlot.id,
-              // startSundayDate / endThursdayDate come directly from the server.
-              // Never generate these client-side — the backend owns the canonical
-              // week boundaries to avoid timezone drift.
-              startSundayDate: selectedWeek.weekStart,
-              endThursdayDate: selectedWeek.weekEnd,
-            }),
-        },
-      ]
-    );
+    setShowConfirmDialog(true);
+  };
+
+  const handleConfirmBooking = () => {
+    setShowConfirmDialog(false);
+    if (!bookingRoute || !selectedWeek || !selectedSlot) return;
+    bookMutation.mutate({
+      routeId: bookingRoute.id,
+      slotId: selectedSlot.id,
+      // startSundayDate / endThursdayDate come directly from the server.
+      // Never generate these client-side — the backend owns the canonical
+      // week boundaries to avoid timezone drift.
+      startSundayDate: selectedWeek.weekStart,
+      endThursdayDate: selectedWeek.weekEnd,
+    });
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -627,6 +608,134 @@ export default function ShuttleLinesScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* ── Confirm 5-Day Booking Dialog ──────────────────────────── */}
+      <Modal
+        visible={showConfirmDialog}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowConfirmDialog(false)}
+      >
+        <View style={styles.dialogOverlay}>
+          <View style={[styles.dialogCard, { backgroundColor: '#ffffff' }]}>
+            <View style={[styles.dialogHeader, { backgroundColor: colors.primary }]}>
+              <Calendar size={18} color="#fff" strokeWidth={2} />
+              <Text style={[styles.dialogHeaderTitle, { color: '#fff', fontFamily: 'Inter_700Bold' }]}>
+                Confirm 5-Day Booking
+              </Text>
+            </View>
+            <View style={styles.dialogBody}>
+              <View style={styles.dialogInfoRow}>
+                <MapPin size={14} color={colors.primary} strokeWidth={2} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.dialogInfoLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>Route</Text>
+                  <Text style={[styles.dialogInfoValue, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{bookingRoute?.name}</Text>
+                </View>
+              </View>
+              <View style={[styles.dialogSep, { backgroundColor: colors.border }]} />
+              <View style={styles.dialogInfoRow}>
+                <GitBranch size={14} color={colors.primary} strokeWidth={2} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.dialogInfoLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>Direction</Text>
+                  <Text style={[styles.dialogInfoValue, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
+                    {bookingRoute?.from} → {bookingRoute?.to}
+                  </Text>
+                </View>
+              </View>
+              <View style={[styles.dialogSep, { backgroundColor: colors.border }]} />
+              <View style={styles.dialogInfoRow}>
+                <Calendar size={14} color={colors.primary} strokeWidth={2} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.dialogInfoLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>Week  ·  Sun – Thu</Text>
+                  <Text style={[styles.dialogInfoValue, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
+                    {selectedWeek ? formatWeekLabel(selectedWeek.weekStart, selectedWeek.weekEnd) : '—'}
+                  </Text>
+                </View>
+              </View>
+              <View style={[styles.dialogSep, { backgroundColor: colors.border }]} />
+              <View style={styles.dialogInfoRow}>
+                <Clock size={14} color={colors.primary} strokeWidth={2} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.dialogInfoLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>Departure</Text>
+                  <Text style={[styles.dialogInfoValue, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{selectedSlot?.departureTime}</Text>
+                </View>
+              </View>
+              {!!bookingRoute?.stationCount && (
+                <>
+                  <View style={[styles.dialogSep, { backgroundColor: colors.border }]} />
+                  <View style={styles.dialogInfoRow}>
+                    <Users size={14} color={colors.primary} strokeWidth={2} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.dialogInfoLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>Stops</Text>
+                      <Text style={[styles.dialogInfoValue, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{bookingRoute.stationCount} stops</Text>
+                    </View>
+                  </View>
+                </>
+              )}
+              <View style={[styles.dialogNote, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+                <Text style={[{ fontSize: 12, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', lineHeight: 18, textAlign: 'center' }]}>
+                  This commits you to the full 5-day work week.{'\n'}Other drivers will see this slot as reserved.
+                </Text>
+              </View>
+            </View>
+            <View style={[styles.dialogButtons, { borderTopColor: colors.border }]}>
+              <Pressable
+                onPress={() => setShowConfirmDialog(false)}
+                style={({ pressed }) => [styles.dialogBtnSecondary, { backgroundColor: pressed ? colors.secondary : '#fff', borderColor: colors.border }]}
+              >
+                <Text style={[styles.dialogBtnLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>CANCEL</Text>
+              </Pressable>
+              <Pressable
+                onPress={handleConfirmBooking}
+                style={({ pressed }) => [styles.dialogBtnPrimary, { backgroundColor: pressed ? '#2d2d42' : colors.primary }]}
+              >
+                {bookMutation.isPending
+                  ? <ActivityIndicator color="#fff" size="small" />
+                  : <Text style={[styles.dialogBtnLabel, { color: '#fff', fontFamily: 'Inter_700Bold' }]}>CONFIRM WEEK</Text>
+                }
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Week Committed! Success Dialog ────────────────────────── */}
+      <Modal
+        visible={showSuccessDialog}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowSuccessDialog(false)}
+      >
+        <View style={styles.dialogOverlay}>
+          <View style={[styles.dialogCard, { backgroundColor: '#ffffff' }]}>
+            <View style={[styles.dialogSuccessIcon, { backgroundColor: '#f0fdf4' }]}>
+              <CheckCircle size={52} color="#16a34a" strokeWidth={1.5} />
+            </View>
+            <View style={styles.dialogBody}>
+              <Text style={[styles.dialogSuccessTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
+                Week Committed!
+              </Text>
+              <Text style={[styles.dialogSuccessBody, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
+                Your 5-day slot (Sun – Thu) is confirmed. It will appear in your upcoming bookings.
+              </Text>
+              <View style={[styles.dialogNoteRow, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+                <Clock size={13} color={colors.mutedForeground} strokeWidth={2} />
+                <Text style={[{ fontSize: 12, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', flex: 1 }]}>
+                  Renewal prompt on Wednesday at 7:00 AM.
+                </Text>
+              </View>
+            </View>
+            <View style={[styles.dialogButtons, { borderTopColor: colors.border }]}>
+              <Pressable
+                onPress={() => setShowSuccessDialog(false)}
+                style={({ pressed }) => [styles.dialogBtnPrimary, { flex: 1, backgroundColor: pressed ? '#2d2d42' : colors.primary }]}
+              >
+                <Text style={[styles.dialogBtnLabel, { color: '#fff', fontFamily: 'Inter_700Bold' }]}>GOT IT</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -834,4 +943,88 @@ const styles = StyleSheet.create({
   bookBtn: { marginTop: 12, borderRadius: 16, overflow: 'hidden' },
   bookBtnGrad: { height: 52, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
   bookBtnText: { fontSize: 14, color: '#fff' },
+
+  // ── Dialog styles ──────────────────────────────────────────────────
+  dialogOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  dialogCard: {
+    width: '100%',
+    maxWidth: 360,
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+    elevation: 12,
+  },
+  dialogHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  dialogHeaderTitle: { fontSize: 16 },
+  dialogBody: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
+  dialogInfoRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: 10 },
+  dialogInfoLabel: { fontSize: 11, letterSpacing: 0.3, marginBottom: 2 },
+  dialogInfoValue: { fontSize: 14 },
+  dialogSep: { height: 1 },
+  dialogNote: {
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginTop: 14,
+    marginBottom: 8,
+    alignItems: 'center',
+  },
+  dialogNoteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  dialogButtons: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 10,
+  },
+  dialogBtnSecondary: {
+    flex: 1,
+    height: 46,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dialogBtnPrimary: {
+    flex: 1,
+    height: 46,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dialogBtnLabel: { fontSize: 13, letterSpacing: 0.5 },
+  dialogSuccessIcon: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 28,
+    paddingBottom: 8,
+  },
+  dialogSuccessTitle: { fontSize: 20, textAlign: 'center', marginBottom: 10 },
+  dialogSuccessBody: { fontSize: 14, lineHeight: 22, textAlign: 'center' },
 });

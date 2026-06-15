@@ -136,6 +136,7 @@ export default function BookingsScreen() {
   const [selectedBooking, setSelectedBooking] = useState<ShuttleBooking | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [tripPage, setTripPage] = useState(1);
+  const [declineModalId, setDeclineModalId] = useState<string | null>(null);
   const TRIP_LIMIT = 10;
 
   // Debounce guard: prevents a second Alert from opening while the first is still
@@ -227,25 +228,20 @@ export default function BookingsScreen() {
     // Double-tap guard: block if an alert is already open or a mutation is in flight
     if (renewalAlertOpen.current || renewalPending) return;
     renewalAlertOpen.current = true;
-    Alert.alert(
-      'الاعتذار عن الخط',
-      'هل أنت متأكد من الاعتذار عن هذا الخط للأسبوع القادم؟ سيتم تحرير الموعد لسائقين آخرين فوراً.',
-      [
-        {
-          text: 'رجوع',
-          style: 'cancel',
-          onPress: () => { renewalAlertOpen.current = false; },
-        },
-        {
-          text: 'اعتذار عن الخط',
-          style: 'destructive',
-          onPress: () => {
-            renewalAlertOpen.current = false;
-            declineRenewalMutation.mutate(bookingId);
-          },
-        },
-      ]
-    );
+    setDeclineModalId(bookingId);
+  };
+
+  const handleDeclineModalClose = () => {
+    renewalAlertOpen.current = false;
+    setDeclineModalId(null);
+  };
+
+  const handleDeclineConfirm = () => {
+    if (!declineModalId) return;
+    const id = declineModalId;
+    renewalAlertOpen.current = false;
+    setDeclineModalId(null);
+    declineRenewalMutation.mutate(id);
   };
 
   const handleRefresh = () => {
@@ -440,6 +436,47 @@ export default function BookingsScreen() {
               onClose={() => setSelectedBooking(null)}
             />
           )}
+        </View>
+      </Modal>
+
+      {/* ── Decline Renewal Dialog ────────────────────────────────── */}
+      <Modal
+        visible={!!declineModalId}
+        transparent
+        animationType="fade"
+        onRequestClose={handleDeclineModalClose}
+      >
+        <View style={styles.dialogOverlay}>
+          <View style={[styles.dialogCard, { backgroundColor: '#ffffff' }]}>
+            <View style={[styles.dialogIconRow, { backgroundColor: '#FEF2F2' }]}>
+              <AlertTriangle size={28} color="#DC2626" strokeWidth={2} />
+            </View>
+            <View style={styles.dialogBody}>
+              <Text style={[styles.dialogTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: 'center' }]}>
+                الاعتذار عن الخط
+              </Text>
+              <Text style={[styles.dialogBodyText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: 'center' }]}>
+                هل أنت متأكد من الاعتذار عن هذا الخط للأسبوع القادم؟ سيتم تحرير الموعد لسائقين آخرين فوراً.
+              </Text>
+            </View>
+            <View style={[styles.dialogButtons, { borderTopColor: colors.border }]}>
+              <Pressable
+                onPress={handleDeclineModalClose}
+                style={({ pressed }) => [styles.dialogBtnSecondary, { backgroundColor: pressed ? colors.secondary : '#fff', borderColor: colors.border }]}
+              >
+                <Text style={[styles.dialogBtnLabel, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>رجوع</Text>
+              </Pressable>
+              <Pressable
+                onPress={handleDeclineConfirm}
+                style={({ pressed }) => [styles.dialogBtnDestructive, { backgroundColor: pressed ? '#b91c1c' : '#DC2626' }]}
+              >
+                {declineRenewalMutation.isPending
+                  ? <ActivityIndicator color="#fff" size="small" />
+                  : <Text style={[styles.dialogBtnLabel, { color: '#fff', fontFamily: 'Inter_700Bold' }]}>اعتذار عن الخط</Text>
+                }
+              </Pressable>
+            </View>
+          </View>
         </View>
       </Modal>
     </View>
@@ -1479,4 +1516,56 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   actionBtnLabel: { fontSize: 14, fontFamily: 'Inter_700Bold' },
+
+  // ── Dialog styles ──────────────────────────────────────────────────
+  dialogOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  dialogCard: {
+    width: '100%',
+    maxWidth: 360,
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+    elevation: 12,
+  },
+  dialogIconRow: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 28,
+    paddingBottom: 12,
+  },
+  dialogBody: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8 },
+  dialogTitle: { fontSize: 18, marginBottom: 10 },
+  dialogBodyText: { fontSize: 14, lineHeight: 22 },
+  dialogButtons: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 10,
+  },
+  dialogBtnSecondary: {
+    flex: 1,
+    height: 46,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dialogBtnDestructive: {
+    flex: 1,
+    height: 46,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dialogBtnLabel: { fontSize: 13, letterSpacing: 0.3, fontFamily: 'Inter_700Bold' },
 });

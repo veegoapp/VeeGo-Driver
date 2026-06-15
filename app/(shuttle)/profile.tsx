@@ -119,7 +119,7 @@ export default function ShuttleProfileScreen() {
   // Referral code: from enriched endpoint or derive from base ID
   // TODO: Backend Integration — referralCode must be returned by GET /driver/profile
   const referralCode: string = enriched?.referralCode
-    ?? (id ? `VGO-${id.slice(0, 4).toUpperCase()}` : 'VGO-XXXX');
+    ?? (id ? `VGO-${String(id).slice(0, 4).toUpperCase()}` : 'VGO-XXXX');
 
   const avatarUri = avatar
     ?? `https://ui-avatars.com/api/?name=${encodeURIComponent(name ?? 'Driver')}&background=1e1e28&color=fff&size=256`;

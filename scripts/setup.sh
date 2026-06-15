@@ -53,4 +53,4 @@ pkill -f "expo start" 2>/dev/null || true
 pkill -f "metro"      2>/dev/null || true
 sleep 1
 
-exec pnpm exec expo start --tunnel --clear
+EXPO_DEBUG=1 EXPO_USE_FAST_RESOLVER=1 exec pnpm exec expo start --tunnel --clear
