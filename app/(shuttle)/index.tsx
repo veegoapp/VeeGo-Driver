@@ -605,7 +605,17 @@ export default function ShuttleHomeScreen() {
                   onPress={() =>
                     router.push({
                       pathname: '/shuttle/trip-details' as any,
-                      params: { bookingId: booking.id, routeId: String(booking.routeId) },
+                      params: {
+                        bookingId: String(booking.id),
+                        routeId: String(booking.routeId),
+                        // Pass full booking snapshot so trip-details can render
+                        // even when ShuttleProvider is not in scope for that route group.
+                        routeName: booking.routeName,
+                        departureTime: booking.departureTime,
+                        weekStart: booking.weekStart,
+                        weekEnd: booking.weekEnd ?? '',
+                        status: booking.status,
+                      },
                     })
                   }
                 />

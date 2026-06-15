@@ -20,7 +20,17 @@ import { useI18n } from '@/lib/i18nContext';
 import { useShuttle } from '@/lib/shuttleContext';
 import { endpoints } from '@/lib/api';
 
-type Params = { bookingId: string; routeId: string };
+type Params = {
+  bookingId: string;
+  routeId: string;
+  // Full booking snapshot passed by the home screen so this screen renders
+  // correctly even when ShuttleProvider is not in scope (different route group).
+  routeName?: string;
+  departureTime?: string;
+  weekStart?: string;
+  weekEnd?: string;
+  status?: string;
+};
 
 type Station = {
   id: string | number;
@@ -37,12 +47,40 @@ export default function TripDetailsScreen() {
   const TA = isRTL ? 'right' as const : 'left' as const;
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
 
-  const { bookingId, routeId } = useLocalSearchParams<Params>();
-  const { myBookings, allLines, setStartedTripId, refetch } = useShuttle();
+  const {
+    bookingId, routeId,
+    routeName: paramRouteName,
+    departureTime: paramDepartureTime,
+    weekStart: paramWeekStart,
+    weekEnd: paramWeekEnd,
+    status: paramStatus,
+  } = useLocalSearchParams<Params>();
+
+  const { myBookings, allLines, listLoading, setStartedTripId, refetch } = useShuttle();
   const [starting, setStarting] = useState(false);
 
-  const booking = myBookings.find(b => b.id === bookingId);
+  // Use String() coercion on both sides — defends against numeric IDs at runtime.
+  // myBookings may be empty when this screen is outside ShuttleProvider's scope
+  // (app/shuttle/ vs app/(shuttle)/ route groups); params are the reliable source.
+  const booking = myBookings.find(b => String(b.id) === String(bookingId));
   const line = allLines.find(l => String(l.id) === String(routeId));
+
+  // Synthesise a booking object from URL params when context lookup returns nothing.
+  // This covers the case where ShuttleProvider is not mounted in this route group.
+  const effectiveBooking = booking ?? (bookingId
+    ? {
+        id: String(bookingId),
+        routeId: routeId ?? '',
+        routeName: paramRouteName ?? '',
+        departureTime: paramDepartureTime ?? '',
+        weekStart: paramWeekStart ?? '',
+        weekEnd: paramWeekEnd || undefined,
+        status: paramStatus ?? '',
+        timeSlotId: '',
+        renewalDeadline: undefined,
+        nextWeekBookingId: undefined,
+      }
+    : null);
 
   const { data: tripDetailData, isLoading: stationsLoading } = useQuery({
     queryKey: ['shuttle-trip-detail', bookingId],
@@ -63,7 +101,7 @@ export default function TripDetailsScreen() {
   }, []);
 
   const isStartEnabled = useMemo(() => {
-    const time = booking?.departureTime;
+    const time = effectiveBooking?.departureTime;
     if (!time) return false;
     // TODO: Backend Integration - Replace with full ISO datetime from backend for date-accurate 30-min check
     const match = time.match(/(\d{1,2}):(\d{2})/);
@@ -75,22 +113,42 @@ export default function TripDetailsScreen() {
     const deptMins = h * 60 + m;
     const diff = deptMins - nowMins;
     return diff >= 0 && diff <= 30;
-  }, [booking?.departureTime]);
+  }, [effectiveBooking?.departureTime]);
 
   const handleCancelPress = () => {
     router.push({
       pathname: '/shuttle/trip-cancel' as any,
       params: {
         bookingId: bookingId ?? '',
-        routeName: booking?.routeName ?? line?.name ?? '',
-        departureTime: booking?.departureTime ?? '',
+        routeName: effectiveBooking?.routeName ?? line?.name ?? '',
+        departureTime: effectiveBooking?.departureTime ?? '',
         fromStation: line?.from ?? '',
         toStation: line?.to ?? '',
       },
     });
   };
 
-  if (!booking && !line) {
+  // Show loading state while context is hydrating — prevents premature "Trip not found".
+  if (listLoading && !effectiveBooking && !line) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.header, { paddingTop: topPad + 8, borderBottomColor: colors.border }]}>
+          <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
+            <ChevronLeft size={24} color={colors.foreground} strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
+          </Pressable>
+          <Text style={[styles.headerTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
+            {t.trip_details_title}
+          </Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={styles.emptyState}>
+          <ActivityIndicator size="small" color="#1e1e28" />
+        </View>
+      </View>
+    );
+  }
+
+  if (!effectiveBooking && !line) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={[styles.header, { paddingTop: topPad + 8, borderBottomColor: colors.border }]}>
@@ -111,17 +169,17 @@ export default function TripDetailsScreen() {
     );
   }
 
-  const routeName = tripDetailData?.routeName ?? booking?.routeName ?? line?.name ?? '—';
+  const routeName = tripDetailData?.routeName ?? effectiveBooking?.routeName ?? line?.name ?? '—';
   const from = line?.from ?? '—';
   const to = line?.to ?? '—';
-  const departureTime = booking?.departureTime ?? line?.departure ?? '—';
+  const departureTime = effectiveBooking?.departureTime ?? line?.departure ?? '—';
   const tripDatetime = tripDetailData?.tripDatetime ?? null;
   const tripDate = tripDatetime
     ? new Date(tripDatetime).toLocaleDateString('en-GB', {
         weekday: 'short', day: 'numeric', month: 'short',
         timeZone: 'Africa/Cairo',
       })
-    : (booking?.weekStart ?? '—');
+    : (effectiveBooking?.weekStart ?? '—');
   const bookedSeats = tripDetailData?.bookedSeats ?? (line?.bookedSeats ?? 0);
   const totalSeats = tripDetailData?.totalSeats ?? (line?.totalSeats ?? 0);
   const vehicleType = line?.vehicleType ?? '—';
@@ -162,7 +220,7 @@ export default function TripDetailsScreen() {
             <View style={[styles.statusDot, { backgroundColor: '#1e1e28' }]} />
             <Text style={[styles.statusText, { color: '#2d2d42', fontFamily: 'Inter_700Bold' }]}>
               {/* TODO: Backend Integration - Fetch real trip status from backend (confirmed, pending, etc.) */}
-              {booking?.status === 'active' ? t.active : 'محجوز'}
+              {effectiveBooking?.status === 'active' ? t.active : 'محجوز'}
             </Text>
           </View>
         </View>
