@@ -339,13 +339,27 @@ function buildHtml(
     try {
       var msg = JSON.parse(e.data);
 
-      if (msg.type === 'driverLocation' && driverMarker) {
+      if (msg.type === 'driverLocation') {
         var newPos = [msg.lng, msg.lat];
-        if (prevPos && !(prevPos[0] === newPos[0] && prevPos[1] === newPos[1])) {
-          applyBearing(calcBearing(prevPos, newPos));
+        if (!driverMarker) {
+          driverMarker = new maplibregl.Marker({ element: makeSvgEl(DRIVER_SVG), anchor: 'bottom' })
+            .setLngLat(newPos).addTo(map);
+          setTimeout(function() {
+            if (driverMarker) {
+              driverMarker.getElement().style.transition = 'transform 1400ms linear';
+              var svg = driverMarker.getElement().querySelector('svg');
+              if (svg) svg.style.transition = 'transform 1400ms linear';
+            }
+          }, 200);
+          prevPos = newPos;
+        } else {
+          if (prevPos && !(prevPos[0] === newPos[0] && prevPos[1] === newPos[1])) {
+            applyBearing(calcBearing(prevPos, newPos));
+          }
+          prevPos = newPos;
+          driverMarker.setLngLat(newPos);
         }
-        prevPos = newPos;
-        driverMarker.setLngLat(newPos);
+        map.easeTo({ center: newPos, duration: 1000 });
       }
 
       if (msg.type === 'updateStationStatuses' && msg.statuses) {
@@ -436,7 +450,7 @@ export function MapBackdrop({
   }, [focusTarget?.latitude, focusTarget?.longitude]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+    <View style={StyleSheet.absoluteFill}>
       <WebView
         ref={webviewRef}
         source={{ html }}
@@ -444,8 +458,7 @@ export function MapBackdrop({
         originWhitelist={['*']}
         javaScriptEnabled
         domStorageEnabled
-        scrollEnabled={false}
-        pointerEvents="none"
+        scrollEnabled
       />
     </View>
   );

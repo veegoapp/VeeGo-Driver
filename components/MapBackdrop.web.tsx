@@ -351,13 +351,28 @@ export function MapBackdrop({
     map.flyTo({ center: [focusTarget.longitude, focusTarget.latitude], zoom: focusTarget.zoom ?? 16, duration: 800 });
   }, [focusTarget?.latitude, focusTarget?.longitude]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Driver location update
+  // Driver location update — creates marker on first update if not yet created, then follows
   useEffect(() => {
     const now = Date.now();
     if (now - lastLocUpdate.current < 1500) return;
     lastLocUpdate.current = now;
-    if (!driverLocation || !driverMarkerRef.current) return;
-    driverMarkerRef.current.setLngLat([driverLocation.longitude, driverLocation.latitude]);
+    const map = mapRef.current;
+    if (!driverLocation || !map) return;
+    const lngLat: [number, number] = [driverLocation.longitude, driverLocation.latitude];
+    if (!driverMarkerRef.current) {
+      const marker = new maplibregl.Marker({ element: makeSvgEl(DRIVER_SVG), anchor: 'bottom' })
+        .setLngLat(lngLat)
+        .addTo(map);
+      setTimeout(() => {
+        marker.getElement().style.transition = 'transform 1400ms linear';
+        const svg = marker.getElement().querySelector('svg') as HTMLElement | null;
+        if (svg) svg.style.transition = 'transform 1400ms linear';
+      }, 200);
+      driverMarkerRef.current = marker;
+    } else {
+      driverMarkerRef.current.setLngLat(lngLat);
+    }
+    map.easeTo({ center: lngLat, duration: 1000 });
   }, [driverLocation?.latitude, driverLocation?.longitude]);
 
   return (
