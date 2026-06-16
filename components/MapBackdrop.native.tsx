@@ -327,7 +327,7 @@ function buildHtml(
   });
 
   // ── postMessage bridge ────────────────────────────────────────────────────────
-  // Android WebView dispatches to `document`; iOS dispatches to `window` — listen on both.
+  // Android dispatches to document; iOS dispatches to window — listen on both.
   function handleBridgeMessage(e) {
     try {
       var msg = JSON.parse(e.data);
