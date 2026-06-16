@@ -134,10 +134,10 @@ export default function ShuttleTripActiveScreen() {
         if (cancelled) break;
         const { sound } = await Audio.Sound.createAsync(
           require('@/assets/sounds/approaching.wav'),
-          { shouldPlay: true, volume: 1.0 },
+          { shouldPlay: false, volume: 1.0, rate: 0.25, shouldCorrectPitch: true },
         );
         await sound.playAsync();
-        await new Promise<void>(res => setTimeout(res, 900));
+        await new Promise<void>(res => setTimeout(res, 2400));
         sound.unloadAsync();
       }
     })();

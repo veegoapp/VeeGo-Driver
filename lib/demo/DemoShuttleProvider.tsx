@@ -66,20 +66,9 @@ export function DemoShuttleProvider({ children }: { children: React.ReactNode })
     }
 
     const totalDist = haversineMeters(startPoint.latitude, startPoint.longitude, target.latitude, target.longitude);
-    // Stop 30 % before the station (never more than 100 m, never less than 20 m)
-    const stopBeforeM = Math.max(20, Math.min(100, totalDist * 0.3));
     const stepCount = Math.max(15, Math.min(60, Math.round(totalDist / 25)));
-    const allPoints = interpolatePath(startPoint, target, stepCount);
-
-    // Cut off points that are within stopBeforeM of the target
-    let cutoff = allPoints.length;
-    for (let i = 0; i < allPoints.length; i++) {
-      if (haversineMeters(allPoints[i].latitude, allPoints[i].longitude, target.latitude, target.longitude) <= stopBeforeM) {
-        cutoff = i;
-        break;
-      }
-    }
-    pathQueueRef.current = allPoints.slice(0, cutoff);
+    // Drive all the way to the station marker
+    pathQueueRef.current = interpolatePath(startPoint, target, stepCount);
 
     simPosRef.current = startPoint;
     setDemoDriverPosition({ ...startPoint, heading: null, speed: 8.33 * demoSpeed });
