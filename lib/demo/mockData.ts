@@ -69,22 +69,22 @@ export const DEMO_STOPS_TEMPLATE: Omit<ShuttleStop, 'status' | 'boarded' | 'expe
 
 export const DEMO_PASSENGERS_TEMPLATE: Omit<BoardingPassenger, 'checkedIn'>[][] = [
   [ // Stop 1
-    { id: 'p1', name: 'Ahmed Hassan',   phone: '010-1234-5678', ticket: 'TK-001', avatar: '', luggage: false },
-    { id: 'p2', name: 'Sara Mohamed',   phone: '011-2345-6789', ticket: 'TK-002', avatar: '', luggage: true },
+    { id: 'p1', name: 'Ahmed Hassan',   phone: '010-1234-5678', ticket: 'TK-001', avatar: '', luggage: false, paymentMethod: 'cash',   fareAmount: 45 },
+    { id: 'p2', name: 'Sara Mohamed',   phone: '011-2345-6789', ticket: 'TK-002', avatar: '', luggage: true,  paymentMethod: 'card',   fareAmount: 45 },
   ],
   [ // Stop 2
-    { id: 'p3', name: 'Omar Khalil',    phone: '012-3456-7890', ticket: 'TK-003', avatar: '', luggage: false },
-    { id: 'p4', name: 'Fatma Ali',      phone: '010-4567-8901', ticket: 'TK-004', avatar: '', luggage: false },
+    { id: 'p3', name: 'Omar Khalil',    phone: '012-3456-7890', ticket: 'TK-003', avatar: '', luggage: false, paymentMethod: 'online', fareAmount: 45 },
+    { id: 'p4', name: 'Fatma Ali',      phone: '010-4567-8901', ticket: 'TK-004', avatar: '', luggage: false, paymentMethod: 'cash',   fareAmount: 45 },
   ],
   [ // Stop 3
-    { id: 'p5', name: 'Khaled Nasser',  phone: '011-5678-9012', ticket: 'TK-005', avatar: '', luggage: true },
-    { id: 'p6', name: 'Nour Ibrahim',   phone: '012-6789-0123', ticket: 'TK-006', avatar: '', luggage: false },
+    { id: 'p5', name: 'Khaled Nasser',  phone: '011-5678-9012', ticket: 'TK-005', avatar: '', luggage: true,  paymentMethod: 'cash',   fareAmount: 45 },
+    { id: 'p6', name: 'Nour Ibrahim',   phone: '012-6789-0123', ticket: 'TK-006', avatar: '', luggage: false, paymentMethod: 'card',   fareAmount: 45 },
   ],
   [ // Stop 4
-    { id: 'p7', name: 'Youssef Samir',  phone: '010-7890-1234', ticket: 'TK-007', avatar: '', luggage: false },
+    { id: 'p7', name: 'Youssef Samir',  phone: '010-7890-1234', ticket: 'TK-007', avatar: '', luggage: false, paymentMethod: 'cash',   fareAmount: 45 },
   ],
   [ // Stop 5
-    { id: 'p8', name: 'Dina Mahmoud',   phone: '011-8901-2345', ticket: 'TK-008', avatar: '', luggage: true },
+    { id: 'p8', name: 'Dina Mahmoud',   phone: '011-8901-2345', ticket: 'TK-008', avatar: '', luggage: true,  paymentMethod: 'online', fareAmount: 45 },
   ],
   [], // Stop 6 — final stop, no boarding
 ];

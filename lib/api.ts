@@ -238,6 +238,33 @@ export const api = {
 
 export { ApiError };
 
+// ─── Trip payment summary types ───────────────────────────────────────────────
+
+export interface TripRevenueSummary {
+  tripId: number;
+  totalPassengers: number;
+  totalExpected: number;
+  cashExpected: number;
+  cashCollected: number;
+  cashShortfall: number;
+  cardTotal: number;
+  walletTotal: number;
+}
+
+export interface TripCashSummary {
+  tripId: number;
+  driverId: number;
+  totalCashExpected: number;
+  totalCashCollected: number;
+  passengers: Array<{
+    bookingId: number;
+    name: string;
+    fareAmount: number;
+    cashCollected: boolean;
+    amountCollected: number;
+  }>;
+}
+
 // ─── Financial Analytics types ────────────────────────────────────────────────
 // Used by app/shuttle/earnings.tsx to render the financial dashboard.
 
@@ -699,8 +726,8 @@ export const endpoints = {
     complete: (lineId: string) => api.post(`/shuttle/lines/${lineId}/complete`),
     passengers: (tripId: string) => api.get(`/shuttle/trips/${tripId}/passengers`),
     // PATCH /driver/bookings/:id/board — marks passenger as boarded
-    boardBooking: (bookingId: string, stationId?: string | number) =>
-      api.patch(`/driver/bookings/${bookingId}/board`, stationId != null ? { stationId } : {}),
+    boardBooking: (bookingId: string, payload?: { stationId?: string | number; cashCollected?: boolean; amountCollected?: number }) =>
+      api.patch(`/driver/bookings/${bookingId}/board`, payload ?? {}),
 
     driverTrips: (page = 1, limit = 10) =>
       api.get(`/shuttle/driver/my-trips?page=${page}&limit=${limit}`),
@@ -717,6 +744,12 @@ export const endpoints = {
 
     noShowBooking: (bookingId: string) =>
       api.patch(`/driver/bookings/${bookingId}/absent`),
+
+    cashSummary: (tripId: string) =>
+      api.get<TripCashSummary>(`/driver/trips/${tripId}/cash-summary`),
+
+    revenueSummary: (tripId: string) =>
+      api.get<TripRevenueSummary>(`/driver/trips/${tripId}/revenue-summary`),
 
     // TODO: Backend Integration - POST /shuttle/route-bookings/:id/refer
     // Body: { driverCode: string } — submits a trip referral to another driver by their unique code

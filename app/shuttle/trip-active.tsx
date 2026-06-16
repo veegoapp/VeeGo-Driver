@@ -277,7 +277,13 @@ export default function ShuttleTripActiveScreen() {
       if (!isDemoMode && tripId && stationId) {
         const boardedIds = Object.entries(passengerStatuses).filter(([, s]) => s === 'boarded').map(([id]) => id);
         const absentIds = Object.entries(passengerStatuses).filter(([, s]) => s === 'no_show').map(([id]) => id);
-        await Promise.allSettled(boardedIds.map(id => endpoints.shuttle.boardBooking(id)));
+        await Promise.allSettled(boardedIds.map(id => {
+          const p = passengers.find(px => px.id === id);
+          const cashPayload = p?.paymentMethod === 'cash'
+            ? { cashCollected: true, amountCollected: p.fareAmount }
+            : {};
+          return endpoints.shuttle.boardBooking(id, { stationId, ...cashPayload });
+        }));
         await Promise.allSettled(absentIds.map(id => endpoints.shuttle.noShowBooking(id)));
         await endpoints.trips.stationCompleted(tripId, stationId);
       }
@@ -295,7 +301,14 @@ export default function ShuttleTripActiveScreen() {
     if (!activeLine) return;
     isFinishingRef.current = true;
     if (isDemoMode) {
-      router.replace('/shuttle/trip-complete' as any);
+      router.replace({
+        pathname: '/shuttle/trip-complete' as any,
+        params: {
+          earnedAmount: '292.50',
+          walletBalance: '1450.00',
+          demoMode: 'true',
+        },
+      });
       return;
     }
     try {
@@ -309,7 +322,7 @@ export default function ShuttleTripActiveScreen() {
         params: {
           earnedAmount: earned != null ? String(earned) : '',
           walletBalance: balance != null ? String(balance) : '',
-          tripId: activeLine.id,
+          tripId: activeLine.tripId ?? '',
         },
       });
     } catch {
@@ -508,6 +521,17 @@ export default function ShuttleTripActiveScreen() {
                     <View style={{ flex: 1, minWidth: 0 }}>
                       <Text style={[styles.passengerName, { fontFamily: 'Inter_600SemiBold', color: colors.foreground }]} numberOfLines={1}>{p.name}</Text>
                       <Text style={[styles.passengerPhone, { fontFamily: 'Inter_400Regular', color: colors.mutedForeground }]}>{p.phone}</Text>
+                      {p.paymentMethod === 'cash' ? (
+                        <View style={styles.paymentCashBadge}>
+                          <Text style={[styles.paymentBadgeText, { fontFamily: 'Inter_700Bold', color: '#d97706' }]}>
+                            💵 {p.fareAmount > 0 ? `${p.fareAmount} EGP` : 'Cash'}
+                          </Text>
+                        </View>
+                      ) : p.paymentMethod === 'card' || p.paymentMethod === 'online' ? (
+                        <View style={styles.paymentPaidBadge}>
+                          <Text style={[styles.paymentBadgeText, { fontFamily: 'Inter_600SemiBold', color: '#16a34a' }]}>✓ Paid</Text>
+                        </View>
+                      ) : null}
                     </View>
                     <View style={styles.statusBtns}>
                       <Pressable
@@ -766,6 +790,9 @@ const styles = StyleSheet.create({
   statusBtn: { width: 44, height: 44, borderRadius: 13, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
 
   // Primary action button
+  paymentCashBadge: { alignSelf: 'flex-start', marginTop: 4, backgroundColor: '#fef3c7', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: '#fcd34d' },
+  paymentPaidBadge: { alignSelf: 'flex-start', marginTop: 4, backgroundColor: '#dcfce7', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: '#86efac' },
+  paymentBadgeText: { fontSize: 11 },
   primaryBtn: { borderRadius: 18, overflow: 'hidden' },
   primaryBtnGrad: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   primaryBtnText: { fontSize: 15, color: '#fff' },
