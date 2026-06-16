@@ -13,6 +13,7 @@ import { MapBackdrop } from '@/components/MapBackdrop';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useDriverLocation, haversineMeters } from '@/hooks/useDriverLocation';
+import { useRoadEta } from '@/hooks/useRoadEta';
 import { useShuttle } from '@/lib/shuttleContext';
 import { useI18n } from '@/lib/i18nContext';
 import { useSocket } from '@/lib/socketContext';
@@ -41,6 +42,12 @@ function distanceLabel(meters: number | null): string {
   return `${Math.round(meters)} m`;
 }
 
+function etaLabel(seconds: number | null): string {
+  if (seconds === null) return '';
+  if (seconds < 60) return '< 1 min';
+  return `~${Math.round(seconds / 60)} min`;
+}
+
 // ── Component ────────────────────────────────────────────────────────────────
 export default function ShuttleTripActiveScreen() {
   const colors = useColors();
@@ -65,10 +72,15 @@ export default function ShuttleTripActiveScreen() {
   // In demo mode demoDriverPosition is the simulated position; real GPS is skipped.
   const effectivePos = demoDriverPosition ?? gpsPos;
 
-  const distanceM = useMemo(() => {
+  // Haversine used only for proximity-based phase transitions (fast, no network)
+  const proximityM = useMemo(() => {
     if (!effectivePos || !nextCoords) return null;
     return haversineMeters(effectivePos.latitude, effectivePos.longitude, nextCoords.latitude, nextCoords.longitude);
   }, [effectivePos?.latitude, effectivePos?.longitude, nextCoords?.latitude, nextCoords?.longitude]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Road-accurate distance + ETA via OSRM (throttled, with fallback)
+  const roadEta = useRoadEta(effectivePos, nextCoords, phase !== 'at_stop' && !!activeLine);
+  const distanceM = roadEta.distanceM;
 
   // ── Phase state ────────────────────────────────────────────────────────────
   const [phase, setPhase] = useState<TripPhase>('en_route');
@@ -97,14 +109,14 @@ export default function ShuttleTripActiveScreen() {
     outputRange: [MAP_H_AT_STOP, MAP_H_EN_ROUTE],
   });
 
-  // ── Phase transitions (GPS-driven) ────────────────────────────────────────
+  // ── Phase transitions (GPS-driven, uses haversine for reliability) ─────────
   useEffect(() => {
     if (phase === 'at_stop') return;
-    if (distanceM !== null) {
-      const next: TripPhase = distanceM <= APPROACH_THRESHOLD_M ? 'approaching' : 'en_route';
+    if (proximityM !== null) {
+      const next: TripPhase = proximityM <= APPROACH_THRESHOLD_M ? 'approaching' : 'en_route';
       if (next !== phase) setPhase(next);
     }
-  }, [distanceM]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [proximityM]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reset all per-stop state when the active stop changes
   useEffect(() => {
@@ -325,6 +337,11 @@ export default function ShuttleTripActiveScreen() {
                   <Text style={[styles.approachBadgeText, { fontFamily: 'Inter_700Bold' }]}>
                     {distanceLabel(distanceM)}
                   </Text>
+                  {roadEta.etaSeconds !== null && (
+                    <Text style={[styles.approachBadgeText, { fontFamily: 'Inter_400Regular', opacity: 0.75 }]}>
+                      {etaLabel(roadEta.etaSeconds)}
+                    </Text>
+                  )}
                 </View>
               </View>
             </View>
@@ -495,6 +512,11 @@ export default function ShuttleTripActiveScreen() {
                     <Text style={[styles.distanceText, { color: phase === 'approaching' ? '#f59e0b' : colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>
                       {distanceLabel(distanceM)}
                     </Text>
+                    {roadEta.etaSeconds !== null && (
+                      <Text style={[styles.etaText, { color: phase === 'approaching' ? '#f59e0b99' : colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
+                        {etaLabel(roadEta.etaSeconds)}
+                      </Text>
+                    )}
                   </View>
                 </View>
 
@@ -574,7 +596,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(245,158,11,0.5)',
   },
   approachText: { flex: 1, fontSize: 13, color: '#fef3c7' },
-  approachBadge: { backgroundColor: '#f59e0b22', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
+  approachBadge: { backgroundColor: '#f59e0b22', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3, alignItems: 'center' },
   approachBadgeText: { fontSize: 12, color: '#f59e0b' },
 
   // En route sheet
@@ -592,8 +614,9 @@ const styles = StyleSheet.create({
   stopIndexText: { fontSize: 14 },
   nextStopLabel: { fontSize: 11, marginBottom: 2 },
   nextStopName: { fontSize: 16 },
-  distanceBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
+  distanceBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, alignItems: 'center' },
   distanceText: { fontSize: 14 },
+  etaText: { fontSize: 11, marginTop: 1 },
   passengerCountRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.07)' },
   passengerCountText: { fontSize: 13 },
 
