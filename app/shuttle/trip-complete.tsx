@@ -11,12 +11,13 @@
  */
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
-import { CheckCircle2, Home, Wallet } from 'lucide-react-native';
-import React, { useEffect, useRef } from 'react';
+import { Banknote, CheckCircle2, CreditCard, Home, Smartphone, Wallet } from 'lucide-react-native';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -26,6 +27,7 @@ import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { useShuttle } from '@/lib/shuttleContext';
+import { endpoints, type TripRevenueSummary } from '@/lib/api';
 
 type Params = {
   earnedAmount?: string;
@@ -40,8 +42,10 @@ export default function TripCompleteScreen() {
   const { t, isRTL } = useI18n();
   const TA = isRTL ? 'right' as const : 'left' as const;
 
-  const { earnedAmount, walletBalance } = useLocalSearchParams<Params>();
+  const { earnedAmount, walletBalance, tripId } = useLocalSearchParams<Params>();
   const { resetTrip } = useShuttle();
+
+  const [revenue, setRevenue] = useState<TripRevenueSummary | null>(null);
 
   const fadeAnim   = useRef(new Animated.Value(0)).current;
   const scaleAnim  = useRef(new Animated.Value(0.7)).current;
@@ -55,6 +59,13 @@ export default function TripCompleteScreen() {
     ]).start();
   }, []);
 
+  useEffect(() => {
+    if (!tripId) return;
+    endpoints.shuttle.revenueSummary(tripId)
+      .then(setRevenue)
+      .catch(() => {});
+  }, [tripId]);
+
   const earned  = earnedAmount  ? parseFloat(earnedAmount)  : null;
   const balance = walletBalance ? parseFloat(walletBalance) : null;
 
@@ -66,7 +77,7 @@ export default function TripCompleteScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background, paddingTop: topPad }]}>
-      <View style={styles.inner}>
+      <ScrollView contentContainerStyle={styles.inner} showsVerticalScrollIndicator={false}>
 
         {/* ── Success icon ─────────────────────────────────────────────── */}
         <Animated.View style={[styles.iconWrap, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
@@ -100,7 +111,6 @@ export default function TripCompleteScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.cardLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
-                {/* TODO: Backend Integration - earnedAmount from completion response */}
                 {t.trip_earnings_label}
               </Text>
               <View style={[{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'baseline', gap: 6 }]}>
@@ -119,7 +129,6 @@ export default function TripCompleteScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.cardLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
-                {/* TODO: Backend Integration - walletBalance from completion response */}
                 {t.wallet_balance_label}
               </Text>
               <View style={[{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'baseline', gap: 6 }]}>
@@ -132,7 +141,92 @@ export default function TripCompleteScreen() {
           </GlassView>
         </Animated.View>
 
-      </View>
+        {/* ── Payment breakdown (from revenue-summary endpoint) ────────── */}
+        {revenue && (
+          <Animated.View style={[styles.cardsWrap, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+
+            {/* Section header */}
+            <Text style={[styles.sectionHeader, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
+              تفاصيل المدفوعات
+            </Text>
+
+            {/* Cash collected */}
+            <GlassView style={styles.earningsCard} borderRadius={16}>
+              <View style={[styles.cardIconWrap, { backgroundColor: '#fef3c7' }]}>
+                <Banknote size={20} color="#d97706" strokeWidth={2} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.cardLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
+                  كاش محصّل
+                </Text>
+                <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'baseline', gap: 6 }}>
+                  <Text style={[styles.cardAmountSmall, { color: '#d97706', fontFamily: 'Inter_700Bold' }]}>
+                    {revenue.cashCollected.toLocaleString('ar-EG')}
+                  </Text>
+                  <Text style={[styles.cardCurrency, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>EGP</Text>
+                </View>
+                {revenue.cashShortfall > 0 && (
+                  <Text style={[{ fontSize: 11, color: '#ef4444', fontFamily: 'Inter_400Regular', marginTop: 2, textAlign: TA }]}>
+                    ناقص {revenue.cashShortfall} EGP من {revenue.cashExpected} EGP
+                  </Text>
+                )}
+              </View>
+            </GlassView>
+
+            {/* Card total */}
+            {revenue.cardTotal > 0 && (
+              <GlassView style={styles.earningsCard} borderRadius={16}>
+                <View style={[styles.cardIconWrap, { backgroundColor: '#eff6ff' }]}>
+                  <CreditCard size={20} color="#2563eb" strokeWidth={2} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.cardLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
+                    كارت / بطاقة
+                  </Text>
+                  <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'baseline', gap: 6 }}>
+                    <Text style={[styles.cardAmountSmall, { color: '#2563eb', fontFamily: 'Inter_700Bold' }]}>
+                      {revenue.cardTotal.toLocaleString('ar-EG')}
+                    </Text>
+                    <Text style={[styles.cardCurrency, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>EGP</Text>
+                  </View>
+                </View>
+              </GlassView>
+            )}
+
+            {/* Wallet total */}
+            {revenue.walletTotal > 0 && (
+              <GlassView style={styles.earningsCard} borderRadius={16}>
+                <View style={[styles.cardIconWrap, { backgroundColor: '#f0fdf4' }]}>
+                  <Smartphone size={20} color="#16a34a" strokeWidth={2} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.cardLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
+                    محفظة / أونلاين
+                  </Text>
+                  <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'baseline', gap: 6 }}>
+                    <Text style={[styles.cardAmountSmall, { color: '#16a34a', fontFamily: 'Inter_700Bold' }]}>
+                      {revenue.walletTotal.toLocaleString('ar-EG')}
+                    </Text>
+                    <Text style={[styles.cardCurrency, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>EGP</Text>
+                  </View>
+                </View>
+              </GlassView>
+            )}
+
+            {/* Total row */}
+            <View style={[styles.totalRow, { borderColor: colors.border }]}>
+              <Text style={[styles.totalLabel, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
+                إجمالي الرحلة
+              </Text>
+              <Text style={[styles.totalAmount, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
+                {revenue.totalExpected.toLocaleString('ar-EG')} EGP
+              </Text>
+            </View>
+
+          </Animated.View>
+        )}
+
+      </ScrollView>
 
       {/* ── Bottom CTA ───────────────────────────────────────────────────── */}
       <Animated.View
@@ -162,7 +256,7 @@ export default function TripCompleteScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  inner: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28 },
+  inner: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, paddingTop: 40, paddingBottom: 24 },
   iconWrap: { alignItems: 'center' },
   iconCircle: {
     width: 120,
@@ -179,6 +273,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 26, lineHeight: 34 },
   subtitle: { fontSize: 14, lineHeight: 22 },
   cardsWrap: { width: '100%', gap: 12, marginTop: 32 },
+  sectionHeader: { fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 },
   earningsCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -194,7 +289,18 @@ const styles = StyleSheet.create({
   },
   cardLabel: { fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 },
   cardAmount: { fontSize: 26 },
+  cardAmountSmall: { fontSize: 20 },
   cardCurrency: { fontSize: 13, marginBottom: 2 },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    marginTop: 4,
+  },
+  totalLabel: { fontSize: 14 },
+  totalAmount: { fontSize: 16 },
   bottomBar: { paddingHorizontal: 20, paddingTop: 12 },
   ctaBtn: {
     height: 58,

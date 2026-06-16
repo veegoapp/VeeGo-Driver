@@ -315,7 +315,7 @@ export default function ShuttleTripActiveScreen() {
         params: {
           earnedAmount: earned != null ? String(earned) : '',
           walletBalance: balance != null ? String(balance) : '',
-          tripId: activeLine.id,
+          tripId: activeLine.tripId ?? '',
         },
       });
     } catch {

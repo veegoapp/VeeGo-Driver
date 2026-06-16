@@ -149,6 +149,8 @@ type StationPassenger = {
   fareAmount?: number;
   price?: number;
   amount?: number;
+  cashCollected?: boolean;
+  amountCollected?: number;
 };
 
 type BackendStationWithPassengers = BackendStation & {
