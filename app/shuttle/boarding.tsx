@@ -2,7 +2,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { AlertCircle, Check, ChevronLeft, Package, Phone, Tag, Users, X } from 'lucide-react-native';
 import React, { useRef, useEffect, useState } from 'react';
-import { Alert, Animated, Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Animated, Image, Platform, Pressable, ScrollView, StyleSheet, Text, View, ImageErrorEventData, NativeSyntheticEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
@@ -26,6 +26,7 @@ export default function ShuttleBoardingScreen() {
   const progressAnim = useRef(new Animated.Value(checkedIn / total)).current;
 
   const [stationTimeoutVisible, setStationTimeoutVisible] = useState(false);
+  const [avatarErrors, setAvatarErrors] = useState<Record<string, boolean>>({});
 
   // Task 1: per-passenger action state ('boarded' | 'absent' | null) and loading id
   const [actionState, setActionState] = useState<Record<string, 'boarded' | 'absent'>>({});
@@ -117,7 +118,7 @@ export default function ShuttleBoardingScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
-        contentContainerStyle={{ paddingTop: topPad + 8, paddingBottom: botPad + 100, paddingHorizontal: 16 }}
+        contentContainerStyle={{ paddingTop: topPad + 8, paddingBottom: 16, paddingHorizontal: 16 }}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
@@ -201,19 +202,39 @@ export default function ShuttleBoardingScreen() {
               >
                 <View style={styles.passengerContent}>
                   <View style={styles.avatarWrap}>
-                    <Image
-                      source={{ uri: p.avatar }}
-                      style={[
+                    {p.avatar && !avatarErrors[p.id] ? (
+                      <Image
+                        source={{ uri: p.avatar }}
+                        style={[
+                          styles.avatar,
+                          {
+                            borderColor: isBoarded
+                              ? colors.primary
+                              : isAbsent
+                              ? '#ef4444'
+                              : colors.border,
+                          },
+                        ]}
+                        onError={() => setAvatarErrors(prev => ({ ...prev, [p.id]: true }))}
+                      />
+                    ) : (
+                      <View style={[
                         styles.avatar,
+                        styles.avatarFallback,
                         {
+                          backgroundColor: colors.secondary,
                           borderColor: isBoarded
                             ? colors.primary
                             : isAbsent
                             ? '#ef4444'
                             : colors.border,
                         },
-                      ]}
-                    />
+                      ]}>
+                        <Text style={[styles.avatarInitial, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
+                          {(p.name || '?')[0].toUpperCase()}
+                        </Text>
+                      </View>
+                    )}
                     {isBoarded && (
                       <View style={[styles.checkBadge, { backgroundColor: colors.primary }]}>
                         <Check size={10} color={colors.primaryForeground} strokeWidth={3} />
@@ -292,7 +313,7 @@ export default function ShuttleBoardingScreen() {
         </View>
       </ScrollView>
 
-      <View style={[styles.bottomAction, { paddingBottom: botPad + 12 }]}>
+      <View style={[styles.bottomAction, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: botPad + 12 }]}>
         {checkedIn === total ? (
           <Pressable onPress={handleDepart} style={styles.departBtn}>
             <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.departBtnGrad}>
@@ -349,8 +370,10 @@ const styles = StyleSheet.create({
   metaText: { fontSize: 11 },
   absentLabel: { fontSize: 11, marginTop: 4 },
   actionBtns: { flexDirection: 'column', gap: 6 },
-  actionBtn: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5 },
-  bottomAction: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 16, paddingTop: 8, backgroundColor: 'transparent' },
+  actionBtn: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5 },
+  avatarFallback: { alignItems: 'center', justifyContent: 'center' },
+  avatarInitial: { fontSize: 18 },
+  bottomAction: { paddingHorizontal: 16, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth },
   departBtn: { borderRadius: 16, overflow: 'hidden', elevation: 8, shadowColor: '#2d2d42', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 12 },
   departBtnGrad: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   departBtnText: { fontSize: 15 },

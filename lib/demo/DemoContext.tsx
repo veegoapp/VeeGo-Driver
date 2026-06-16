@@ -7,7 +7,7 @@ type DemoContextType = {
   enterDemoMode: () => void;
   exitDemoMode: () => void;
   demoSpeed: DemoSpeed;
-  setDemoSpeed: (speed: DemoSpeed) => void;
+  setDemoSpeed: (s: DemoSpeed) => void;
 };
 
 const DemoContext = createContext<DemoContextType>({
@@ -21,17 +21,14 @@ const DemoContext = createContext<DemoContextType>({
 export function DemoModeProvider({ children }: { children: React.ReactNode }) {
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [demoSpeed, setDemoSpeed] = useState<DemoSpeed>(1);
-
   return (
-    <DemoContext.Provider
-      value={{
-        isDemoMode,
-        enterDemoMode: () => setIsDemoMode(true),
-        exitDemoMode: () => setIsDemoMode(false),
-        demoSpeed,
-        setDemoSpeed,
-      }}
-    >
+    <DemoContext.Provider value={{
+      isDemoMode,
+      enterDemoMode: () => setIsDemoMode(true),
+      exitDemoMode:  () => setIsDemoMode(false),
+      demoSpeed,
+      setDemoSpeed,
+    }}>
       {children}
     </DemoContext.Provider>
   );

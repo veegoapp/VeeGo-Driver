@@ -1,200 +1,90 @@
-import type {
-  ShuttleLine,
-  ShuttleStop,
-  BoardingPassenger,
-  ShuttleBooking,
-  ShuttleRoute,
-} from '@/lib/shuttleContext';
+import type { ShuttleLine, ShuttleStop, ShuttleRoute, ShuttleBooking, BoardingPassenger } from '@/lib/shuttleContext';
 
-// ── Mock line ──────────────────────────────────────────────────────────────────
-// tripId is intentionally undefined: the trip-active screen guards every API
-// call with `if (!tripId || ...) return`, so leaving it undefined prevents any
-// real network request from firing during the demo.
+export const DEMO_STATION_COORDS = [
+  { latitude: 30.1324,   longitude: 31.3231   },
+  { latitude: 30.129553, longitude: 31.321638 },
+  { latitude: 30.122316, longitude: 31.318186 },
+  { latitude: 30.112371, longitude: 31.316303 },
+  { latitude: 30.11504,  longitude: 31.30606  },
+  { latitude: 30.1024,   longitude: 31.301067 },
+];
+
 export const DEMO_LINE: ShuttleLine = {
-  id: '4',
-  tripId: undefined,
-  lineNumber: '4',
-  name: 'Ain Shams → Heliopolis #1',
-  from: 'Mazlaqan Ain Shams',
-  to: 'Al Batal Al Romani Company for Car Tires',
-  departure: '07:00',
-  arrival: '07:40',
+  id: 'demo-line-1',
+  tripId: 'demo-trip-1',
+  lineNumber: 'D1',
+  name: 'Ain Shams → Heliopolis',
+  from: 'Ain Shams',
+  to: 'Heliopolis',
+  departure: '08:00',
+  arrival: '09:15',
   status: 'in-progress',
   passengers: 8,
-  capacity: 14,
+  capacity: 12,
   bookedSeats: 8,
-  totalSeats: 14,
+  totalSeats: 12,
   vehicleType: 'HiAce',
   assigned: true,
   stationCount: 6,
-  estimatedDuration: 40,
-  basePrice: 35,
+  estimatedDuration: 75,
+  basePrice: 85,
 };
 
-// ── Mock booking (shown on shuttle home screen) ────────────────────────────────
+export const DEMO_ROUTE: ShuttleRoute = {
+  id: 'demo-route-1',
+  name: 'Ain Shams → Heliopolis',
+  from: 'Ain Shams',
+  to: 'Heliopolis',
+  stationCount: 6,
+  estimatedDuration: 75,
+  basePrice: 85,
+  timeslots: [{
+    id: 'demo-slot-1',
+    departureTime: '08:00',
+    availableSeats: 1,
+    totalSeats: 12,
+    isBooked: true,
+    isTaken: false,
+  }],
+};
+
 export const DEMO_BOOKING: ShuttleBooking = {
   id: 'demo-booking-1',
-  routeId: '4',
-  routeName: 'Ain Shams → El Maadi #1',
+  routeId: 'demo-route-1',
+  routeName: 'Ain Shams → Heliopolis',
   timeSlotId: 'demo-slot-1',
-  departureTime: '07:00',
+  departureTime: '08:00',
   weekStart: new Date().toISOString().slice(0, 10),
   status: 'booked',
 };
 
-// ── Mock route (shown on lines screen) ────────────────────────────────────────
-export const DEMO_ROUTE: ShuttleRoute = {
-  id: '4',
-  name: 'Ain Shams → Heliopolis #1',
-  from: 'Mazlaqan Ain Shams',
-  to: 'Al Batal Al Romani Company for Car Tires',
-  stationCount: 6,
-  estimatedDuration: 40,
-  basePrice: 35,
-  timeslots: [
-    {
-      id: 'demo-slot-1',
-      departureTime: '07:00',
-      availableSeats: 6,
-      totalSeats: 14,
-      isBooked: true,
-      isTaken: false,
-    },
-  ],
-};
-
-// ── Stop templates ─────────────────────────────────────────────────────────────
-// `status`, `boarded`, and `expected` are computed dynamically in DemoShuttleProvider
-// to match the exact same derivation logic as the real ShuttleProvider.
 export const DEMO_STOPS_TEMPLATE: Omit<ShuttleStop, 'status' | 'boarded' | 'expected'>[] = [
-  {
-    id: '16',
-    name: 'Mazlaqan Ain Shams',
-    address: 'Ain Shams, Cairo',
-    eta: '07:00',
-  },
-  {
-    id: '17',
-    name: 'New Al Easr Mall',
-    address: 'Ain Shams, Cairo',
-    eta: '07:07',
-  },
-  {
-    id: '18',
-    name: 'El Tawhed & El Noor',
-    address: 'Ain Shams, Cairo',
-    eta: '07:14',
-  },
-  {
-    id: '19',
-    name: 'Mr. Avocado Juices',
-    address: 'Ain Shams, Cairo',
-    eta: '07:22',
-  },
-  {
-    id: '20',
-    name: 'Al Gamal Mall',
-    address: 'Heliopolis, Cairo',
-    eta: '07:30',
-  },
-  {
-    id: '21',
-    name: 'Al Batal Al Romani Company for Car Tires',
-    address: 'Heliopolis, Cairo',
-    eta: '07:40',
-  },
+  { id: 'stop-1', name: 'Mazlaqan Ain Shams',    address: 'Mazlaqan, Ain Shams', eta: '08:00' },
+  { id: 'stop-2', name: 'New Al Easr Mall',       address: 'New Al Easr, Ain Shams', eta: '08:08' },
+  { id: 'stop-3', name: 'El Tawhed & El Noor',    address: 'El Tawhed St, Ain Shams', eta: '08:16' },
+  { id: 'stop-4', name: 'Mr. Avocado Juices',     address: 'Abbas El Akkad, Nasr City', eta: '08:25' },
+  { id: 'stop-5', name: 'Al Gamal Mall',          address: 'Al Gamal Mall, Heliopolis', eta: '08:35' },
+  { id: 'stop-6', name: 'Al Batal Al Romani',     address: 'Al Batal Al Romani St, Heliopolis', eta: '08:45' },
 ];
 
-// ── Passengers per stop index ──────────────────────────────────────────────────
-// `checkedIn` is managed dynamically by the demo reducer — not stored here.
-export const DEMO_PASSENGERS_TEMPLATE: Record<
-  number,
-  Omit<BoardingPassenger, 'checkedIn'>[]
-> = {
-  0: [
-    {
-      id: 'p1',
-      name: 'Mohamed El-Sayed',
-      avatar: '',
-      phone: '+20 100 123 4567',
-      ticket: 'TK001',
-      luggage: false,
-    },
-    {
-      id: 'p2',
-      name: 'Nour Ibrahim',
-      avatar: '',
-      phone: '+20 111 234 5678',
-      ticket: 'TK002',
-      luggage: true,
-    },
+export const DEMO_PASSENGERS_TEMPLATE: Omit<BoardingPassenger, 'checkedIn'>[][] = [
+  [ // Stop 1
+    { id: 'p1', name: 'Ahmed Hassan',   phone: '010-1234-5678', ticket: 'TK-001', avatar: '', luggage: false },
+    { id: 'p2', name: 'Sara Mohamed',   phone: '011-2345-6789', ticket: 'TK-002', avatar: '', luggage: true },
   ],
-  1: [
-    {
-      id: 'p3',
-      name: 'Ahmed Mostafa',
-      avatar: '',
-      phone: '+20 122 345 6789',
-      ticket: 'TK003',
-      luggage: false,
-    },
+  [ // Stop 2
+    { id: 'p3', name: 'Omar Khalil',    phone: '012-3456-7890', ticket: 'TK-003', avatar: '', luggage: false },
+    { id: 'p4', name: 'Fatma Ali',      phone: '010-4567-8901', ticket: 'TK-004', avatar: '', luggage: false },
   ],
-  2: [
-    {
-      id: 'p4',
-      name: 'Sara Hassan',
-      avatar: '',
-      phone: '+20 100 456 7890',
-      ticket: 'TK004',
-      luggage: false,
-    },
-    {
-      id: 'p5',
-      name: 'Omar Khalil',
-      avatar: '',
-      phone: '+20 106 567 8901',
-      ticket: 'TK005',
-      luggage: true,
-    },
+  [ // Stop 3
+    { id: 'p5', name: 'Khaled Nasser',  phone: '011-5678-9012', ticket: 'TK-005', avatar: '', luggage: true },
+    { id: 'p6', name: 'Nour Ibrahim',   phone: '012-6789-0123', ticket: 'TK-006', avatar: '', luggage: false },
   ],
-  3: [
-    {
-      id: 'p6',
-      name: 'Dina Mahmoud',
-      avatar: '',
-      phone: '+20 111 678 9012',
-      ticket: 'TK006',
-      luggage: false,
-    },
+  [ // Stop 4
+    { id: 'p7', name: 'Youssef Samir',  phone: '010-7890-1234', ticket: 'TK-007', avatar: '', luggage: false },
   ],
-  4: [
-    {
-      id: 'p7',
-      name: 'Karim Adel',
-      avatar: '',
-      phone: '+20 122 789 0123',
-      ticket: 'TK007',
-      luggage: false,
-    },
+  [ // Stop 5
+    { id: 'p8', name: 'Dina Mahmoud',   phone: '011-8901-2345', ticket: 'TK-008', avatar: '', luggage: true },
   ],
-  5: [
-    {
-      id: 'p8',
-      name: 'Mona Tarek',
-      avatar: '',
-      phone: '+20 100 890 1234',
-      ticket: 'TK008',
-      luggage: false,
-    },
-  ],
-};
-
-// ── Station coordinates for map polyline ───────────────────────────────────────
-export const DEMO_STATION_COORDS: Array<{ latitude: number; longitude: number }> = [
-  { latitude: 30.1324,   longitude: 31.3231   }, // Station 1 — Mazlaqan Ain Shams
-  { latitude: 30.129553, longitude: 31.321638 }, // Station 2 — New Al Easr Mall
-  { latitude: 30.122316, longitude: 31.318186 }, // Station 3 — El Tawhed & El Noor
-  { latitude: 30.112371, longitude: 31.316303 }, // Station 4 — Mr. Avocado Juices
-  { latitude: 30.11504,  longitude: 31.30606  }, // Station 5 — Al Gamal Mall
-  { latitude: 30.1024,   longitude: 31.301067 }, // Station 6 — Al Batal Al Romani (final stop)
+  [], // Stop 6 — final stop, no boarding
 ];
