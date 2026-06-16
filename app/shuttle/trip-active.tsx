@@ -111,6 +111,7 @@ export default function ShuttleTripActiveScreen() {
   const [isNextLoading, setIsNextLoading] = useState(false);
   const [focusTarget, setFocusTarget] = useState<{ latitude: number; longitude: number; zoom: number } | null>(null);
   const timeoutProcessingRef = useRef(false);
+  const isFinishingRef = useRef(false);
   const [stationTimeoutVisible, setStationTimeoutVisible] = useState(false);
 
   // ── Map height animation ───────────────────────────────────────────────────
@@ -126,7 +127,7 @@ export default function ShuttleTripActiveScreen() {
 
   const mapHeight = mapAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [MAP_H_AT_STOP, MAP_H_EN_ROUTE],
+    outputRange: [MAP_H_AT_STOP, SCREEN_H],
   });
 
   // ── Phase transitions (GPS-driven, uses haversine for reliability) ─────────
@@ -204,6 +205,7 @@ export default function ShuttleTripActiveScreen() {
   useEffect(() => {
     if (!activeLine) return;
     const unsub = navigation.addListener('beforeRemove', (e: any) => {
+      if (isFinishingRef.current) return; // intentional finish — let it through
       e.preventDefault();
       Alert.alert(
         t.trip_active_exit_title,
@@ -286,6 +288,7 @@ export default function ShuttleTripActiveScreen() {
 
   const handleFinishRoute = useCallback(async () => {
     if (!activeLine) return;
+    isFinishingRef.current = true;
     if (isDemoMode) {
       router.replace('/shuttle/trip-complete' as any);
       return;
@@ -321,9 +324,9 @@ export default function ShuttleTripActiveScreen() {
           key={i}
           style={[
             styles.dot,
-            i < currentStopIndex && { backgroundColor: colors.primary },
-            i === currentStopIndex && { backgroundColor: colors.accent, width: 24 },
-            i > currentStopIndex && { backgroundColor: colors.border },
+            i < currentStopIndex && { backgroundColor: '#4f46e5' },
+            i === currentStopIndex && { backgroundColor: '#f59e0b', width: 24 },
+            i > currentStopIndex && { backgroundColor: 'rgba(255,255,255,0.18)' },
           ]}
         />
       ))}
@@ -513,24 +516,26 @@ export default function ShuttleTripActiveScreen() {
                     </View>
                     <View style={styles.statusBtns}>
                       <Pressable
-                        onPress={() => updatePassengerStatus(p.id, 'boarded')}
+                        onPress={() => updatePassengerStatus(p.id, status === 'boarded' ? 'not_arrived' : 'boarded')}
                         style={[
                           styles.statusBtn,
-                          { borderColor: '#22c55e' },
-                          status === 'boarded' && { backgroundColor: '#22c55e22' },
+                          status === 'boarded'
+                            ? { backgroundColor: '#22c55e', borderColor: '#22c55e' }
+                            : { borderColor: '#22c55e44' },
                         ]}
                       >
-                        <Check size={16} color={status === 'boarded' ? '#22c55e' : colors.mutedForeground} strokeWidth={2} />
+                        <Check size={18} color={status === 'boarded' ? '#fff' : '#22c55e'} strokeWidth={2.5} />
                       </Pressable>
                       <Pressable
-                        onPress={() => updatePassengerStatus(p.id, 'no_show')}
+                        onPress={() => updatePassengerStatus(p.id, status === 'no_show' ? 'not_arrived' : 'no_show')}
                         style={[
                           styles.statusBtn,
-                          { borderColor: '#ef4444' },
-                          status === 'no_show' && { backgroundColor: '#ef444422' },
+                          status === 'no_show'
+                            ? { backgroundColor: '#ef4444', borderColor: '#ef4444' }
+                            : { borderColor: '#ef444444' },
                         ]}
                       >
-                        <X size={16} color={status === 'no_show' ? '#ef4444' : colors.mutedForeground} strokeWidth={2} />
+                        <X size={18} color={status === 'no_show' ? '#fff' : '#ef4444'} strokeWidth={2.5} />
                       </Pressable>
                     </View>
                   </View>
@@ -572,19 +577,8 @@ export default function ShuttleTripActiveScreen() {
           </ScrollView>
         </View>
       ) : (
-        /* ═══ EN ROUTE / APPROACHING — floating bottom card ════════════ */
-        <View style={[
-          styles.enRouteSheet,
-          {
-            backgroundColor: colors.background,
-            paddingBottom: insets.bottom + 16,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: -4 },
-            shadowOpacity: 0.18,
-            shadowRadius: 12,
-            elevation: 12,
-          },
-        ]}>
+        /* ═══ EN ROUTE / APPROACHING — glass overlay card ══════════════ */
+        <View style={[styles.enRouteSheet, { paddingBottom: insets.bottom + 12 }]}>
           <View style={styles.enRouteHandle} />
 
           {/* Progress dots */}
@@ -592,27 +586,27 @@ export default function ShuttleTripActiveScreen() {
 
           {/* Next stop card */}
           {currentStop && (
-            <View style={[styles.nextStopCard, { backgroundColor: colors.card, borderColor: phase === 'approaching' ? '#f59e0b66' : colors.border }]}>
+            <View style={[styles.nextStopCard, { borderColor: phase === 'approaching' ? '#f59e0b66' : 'rgba(255,255,255,0.12)' }]}>
               <View style={styles.nextStopCardHeader}>
-                <View style={[styles.stopIndexBadge, { backgroundColor: phase === 'approaching' ? '#f59e0b22' : colors.secondary }]}>
-                  <Text style={[styles.stopIndexText, { color: phase === 'approaching' ? '#f59e0b' : colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>
+                <View style={[styles.stopIndexBadge, { backgroundColor: phase === 'approaching' ? '#f59e0b22' : 'rgba(255,255,255,0.1)' }]}>
+                  <Text style={[styles.stopIndexText, { color: phase === 'approaching' ? '#f59e0b' : 'rgba(255,255,255,0.7)', fontFamily: 'Inter_700Bold' }]}>
                     {currentStopIndex + 1}
                   </Text>
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={[styles.nextStopLabel, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>
+                  <Text style={[styles.nextStopLabel, { color: phase === 'approaching' ? '#f59e0b' : 'rgba(255,255,255,0.5)', fontFamily: 'Inter_600SemiBold' }]}>
                     {phase === 'approaching' ? '⚠ Approaching' : 'Next Stop'}
                   </Text>
-                  <Text style={[styles.nextStopName, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]} numberOfLines={1}>
+                  <Text style={[styles.nextStopName, { color: '#fff', fontFamily: 'Inter_700Bold' }]} numberOfLines={1}>
                     {currentStop.name}
                   </Text>
                 </View>
                 <View style={styles.distanceBadge}>
-                  <Text style={[styles.distanceText, { color: phase === 'approaching' ? '#f59e0b' : colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>
+                  <Text style={[styles.distanceText, { color: phase === 'approaching' ? '#f59e0b' : 'rgba(255,255,255,0.9)', fontFamily: 'Inter_700Bold' }]}>
                     {distanceLabel(distanceM)}
                   </Text>
                   {roadEta.etaSeconds !== null && (
-                    <Text style={[styles.etaText, { color: phase === 'approaching' ? '#f59e0b99' : colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
+                    <Text style={[styles.etaText, { color: phase === 'approaching' ? '#f59e0b99' : 'rgba(255,255,255,0.45)', fontFamily: 'Inter_400Regular' }]}>
                       {etaLabel(roadEta.etaSeconds)}
                     </Text>
                   )}
@@ -620,15 +614,15 @@ export default function ShuttleTripActiveScreen() {
               </View>
 
               <View style={styles.passengerCountRow}>
-                <Users size={14} color={colors.mutedForeground} strokeWidth={2} />
-                <Text style={[styles.passengerCountText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
+                <Users size={13} color="rgba(255,255,255,0.4)" strokeWidth={2} />
+                <Text style={[styles.passengerCountText, { color: 'rgba(255,255,255,0.4)', fontFamily: 'Inter_400Regular' }]}>
                   {passengers.length} passenger{passengers.length !== 1 ? 's' : ''} at this stop
                 </Text>
               </View>
             </View>
           )}
 
-          {/* Station timeout banner (also shown in en_route phase after auto-advance) */}
+          {/* Station timeout banner */}
           {stationTimeoutVisible && (
             <View style={[styles.timeoutBanner, { marginTop: 0, marginBottom: 8 }]}>
               <AlertTriangle size={14} color="#d97706" strokeWidth={2} />
@@ -648,7 +642,7 @@ export default function ShuttleTripActiveScreen() {
             style={[styles.arrivedBtn, { opacity: isArrivingLoading ? 0.6 : 1 }]}
           >
             <LinearGradient
-              colors={phase === 'approaching' ? ['#d97706', '#f59e0b'] : ['#2d2d42', '#1e1e28']}
+              colors={phase === 'approaching' ? ['#d97706', '#f59e0b'] : ['#4f46e5', '#6366f1']}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
               style={styles.arrivedBtnGrad}
             >
@@ -663,7 +657,7 @@ export default function ShuttleTripActiveScreen() {
           {isLastStop && (
             <Pressable
               onPress={handleFinishRoute}
-              style={[styles.finishBtn, { backgroundColor: '#22c55e22', borderColor: '#22c55e' }]}
+              style={[styles.finishBtn, { backgroundColor: 'rgba(34,197,94,0.15)', borderColor: '#22c55e' }]}
             >
               <Check size={16} color="#22c55e" strokeWidth={2} />
               <Text style={[styles.finishBtnText, { color: '#22c55e', fontFamily: 'Inter_700Bold' }]}>
@@ -720,21 +714,30 @@ const styles = StyleSheet.create({
   // At stop sheet
   atStopSheet: { flex: 1 },
 
-  // En route sheet — floating card style
+  // En route sheet — glass overlay at bottom of screen
   enRouteSheet: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     paddingHorizontal: 16,
-    paddingTop: 8,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    paddingTop: 10,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    backgroundColor: 'rgba(12,12,22,0.82)',
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
   },
-  enRouteHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: '#ffffff22', alignSelf: 'center', marginBottom: 12 },
+  enRouteHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.2)', alignSelf: 'center', marginBottom: 12 },
 
   // Progress dots
   progressDots: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 16 },
   dot: { height: 8, width: 14, borderRadius: 4 },
 
   // Next stop card
-  nextStopCard: { borderRadius: 20, borderWidth: 1.5, padding: 16, marginBottom: 12 },
+  nextStopCard: { borderRadius: 18, borderWidth: 1, padding: 14, marginBottom: 10, backgroundColor: 'rgba(255,255,255,0.06)' },
   nextStopCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   stopIndexBadge: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   stopIndexText: { fontSize: 14 },
