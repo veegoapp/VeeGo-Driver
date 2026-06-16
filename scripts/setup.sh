@@ -9,31 +9,32 @@ echo ""
 
 # ── 1. Check required secrets ──────────────────────────────────────────────
 if [ -z "$BACKEND_URL" ]; then
-  echo "❌  ERROR: BACKEND_URL secret is not set."
-  echo "    Go to Replit Secrets and add BACKEND_URL with your backend server URL."
-  echo "    Example: https://your-backend.replit.app/api"
+  echo "⚠️  WARNING: BACKEND_URL secret is not set."
+  echo "    The app will start in Demo-only mode (no live backend)."
+  echo "    To connect a real backend, add BACKEND_URL in Replit Secrets."
   echo ""
-  exit 1
-fi
-
-echo "✅  BACKEND_URL found: $BACKEND_URL"
-
-# ── 2. Verify backend connectivity ─────────────────────────────────────
-echo ""
-echo "🔗  Checking backend connectivity..."
-HTTP_STATUS=$(curl -o /dev/null -s -w "%{http_code}" --max-time 8 "$BACKEND_URL/health" 2>/dev/null || echo "000")
-
-if [ "$HTTP_STATUS" = "000" ]; then
-  echo "⚠️  WARNING: Backend did not respond at $BACKEND_URL/health"
+  EFFECTIVE_URL="http://localhost:3000/api"
 else
-  echo "✅  Backend responded (HTTP $HTTP_STATUS)."
+  echo "✅  BACKEND_URL found: $BACKEND_URL"
+  EFFECTIVE_URL="$BACKEND_URL"
+
+  # ── 2. Verify backend connectivity ──────────────────────────────────────
+  echo ""
+  echo "🔗  Checking backend connectivity..."
+  HTTP_STATUS=$(curl -o /dev/null -s -w "%{http_code}" --max-time 8 "$EFFECTIVE_URL/health" 2>/dev/null || echo "000")
+
+  if [ "$HTTP_STATUS" = "000" ]; then
+    echo "⚠️  WARNING: Backend did not respond at $EFFECTIVE_URL/health"
+  else
+    echo "✅  Backend responded (HTTP $HTTP_STATUS)."
+  fi
 fi
 
 # ── 3. Write .env ─────────────────────────────────────────────────────
 echo ""
 echo "📝  Writing .env..."
 cat > .env << EOF
-EXPO_PUBLIC_API_URL=${BACKEND_URL}
+EXPO_PUBLIC_API_URL=${EFFECTIVE_URL}
 EXPO_PUBLIC_DEMO_ENABLED=true
 EOF
 
