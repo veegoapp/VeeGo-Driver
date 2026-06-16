@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useRef } from 'react';
-import { StyleSheet, View } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 
 export interface SurgeZone {
@@ -170,6 +170,7 @@ function buildHtml(
   var driverMarker = null;
   var prevPos = null;
   var currentBearing = 0;
+  var userPanned = false;
 
   function calcBearing(from, to) {
     var lat1 = from[1] * Math.PI / 180;
@@ -334,6 +335,13 @@ function buildHtml(
     }
   });
 
+  map.on('movestart', function(e) {
+    if (e.originalEvent) {
+      userPanned = true;
+      try { window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'userPanned' })); } catch(_) {}
+    }
+  });
+
   // ── postMessage bridge ─────────────────────────────────────────────────────
   window.addEventListener('message', function(e) {
     try {
@@ -359,7 +367,7 @@ function buildHtml(
           prevPos = newPos;
           driverMarker.setLngLat(newPos);
         }
-        map.easeTo({ center: newPos, duration: 1000 });
+        if (!userPanned) map.easeTo({ center: newPos, duration: 1000 });
       }
 
       if (msg.type === 'updateStationStatuses' && msg.statuses) {
@@ -388,6 +396,11 @@ function buildHtml(
       if (msg.type === 'focusLocation' && msg.lat != null && msg.lng != null) {
         map.flyTo({ center: [msg.lng, msg.lat], zoom: msg.zoom || 16, duration: 800 });
       }
+
+      if (msg.type === 'recenter') {
+        userPanned = false;
+        if (prevPos) map.easeTo({ center: prevPos, duration: 800 });
+      }
     } catch(_) {}
   });
 })();
@@ -402,6 +415,7 @@ export function MapBackdrop({
 }: MapBackdropProps) {
   const webviewRef = useRef<WebView>(null);
   const lastLocUpdate = useRef(0);
+  const [userPanned, setUserPanned] = useState(false);
 
   // Stable HTML: only rebuilds when the route or surges change (prevents WebView remount)
   const html = useMemo(
@@ -459,7 +473,45 @@ export function MapBackdrop({
         javaScriptEnabled
         domStorageEnabled
         scrollEnabled
+        onMessage={(event) => {
+          try {
+            const msg = JSON.parse(event.nativeEvent.data);
+            if (msg.type === 'userPanned') setUserPanned(true);
+          } catch {}
+        }}
       />
+      {userPanned && (
+        <Pressable
+          onPress={() => {
+            setUserPanned(false);
+            webviewRef.current?.postMessage(JSON.stringify({ type: 'recenter' }));
+          }}
+          style={styles.recenterBtn}
+        >
+          <Text style={styles.recenterIcon}>⊕</Text>
+        </Pressable>
+      )}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  recenterBtn: {
+    position: 'absolute',
+    bottom: 72,
+    right: 12,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(15,15,25,0.88)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  recenterIcon: {
+    color: '#6366f1',
+    fontSize: 20,
+    lineHeight: 22,
+  },
+});

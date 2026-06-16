@@ -1,7 +1,7 @@
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import React, { useEffect, useRef } from 'react';
-import { StyleSheet, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 export interface SurgeZone {
   id: string;
@@ -147,6 +147,8 @@ export function MapBackdrop({
   const shuttleRouteReadyRef = useRef(false);
   const shuttleMarkersRef = useRef<maplibregl.Marker[]>([]);
   const approachReadyRef = useRef(false);
+  const isFollowingRef = useRef(true);
+  const [showRecenter, setShowRecenter] = useState(false);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -236,6 +238,13 @@ export function MapBackdrop({
           allPoints.forEach((p) => bounds.extend([p.longitude, p.latitude]));
           map.fitBounds(bounds, { padding: 70, maxZoom: 15, duration: 600 });
         }
+      }
+    });
+
+    map.on('movestart', (e: any) => {
+      if (e.originalEvent) {
+        isFollowingRef.current = false;
+        setShowRecenter(true);
       }
     });
 
@@ -372,13 +381,47 @@ export function MapBackdrop({
     } else {
       driverMarkerRef.current.setLngLat(lngLat);
     }
-    map.easeTo({ center: lngLat, duration: 1000 });
+    if (isFollowingRef.current) map.easeTo({ center: lngLat, duration: 1000 });
   }, [driverLocation?.latitude, driverLocation?.longitude]);
+
+  const handleRecenter = useCallback(() => {
+    isFollowingRef.current = true;
+    setShowRecenter(false);
+    const map = mapRef.current;
+    if (!map || !driverLocation) return;
+    map.easeTo({ center: [driverLocation.longitude, driverLocation.latitude], duration: 800 });
+  }, [driverLocation]);
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
       {/* @ts-ignore — plain div is valid in Expo Web */}
       <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+      {showRecenter && (
+        <Pressable onPress={handleRecenter} style={webStyles.recenterBtn} pointerEvents="auto">
+          <Text style={webStyles.recenterIcon}>⊕</Text>
+        </Pressable>
+      )}
     </View>
   );
 }
+
+const webStyles = StyleSheet.create({
+  recenterBtn: {
+    position: 'absolute',
+    bottom: 72,
+    right: 12,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(15,15,25,0.88)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  recenterIcon: {
+    color: '#6366f1',
+    fontSize: 20,
+    lineHeight: 22,
+  },
+});
