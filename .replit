@@ -20,6 +20,10 @@ args = "bash setup.sh"
 task = "workflow.run"
 args = "Start application"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "VeeGo Driver"
+
 [[workflows.workflow]]
 name = "Start application"
 author = "agent"
@@ -30,6 +34,17 @@ outputType = "console"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "bash scripts/setup.sh"
+
+[[workflows.workflow]]
+name = "VeeGo Driver"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "bash scripts/setup.sh"
+
+[workflows.workflow.metadata]
+outputType = "console"
 
 [deployment]
 router = "application"
