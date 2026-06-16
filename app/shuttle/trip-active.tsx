@@ -24,7 +24,7 @@ import { SOCKET_EVENTS } from '@/constants/socketEvents';
 import { endpoints, type ShuttleCompleteResponse } from '@/lib/api';
 
 // ── Constants ────────────────────────────────────────────────────────────────
-const APPROACH_THRESHOLD_M = 500;
+const APPROACH_THRESHOLD_M = 250;
 const STOP_DURATION_S = 60;
 const { height: SCREEN_H } = Dimensions.get('window');
 
@@ -182,7 +182,7 @@ export default function ShuttleTripActiveScreen() {
 
   const approachCircle = useMemo(() => {
     if (phase !== 'approaching' || !nextCoords) return null;
-    return { latitude: nextCoords.latitude, longitude: nextCoords.longitude, radius: APPROACH_THRESHOLD_M };
+    return { latitude: nextCoords.latitude, longitude: nextCoords.longitude, radius: 100 };
   }, [phase, nextCoords?.latitude, nextCoords?.longitude]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Exit guard ─────────────────────────────────────────────────────────────
