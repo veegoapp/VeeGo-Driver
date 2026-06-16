@@ -242,8 +242,10 @@ export function DemoShuttleProvider({ children }: { children: React.ReactNode })
         latitude:  cur.latitude  + (target.latitude  - cur.latitude)  * 0.07,
         longitude: cur.longitude + (target.longitude - cur.longitude) * 0.07,
       };
+      const movedM = haversineMeters(cur.latitude, cur.longitude, next.latitude, next.longitude);
+      const speedMps = movedM / 1.5; // interval is 1.5 s
       simPosRef.current = next;
-      setDemoDriverPosition({ ...next, heading: null, speed: null });
+      setDemoDriverPosition({ ...next, heading: null, speed: speedMps });
     }, 1500);
 
     return () => clearInterval(interval);
