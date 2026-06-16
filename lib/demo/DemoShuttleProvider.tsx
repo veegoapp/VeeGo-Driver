@@ -269,8 +269,11 @@ export function DemoShuttleProvider({ children }: { children: React.ReactNode })
       }
     }
 
+    // Estimate a realistic initial speed based on demo speed setting
+    // Base speed is ~8.33 m/s (30 km/h) scaled by demoSpeed
+    const initialSpeedMps = 8.33 * demoSpeed;
     simPosRef.current = startPoint;
-    setDemoDriverPosition({ ...startPoint, heading: null, speed: null });
+    setDemoDriverPosition({ ...startPoint, heading: null, speed: initialSpeedMps });
 
     // بناء مسار مقسّم لخطوات صغيرة جداً (50 خطوة) عشان الحركة تبقى سلسة
     // الإصلاح التاني: بدل الـ easing الأسي (اللي بيبطّي في الآخر)، خطوات ثابتة الحجم

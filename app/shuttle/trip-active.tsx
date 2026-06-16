@@ -66,7 +66,7 @@ export default function ShuttleTripActiveScreen() {
   } = useShuttle();
 
   const currentStop = stops[currentStopIndex] ?? null;
-  const nextCoords = stationCoords[currentStopIndex] ?? null;
+  const nextCoords = stationCoords[currentStopIndex + 1] ?? null;
   const isLastStop = currentStopIndex >= stops.length - 1;
   const tripId = activeLine?.tripId;
   const stationId = currentStop?.id;
@@ -97,7 +97,7 @@ export default function ShuttleTripActiveScreen() {
     if (!cur || !nxt) return null;
     return [cur, nxt];
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentStopIndex, stationCoords.length]);
+  }, [currentStopIndex, stationCoords]);
 
   const { coords: roadPolylineCoords } = useRoadPolyline(segmentWaypoints);
 
@@ -136,6 +136,22 @@ export default function ShuttleTripActiveScreen() {
       if (next !== phase) setPhase(next);
     }
   }, [proximityM]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── GPS location updates to backend every 10 s during active trip ─────────
+  useEffect(() => {
+    if (!effectivePos || !tripId || (phase !== 'en_route' && phase !== 'approaching')) return;
+    const send = () => {
+      endpoints.driver.updateLocation({
+        latitude: effectivePos.latitude,
+        longitude: effectivePos.longitude,
+        speed: effectivePos.speed ?? undefined,
+        tripId,
+      });
+    };
+    send();
+    const id = setInterval(send, 10_000);
+    return () => clearInterval(id);
+  }, [effectivePos?.latitude, effectivePos?.longitude, phase, tripId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reset all per-stop state when the active stop changes
   useEffect(() => {
@@ -216,13 +232,16 @@ export default function ShuttleTripActiveScreen() {
   // ── Socket: station timeout ────────────────────────────────────────────────
   useEffect(() => {
     if (!socket) return;
-    const handler = (data: { tripId?: string }) => {
+    const handler = async (data: { tripId?: string }) => {
       if (data.tripId && data.tripId !== tripId) return;
       if (timeoutProcessingRef.current) return;
       timeoutProcessingRef.current = true;
-      setStationTimeoutVisible(true);
-      nextStop();
-      timeoutProcessingRef.current = false;
+      try {
+        setStationTimeoutVisible(true);
+        await nextStop();
+      } finally {
+        timeoutProcessingRef.current = false;
+      }
     };
     socket.on(SOCKET_EVENTS.SHUTTLE_STATION_TIMEOUT, handler);
     return () => { socket.off(SOCKET_EVENTS.SHUTTLE_STATION_TIMEOUT, handler); };

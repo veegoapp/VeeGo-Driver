@@ -99,8 +99,12 @@ export default function ShuttleBoardingScreen() {
   };
 
   const handleDepart = async () => {
-    const boardedIds = passengers.filter(p => p.checkedIn).map(p => p.id);
     const stationId = currentStop?.id;
+    if (!stationId) {
+      Alert.alert(t.error, t.station_action_error);
+      return;
+    }
+    const boardedIds = passengers.filter(p => p.checkedIn).map(p => p.id);
     await Promise.allSettled(
       boardedIds.map(bookingId =>
         endpoints.shuttle.boardBooking(bookingId, stationId)
