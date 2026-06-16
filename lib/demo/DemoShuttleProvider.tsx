@@ -87,8 +87,10 @@ async function fetchRealDemoBase(): Promise<DemoBase | null> {
   // Need at least 2 stations for a meaningful demo trip
   if (stations.length < 2) return null;
 
-  // Sort by station order
-  const sorted = [...stations].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  // Sort by station order, then cap at 6 so the demo always ends at Station 6
+  const sorted = [...stations]
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+    .slice(0, 6);
 
   // Build stop templates (all stations, name + address)
   const stopsTemplate: Omit<ShuttleStop, 'status' | 'boarded' | 'expected'>[] = sorted.map(

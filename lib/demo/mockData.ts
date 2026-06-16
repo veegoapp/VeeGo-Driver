@@ -14,11 +14,11 @@ export const DEMO_LINE: ShuttleLine = {
   id: '4',
   tripId: undefined,
   lineNumber: '4',
-  name: 'Ain Shams → El Maadi #1',
+  name: 'Ain Shams → Heliopolis #1',
   from: 'Mazlaqan Ain Shams',
-  to: 'Misr Helwan Agriculture Rd',
+  to: 'Al Batal Al Romani Company for Car Tires',
   departure: '07:00',
-  arrival: '08:30',
+  arrival: '07:40',
   status: 'in-progress',
   passengers: 8,
   capacity: 14,
@@ -26,8 +26,8 @@ export const DEMO_LINE: ShuttleLine = {
   totalSeats: 14,
   vehicleType: 'HiAce',
   assigned: true,
-  stationCount: 10,
-  estimatedDuration: 90,
+  stationCount: 6,
+  estimatedDuration: 40,
   basePrice: 35,
 };
 
@@ -45,11 +45,11 @@ export const DEMO_BOOKING: ShuttleBooking = {
 // ── Mock route (shown on lines screen) ────────────────────────────────────────
 export const DEMO_ROUTE: ShuttleRoute = {
   id: '4',
-  name: 'Ain Shams → El Maadi #1',
+  name: 'Ain Shams → Heliopolis #1',
   from: 'Mazlaqan Ain Shams',
-  to: 'Misr Helwan Agriculture Rd',
-  stationCount: 10,
-  estimatedDuration: 90,
+  to: 'Al Batal Al Romani Company for Car Tires',
+  stationCount: 6,
+  estimatedDuration: 40,
   basePrice: 35,
   timeslots: [
     {
@@ -102,30 +102,6 @@ export const DEMO_STOPS_TEMPLATE: Omit<ShuttleStop, 'status' | 'boarded' | 'expe
     name: 'Al Batal Al Romani Company for Car Tires',
     address: 'Heliopolis, Cairo',
     eta: '07:40',
-  },
-  {
-    id: '22',
-    name: 'HSBC New Maadi Branch',
-    address: 'New Maadi, Cairo',
-    eta: '07:58',
-  },
-  {
-    id: '23',
-    name: 'Maadi Technology Village',
-    address: 'New Maadi, Cairo',
-    eta: '08:04',
-  },
-  {
-    id: '24',
-    name: 'Concentrix',
-    address: 'Maadi, Cairo',
-    eta: '08:14',
-  },
-  {
-    id: '25',
-    name: 'Misr Helwan Agriculture Rd',
-    address: 'Maadi, Cairo',
-    eta: '08:30',
   },
 ];
 
@@ -211,22 +187,14 @@ export const DEMO_PASSENGERS_TEMPLATE: Record<
       luggage: false,
     },
   ],
-  6: [],
-  7: [],
-  8: [],
-  9: [],
 };
 
 // ── Station coordinates for map polyline ───────────────────────────────────────
 export const DEMO_STATION_COORDS: Array<{ latitude: number; longitude: number }> = [
-  { latitude: 30.1324,   longitude: 31.3231   }, // Mazlaqan Ain Shams
-  { latitude: 30.129553, longitude: 31.321638 }, // New Al Easr Mall
-  { latitude: 30.122316, longitude: 31.318186 }, // El Tawhed & El Noor
-  { latitude: 30.112371, longitude: 31.316303 }, // Mr. Avocado Juices
-  { latitude: 30.11504,  longitude: 31.30606  }, // Al Gamal Mall
-  { latitude: 30.1024,   longitude: 31.301067 }, // Al Batal Al Romani Company for Car Tires
-  { latitude: 29.9759,   longitude: 31.283794 }, // HSBC New Maadi Branch
-  { latitude: 29.972475, longitude: 31.280281 }, // Maadi Technology Village
-  { latitude: 29.9599,   longitude: 31.269764 }, // Concentrix
-  { latitude: 29.960499, longitude: 31.250505 }, // Misr Helwan Agriculture Rd
+  { latitude: 30.1324,   longitude: 31.3231   }, // Station 1 — Mazlaqan Ain Shams
+  { latitude: 30.129553, longitude: 31.321638 }, // Station 2 — New Al Easr Mall
+  { latitude: 30.122316, longitude: 31.318186 }, // Station 3 — El Tawhed & El Noor
+  { latitude: 30.112371, longitude: 31.316303 }, // Station 4 — Mr. Avocado Juices
+  { latitude: 30.11504,  longitude: 31.30606  }, // Station 5 — Al Gamal Mall
+  { latitude: 30.1024,   longitude: 31.301067 }, // Station 6 — Al Batal Al Romani (final stop)
 ];
