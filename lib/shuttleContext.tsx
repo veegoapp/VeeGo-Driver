@@ -83,6 +83,8 @@ export type BoardingPassenger = {
   ticket: string;
   checkedIn: boolean;
   luggage: boolean;
+  paymentMethod: 'cash' | 'card' | 'online' | 'unknown';
+  fareAmount: number;
 };
 
 // ─── Backend raw shapes ───────────────────────────────────────────────────────
@@ -143,6 +145,10 @@ type StationPassenger = {
   boardingStationId: number | null;
   userName: string;
   userPhone: string;
+  paymentMethod?: string;
+  fareAmount?: number;
+  price?: number;
+  amount?: number;
 };
 
 type BackendStationWithPassengers = BackendStation & {
@@ -495,6 +501,12 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
       const prevMap = new Map(prev.map(p => [p.id, p]));
       return allPassengers.map(sp => {
         const existing = prevMap.get(String(sp.bookingId));
+        const method = (sp.paymentMethod ?? '').toLowerCase();
+        const paymentMethod: BoardingPassenger['paymentMethod'] =
+          method === 'cash' ? 'cash' :
+          method === 'card' || method === 'credit' || method === 'credit_card' ? 'card' :
+          method === 'online' || method === 'wallet' || method === 'prepaid' ? 'online' :
+          'unknown';
         return {
           id: String(sp.bookingId),
           name: sp.userName || 'Passenger',
@@ -506,6 +518,8 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
             sp.status === 'absent' ? false :
             (existing?.checkedIn ?? false),
           luggage: false,
+          paymentMethod,
+          fareAmount: sp.fareAmount ?? sp.price ?? sp.amount ?? 0,
         };
       });
     });

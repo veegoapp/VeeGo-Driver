@@ -699,8 +699,8 @@ export const endpoints = {
     complete: (lineId: string) => api.post(`/shuttle/lines/${lineId}/complete`),
     passengers: (tripId: string) => api.get(`/shuttle/trips/${tripId}/passengers`),
     // PATCH /driver/bookings/:id/board — marks passenger as boarded
-    boardBooking: (bookingId: string, stationId?: string | number) =>
-      api.patch(`/driver/bookings/${bookingId}/board`, stationId != null ? { stationId } : {}),
+    boardBooking: (bookingId: string, payload?: { stationId?: string | number; cashCollected?: boolean; amountCollected?: number }) =>
+      api.patch(`/driver/bookings/${bookingId}/board`, payload ?? {}),
 
     driverTrips: (page = 1, limit = 10) =>
       api.get(`/shuttle/driver/my-trips?page=${page}&limit=${limit}`),
