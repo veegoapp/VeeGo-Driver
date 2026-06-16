@@ -14,6 +14,7 @@ import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useDriverLocation, haversineMeters } from '@/hooks/useDriverLocation';
 import { useRoadEta } from '@/hooks/useRoadEta';
+import { useRoadPolyline } from '@/hooks/useRoadPolyline';
 import { useShuttle } from '@/lib/shuttleContext';
 import { useI18n } from '@/lib/i18nContext';
 import { useSocket } from '@/lib/socketContext';
@@ -81,6 +82,9 @@ export default function ShuttleTripActiveScreen() {
   // Road-accurate distance + ETA via OSRM (throttled, with fallback)
   const roadEta = useRoadEta(effectivePos, nextCoords, phase !== 'at_stop' && !!activeLine);
   const distanceM = roadEta.distanceM;
+
+  // Road-snapped full route polyline for map rendering (fetched once per station set)
+  const { coords: roadPolylineCoords } = useRoadPolyline(stationCoords);
 
   // ── Phase state ────────────────────────────────────────────────────────────
   const [phase, setPhase] = useState<TripPhase>('en_route');
@@ -292,6 +296,7 @@ export default function ShuttleTripActiveScreen() {
       <Animated.View style={{ height: mapHeight, overflow: 'hidden' }}>
         <MapBackdrop
           routePolyline={stationCoords}
+          roadPolyline={roadPolylineCoords ?? undefined}
           stationStatuses={stationStatuses}
           approachCircle={approachCircle}
           driverLocation={effectivePos ?? undefined}

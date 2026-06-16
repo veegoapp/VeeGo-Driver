@@ -17,6 +17,7 @@ export interface MapBackdropProps {
   driverLocation?: { latitude: number; longitude: number };
   surgeZones?: SurgeZone[];
   routePolyline?: Array<{ latitude: number; longitude: number }>;
+  roadPolyline?: Array<{ latitude: number; longitude: number }>;
   stationStatuses?: ('pending' | 'current' | 'completed')[];
   approachCircle?: { latitude: number; longitude: number; radius: number } | null;
   focusTarget?: { latitude: number; longitude: number; zoom?: number } | null;
@@ -135,7 +136,7 @@ function surgeColors(multiplier: number): { fill: string; stroke: string } {
 }
 
 export function MapBackdrop({
-  pickup, dropoff, driverLocation, surgeZones = [], routePolyline,
+  pickup, dropoff, driverLocation, surgeZones = [], routePolyline, roadPolyline,
   stationStatuses, approachCircle, focusTarget,
 }: MapBackdropProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -306,11 +307,7 @@ export function MapBackdrop({
     routePolyline.forEach((p) => bounds.extend([p.longitude, p.latitude]));
     map.fitBounds(bounds, { padding: 80, maxZoom: 14, duration: 700 });
 
-    fetchOSRMRoute(coords).then((osrmCoords) => {
-      if (!osrmCoords) return;
-      const src = mapRef.current?.getSource('shuttle-route') as maplibregl.GeoJSONSource | undefined;
-      src?.setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: osrmCoords }, properties: {} });
-    });
+    // Road-snapped geometry applied by the roadPolyline effect below
   }, [routePolyline]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Station statuses update (without rebuilding route)
@@ -329,6 +326,18 @@ export function MapBackdrop({
       shuttleMarkersRef.current.push(marker);
     });
   }, [stationStatuses]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Road polyline update — replaces straight-line route with OSRM geometry
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !shuttleRouteReadyRef.current || !roadPolyline?.length) return;
+    const source = map.getSource('shuttle-route') as maplibregl.GeoJSONSource | undefined;
+    source?.setData({
+      type: 'Feature',
+      geometry: { type: 'LineString', coordinates: roadPolyline.map(p => [p.longitude, p.latitude]) },
+      properties: {},
+    });
+  }, [roadPolyline]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Approach circle update
   useEffect(() => {

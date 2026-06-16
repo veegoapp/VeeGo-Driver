@@ -16,6 +16,7 @@ export interface MapBackdropProps {
   driverLocation?: { latitude: number; longitude: number };
   surgeZones?: SurgeZone[];
   routePolyline?: Array<{ latitude: number; longitude: number }>;
+  roadPolyline?: Array<{ latitude: number; longitude: number }>;
   stationStatuses?: ('pending' | 'current' | 'completed')[];
   approachCircle?: { latitude: number; longitude: number; radius: number } | null;
   focusTarget?: { latitude: number; longitude: number; zoom?: number } | null;
@@ -313,13 +314,7 @@ function buildHtml(
       }
 
       drawShuttleRoute(routePolyline);
-      (function() {
-        var c = routePolyline.map(function(p) { return p[0] + ',' + p[1]; }).join(';');
-        fetch('https://router.project-osrm.org/route/v1/driving/' + c + '?overview=full&geometries=geojson', { signal: AbortSignal.timeout(8000) })
-          .then(function(res) { return res.ok ? res.json() : null; })
-          .then(function(data) { if (data && data.code === 'Ok' && data.routes && data.routes.length) drawShuttleRoute(data.routes[0].geometry.coordinates); })
-          .catch(function() {});
-      })();
+      // Road-snapped geometry arrives later via updateRoadPolyline postMessage
 
       var stBounds = new maplibregl.LngLatBounds();
       routePolyline.forEach(function(pt) { stBounds.extend(pt); });
@@ -397,6 +392,11 @@ function buildHtml(
         map.flyTo({ center: [msg.lng, msg.lat], zoom: msg.zoom || 16, duration: 800 });
       }
 
+      if (msg.type === 'updateRoadPolyline' && Array.isArray(msg.coords) && msg.coords.length >= 2) {
+        var rSrc = map.getSource('shuttle-route');
+        if (rSrc) rSrc.setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: msg.coords }, properties: {} });
+      }
+
       if (msg.type === 'recenter') {
         userPanned = false;
         if (prevPos) map.easeTo({ center: prevPos, duration: 800 });
@@ -410,7 +410,7 @@ function buildHtml(
 }
 
 export function MapBackdrop({
-  pickup, dropoff, driverLocation, surgeZones = [], routePolyline,
+  pickup, dropoff, driverLocation, surgeZones = [], routePolyline, roadPolyline,
   stationStatuses, approachCircle, focusTarget,
 }: MapBackdropProps) {
   const webviewRef = useRef<WebView>(null);
@@ -454,6 +454,17 @@ export function MapBackdrop({
       webviewRef.current.postMessage(JSON.stringify({ type: 'setApproachCircle', show: false }));
     }
   }, [approachCircle?.latitude, approachCircle?.longitude, approachCircle?.radius, approachCircle == null]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Road polyline update — sends pre-snapped geometry into the WebView
+  useEffect(() => {
+    if (!roadPolyline?.length || !webviewRef.current) return;
+    webviewRef.current.postMessage(
+      JSON.stringify({
+        type: 'updateRoadPolyline',
+        coords: roadPolyline.map(p => [p.longitude, p.latitude]),
+      })
+    );
+  }, [JSON.stringify(roadPolyline)]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Focus camera on target
   useEffect(() => {
