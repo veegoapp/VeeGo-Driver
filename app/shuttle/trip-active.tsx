@@ -5,7 +5,7 @@ import {
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Alert, Animated, Dimensions, Platform, Pressable, ScrollView,
+  Alert, Dimensions, Platform, Pressable, ScrollView,
   StyleSheet, Text, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -27,8 +27,6 @@ import { endpoints, type ShuttleCompleteResponse } from '@/lib/api';
 const APPROACH_THRESHOLD_M = 500;
 const STOP_DURATION_S = 60;
 const { height: SCREEN_H } = Dimensions.get('window');
-const MAP_H_EN_ROUTE = Math.round(SCREEN_H * 0.55);
-const MAP_H_AT_STOP = Math.round(SCREEN_H * 0.36);
 
 type TripPhase = 'en_route' | 'approaching' | 'at_stop';
 type PassengerStatus = 'not_arrived' | 'boarded' | 'no_show';
@@ -114,21 +112,7 @@ export default function ShuttleTripActiveScreen() {
   const isFinishingRef = useRef(false);
   const [stationTimeoutVisible, setStationTimeoutVisible] = useState(false);
 
-  // ── Map height animation ───────────────────────────────────────────────────
-  const mapAnim = useRef(new Animated.Value(1)).current; // 1=en_route, 0=at_stop
-  useEffect(() => {
-    Animated.spring(mapAnim, {
-      toValue: phase === 'at_stop' ? 0 : 1,
-      useNativeDriver: false,
-      stiffness: 220,
-      damping: 28,
-    }).start();
-  }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const mapHeight = mapAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [MAP_H_AT_STOP, SCREEN_H],
-  });
+  // Map always fills full height — both sheets are absolute overlays
 
   // ── Phase transitions (GPS-driven, uses haversine for reliability) ─────────
   useEffect(() => {
@@ -335,9 +319,9 @@ export default function ShuttleTripActiveScreen() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* ── Animated Map ─────────────────────────────────────────────────── */}
-      <Animated.View style={{ height: mapHeight, overflow: 'hidden' }}>
+    <View style={styles.container}>
+      {/* ── Map — fills full screen, both sheets overlay on top ──────────── */}
+      <View style={StyleSheet.absoluteFill}>
         <MapBackdrop
           routePolyline={stationCoords}
           roadPolyline={roadPolylineCoords ?? undefined}
@@ -439,12 +423,12 @@ export default function ShuttleTripActiveScreen() {
             </View>
           )}
         </View>
-      </Animated.View>
+      </View>
 
       {/* ── Bottom sheet ─────────────────────────────────────────────────── */}
       {phase === 'at_stop' ? (
-        /* ═══ AT STOP — dark glass sheet ════════════════════════════════ */
-        <View style={styles.atStopSheet}>
+        /* ═══ AT STOP — bottom overlay sheet ═══════════════════════════ */
+        <View style={[styles.atStopSheet, { backgroundColor: colors.card, borderColor: colors.border, maxHeight: SCREEN_H * 0.68 }]}>
           {/* Header: stop name + timer */}
           <View style={styles.atStopHeader}>
             <View style={{ flex: 1, minWidth: 0 }}>
@@ -452,11 +436,11 @@ export default function ShuttleTripActiveScreen() {
                 <View style={styles.stopModeDot} />
                 <Text style={[styles.stopModeLabel, { fontFamily: 'Inter_700Bold' }]}>STOP MODE</Text>
               </View>
-              <Text style={[styles.atStopName, { fontFamily: 'Inter_700Bold' }]} numberOfLines={1}>
+              <Text style={[styles.atStopName, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]} numberOfLines={1}>
                 {currentStop?.name ?? '—'}
               </Text>
             </View>
-            <View style={styles.timerBlock}>
+            <View style={[styles.timerBlock, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
               <Clock size={13} color={stopTimer > 15 ? '#f59e0b' : '#ef4444'} strokeWidth={2} />
               <Text style={[styles.timerText, { fontFamily: 'Inter_700Bold', color: stopTimer > 15 ? '#f59e0b' : '#ef4444' }]}>
                 {formatTimer(stopTimer)}
@@ -465,7 +449,7 @@ export default function ShuttleTripActiveScreen() {
           </View>
 
           {/* Divider */}
-          <View style={styles.atStopDivider} />
+          <View style={[styles.atStopDivider, { backgroundColor: colors.border }]} />
 
           {/* Station timeout banner */}
           {stationTimeoutVisible && (
@@ -480,8 +464,8 @@ export default function ShuttleTripActiveScreen() {
           <ScrollView style={{ flex: 1 }} contentContainerStyle={[styles.passengerList, { paddingBottom: insets.bottom + 8 }]} showsVerticalScrollIndicator={false}>
             {passengers.length === 0 ? (
               <View style={styles.emptyPassengers}>
-                <Users size={26} color="rgba(255,255,255,0.2)" strokeWidth={1.5} />
-                <Text style={[styles.emptyPassengersText, { fontFamily: 'Inter_400Regular', color: 'rgba(255,255,255,0.3)' }]}>No passengers at this stop</Text>
+                <Users size={26} color={colors.mutedForeground} strokeWidth={1.5} />
+                <Text style={[styles.emptyPassengersText, { fontFamily: 'Inter_400Regular', color: colors.mutedForeground }]}>No passengers at this stop</Text>
               </View>
             ) : (
               passengers.map(p => {
@@ -491,17 +475,18 @@ export default function ShuttleTripActiveScreen() {
                 return (
                   <View key={p.id} style={[
                     styles.passengerRow,
-                    isBoarded && { borderColor: 'rgba(34,197,94,0.4)', backgroundColor: 'rgba(34,197,94,0.06)' },
-                    isNoShow  && { borderColor: 'rgba(239,68,68,0.4)',  backgroundColor: 'rgba(239,68,68,0.06)' },
+                    { backgroundColor: colors.background, borderColor: colors.border },
+                    isBoarded && { borderColor: '#22c55e66', backgroundColor: '#22c55e0a' },
+                    isNoShow  && { borderColor: '#ef444466', backgroundColor: '#ef44440a' },
                   ]}>
-                    <View style={[styles.passengerAvatar, isBoarded && { backgroundColor: 'rgba(34,197,94,0.2)' }, isNoShow && { backgroundColor: 'rgba(239,68,68,0.2)' }]}>
-                      <Text style={[styles.passengerInitial, { fontFamily: 'Inter_700Bold', color: isBoarded ? '#22c55e' : isNoShow ? '#ef4444' : 'rgba(255,255,255,0.7)' }]}>
+                    <View style={[styles.passengerAvatar, { backgroundColor: colors.secondary }, isBoarded && { backgroundColor: '#22c55e22' }, isNoShow && { backgroundColor: '#ef444422' }]}>
+                      <Text style={[styles.passengerInitial, { fontFamily: 'Inter_700Bold', color: isBoarded ? '#22c55e' : isNoShow ? '#ef4444' : colors.foreground }]}>
                         {(p.name || '?')[0].toUpperCase()}
                       </Text>
                     </View>
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text style={[styles.passengerName, { fontFamily: 'Inter_600SemiBold', color: '#fff' }]} numberOfLines={1}>{p.name}</Text>
-                      <Text style={[styles.passengerPhone, { fontFamily: 'Inter_400Regular', color: 'rgba(255,255,255,0.4)' }]}>{p.phone}</Text>
+                      <Text style={[styles.passengerName, { fontFamily: 'Inter_600SemiBold', color: colors.foreground }]} numberOfLines={1}>{p.name}</Text>
+                      <Text style={[styles.passengerPhone, { fontFamily: 'Inter_400Regular', color: colors.mutedForeground }]}>{p.phone}</Text>
                     </View>
                     <View style={styles.statusBtns}>
                       <Pressable
@@ -677,9 +662,9 @@ const styles = StyleSheet.create({
   approachBadge: { backgroundColor: '#f59e0b22', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3, alignItems: 'center' },
   approachBadgeText: { fontSize: 12, color: '#f59e0b' },
 
-  // At stop sheet — dark glass
-  atStopSheet: { flex: 1, backgroundColor: 'rgba(10,10,20,0.96)', borderTopLeftRadius: 28, borderTopRightRadius: 28, borderTopWidth: 1, borderLeftWidth: 1, borderRightWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
-  atStopDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.07)', marginHorizontal: 16 },
+  // At stop sheet — absolute bottom overlay, height fits content
+  atStopSheet: { position: 'absolute', bottom: 0, left: 0, right: 0, borderTopLeftRadius: 28, borderTopRightRadius: 28, borderTopWidth: 1, borderLeftWidth: 1, borderRightWidth: 1 },
+  atStopDivider: { height: 1, marginHorizontal: 16 },
 
   // En route sheet — glass overlay at bottom of screen
   enRouteSheet: {
@@ -727,21 +712,21 @@ const styles = StyleSheet.create({
 
   // At stop header
   atStopHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 18, paddingBottom: 14 },
-  stopModeBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', backgroundColor: 'rgba(239,68,68,0.15)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, marginBottom: 6, borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)' },
+  stopModeBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', backgroundColor: '#ef444418', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, marginBottom: 6, borderWidth: 1, borderColor: '#ef444440' },
   stopModeDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#ef4444' },
   stopModeLabel: { fontSize: 10, letterSpacing: 1.2, color: '#ef4444' },
-  atStopName: { fontSize: 18, color: '#fff' },
-  timerBlock: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(255,255,255,0.06)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
+  atStopName: { fontSize: 18 },
+  timerBlock: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, borderWidth: 1 },
   timerText: { fontSize: 18, letterSpacing: 2 },
 
   // Timeout banner
   timeoutBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     marginHorizontal: 16, marginTop: 8, marginBottom: 0,
-    backgroundColor: 'rgba(245,158,11,0.1)', borderColor: 'rgba(245,158,11,0.3)', borderWidth: 1,
+    backgroundColor: '#f59e0b12', borderColor: '#f59e0b44', borderWidth: 1,
     borderRadius: 12, padding: 10,
   },
-  timeoutText: { fontSize: 13, color: '#fbbf24', lineHeight: 18 },
+  timeoutText: { fontSize: 13, color: '#d97706', lineHeight: 18 },
 
   // Passenger list
   passengerList: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 16 },
@@ -750,10 +735,9 @@ const styles = StyleSheet.create({
   passengerRow: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     padding: 12, borderRadius: 16, borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'rgba(255,255,255,0.04)',
     marginBottom: 8,
   },
-  passengerAvatar: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.08)' },
+  passengerAvatar: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   passengerInitial: { fontSize: 16 },
   passengerName: { fontSize: 14, marginBottom: 2 },
   passengerPhone: { fontSize: 12 },
