@@ -33,6 +33,18 @@ type Params = {
   earnedAmount?: string;
   walletBalance?: string;
   tripId?: string;
+  demoMode?: string;
+};
+
+const DEMO_REVENUE: TripRevenueSummary = {
+  tripId: 1,
+  totalPassengers: 8,
+  totalExpected: 360,
+  cashExpected: 180,
+  cashCollected: 180,
+  cashShortfall: 0,
+  cardTotal: 90,
+  walletTotal: 90,
 };
 
 export default function TripCompleteScreen() {
@@ -42,10 +54,11 @@ export default function TripCompleteScreen() {
   const { t, isRTL } = useI18n();
   const TA = isRTL ? 'right' as const : 'left' as const;
 
-  const { earnedAmount, walletBalance, tripId } = useLocalSearchParams<Params>();
+  const { earnedAmount, walletBalance, tripId, demoMode } = useLocalSearchParams<Params>();
   const { resetTrip } = useShuttle();
+  const isDemo = demoMode === 'true';
 
-  const [revenue, setRevenue] = useState<TripRevenueSummary | null>(null);
+  const [revenue, setRevenue] = useState<TripRevenueSummary | null>(isDemo ? DEMO_REVENUE : null);
 
   const fadeAnim   = useRef(new Animated.Value(0)).current;
   const scaleAnim  = useRef(new Animated.Value(0.7)).current;
@@ -60,11 +73,11 @@ export default function TripCompleteScreen() {
   }, []);
 
   useEffect(() => {
-    if (!tripId) return;
+    if (isDemo || !tripId) return;
     endpoints.shuttle.revenueSummary(tripId)
       .then(setRevenue)
       .catch(() => {});
-  }, [tripId]);
+  }, [tripId, isDemo]);
 
   const earned  = earnedAmount  ? parseFloat(earnedAmount)  : null;
   const balance = walletBalance ? parseFloat(walletBalance) : null;

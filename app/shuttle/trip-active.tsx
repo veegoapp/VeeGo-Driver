@@ -301,7 +301,14 @@ export default function ShuttleTripActiveScreen() {
     if (!activeLine) return;
     isFinishingRef.current = true;
     if (isDemoMode) {
-      router.replace('/shuttle/trip-complete' as any);
+      router.replace({
+        pathname: '/shuttle/trip-complete' as any,
+        params: {
+          earnedAmount: '292.50',
+          walletBalance: '1450.00',
+          demoMode: 'true',
+        },
+      });
       return;
     }
     try {
