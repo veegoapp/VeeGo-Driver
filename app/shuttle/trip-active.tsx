@@ -350,6 +350,39 @@ export default function ShuttleTripActiveScreen() {
             {demoDriverPosition && <DemoSpeedControl />}
           </View>
 
+          {/* ── Live Navigation HUD: speed · distance · ETA ─────────────── */}
+          {phase === 'en_route' && effectivePos && (
+            <View style={styles.hudContainer} pointerEvents="none">
+              {/* Speedometer */}
+              <View style={styles.hudCell}>
+                <Text style={[styles.hudPrimary, { fontFamily: 'Inter_700Bold' }]}>
+                  {Math.round((effectivePos.speed ?? 0) * 3.6)}
+                </Text>
+                <Text style={[styles.hudLabel, { fontFamily: 'Inter_400Regular' }]}>km/h</Text>
+              </View>
+
+              <View style={styles.hudSep} />
+
+              {/* Distance to next station */}
+              <View style={styles.hudCell}>
+                <Text style={[styles.hudPrimary, { fontFamily: 'Inter_700Bold' }]}>
+                  {distanceM !== null ? distanceLabel(distanceM) : '—'}
+                </Text>
+                <Text style={[styles.hudLabel, { fontFamily: 'Inter_400Regular' }]}>distance</Text>
+              </View>
+
+              <View style={styles.hudSep} />
+
+              {/* ETA */}
+              <View style={styles.hudCell}>
+                <Text style={[styles.hudPrimary, { fontFamily: 'Inter_700Bold' }]}>
+                  {roadEta.etaSeconds !== null ? etaLabel(roadEta.etaSeconds) : '—'}
+                </Text>
+                <Text style={[styles.hudLabel, { fontFamily: 'Inter_400Regular' }]}>ETA</Text>
+              </View>
+            </View>
+          )}
+
           {/* Approaching banner — sits at bottom of map area */}
           {phase === 'approaching' && currentStop && (
             <View style={styles.approachBannerWrapper} pointerEvents="none">
@@ -612,6 +645,26 @@ const styles = StyleSheet.create({
   backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   tripBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 5 },
   badgeText: { fontSize: 12 },
+
+  // Navigation HUD (en_route only)
+  hudContainer: {
+    position: 'absolute',
+    bottom: 16,
+    left: 16,
+    right: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(10,10,20,0.82)',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    paddingVertical: 10,
+    paddingHorizontal: 6,
+  },
+  hudCell: { flex: 1, alignItems: 'center', gap: 2 },
+  hudPrimary: { fontSize: 18, color: '#fff', lineHeight: 22 },
+  hudLabel: { fontSize: 10, color: 'rgba(255,255,255,0.45)', letterSpacing: 0.8, textTransform: 'uppercase' },
+  hudSep: { width: 1, height: 30, backgroundColor: 'rgba(255,255,255,0.1)' },
 
   // Approaching banner
   approachBannerWrapper: { position: 'absolute', bottom: 12, left: 16, right: 16 },
