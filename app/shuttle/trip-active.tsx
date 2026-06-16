@@ -66,7 +66,7 @@ export default function ShuttleTripActiveScreen() {
   } = useShuttle();
 
   const currentStop = stops[currentStopIndex] ?? null;
-  const nextCoords = stationCoords[currentStopIndex + 1] ?? null;
+  const nextCoords = stationCoords[currentStopIndex] ?? null;
   const isLastStop = currentStopIndex >= stops.length - 1;
   const tripId = activeLine?.tripId;
   const stationId = currentStop?.id;

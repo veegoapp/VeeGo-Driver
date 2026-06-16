@@ -1,4 +1,4 @@
-import React, { useReducer, useEffect, useRef, useState } from 'react';
+import React, { useReducer, useEffect, useRef, useState, useMemo } from 'react';
 import { ShuttleContext } from '@/lib/shuttleContext';
 import type {
   ShuttleLine,
@@ -208,11 +208,11 @@ export function DemoShuttleProvider({ children }: { children: React.ReactNode })
     return () => { cancelled = true; };
   }, []);
 
-  const stopsTemplate = demoBase?.stopsTemplate ?? DEMO_STOPS_TEMPLATE;
-  const stationCoords = demoBase?.stationCoords ?? DEMO_STATION_COORDS;
-  const activeLine = demoBase?.activeLine ?? DEMO_LINE;
-  const demoBooking = demoBase?.booking ?? DEMO_BOOKING;
-  const demoRoute = demoBase?.route ?? DEMO_ROUTE;
+  const stopsTemplate = useMemo(() => demoBase?.stopsTemplate ?? DEMO_STOPS_TEMPLATE, [demoBase]);
+  const stationCoords = useMemo(() => demoBase?.stationCoords ?? DEMO_STATION_COORDS, [demoBase]);
+  const activeLine = useMemo(() => demoBase?.activeLine ?? DEMO_LINE, [demoBase]);
+  const demoBooking = useMemo(() => demoBase?.booking ?? DEMO_BOOKING, [demoBase]);
+  const demoRoute = useMemo(() => demoBase?.route ?? DEMO_ROUTE, [demoBase]);
 
   // ── Simulated GPS ──────────────────────────────────────────────────────────
   // الإصلاح الأول: العربية تبدأ من المحطة السابقة بالظبط (مش من مكان بعيد)
