@@ -16,11 +16,12 @@ import { useDriverLocation, haversineMeters } from '@/hooks/useDriverLocation';
 import { useRoadEta } from '@/hooks/useRoadEta';
 import { useRoadPolyline } from '@/hooks/useRoadPolyline';
 import { useShuttle } from '@/lib/shuttleContext';
+import { useDemoMode } from '@/lib/demo';
+import { DemoSpeedControl } from '@/lib/demo';
 import { useI18n } from '@/lib/i18nContext';
 import { useSocket } from '@/lib/socketContext';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
 import { endpoints, type ShuttleCompleteResponse } from '@/lib/api';
-import { useDemoMode, DemoSpeedControl } from '@/lib/demo';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 const APPROACH_THRESHOLD_M = 500;
@@ -59,11 +60,12 @@ export default function ShuttleTripActiveScreen() {
   const { socket } = useSocket();
   const navigation = useNavigation();
 
-  const { demoSpeed } = useDemoMode();
+  const { isDemoMode, demoSpeed } = useDemoMode();
 
+  const shuttleCtx = useShuttle();
   const {
-    activeLine, stops, currentStopIndex, passengers, nextStop, stationCoords, demoDriverPosition,
-  } = useShuttle();
+    activeLine, stops, currentStopIndex, passengers, nextStop, stationCoords,
+  } = shuttleCtx;
 
   const currentStop = stops[currentStopIndex] ?? null;
   const nextCoords = stationCoords[currentStopIndex] ?? null;
@@ -72,9 +74,9 @@ export default function ShuttleTripActiveScreen() {
   const stationId = currentStop?.id;
 
   // ── GPS ────────────────────────────────────────────────────────────────────
-  const { position: gpsPos } = useDriverLocation(!!activeLine && !demoDriverPosition);
-  // In demo mode demoDriverPosition is the simulated position; real GPS is skipped.
-  const effectivePos = demoDriverPosition ?? gpsPos;
+  const { position: gpsPos } = useDriverLocation(!isDemoMode && !!activeLine);
+  const demoDriverPosition = (shuttleCtx as any).demoDriverPosition as typeof gpsPos | null | undefined;
+  const effectivePos = isDemoMode ? (demoDriverPosition ?? null) : gpsPos;
 
   // Haversine used only for proximity-based phase transitions (fast, no network)
   const proximityM = useMemo(() => {
@@ -101,8 +103,7 @@ export default function ShuttleTripActiveScreen() {
 
   const { coords: roadPolylineCoords } = useRoadPolyline(segmentWaypoints);
 
-  // Camera animation duration synced to demo update speed (or real-GPS default)
-  const animDurationMs = demoDriverPosition ? Math.round(1500 / demoSpeed) : 1200;
+  const animDurationMs = isDemoMode ? Math.round(1500 / demoSpeed) : 1200;
   const [stopTimer, setStopTimer] = useState(STOP_DURATION_S);
   const [timerActive, setTimerActive] = useState(false);
   const [passengerStatuses, setPassengerStatuses] = useState<Record<string, PassengerStatus>>({});
@@ -139,7 +140,7 @@ export default function ShuttleTripActiveScreen() {
 
   // ── GPS location updates to backend every 10 s during active trip ─────────
   useEffect(() => {
-    if (!effectivePos || !tripId || (phase !== 'en_route' && phase !== 'approaching')) return;
+    if (isDemoMode || !effectivePos || !tripId || (phase !== 'en_route' && phase !== 'approaching')) return;
     const send = () => {
       endpoints.driver.updateLocation({
         latitude: effectivePos.latitude,
@@ -176,16 +177,15 @@ export default function ShuttleTripActiveScreen() {
     });
   }, [passengers]);
 
-  // ── Countdown timer (scales with demoSpeed in demo mode) ──────────────────
+  // ── Countdown timer ────────────────────────────────────────────────────────
   useEffect(() => {
     if (!timerActive || stopTimer <= 0) {
       if (stopTimer <= 0) setTimerActive(false);
       return;
     }
-    const tickMs = demoDriverPosition ? Math.round(1000 / demoSpeed) : 1000;
-    const id = setTimeout(() => setStopTimer(t => t - 1), tickMs);
+    const id = setTimeout(() => setStopTimer(t => t - 1), 1000);
     return () => clearTimeout(id);
-  }, [timerActive, stopTimer, demoSpeed, demoDriverPosition]);
+  }, [timerActive, stopTimer]);
 
   // ── Map data ───────────────────────────────────────────────────────────────
   const stationStatuses = useMemo(
@@ -276,7 +276,9 @@ export default function ShuttleTripActiveScreen() {
       }
       nextStop();
     } catch {
-      nextStop(); // advance locally even on failure
+      Alert.alert(t.error, t.station_action_error);
+      setIsNextLoading(false);
+      return;
     } finally {
       setIsNextLoading(false);
     }
@@ -316,7 +318,7 @@ export default function ShuttleTripActiveScreen() {
           style={[
             styles.dot,
             i < currentStopIndex && { backgroundColor: colors.primary },
-            i === currentStopIndex && { backgroundColor: colors.accent, width: 20 },
+            i === currentStopIndex && { backgroundColor: colors.accent, width: 24 },
             i > currentStopIndex && { backgroundColor: colors.border },
           ]}
         />
@@ -353,7 +355,7 @@ export default function ShuttleTripActiveScreen() {
             <GlassView style={styles.tripBadge} borderRadius={20}>
               <Users size={13} color={colors.foreground} strokeWidth={2} />
               <Text style={[styles.badgeText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-                {currentStopIndex}/{stops.length}
+                {currentStopIndex + 1}/{stops.length}
               </Text>
             </GlassView>
 
@@ -366,8 +368,14 @@ export default function ShuttleTripActiveScreen() {
               </GlassView>
             )}
 
-            {demoDriverPosition && <DemoSpeedControl />}
           </View>
+
+          {/* Demo speed control */}
+          {isDemoMode && (
+            <View style={{ position: 'absolute', top: topPad + 8, right: 16 }} pointerEvents="auto">
+              <DemoSpeedControl />
+            </View>
+          )}
 
           {/* ── Live Navigation HUD: speed · distance · ETA ─────────────── */}
           {phase === 'en_route' && effectivePos && (
@@ -427,237 +435,246 @@ export default function ShuttleTripActiveScreen() {
       </Animated.View>
 
       {/* ── Bottom sheet ─────────────────────────────────────────────────── */}
-      <View style={{ flex: 1, backgroundColor: colors.background }}>
-        {phase === 'at_stop' ? (
-          /* ═══ AT STOP ════════════════════════════════════════════════════ */
-          <View style={{ flex: 1 }}>
-            {/* Stop header */}
-            <View style={[styles.atStopHeader, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
-              <View style={styles.atStopHeaderLeft}>
-                <View style={[styles.stopModeBadge, { backgroundColor: '#dc262622' }]}>
-                  <View style={[styles.stopModeDot, { backgroundColor: '#dc2626' }]} />
-                  <Text style={[styles.stopModeLabel, { color: '#dc2626', fontFamily: 'Inter_700Bold' }]}>
-                    STOP MODE
-                  </Text>
-                </View>
-                <Text style={[styles.atStopName, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]} numberOfLines={1}>
-                  {currentStop?.name ?? '—'}
+      {phase === 'at_stop' ? (
+        /* ═══ AT STOP ════════════════════════════════════════════════════ */
+        <View style={[styles.atStopSheet, { backgroundColor: colors.background }]}>
+          {/* Compact stop header */}
+          <View style={[styles.atStopHeader, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
+            <View style={styles.atStopHeaderLeft}>
+              <View style={[styles.stopModeBadge, { backgroundColor: '#dc262622' }]}>
+                <View style={[styles.stopModeDot, { backgroundColor: '#dc2626' }]} />
+                <Text style={[styles.stopModeLabel, { color: '#dc2626', fontFamily: 'Inter_700Bold' }]}>
+                  STOP MODE
                 </Text>
               </View>
+              <Text style={[styles.atStopName, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]} numberOfLines={1}>
+                {currentStop?.name ?? '—'}
+              </Text>
+            </View>
 
-              <View style={styles.timerBlock}>
-                <Clock size={14} color={stopTimer > 15 ? '#f59e0b' : '#ef4444'} strokeWidth={2} />
-                <Text style={[
-                  styles.timerText,
-                  { fontFamily: 'Inter_700Bold', color: stopTimer > 15 ? '#f59e0b' : '#ef4444' },
-                ]}>
-                  {formatTimer(stopTimer)}
+            <View style={styles.timerBlock}>
+              <Clock size={14} color={stopTimer > 15 ? '#f59e0b' : '#ef4444'} strokeWidth={2} />
+              <Text style={[
+                styles.timerText,
+                { fontFamily: 'Inter_700Bold', color: stopTimer > 15 ? '#f59e0b' : '#ef4444' },
+              ]}>
+                {formatTimer(stopTimer)}
+              </Text>
+            </View>
+          </View>
+
+          {/* Station timeout banner */}
+          {stationTimeoutVisible && (
+            <View style={styles.timeoutBanner}>
+              <AlertTriangle size={14} color="#d97706" strokeWidth={2} />
+              <Text style={[styles.timeoutText, { fontFamily: 'Inter_400Regular', flex: 1 }]}>
+                {t.station_timeout_msg}
+              </Text>
+              <Pressable onPress={() => setStationTimeoutVisible(false)}>
+                <X size={14} color="#d97706" strokeWidth={2} />
+              </Pressable>
+            </View>
+          )}
+
+          {/* Passenger list */}
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={[styles.passengerList, { paddingBottom: insets.bottom + 16 }]}
+            showsVerticalScrollIndicator={false}
+          >
+            {passengers.length === 0 ? (
+              <View style={styles.emptyPassengers}>
+                <Users size={28} color={colors.mutedForeground} strokeWidth={1.5} />
+                <Text style={[styles.emptyPassengersText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
+                  No passengers assigned to this stop
+                </Text>
+              </View>
+            ) : (
+              passengers.map(p => {
+                const status: PassengerStatus = passengerStatuses[p.id] ?? 'not_arrived';
+                return (
+                  <View key={p.id} style={[styles.passengerRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    <View style={[styles.passengerAvatar, { backgroundColor: colors.secondary }]}>
+                      <Text style={[styles.passengerInitial, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
+                        {(p.name || '?')[0].toUpperCase()}
+                      </Text>
+                    </View>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={[styles.passengerName, { color: colors.foreground, fontFamily: 'Inter_600SemiBold' }]} numberOfLines={1}>
+                        {p.name}
+                      </Text>
+                      <Text style={[styles.passengerPhone, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
+                        {p.phone}
+                      </Text>
+                    </View>
+                    <View style={styles.statusBtns}>
+                      <Pressable
+                        onPress={() => updatePassengerStatus(p.id, 'boarded')}
+                        style={[
+                          styles.statusBtn,
+                          { borderColor: '#22c55e' },
+                          status === 'boarded' && { backgroundColor: '#22c55e22' },
+                        ]}
+                      >
+                        <Check size={16} color={status === 'boarded' ? '#22c55e' : colors.mutedForeground} strokeWidth={2} />
+                      </Pressable>
+                      <Pressable
+                        onPress={() => updatePassengerStatus(p.id, 'no_show')}
+                        style={[
+                          styles.statusBtn,
+                          { borderColor: '#ef4444' },
+                          status === 'no_show' && { backgroundColor: '#ef444422' },
+                        ]}
+                      >
+                        <X size={16} color={status === 'no_show' ? '#ef4444' : colors.mutedForeground} strokeWidth={2} />
+                      </Pressable>
+                    </View>
+                  </View>
+                );
+              })
+            )}
+
+            {/* Bottom action button inside scroll so it's never clipped */}
+            <View style={{ marginTop: 16 }}>
+              {isLastStop ? (
+                <Pressable
+                  onPress={handleFinishRoute}
+                  style={[styles.primaryBtn, { backgroundColor: '#22c55e', opacity: isNextLoading ? 0.6 : 1 }]}
+                >
+                  <Check size={18} color="#fff" strokeWidth={2} />
+                  <Text style={[styles.primaryBtnText, { color: '#fff', fontFamily: 'Inter_700Bold' }]}>
+                    {t.finish_route}
+                  </Text>
+                </Pressable>
+              ) : (
+                <Pressable
+                  onPress={handleNextStop}
+                  disabled={isNextLoading}
+                  style={[styles.primaryBtn, { opacity: isNextLoading ? 0.6 : 1 }]}
+                >
+                  <LinearGradient
+                    colors={['#4f46e5', '#6366f1']}
+                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                    style={styles.primaryBtnGrad}
+                  >
+                    <Navigation2 size={18} color="#fff" strokeWidth={2} />
+                    <Text style={[styles.primaryBtnText, { color: '#fff', fontFamily: 'Inter_700Bold' }]}>
+                      {isNextLoading ? '…' : `Next Stop →`}
+                    </Text>
+                  </LinearGradient>
+                </Pressable>
+              )}
+            </View>
+          </ScrollView>
+        </View>
+      ) : (
+        /* ═══ EN ROUTE / APPROACHING — floating bottom card ════════════ */
+        <View style={[
+          styles.enRouteSheet,
+          {
+            backgroundColor: colors.background,
+            paddingBottom: insets.bottom + 16,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: -4 },
+            shadowOpacity: 0.18,
+            shadowRadius: 12,
+            elevation: 12,
+          },
+        ]}>
+          <View style={styles.enRouteHandle} />
+
+          {/* Progress dots */}
+          {progressDots}
+
+          {/* Next stop card */}
+          {currentStop && (
+            <View style={[styles.nextStopCard, { backgroundColor: colors.card, borderColor: phase === 'approaching' ? '#f59e0b66' : colors.border }]}>
+              <View style={styles.nextStopCardHeader}>
+                <View style={[styles.stopIndexBadge, { backgroundColor: phase === 'approaching' ? '#f59e0b22' : colors.secondary }]}>
+                  <Text style={[styles.stopIndexText, { color: phase === 'approaching' ? '#f59e0b' : colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>
+                    {currentStopIndex + 1}
+                  </Text>
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={[styles.nextStopLabel, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>
+                    {phase === 'approaching' ? '⚠ Approaching' : 'Next Stop'}
+                  </Text>
+                  <Text style={[styles.nextStopName, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]} numberOfLines={1}>
+                    {currentStop.name}
+                  </Text>
+                </View>
+                <View style={styles.distanceBadge}>
+                  <Text style={[styles.distanceText, { color: phase === 'approaching' ? '#f59e0b' : colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>
+                    {distanceLabel(distanceM)}
+                  </Text>
+                  {roadEta.etaSeconds !== null && (
+                    <Text style={[styles.etaText, { color: phase === 'approaching' ? '#f59e0b99' : colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
+                      {etaLabel(roadEta.etaSeconds)}
+                    </Text>
+                  )}
+                </View>
+              </View>
+
+              <View style={styles.passengerCountRow}>
+                <Users size={14} color={colors.mutedForeground} strokeWidth={2} />
+                <Text style={[styles.passengerCountText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
+                  {passengers.length} passenger{passengers.length !== 1 ? 's' : ''} at this stop
                 </Text>
               </View>
             </View>
+          )}
 
-            {/* Station timeout banner */}
-            {stationTimeoutVisible && (
-              <View style={styles.timeoutBanner}>
-                <AlertTriangle size={14} color="#d97706" strokeWidth={2} />
-                <Text style={[styles.timeoutText, { fontFamily: 'Inter_400Regular', flex: 1 }]}>
-                  {t.station_timeout_msg}
-                </Text>
-                <Pressable onPress={() => setStationTimeoutVisible(false)}>
-                  <X size={14} color="#d97706" strokeWidth={2} />
-                </Pressable>
-              </View>
-            )}
-
-            {/* Passenger list */}
-            <ScrollView
-              style={{ flex: 1 }}
-              contentContainerStyle={styles.passengerList}
-              showsVerticalScrollIndicator={false}
-            >
-              {passengers.length === 0 ? (
-                <View style={styles.emptyPassengers}>
-                  <Users size={28} color={colors.mutedForeground} strokeWidth={1.5} />
-                  <Text style={[styles.emptyPassengersText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-                    No passengers assigned to this stop
-                  </Text>
-                </View>
-              ) : (
-                passengers.map(p => {
-                  const status: PassengerStatus = passengerStatuses[p.id] ?? 'not_arrived';
-                  return (
-                    <View key={p.id} style={[styles.passengerRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                      <View style={[styles.passengerAvatar, { backgroundColor: colors.secondary }]}>
-                        <Text style={[styles.passengerInitial, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-                          {(p.name || '?')[0].toUpperCase()}
-                        </Text>
-                      </View>
-                      <View style={{ flex: 1, minWidth: 0 }}>
-                        <Text style={[styles.passengerName, { color: colors.foreground, fontFamily: 'Inter_600SemiBold' }]} numberOfLines={1}>
-                          {p.name}
-                        </Text>
-                        <Text style={[styles.passengerPhone, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-                          {p.phone}
-                        </Text>
-                      </View>
-                      <View style={styles.statusBtns}>
-                        <Pressable
-                          onPress={() => updatePassengerStatus(p.id, 'boarded')}
-                          style={[
-                            styles.statusBtn,
-                            { borderColor: '#22c55e' },
-                            status === 'boarded' && { backgroundColor: '#22c55e22' },
-                          ]}
-                        >
-                          <Check size={14} color={status === 'boarded' ? '#22c55e' : colors.mutedForeground} strokeWidth={2} />
-                        </Pressable>
-                        <Pressable
-                          onPress={() => updatePassengerStatus(p.id, 'no_show')}
-                          style={[
-                            styles.statusBtn,
-                            { borderColor: '#ef4444' },
-                            status === 'no_show' && { backgroundColor: '#ef444422' },
-                          ]}
-                        >
-                          <X size={14} color={status === 'no_show' ? '#ef4444' : colors.mutedForeground} strokeWidth={2} />
-                        </Pressable>
-                      </View>
-                    </View>
-                  );
-                })
-              )}
-
-              {/* Bottom action button */}
-              <View style={{ marginTop: 16, marginBottom: 8 }}>
-                {isLastStop ? (
-                  <Pressable
-                    onPress={handleFinishRoute}
-                    style={[styles.primaryBtn, { backgroundColor: '#22c55e', opacity: isNextLoading ? 0.6 : 1 }]}
-                  >
-                    <Check size={18} color="#fff" strokeWidth={2} />
-                    <Text style={[styles.primaryBtnText, { color: '#fff', fontFamily: 'Inter_700Bold' }]}>
-                      {t.finish_route}
-                    </Text>
-                  </Pressable>
-                ) : (
-                  <Pressable
-                    onPress={handleNextStop}
-                    disabled={isNextLoading}
-                    style={[styles.primaryBtn, { opacity: isNextLoading ? 0.6 : 1 }]}
-                  >
-                    <LinearGradient
-                      colors={['#4f46e5', '#6366f1']}
-                      start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                      style={styles.primaryBtnGrad}
-                    >
-                      <Navigation2 size={18} color="#fff" strokeWidth={2} />
-                      <Text style={[styles.primaryBtnText, { color: '#fff', fontFamily: 'Inter_700Bold' }]}>
-                        {isNextLoading ? '…' : `Next Stop →`}
-                      </Text>
-                    </LinearGradient>
-                  </Pressable>
-                )}
-              </View>
-            </ScrollView>
-          </View>
-        ) : (
-          /* ═══ EN ROUTE / APPROACHING ════════════════════════════════════ */
-          <View style={[styles.enRouteSheet, { backgroundColor: colors.background }]}>
-            <View style={styles.enRouteHandle} />
-
-            {/* Progress dots */}
-            {progressDots}
-
-            {/* Next stop card */}
-            {currentStop && (
-              <View style={[styles.nextStopCard, { backgroundColor: colors.card, borderColor: phase === 'approaching' ? '#f59e0b66' : colors.border }]}>
-                <View style={styles.nextStopCardHeader}>
-                  <View style={[styles.stopIndexBadge, { backgroundColor: phase === 'approaching' ? '#f59e0b22' : colors.secondary }]}>
-                    <Text style={[styles.stopIndexText, { color: phase === 'approaching' ? '#f59e0b' : colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>
-                      {currentStopIndex + 1}
-                    </Text>
-                  </View>
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={[styles.nextStopLabel, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>
-                      {phase === 'approaching' ? '⚠ Approaching' : 'Next Stop'}
-                    </Text>
-                    <Text style={[styles.nextStopName, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]} numberOfLines={1}>
-                      {currentStop.name}
-                    </Text>
-                  </View>
-                  <View style={styles.distanceBadge}>
-                    <Text style={[styles.distanceText, { color: phase === 'approaching' ? '#f59e0b' : colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>
-                      {distanceLabel(distanceM)}
-                    </Text>
-                    {roadEta.etaSeconds !== null && (
-                      <Text style={[styles.etaText, { color: phase === 'approaching' ? '#f59e0b99' : colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-                        {etaLabel(roadEta.etaSeconds)}
-                      </Text>
-                    )}
-                  </View>
-                </View>
-
-                <View style={styles.passengerCountRow}>
-                  <Users size={14} color={colors.mutedForeground} strokeWidth={2} />
-                  <Text style={[styles.passengerCountText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-                    {passengers.length} passenger{passengers.length !== 1 ? 's' : ''} at this stop
-                  </Text>
-                </View>
-              </View>
-            )}
-
-            {/* Station timeout banner (also shown in en_route phase after auto-advance) */}
-            {stationTimeoutVisible && (
-              <View style={[styles.timeoutBanner, { marginTop: 0, marginBottom: 8 }]}>
-                <AlertTriangle size={14} color="#d97706" strokeWidth={2} />
-                <Text style={[styles.timeoutText, { fontFamily: 'Inter_400Regular', flex: 1 }]}>
-                  {t.station_timeout_msg}
-                </Text>
-                <Pressable onPress={() => setStationTimeoutVisible(false)}>
-                  <X size={14} color="#d97706" strokeWidth={2} />
-                </Pressable>
-              </View>
-            )}
-
-            {/* Mark Arrived button */}
-            <Pressable
-              onPress={handleArrived}
-              disabled={isArrivingLoading || !currentStop}
-              style={[styles.arrivedBtn, { opacity: isArrivingLoading ? 0.6 : 1 }]}
-            >
-              <LinearGradient
-                colors={phase === 'approaching' ? ['#d97706', '#f59e0b'] : ['#2d2d42', '#1e1e28']}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                style={styles.arrivedBtnGrad}
-              >
-                <Check size={18} color="#fff" strokeWidth={2} />
-                <Text style={[styles.arrivedBtnText, { fontFamily: 'Inter_700Bold' }]}>
-                  {isArrivingLoading ? '…' : 'Mark Arrived'}
-                </Text>
-              </LinearGradient>
-            </Pressable>
-
-            {/* Finish route if last stop */}
-            {isLastStop && (
-              <Pressable
-                onPress={handleFinishRoute}
-                style={[styles.finishBtn, { backgroundColor: '#22c55e22', borderColor: '#22c55e' }]}
-              >
-                <Check size={16} color="#22c55e" strokeWidth={2} />
-                <Text style={[styles.finishBtnText, { color: '#22c55e', fontFamily: 'Inter_700Bold' }]}>
-                  {t.finish_route}
-                </Text>
+          {/* Station timeout banner (also shown in en_route phase after auto-advance) */}
+          {stationTimeoutVisible && (
+            <View style={[styles.timeoutBanner, { marginTop: 0, marginBottom: 8 }]}>
+              <AlertTriangle size={14} color="#d97706" strokeWidth={2} />
+              <Text style={[styles.timeoutText, { fontFamily: 'Inter_400Regular', flex: 1 }]}>
+                {t.station_timeout_msg}
+              </Text>
+              <Pressable onPress={() => setStationTimeoutVisible(false)}>
+                <X size={14} color="#d97706" strokeWidth={2} />
               </Pressable>
-            )}
-          </View>
-        )}
-      </View>
+            </View>
+          )}
+
+          {/* Mark Arrived button */}
+          <Pressable
+            onPress={handleArrived}
+            disabled={isArrivingLoading || !currentStop}
+            style={[styles.arrivedBtn, { opacity: isArrivingLoading ? 0.6 : 1 }]}
+          >
+            <LinearGradient
+              colors={phase === 'approaching' ? ['#d97706', '#f59e0b'] : ['#2d2d42', '#1e1e28']}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+              style={styles.arrivedBtnGrad}
+            >
+              <Check size={18} color="#fff" strokeWidth={2} />
+              <Text style={[styles.arrivedBtnText, { fontFamily: 'Inter_700Bold' }]}>
+                {isArrivingLoading ? '…' : 'Mark Arrived'}
+              </Text>
+            </LinearGradient>
+          </Pressable>
+
+          {/* Finish route if last stop */}
+          {isLastStop && (
+            <Pressable
+              onPress={handleFinishRoute}
+              style={[styles.finishBtn, { backgroundColor: '#22c55e22', borderColor: '#22c55e' }]}
+            >
+              <Check size={16} color="#22c55e" strokeWidth={2} />
+              <Text style={[styles.finishBtnText, { color: '#22c55e', fontFamily: 'Inter_700Bold' }]}>
+                {t.finish_route}
+              </Text>
+            </Pressable>
+          )}
+        </View>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, overflow: 'hidden' },
 
   // Top bar
   topBar: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16 },
@@ -696,13 +713,21 @@ const styles = StyleSheet.create({
   approachBadge: { backgroundColor: '#f59e0b22', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3, alignItems: 'center' },
   approachBadgeText: { fontSize: 12, color: '#f59e0b' },
 
-  // En route sheet
-  enRouteSheet: { flex: 1, paddingHorizontal: 16, paddingTop: 8 },
+  // At stop sheet
+  atStopSheet: { flex: 1 },
+
+  // En route sheet — floating card style
+  enRouteSheet: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+  },
   enRouteHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: '#ffffff22', alignSelf: 'center', marginBottom: 12 },
 
   // Progress dots
   progressDots: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 16 },
-  dot: { height: 6, width: 10, borderRadius: 3 },
+  dot: { height: 8, width: 14, borderRadius: 4 },
 
   // Next stop card
   nextStopCard: { borderRadius: 20, borderWidth: 1.5, padding: 16, marginBottom: 12 },
@@ -719,7 +744,7 @@ const styles = StyleSheet.create({
 
   // Mark arrived button
   arrivedBtn: { borderRadius: 16, overflow: 'hidden', marginBottom: 10 },
-  arrivedBtnGrad: { height: 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  arrivedBtnGrad: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   arrivedBtnText: { fontSize: 15, color: '#fff' },
 
   // Finish button (en-route last stop)
@@ -757,11 +782,11 @@ const styles = StyleSheet.create({
   passengerInitial: { fontSize: 16 },
   passengerName: { fontSize: 14, marginBottom: 2 },
   passengerPhone: { fontSize: 12 },
-  statusBtns: { flexDirection: 'row', gap: 6 },
-  statusBtn: { width: 34, height: 34, borderRadius: 10, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  statusBtns: { flexDirection: 'row', gap: 8 },
+  statusBtn: { width: 44, height: 44, borderRadius: 12, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
 
   // Primary action button
   primaryBtn: { borderRadius: 16, overflow: 'hidden' },
-  primaryBtnGrad: { height: 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  primaryBtnGrad: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   primaryBtnText: { fontSize: 15 },
 });

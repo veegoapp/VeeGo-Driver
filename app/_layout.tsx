@@ -19,7 +19,7 @@ import { SocketProvider } from '@/lib/socketContext';
 import { navigateAfterAuth } from '@/lib/postAuthRouter';
 import { setOnAccountSuspended } from '@/lib/api';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
-import { DemoModeProvider, DemoGate, useDemoMode } from '@/lib/demo';
+import { DemoModeProvider, DemoGate } from '@/lib/demo';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -56,7 +56,6 @@ function PushNotificationsBridge() {
 
 function RootLayoutNav() {
   const { token, isLoading } = useAuth();
-  const { isDemoMode } = useDemoMode();
   const router = useRouter();
   const segments = useSegments();
 
@@ -75,7 +74,7 @@ function RootLayoutNav() {
     const currentScreen = segments[0] as string | undefined;
     const inPreAuthZone = !currentScreen || PRE_AUTH_SCREENS.has(currentScreen);
 
-    if (!token && !isDemoMode) {
+    if (!token) {
       // Unauthenticated user on a protected screen → send to login.
       if (!inPreAuthZone) {
         queryClient.clear();
@@ -89,7 +88,7 @@ function RootLayoutNav() {
     if (inPreAuthZone) {
       navigateAfterAuth(token);
     }
-  }, [token, isLoading, segments]);
+  }, [token, isLoading, segments]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Hold the stack while auth is resolving to prevent any flash of pre-auth screens.
   if (isLoading) return null;
@@ -171,29 +170,29 @@ export default function RootLayout() {
 
   return (
     <DemoModeProvider>
-    <AuthProvider>
-      <SafeAreaProvider>
-        <ErrorBoundary>
-          <QueryClientProvider client={queryClient}>
-            <GestureHandlerRootView style={{ flex: 1 }}>
-              <KeyboardProvider>
-                <I18nProvider>
-                  <ServiceProvider>
-                    <SocketProvider>
-                      <ServiceControlProvider>
+      <AuthProvider>
+        <SafeAreaProvider>
+          <ErrorBoundary>
+            <QueryClientProvider client={queryClient}>
+              <GestureHandlerRootView style={{ flex: 1 }}>
+                <KeyboardProvider>
+                  <I18nProvider>
+                    <ServiceProvider>
+                      <SocketProvider>
                         <DemoGate>
-                          <RootLayoutNav />
+                          <ServiceControlProvider>
+                            <RootLayoutNav />
+                          </ServiceControlProvider>
                         </DemoGate>
-                      </ServiceControlProvider>
-                    </SocketProvider>
-                  </ServiceProvider>
-                </I18nProvider>
-              </KeyboardProvider>
-            </GestureHandlerRootView>
-          </QueryClientProvider>
-        </ErrorBoundary>
-      </SafeAreaProvider>
-    </AuthProvider>
+                      </SocketProvider>
+                    </ServiceProvider>
+                  </I18nProvider>
+                </KeyboardProvider>
+              </GestureHandlerRootView>
+            </QueryClientProvider>
+          </ErrorBoundary>
+        </SafeAreaProvider>
+      </AuthProvider>
     </DemoModeProvider>
   );
 }

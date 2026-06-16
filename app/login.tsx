@@ -21,11 +21,11 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '@/lib/i18nContext';
 import { useAuth } from '@/lib/authContext';
+import { useDemoMode } from '@/lib/demo';
 import { endpoints, ApiError } from '@/lib/api';
 import { api } from '@/lib/api';
 import { saveToken } from '@/lib/auth';
 import { navigateAfterAuth } from '@/lib/postAuthRouter';
-import { useDemoMode } from '@/lib/demo';
 
 type Tab = 'signin' | 'signup';
 
@@ -49,6 +49,7 @@ export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const { t, isRTL } = useI18n();
   const { login } = useAuth();
+  const { enterDemoMode } = useDemoMode();
 
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
 
@@ -121,6 +122,17 @@ export default function LoginScreen() {
             )}
           </View>
 
+          <TouchableOpacity
+            style={s.demoBtn}
+            onPress={() => {
+              enterDemoMode();
+              expoRouter.replace('/(tabs)');
+            }}
+            activeOpacity={0.7}
+          >
+            <Text style={s.demoBtnText}>Try Demo</Text>
+          </TouchableOpacity>
+
           <Text style={[s.terms, { textAlign: 'center' }]}>
             By continuing you agree to VeeGo's{' '}
             <Text style={s.termsLink}>Driver Terms & Privacy Policy</Text>
@@ -138,7 +150,6 @@ function SignInForm({ isRTL, onSuccess }: { isRTL: boolean; onSuccess: (at: stri
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { enterDemoMode } = useDemoMode();
 
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
   const TA = isRTL ? 'right' as const : 'left' as const;
@@ -229,18 +240,6 @@ function SignInForm({ isRTL, onSuccess }: { isRTL: boolean; onSuccess: (at: stri
         <Text style={s.forgotText}>Forgot password?</Text>
       </TouchableOpacity>
 
-      {process.env.EXPO_PUBLIC_DEMO_ENABLED === 'true' && (
-        <TouchableOpacity
-          style={s.demoBtn}
-          activeOpacity={0.75}
-          onPress={() => {
-            enterDemoMode();
-            expoRouter.replace('/(shuttle)' as any);
-          }}
-        >
-          <Text style={s.demoBtnText}>Demo Trip</Text>
-        </TouchableOpacity>
-      )}
     </View>
   );
 }
@@ -403,8 +402,9 @@ const s = StyleSheet.create({
   forgotBtn: { alignItems: 'center', paddingVertical: 4 },
   forgotText: { fontSize: 13, color: '#5e5e72', fontFamily: 'Inter_400Regular', textDecorationLine: 'underline' },
   demoBtn: {
-    alignItems: 'center', paddingVertical: 10, marginTop: 4,
-    borderWidth: 1, borderColor: '#3D52D5', borderRadius: 14, borderStyle: 'dashed',
+    alignItems: 'center', paddingVertical: 10, paddingHorizontal: 24,
+    borderRadius: 99, borderWidth: 1.5, borderColor: '#4f46e5',
+    backgroundColor: 'rgba(79,70,229,0.06)',
   },
-  demoBtnText: { fontSize: 13, color: '#3D52D5', fontFamily: 'Inter_500Medium', letterSpacing: 0.2 },
+  demoBtnText: { fontSize: 13, color: '#4f46e5', fontFamily: 'Inter_600SemiBold', letterSpacing: 0.3 },
 });
