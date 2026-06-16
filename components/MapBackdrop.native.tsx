@@ -327,7 +327,8 @@ function buildHtml(
   });
 
   // ── postMessage bridge ────────────────────────────────────────────────────────
-  window.addEventListener('message', function(e) {
+  // Android WebView dispatches to `document`; iOS dispatches to `window` — listen on both.
+  function handleBridgeMessage(e) {
     try {
       var msg = JSON.parse(e.data);
 
@@ -427,7 +428,9 @@ function buildHtml(
         }
       }
     } catch(_) {}
-  });
+  }
+  window.addEventListener('message', handleBridgeMessage);
+  document.addEventListener('message', handleBridgeMessage);
 })();
 </script>
 </body>
