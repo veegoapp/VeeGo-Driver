@@ -252,7 +252,7 @@ export default function ShuttleTripActiveScreen() {
     if (!stationId || isArrivingLoading) return;
     setIsArrivingLoading(true);
     try {
-      if (tripId) await endpoints.trips.stationArrived(tripId, stationId);
+      if (!isDemoMode && tripId) await endpoints.trips.stationArrived(tripId, stationId);
       setPhase('at_stop');
       setTimerActive(true);
       if (nextCoords) setFocusTarget({ latitude: nextCoords.latitude, longitude: nextCoords.longitude, zoom: 16 });
@@ -261,13 +261,13 @@ export default function ShuttleTripActiveScreen() {
     } finally {
       setIsArrivingLoading(false);
     }
-  }, [tripId, stationId, isArrivingLoading, nextCoords, t]);
+  }, [isDemoMode, tripId, stationId, isArrivingLoading, nextCoords, t]);
 
   const handleNextStop = useCallback(async () => {
     if (isNextLoading) return;
     setIsNextLoading(true);
     try {
-      if (tripId && stationId) {
+      if (!isDemoMode && tripId && stationId) {
         const boardedIds = Object.entries(passengerStatuses).filter(([, s]) => s === 'boarded').map(([id]) => id);
         const absentIds = Object.entries(passengerStatuses).filter(([, s]) => s === 'no_show').map(([id]) => id);
         await Promise.allSettled(boardedIds.map(id => endpoints.shuttle.boardBooking(id)));
@@ -282,10 +282,14 @@ export default function ShuttleTripActiveScreen() {
     } finally {
       setIsNextLoading(false);
     }
-  }, [isNextLoading, tripId, stationId, passengerStatuses, nextStop]);
+  }, [isDemoMode, isNextLoading, tripId, stationId, passengerStatuses, nextStop]);
 
   const handleFinishRoute = useCallback(async () => {
     if (!activeLine) return;
+    if (isDemoMode) {
+      router.replace('/shuttle/trip-complete' as any);
+      return;
+    }
     try {
       const id = activeLine.tripId;
       if (!id) throw new Error('No trip ID');
@@ -303,7 +307,7 @@ export default function ShuttleTripActiveScreen() {
     } catch {
       router.replace('/shuttle/trip-complete' as any);
     }
-  }, [activeLine]);
+  }, [isDemoMode, activeLine]);
 
   const updatePassengerStatus = useCallback((passengerId: string, status: PassengerStatus) => {
     setPassengerStatuses(prev => ({ ...prev, [passengerId]: status }));
