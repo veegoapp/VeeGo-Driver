@@ -1,4 +1,4 @@
-import React, { useReducer, useEffect, useState } from 'react';
+import React, { useReducer, useEffect, useRef, useState } from 'react';
 import { ShuttleContext } from '@/lib/shuttleContext';
 import type {
   ShuttleLine,
@@ -7,6 +7,7 @@ import type {
   ShuttleRoute,
   BoardingPassenger,
 } from '@/lib/shuttleContext';
+import { haversineMeters } from '@/hooks/useDriverLocation';
 import { api } from '@/lib/api';
 import {
   DEMO_LINE,
@@ -207,6 +208,48 @@ export function DemoShuttleProvider({ children }: { children: React.ReactNode })
   const demoBooking = demoBase?.booking ?? DEMO_BOOKING;
   const demoRoute = demoBase?.route ?? DEMO_ROUTE;
 
+  // ── Simulated GPS: moves from previous station toward the current target ──
+  // Stops within ~350 m so the "approaching" banner triggers in trip-active.
+  const simPosRef = useRef<{ latitude: number; longitude: number } | null>(null);
+  const [demoDriverPosition, setDemoDriverPosition] = useState<{
+    latitude: number; longitude: number; heading: number | null; speed: number | null;
+  } | null>(null);
+
+  useEffect(() => {
+    const target = stationCoords[state.currentStopIndex];
+    if (!target) {
+      simPosRef.current = null;
+      setDemoDriverPosition(null);
+      return;
+    }
+
+    // Start from the previous station, or ~2.5 km before the first stop
+    const prev = stationCoords[state.currentStopIndex - 1];
+    const start = {
+      latitude: prev?.latitude ?? (target.latitude + 0.022),
+      longitude: prev?.longitude ?? target.longitude,
+    };
+    simPosRef.current = start;
+    setDemoDriverPosition({ ...start, heading: null, speed: null });
+
+    // Move 7 % of remaining distance every 1.5 s; halt when ≤ 350 m away
+    const interval = setInterval(() => {
+      const cur = simPosRef.current;
+      if (!cur) { clearInterval(interval); return; }
+      const dist = haversineMeters(cur.latitude, cur.longitude, target.latitude, target.longitude);
+      if (dist <= 350) { clearInterval(interval); return; }
+      const next = {
+        latitude:  cur.latitude  + (target.latitude  - cur.latitude)  * 0.07,
+        longitude: cur.longitude + (target.longitude - cur.longitude) * 0.07,
+      };
+      simPosRef.current = next;
+      setDemoDriverPosition({ ...next, heading: null, speed: null });
+    }, 1500);
+
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.currentStopIndex, stationCoords]);
+
   // ── Passengers for the current stop (checkedIn driven by demo reducer) ──────
   const checkedInMap = state.checkedInByStop[state.currentStopIndex] ?? {};
   const passengers: BoardingPassenger[] = passengersForStop(state.currentStopIndex).map(p => ({
@@ -261,6 +304,7 @@ export function DemoShuttleProvider({ children }: { children: React.ReactNode })
         resetTrip: () => dispatch({ type: 'RESET' }),
         slotReleasedAlert: null,
         dismissSlotReleasedAlert: () => {},
+        demoDriverPosition,
       }}
     >
       {children}

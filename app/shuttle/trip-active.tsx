@@ -51,7 +51,7 @@ export default function ShuttleTripActiveScreen() {
   const navigation = useNavigation();
 
   const {
-    activeLine, stops, currentStopIndex, passengers, nextStop, stationCoords,
+    activeLine, stops, currentStopIndex, passengers, nextStop, stationCoords, demoDriverPosition,
   } = useShuttle();
 
   const currentStop = stops[currentStopIndex] ?? null;
@@ -61,12 +61,14 @@ export default function ShuttleTripActiveScreen() {
   const stationId = currentStop?.id;
 
   // ── GPS ────────────────────────────────────────────────────────────────────
-  const { position: gpsPos } = useDriverLocation(!!activeLine);
+  const { position: gpsPos } = useDriverLocation(!!activeLine && !demoDriverPosition);
+  // In demo mode demoDriverPosition is the simulated position; real GPS is skipped.
+  const effectivePos = demoDriverPosition ?? gpsPos;
 
   const distanceM = useMemo(() => {
-    if (!gpsPos || !nextCoords) return null;
-    return haversineMeters(gpsPos.latitude, gpsPos.longitude, nextCoords.latitude, nextCoords.longitude);
-  }, [gpsPos?.latitude, gpsPos?.longitude, nextCoords?.latitude, nextCoords?.longitude]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!effectivePos || !nextCoords) return null;
+    return haversineMeters(effectivePos.latitude, effectivePos.longitude, nextCoords.latitude, nextCoords.longitude);
+  }, [effectivePos?.latitude, effectivePos?.longitude, nextCoords?.latitude, nextCoords?.longitude]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Phase state ────────────────────────────────────────────────────────────
   const [phase, setPhase] = useState<TripPhase>('en_route');
@@ -196,15 +198,15 @@ export default function ShuttleTripActiveScreen() {
 
   // ── Actions ────────────────────────────────────────────────────────────────
   const handleArrived = useCallback(async () => {
-    if (!tripId || !stationId || isArrivingLoading) return;
+    if (!stationId || isArrivingLoading) return;
     setIsArrivingLoading(true);
     try {
-      await endpoints.trips.stationArrived(tripId, stationId);
+      if (tripId) await endpoints.trips.stationArrived(tripId, stationId);
       setPhase('at_stop');
       setTimerActive(true);
       if (nextCoords) setFocusTarget({ latitude: nextCoords.latitude, longitude: nextCoords.longitude, zoom: 16 });
     } catch {
-      Alert.alert(t.error, t.station_action_error);
+      if (tripId) Alert.alert(t.error, t.station_action_error);
     } finally {
       setIsArrivingLoading(false);
     }
@@ -280,7 +282,7 @@ export default function ShuttleTripActiveScreen() {
           routePolyline={stationCoords}
           stationStatuses={stationStatuses}
           approachCircle={approachCircle}
-          driverLocation={gpsPos ?? undefined}
+          driverLocation={effectivePos ?? undefined}
           focusTarget={focusTarget}
         />
 

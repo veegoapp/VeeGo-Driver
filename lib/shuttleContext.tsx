@@ -323,6 +323,8 @@ type ShuttleContextType = {
   // Real-time slot-released toast (populated by socket event, consumed by layout)
   slotReleasedAlert: SlotReleasedAlert | null;
   dismissSlotReleasedAlert: () => void;
+  // Demo mode only: simulated GPS position (undefined in real mode — no behaviour change)
+  demoDriverPosition?: { latitude: number; longitude: number; heading: number | null; speed: number | null } | null;
 };
 
 export const ShuttleContext = createContext<ShuttleContextType>({
