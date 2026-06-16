@@ -1,4 +1,4 @@
-import React, { useReducer, useEffect, useState } from 'react';
+import React, { useReducer, useEffect, useRef, useState } from 'react';
 import { ShuttleContext } from '@/lib/shuttleContext';
 import type {
   ShuttleLine,
@@ -6,7 +6,9 @@ import type {
   ShuttleBooking,
   ShuttleRoute,
   BoardingPassenger,
+  DemoDriverPosition,
 } from '@/lib/shuttleContext';
+import { haversineMeters } from '@/hooks/useDriverLocation';
 import { api } from '@/lib/api';
 import {
   DEMO_LINE,

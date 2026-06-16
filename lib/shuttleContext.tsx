@@ -292,6 +292,13 @@ export type SlotReleasedAlert = {
 
 // ─── Context type ─────────────────────────────────────────────────────────────
 
+export type DemoDriverPosition = {
+  latitude: number;
+  longitude: number;
+  heading: number | null;
+  speed: number | null;
+};
+
 type ShuttleContextType = {
   // New: booking layer
   routes: ShuttleRoute[];
@@ -323,6 +330,8 @@ type ShuttleContextType = {
   // Real-time slot-released toast (populated by socket event, consumed by layout)
   slotReleasedAlert: SlotReleasedAlert | null;
   dismissSlotReleasedAlert: () => void;
+  // Demo mode: simulated GPS position (undefined / null in real mode)
+  demoDriverPosition?: DemoDriverPosition | null;
 };
 
 export const ShuttleContext = createContext<ShuttleContextType>({
