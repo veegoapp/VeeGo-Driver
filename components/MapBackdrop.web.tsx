@@ -21,6 +21,8 @@ export interface MapBackdropProps {
   stationStatuses?: ('pending' | 'current' | 'completed')[];
   approachCircle?: { latitude: number; longitude: number; radius: number } | null;
   focusTarget?: { latitude: number; longitude: number; zoom?: number } | null;
+  navigationMode?: boolean;
+  animDurationMs?: number;
 }
 
 const DEFAULT_CENTER: [number, number] = [31.2357, 30.0444];
@@ -61,6 +63,15 @@ function makeSvgEl(svg: string): HTMLElement {
   return el;
 }
 
+function calcBearing(from: [number, number], to: [number, number]): number {
+  const lat1 = (from[1] * Math.PI) / 180;
+  const lat2 = (to[1] * Math.PI) / 180;
+  const dLng = ((to[0] - from[0]) * Math.PI) / 180;
+  const y = Math.sin(dLng) * Math.cos(lat2);
+  const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+  return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
+}
+
 function stationSvg(n: number, status: 'pending' | 'current' | 'completed'): string {
   if (status === 'current') {
     return `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
@@ -70,9 +81,9 @@ function stationSvg(n: number, status: 'pending' | 'current' | 'completed'): str
 </svg>`;
   }
   if (status === 'completed') {
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-  <circle cx="12" cy="12" r="10" fill="#374151" stroke="#6b7280" stroke-width="2"/>
-  <text x="12" y="16" text-anchor="middle" fill="#9ca3af" font-size="9" font-family="sans-serif" font-weight="bold">${n}</text>
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
+  <circle cx="10" cy="10" r="8" fill="#1f2937" stroke="#374151" stroke-width="1.5"/>
+  <text x="10" y="14" text-anchor="middle" fill="#6b7280" font-size="7" font-family="sans-serif" font-weight="bold">${n}</text>
 </svg>`;
   }
   return `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28">
@@ -80,6 +91,21 @@ function stationSvg(n: number, status: 'pending' | 'current' | 'completed'): str
   <text x="14" y="18.5" text-anchor="middle" fill="white" font-size="10" font-family="sans-serif" font-weight="bold">${n}</text>
 </svg>`;
 }
+
+// Navigation arrow — points north; map bearing handles direction
+const DRIVER_NAV_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" viewBox="0 0 52 52">
+  <circle cx="26" cy="26" r="24" fill="rgba(29,78,216,0.22)" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
+  <circle cx="26" cy="26" r="17" fill="#1d4ed8" stroke="white" stroke-width="2.5"/>
+  <path d="M26 11 L36 36 L26 28 L16 36 Z" fill="white" stroke="rgba(255,255,255,0.4)" stroke-linejoin="round" stroke-width="0.5"/>
+</svg>`;
+
+const DRIVER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="38" height="46" viewBox="0 0 38 46">
+  <circle cx="19" cy="19" r="17" fill="#2563eb" opacity="0.18"/>
+  <circle cx="19" cy="19" r="13" fill="#2563eb" stroke="white" stroke-width="2.5"/>
+  <path d="M12 17.5 h14 M15 14 l4 3.5 l4-3.5 M13 21 c0 2.5 2.8 4.5 6 4.5s6-2 6-4.5"
+    stroke="white" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+  <line x1="19" y1="32" x2="19" y2="44" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round"/>
+</svg>`;
 
 const PICKUP_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36">
   <circle cx="14" cy="14" r="12" fill="#22c55e" stroke="white" stroke-width="2.5"/>
@@ -91,14 +117,6 @@ const DROPOFF_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="
   <circle cx="14" cy="14" r="12" fill="#ef4444" stroke="white" stroke-width="2.5"/>
   <text x="14" y="18.5" text-anchor="middle" fill="white" font-size="11" font-family="sans-serif" font-weight="bold">D</text>
   <line x1="14" y1="26" x2="14" y2="34" stroke="#ef4444" stroke-width="2" stroke-linecap="round"/>
-</svg>`;
-
-const DRIVER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="38" height="46" viewBox="0 0 38 46">
-  <circle cx="19" cy="19" r="17" fill="#2563eb" opacity="0.18"/>
-  <circle cx="19" cy="19" r="13" fill="#2563eb" stroke="white" stroke-width="2.5"/>
-  <path d="M12 17.5 h14 M15 14 l4 3.5 l4-3.5 M13 21 c0 2.5 2.8 4.5 6 4.5s6-2 6-4.5"
-    stroke="white" stroke-width="1.6" fill="none" stroke-linecap="round"/>
-  <line x1="19" y1="32" x2="19" y2="44" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round"/>
 </svg>`;
 
 function geoCirclePolygon(lat: number, lng: number, radiusMeters: number, steps = 64): number[][] {
@@ -138,58 +156,72 @@ function surgeColors(multiplier: number): { fill: string; stroke: string } {
 export function MapBackdrop({
   pickup, dropoff, driverLocation, surgeZones = [], routePolyline, roadPolyline,
   stationStatuses, approachCircle, focusTarget,
+  navigationMode = false, animDurationMs = 1200,
 }: MapBackdropProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const driverMarkerRef = useRef<maplibregl.Marker | null>(null);
-  const lastLocUpdate = useRef(0);
   const surgeReadyRef = useRef(false);
   const surgeMarkersRef = useRef<maplibregl.Marker[]>([]);
   const shuttleRouteReadyRef = useRef(false);
   const shuttleMarkersRef = useRef<maplibregl.Marker[]>([]);
   const approachReadyRef = useRef(false);
   const isFollowingRef = useRef(true);
+  const prevLngLatRef = useRef<[number, number] | null>(null);
+  const bearingRef = useRef(0);
   const [showRecenter, setShowRecenter] = useState(false);
 
+  // ── Map init ─────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!containerRef.current) return;
 
-    const ridePts = [driverLocation, pickup, dropoff].filter(Boolean) as Array<{ latitude: number; longitude: number }>;
+    // Initial center: for nav mode use first station; otherwise average of all points
     const stationPts = routePolyline?.length ? routePolyline : [];
-    const centerPts = ridePts.length > 0 ? ridePts : stationPts;
-    const center: [number, number] = centerPts.length
-      ? [centerPts.reduce((s, p) => s + p.longitude, 0) / centerPts.length, centerPts.reduce((s, p) => s + p.latitude, 0) / centerPts.length]
-      : DEFAULT_CENTER;
+    const firstStation = stationPts[0];
+    let center: [number, number];
+    if (navigationMode && firstStation) {
+      center = [firstStation.longitude, firstStation.latitude];
+    } else {
+      const ridePts = [driverLocation, pickup, dropoff].filter(Boolean) as Array<{ latitude: number; longitude: number }>;
+      const centerPts = ridePts.length > 0 ? ridePts : stationPts;
+      center = centerPts.length
+        ? [centerPts.reduce((s, p) => s + p.longitude, 0) / centerPts.length, centerPts.reduce((s, p) => s + p.latitude, 0) / centerPts.length]
+        : DEFAULT_CENTER;
+    }
 
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: OSM_STYLE,
       center,
-      zoom: 13,
+      zoom: navigationMode ? 17 : 13,
+      pitch: navigationMode ? 55 : 0,
+      bearing: 0,
       interactive: true,
       attributionControl: { compact: true },
     });
 
-    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+    if (!navigationMode) {
+      map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+    }
     mapRef.current = map;
 
     map.on('load', async () => {
-      // ── Surge layers ────────────────────────────────────────────────────
+      // ── Surge layers ──────────────────────────────────────────────────────
       map.addSource('surge-zones', { type: 'geojson', data: buildSurgeGeoJSON([]) });
       map.addLayer({ id: 'surge-fill', type: 'fill', source: 'surge-zones', paint: { 'fill-color': ['interpolate', ['linear'], ['get', 'multiplier'], 1.0, 'rgba(213,178,61,0.13)', 1.5, 'rgba(249,115,22,0.14)', 2.0, 'rgba(239,68,68,0.14)'], 'fill-opacity': 1 } });
       map.addLayer({ id: 'surge-stroke', type: 'line', source: 'surge-zones', paint: { 'line-color': ['interpolate', ['linear'], ['get', 'multiplier'], 1.0, 'rgba(213,178,61,0.6)', 1.5, 'rgba(249,115,22,0.6)', 2.0, 'rgba(239,68,68,0.6)'], 'line-width': 1.5, 'line-dasharray': [4, 3] } });
       surgeReadyRef.current = true;
 
-      // ── Shuttle route layers ─────────────────────────────────────────────
+      // ── Shuttle segment route source (populated via roadPolyline effect) ──
       map.addSource('shuttle-route', {
         type: 'geojson',
         data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] }, properties: {} },
       });
-      map.addLayer({ id: 'shuttle-casing', type: 'line', source: 'shuttle-route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#ffffff', 'line-width': 5, 'line-opacity': 0.35 } });
-      map.addLayer({ id: 'shuttle-line', type: 'line', source: 'shuttle-route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#6366f1', 'line-width': 3.5, 'line-opacity': 0.88 } });
+      map.addLayer({ id: 'shuttle-casing', type: 'line', source: 'shuttle-route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#ffffff', 'line-width': 5, 'line-opacity': 0.30 } });
+      map.addLayer({ id: 'shuttle-line', type: 'line', source: 'shuttle-route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#6366f1', 'line-width': 4, 'line-opacity': 0.92 } });
       shuttleRouteReadyRef.current = true;
 
-      // ── Approach circle layers (initially hidden) ─────────────────────────
+      // ── Approach circle (hidden) ───────────────────────────────────────────
       map.addSource('approach-circle', {
         type: 'geojson',
         data: { type: 'Feature', geometry: { type: 'Polygon', coordinates: [[]] }, properties: {} },
@@ -198,7 +230,7 @@ export function MapBackdrop({
       map.addLayer({ id: 'approach-stroke', type: 'line', source: 'approach-circle', paint: { 'line-color': '#f59e0b', 'line-width': 2.5, 'line-dasharray': [5, 4] }, layout: { visibility: 'none' } });
       approachReadyRef.current = true;
 
-      // ── On-demand ride markers ───────────────────────────────────────────
+      // ── On-demand ride markers ─────────────────────────────────────────────
       if (pickup) {
         new maplibregl.Marker({ element: makeSvgEl(PICKUP_SVG), anchor: 'bottom' })
           .setLngLat([pickup.longitude, pickup.latitude])
@@ -212,32 +244,55 @@ export function MapBackdrop({
           .addTo(map);
       }
 
+      // ── Station markers ────────────────────────────────────────────────────
+      if (routePolyline?.length) {
+        routePolyline.forEach((pt, idx) => {
+          const status = stationStatuses?.[idx] ?? 'pending';
+          const marker = new maplibregl.Marker({ element: makeSvgEl(stationSvg(idx + 1, status)), anchor: 'center' })
+            .setLngLat([pt.longitude, pt.latitude])
+            .addTo(map);
+          shuttleMarkersRef.current.push(marker);
+        });
+
+        if (!navigationMode) {
+          // Legacy flat view: fitBounds to show all stations
+          const bounds = new maplibregl.LngLatBounds();
+          routePolyline.forEach((p) => bounds.extend([p.longitude, p.latitude]));
+          map.fitBounds(bounds, { padding: 80, maxZoom: 14, duration: 700 });
+        }
+        // In nav mode: don't fitBounds; camera will follow driver
+      }
+
+      // ── Driver marker ─────────────────────────────────────────────────────
       const driverLoc = driverLocation ?? pickup;
       if (driverLoc) {
-        const marker = new maplibregl.Marker({ element: makeSvgEl(DRIVER_SVG), anchor: 'bottom' })
+        const svg = navigationMode ? DRIVER_NAV_SVG : DRIVER_SVG;
+        const anchor = navigationMode ? 'center' : 'bottom';
+        const marker = new maplibregl.Marker({ element: makeSvgEl(svg), anchor })
           .setLngLat([driverLoc.longitude, driverLoc.latitude])
-          .setPopup(new maplibregl.Popup({ offset: 22, closeButton: false }).setText('Your location'))
           .addTo(map);
+        marker.getElement().style.transition = `transform ${animDurationMs}ms linear`;
         driverMarkerRef.current = marker;
+        prevLngLatRef.current = [driverLoc.longitude, driverLoc.latitude];
       }
 
-      // ── On-demand ride route ─────────────────────────────────────────────
-      const routePts = [driverLocation ?? pickup, pickup, dropoff]
-        .filter(Boolean) as Array<{ latitude: number; longitude: number }>;
-      if (routePts.length >= 2) {
-        const straightCoords = routePts.map((p) => [p.longitude, p.latitude] as [number, number]);
-        const routeCoords = (await fetchOSRMRoute(straightCoords)) ?? straightCoords;
-        map.addSource('route', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: routeCoords }, properties: {} } });
-        map.addLayer({ id: 'route-casing', type: 'line', source: 'route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#ffffff', 'line-width': 6, 'line-opacity': 0.4 } });
-        map.addLayer({ id: 'route-line', type: 'line', source: 'route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#6366f1', 'line-width': 3.5, 'line-opacity': 0.9 } });
-      }
+      // ── On-demand ride route (non-nav mode only) ────────────────────────
+      if (!navigationMode) {
+        const routePts = [driverLocation ?? pickup, pickup, dropoff]
+          .filter(Boolean) as Array<{ latitude: number; longitude: number }>;
+        if (routePts.length >= 2) {
+          const straightCoords = routePts.map((p) => [p.longitude, p.latitude] as [number, number]);
+          const routeCoords = (await fetchOSRMRoute(straightCoords)) ?? straightCoords;
+          map.addSource('route', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: routeCoords }, properties: {} } });
+          map.addLayer({ id: 'route-casing', type: 'line', source: 'route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#ffffff', 'line-width': 6, 'line-opacity': 0.4 } });
+          map.addLayer({ id: 'route-line', type: 'line', source: 'route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#6366f1', 'line-width': 3.5, 'line-opacity': 0.9 } });
 
-      if (!routePolyline?.length) {
-        const allPoints = [driverLocation, pickup, dropoff].filter(Boolean) as Array<{ latitude: number; longitude: number }>;
-        if (allPoints.length > 1) {
-          const bounds = new maplibregl.LngLatBounds();
-          allPoints.forEach((p) => bounds.extend([p.longitude, p.latitude]));
-          map.fitBounds(bounds, { padding: 70, maxZoom: 15, duration: 600 });
+          const allPoints = [driverLocation, pickup, dropoff].filter(Boolean) as Array<{ latitude: number; longitude: number }>;
+          if (allPoints.length > 1) {
+            const bounds = new maplibregl.LngLatBounds();
+            allPoints.forEach((p) => bounds.extend([p.longitude, p.latitude]));
+            map.fitBounds(bounds, { padding: 70, maxZoom: 15, duration: 600 });
+          }
         }
       }
     });
@@ -258,12 +313,13 @@ export function MapBackdrop({
       shuttleMarkersRef.current.forEach(m => m.remove());
       shuttleMarkersRef.current = [];
       driverMarkerRef.current = null;
+      prevLngLatRef.current = null;
       map.remove();
       mapRef.current = null;
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Surge zones update
+  // ── Surge zones update ────────────────────────────────────────────────────────
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !surgeReadyRef.current) return;
@@ -282,40 +338,10 @@ export function MapBackdrop({
     });
   }, [surgeZones]);
 
-  // Shuttle route + station markers update
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !shuttleRouteReadyRef.current) return;
-    if (!routePolyline?.length) return;
-
-    const coords = routePolyline.map((p) => [p.longitude, p.latitude] as [number, number]);
-    const source = map.getSource('shuttle-route') as maplibregl.GeoJSONSource | undefined;
-    if (source) source.setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: coords }, properties: {} });
-
-    // Rebuild station markers with current statuses
-    shuttleMarkersRef.current.forEach(m => m.remove());
-    shuttleMarkersRef.current = [];
-    routePolyline.forEach((pt, idx) => {
-      const status = stationStatuses?.[idx] ?? 'pending';
-      const marker = new maplibregl.Marker({ element: makeSvgEl(stationSvg(idx + 1, status)), anchor: 'center' })
-        .setLngLat([pt.longitude, pt.latitude])
-        .addTo(map);
-      shuttleMarkersRef.current.push(marker);
-    });
-
-    const bounds = new maplibregl.LngLatBounds();
-    routePolyline.forEach((p) => bounds.extend([p.longitude, p.latitude]));
-    map.fitBounds(bounds, { padding: 80, maxZoom: 14, duration: 700 });
-
-    // Road-snapped geometry applied by the roadPolyline effect below
-  }, [routePolyline]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Station statuses update (without rebuilding route)
+  // ── Station status markers update ─────────────────────────────────────────────
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !routePolyline?.length) return;
-    // Only update markers if the route is already drawn
-    if (!shuttleRouteReadyRef.current) return;
     shuttleMarkersRef.current.forEach(m => m.remove());
     shuttleMarkersRef.current = [];
     routePolyline.forEach((pt, idx) => {
@@ -327,19 +353,25 @@ export function MapBackdrop({
     });
   }, [stationStatuses]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Road polyline update — replaces straight-line route with OSRM geometry
+  // ── Road polyline (segment-only): draw or clear ────────────────────────────────
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !shuttleRouteReadyRef.current || !roadPolyline?.length) return;
+    if (!map || !shuttleRouteReadyRef.current) return;
     const source = map.getSource('shuttle-route') as maplibregl.GeoJSONSource | undefined;
-    source?.setData({
-      type: 'Feature',
-      geometry: { type: 'LineString', coordinates: roadPolyline.map(p => [p.longitude, p.latitude]) },
-      properties: {},
-    });
+    if (!source) return;
+    if (roadPolyline?.length) {
+      source.setData({
+        type: 'Feature',
+        geometry: { type: 'LineString', coordinates: roadPolyline.map(p => [p.longitude, p.latitude]) },
+        properties: {},
+      });
+    } else {
+      // Clear route while loading next segment
+      source.setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: [] }, properties: {} });
+    }
   }, [roadPolyline]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Approach circle update
+  // ── Approach circle update ─────────────────────────────────────────────────────
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !approachReadyRef.current) return;
@@ -348,10 +380,7 @@ export function MapBackdrop({
     if (approachCircle) {
       source.setData({
         type: 'Feature',
-        geometry: {
-          type: 'Polygon',
-          coordinates: [geoCirclePolygon(approachCircle.latitude, approachCircle.longitude, approachCircle.radius)],
-        },
+        geometry: { type: 'Polygon', coordinates: [geoCirclePolygon(approachCircle.latitude, approachCircle.longitude, approachCircle.radius)] },
         properties: {},
       });
       map.setLayoutProperty('approach-fill', 'visibility', 'visible');
@@ -362,44 +391,66 @@ export function MapBackdrop({
     }
   }, [approachCircle]);
 
-  // Focus camera
+  // ── Focus camera ─────────────────────────────────────────────────────────────
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !focusTarget) return;
-    map.flyTo({ center: [focusTarget.longitude, focusTarget.latitude], zoom: focusTarget.zoom ?? 16, duration: 800 });
+    map.flyTo({ center: [focusTarget.longitude, focusTarget.latitude], zoom: focusTarget.zoom ?? 16, pitch: navigationMode ? 55 : 0, duration: 800 });
   }, [focusTarget?.latitude, focusTarget?.longitude]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Driver location update — creates marker on first update if not yet created, then follows
+  // ── Driver location: smooth glide + 3D navigation camera ─────────────────────
   useEffect(() => {
-    const now = Date.now();
-    if (now - lastLocUpdate.current < 1500) return;
-    lastLocUpdate.current = now;
     const map = mapRef.current;
     if (!driverLocation || !map) return;
     const lngLat: [number, number] = [driverLocation.longitude, driverLocation.latitude];
+
+    // Compute bearing from previous position
+    const prev = prevLngLatRef.current;
+    if (prev && (prev[0] !== lngLat[0] || prev[1] !== lngLat[1])) {
+      bearingRef.current = calcBearing(prev, lngLat);
+    }
+    prevLngLatRef.current = lngLat;
+
     if (!driverMarkerRef.current) {
-      const marker = new maplibregl.Marker({ element: makeSvgEl(DRIVER_SVG), anchor: 'bottom' })
+      const svg = navigationMode ? DRIVER_NAV_SVG : DRIVER_SVG;
+      const anchor = navigationMode ? 'center' : 'bottom';
+      const marker = new maplibregl.Marker({ element: makeSvgEl(svg), anchor })
         .setLngLat(lngLat)
         .addTo(map);
-      setTimeout(() => {
-        marker.getElement().style.transition = 'transform 1400ms linear';
-        const svg = marker.getElement().querySelector('svg') as HTMLElement | null;
-        if (svg) svg.style.transition = 'transform 1400ms linear';
-      }, 200);
+      marker.getElement().style.transition = `transform ${animDurationMs}ms linear`;
       driverMarkerRef.current = marker;
     } else {
+      driverMarkerRef.current.getElement().style.transition = `transform ${animDurationMs}ms linear`;
       driverMarkerRef.current.setLngLat(lngLat);
     }
-    if (isFollowingRef.current) map.easeTo({ center: lngLat, duration: 1000 });
-  }, [driverLocation?.latitude, driverLocation?.longitude]);
+
+    if (isFollowingRef.current) {
+      if (navigationMode) {
+        map.easeTo({
+          center: lngLat,
+          bearing: bearingRef.current,
+          pitch: 55,
+          zoom: 17,
+          duration: animDurationMs,
+        });
+      } else {
+        map.easeTo({ center: lngLat, duration: 1000 });
+      }
+    }
+  }, [driverLocation?.latitude, driverLocation?.longitude, animDurationMs]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleRecenter = useCallback(() => {
     isFollowingRef.current = true;
     setShowRecenter(false);
     const map = mapRef.current;
     if (!map || !driverLocation) return;
-    map.easeTo({ center: [driverLocation.longitude, driverLocation.latitude], duration: 800 });
-  }, [driverLocation]);
+    const lngLat: [number, number] = [driverLocation.longitude, driverLocation.latitude];
+    if (navigationMode) {
+      map.easeTo({ center: lngLat, bearing: bearingRef.current, pitch: 55, zoom: 17, duration: 800 });
+    } else {
+      map.easeTo({ center: lngLat, duration: 800 });
+    }
+  }, [driverLocation, navigationMode]);
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">

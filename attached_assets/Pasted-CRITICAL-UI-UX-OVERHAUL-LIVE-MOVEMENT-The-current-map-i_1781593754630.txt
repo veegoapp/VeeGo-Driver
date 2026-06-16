@@ -1,0 +1,19 @@
+CRITICAL UI/UX OVERHAUL & LIVE MOVEMENT: The current map is completely wrong. We need a true 3D Navigation Experience matching the provided reference screenshot (135246.jpg & 135246.jpg), and most importantly, the driver MUST see the car marker moving LIVE and smoothly gliding on the screen in real-time.
+
+Please completely overhaul 'MapBackdrop.native.tsx', 'MapBackdrop.web.tsx', and the trip state logic immediately according to these absolute requirements:
+
+1. Live Continuous Animation (Smooth Gliding Vehicle):
+   - The blue car marker MUST NOT snap, jump, or jitter. Implement a continuous animation interpolation (like a smooth frame loop or native Marker translation) so the car visibly glides LIVE from one coordinate to the next.
+   - The vehicle marker must dynamically rotate (bearing) smoothly to face the direction of the street it is currently driving on.
+
+2. Dynamic Micro-Routing (Station-to-Stop Only):
+   - Modify the route rendering logic so it ONLY draws the road polyline path from the driver's current live location to the NEXT IMMEDIATE STATION (Stop N to Stop N+1).
+   - Do NOT render or pre-draw the rest of the 6 stops or lines on the map. 
+   - Once the driver hits "Mark Arrived" and completes a stop, clear the old line completely and fetch/draw the path to the next single stop dynamically.
+
+3. Navigation Camera Angles (3D Perspective & Tight Zoom):
+   - Force the map camera to automatically maintain a sharp, tight Zoom-In level directly centered behind the moving car marker.
+   - Apply a permanent 3D Pitch/Tilt angle (e.g., pitch: 50 or 60 degrees) to the map viewpoint so the driver sees the road stretching ahead in perspective, exactly like Google Maps navigation, rather than looking straight down from the sky.
+   - The camera 'easeTo' or 'flyTo' duration must match the demo update speed dynamically to prevent lagging or jumping.
+
+Apply these structural layout and live animation changes directly to the codebase now. Do not explain the concepts, just deliver a fully functional, live-moving driving navigation view.

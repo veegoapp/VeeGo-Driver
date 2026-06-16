@@ -20,6 +20,8 @@ export interface MapBackdropProps {
   stationStatuses?: ('pending' | 'current' | 'completed')[];
   approachCircle?: { latitude: number; longitude: number; radius: number } | null;
   focusTarget?: { latitude: number; longitude: number; zoom?: number } | null;
+  navigationMode?: boolean;
+  animDurationMs?: number;
 }
 
 function buildHtml(
@@ -29,10 +31,22 @@ function buildHtml(
   surgeZones: SurgeZone[],
   routePolyline: MapBackdropProps['routePolyline'],
   stationStatuses: ('pending' | 'current' | 'completed')[],
+  navigationMode: boolean,
+  animDurationMs: number,
 ): string {
-  const ridePts = [driverLocation, pickup, dropoff].filter(Boolean) as Array<{ latitude: number; longitude: number }>;
   const stationPts = routePolyline?.length ? routePolyline : [];
-  const centerPts = ridePts.length > 0 ? ridePts : stationPts;
+  const firstStation = stationPts[0];
+  const driverLngLat = driverLocation
+    ? [driverLocation.longitude, driverLocation.latitude]
+    : firstStation
+    ? [firstStation.longitude, firstStation.latitude]
+    : [31.2357, 30.0444];
+
+  const centerPts = driverLocation
+    ? [driverLocation]
+    : stationPts.length
+    ? stationPts
+    : [];
   const center = centerPts.length
     ? [
         centerPts.reduce((s, p) => s + p.longitude, 0) / centerPts.length,
@@ -42,13 +56,19 @@ function buildHtml(
 
   const pickupJson = pickup ? JSON.stringify([pickup.longitude, pickup.latitude]) : 'null';
   const dropoffJson = dropoff ? JSON.stringify([dropoff.longitude, dropoff.latitude]) : 'null';
-  const driverJson = driverLocation ? JSON.stringify([driverLocation.longitude, driverLocation.latitude]) : 'null';
+  const driverJson = JSON.stringify(driverLngLat);
   const surgeJson = JSON.stringify(surgeZones);
-  const centerJson = JSON.stringify(center);
+  const centerJson = JSON.stringify(navigationMode && firstStation
+    ? [firstStation.longitude, firstStation.latitude]
+    : center);
   const routePolylineJson = routePolyline?.length
     ? JSON.stringify(routePolyline.map(p => [p.longitude, p.latitude]))
     : 'null';
   const stationStatusesJson = JSON.stringify(stationStatuses);
+  const navModeStr = navigationMode ? 'true' : 'false';
+  const animMsStr = String(animDurationMs);
+  const initZoom = navigationMode ? '17' : '13';
+  const initPitch = navigationMode ? '55' : '0';
 
   return `<!DOCTYPE html>
 <html>
@@ -59,7 +79,7 @@ function buildHtml(
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
-  html, body, #map { width:100%; height:100%; }
+  html, body, #map { width:100%; height:100%; overflow:hidden; }
 </style>
 </head>
 <body>
@@ -68,30 +88,49 @@ function buildHtml(
 (function() {
   var pickup = ${pickupJson};
   var dropoff = ${dropoffJson};
-  var driver = ${driverJson};
+  var driverInit = ${driverJson};
   var surgeZones = ${surgeJson};
   var center = ${centerJson};
   var routePolyline = ${routePolylineJson};
   var stationStatuses = ${stationStatusesJson};
+  var navMode = ${navModeStr};
+  var animDurationMs = ${animMsStr};
   var stationMarkers = [];
   var approachReady = false;
+  var userPanned = false;
+  var driverMarker = null;
+  var prevPos = null;
+  var currentBearing = 0;
+
+  // ── Navigation arrow SVG (used in nav mode) ──────────────────────────────────
+  var DRIVER_NAV_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" viewBox="0 0 52 52">' +
+    '<circle cx="26" cy="26" r="24" fill="rgba(29,78,216,0.22)" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>' +
+    '<circle cx="26" cy="26" r="17" fill="#1d4ed8" stroke="white" stroke-width="2.5"/>' +
+    '<path d="M26 11 L36 36 L26 28 L16 36 Z" fill="white" stroke="rgba(255,255,255,0.4)" stroke-linejoin="round" stroke-width="0.5"/>' +
+    '</svg>';
+
+  // ── Standard car SVG (used in non-nav mode) ───────────────────────────────────
+  var DRIVER_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="38" height="46" viewBox="0 0 38 46">' +
+    '<circle cx="19" cy="19" r="17" fill="#2563eb" opacity="0.18"/>' +
+    '<circle cx="19" cy="19" r="13" fill="#2563eb" stroke="white" stroke-width="2.5"/>' +
+    '<path d="M12 17.5 h14 M15 14 l4 3.5 l4-3.5 M13 21 c0 2.5 2.8 4.5 6 4.5s6-2 6-4.5" stroke="white" stroke-width="1.6" fill="none" stroke-linecap="round"/>' +
+    '<line x1="19" y1="32" x2="19" y2="44" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round"/>' +
+    '</svg>';
+
+  var PICKUP_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36"><circle cx="14" cy="14" r="12" fill="#22c55e" stroke="white" stroke-width="2.5"/><text x="14" y="18.5" text-anchor="middle" fill="white" font-size="11" font-family="sans-serif" font-weight="bold">P</text><line x1="14" y1="26" x2="14" y2="34" stroke="#22c55e" stroke-width="2" stroke-linecap="round"/></svg>';
+  var DROPOFF_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36"><circle cx="14" cy="14" r="12" fill="#ef4444" stroke="white" stroke-width="2.5"/><text x="14" y="18.5" text-anchor="middle" fill="white" font-size="11" font-family="sans-serif" font-weight="bold">D</text><line x1="14" y1="26" x2="14" y2="34" stroke="#ef4444" stroke-width="2" stroke-linecap="round"/></svg>';
 
   var map = new maplibregl.Map({
     container: 'map',
     style: {
       version: 8,
-      sources: {
-        osm: {
-          type: 'raster',
-          tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-          tileSize: 256,
-          attribution: '\u00a9 OpenStreetMap contributors'
-        }
-      },
+      sources: { osm: { type: 'raster', tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], tileSize: 256, attribution: '\u00a9 OpenStreetMap contributors' } },
       layers: [{ id: 'osm', type: 'raster', source: 'osm' }]
     },
     center: center,
-    zoom: 13,
+    zoom: ${initZoom},
+    pitch: ${initPitch},
+    bearing: 0,
     interactive: true,
     attributionControl: { compact: true }
   });
@@ -110,16 +149,20 @@ function buildHtml(
     return coords;
   }
 
+  function calcBearing(from, to) {
+    var lat1 = from[1] * Math.PI / 180;
+    var lat2 = to[1] * Math.PI / 180;
+    var dLng = (to[0] - from[0]) * Math.PI / 180;
+    var y = Math.sin(dLng) * Math.cos(lat2);
+    var x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+    return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+  }
+
   function buildSurgeGeoJSON(zones) {
     return {
       type: 'FeatureCollection',
       features: zones.map(function(z) {
-        return {
-          type: 'Feature',
-          id: z.id,
-          properties: { multiplier: z.multiplier },
-          geometry: { type: 'Polygon', coordinates: [geoCircle(z.latitude, z.longitude, z.radius)] }
-        };
+        return { type: 'Feature', id: z.id, properties: { multiplier: z.multiplier }, geometry: { type: 'Polygon', coordinates: [geoCircle(z.latitude, z.longitude, z.radius)] } };
       })
     };
   }
@@ -139,9 +182,9 @@ function buildHtml(
         '</svg>';
     }
     if (status === 'completed') {
-      return '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">' +
-        '<circle cx="12" cy="12" r="10" fill="#374151" stroke="#6b7280" stroke-width="2"/>' +
-        '<text x="12" y="16" text-anchor="middle" fill="#9ca3af" font-size="9" font-family="sans-serif" font-weight="bold">' + n + '</text>' +
+      return '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">' +
+        '<circle cx="10" cy="10" r="8" fill="#1f2937" stroke="#374151" stroke-width="1.5"/>' +
+        '<text x="10" y="14" text-anchor="middle" fill="#6b7280" font-size="7" font-family="sans-serif" font-weight="bold">' + n + '</text>' +
         '</svg>';
     }
     return '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28">' +
@@ -156,66 +199,27 @@ function buildHtml(
     if (!routePolyline) return;
     routePolyline.forEach(function(pt, idx) {
       var st = (statuses && statuses[idx]) ? statuses[idx] : 'pending';
-      var anchor = st === 'current' ? 'center' : 'center';
-      var m = new maplibregl.Marker({ element: makeSvgEl(stationSvg(idx + 1, st)), anchor: anchor })
-        .setLngLat(pt)
-        .addTo(map);
+      var m = new maplibregl.Marker({ element: makeSvgEl(stationSvg(idx + 1, st)), anchor: 'center' })
+        .setLngLat(pt).addTo(map);
       stationMarkers.push(m);
     });
   }
 
-  var PICKUP_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36"><circle cx="14" cy="14" r="12" fill="#22c55e" stroke="white" stroke-width="2.5"/><text x="14" y="18.5" text-anchor="middle" fill="white" font-size="11" font-family="sans-serif" font-weight="bold">P</text><line x1="14" y1="26" x2="14" y2="34" stroke="#22c55e" stroke-width="2" stroke-linecap="round"/></svg>';
-  var DROPOFF_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36"><circle cx="14" cy="14" r="12" fill="#ef4444" stroke="white" stroke-width="2.5"/><text x="14" y="18.5" text-anchor="middle" fill="white" font-size="11" font-family="sans-serif" font-weight="bold">D</text><line x1="14" y1="26" x2="14" y2="34" stroke="#ef4444" stroke-width="2" stroke-linecap="round"/></svg>';
-  var DRIVER_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="38" height="46" viewBox="0 0 38 46"><circle cx="19" cy="19" r="17" fill="#2563eb" opacity="0.18"/><circle cx="19" cy="19" r="13" fill="#2563eb" stroke="white" stroke-width="2.5"/><path d="M12 17.5 h14 M15 14 l4 3.5 l4-3.5 M13 21 c0 2.5 2.8 4.5 6 4.5s6-2 6-4.5" stroke="white" stroke-width="1.6" fill="none" stroke-linecap="round"/><line x1="19" y1="32" x2="19" y2="44" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round"/></svg>';
-
-  var driverMarker = null;
-  var prevPos = null;
-  var currentBearing = 0;
-  var userPanned = false;
-
-  function calcBearing(from, to) {
-    var lat1 = from[1] * Math.PI / 180;
-    var lat2 = to[1] * Math.PI / 180;
-    var dLng = (to[0] - from[0]) * Math.PI / 180;
-    var y = Math.sin(dLng) * Math.cos(lat2);
-    var x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
-    return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
-  }
-
-  function shortestRotation(from, to) {
-    var diff = ((to - from) % 360 + 360) % 360;
-    return diff > 180 ? from - (360 - diff) : from + diff;
-  }
-
-  function applyBearing(deg) {
+  function setMarkerTransition(ms) {
     if (!driverMarker) return;
-    var svg = driverMarker.getElement().querySelector('svg');
-    if (!svg) return;
-    currentBearing = shortestRotation(currentBearing, deg);
-    svg.style.transform = 'rotate(' + currentBearing + 'deg)';
-    svg.style.transformOrigin = '19px 19px';
+    driverMarker.getElement().style.transition = 'transform ' + ms + 'ms linear';
+  }
+
+  function moveNavCamera(pos, bearing, ms) {
+    if (userPanned) return;
+    map.easeTo({ center: pos, bearing: bearing, pitch: 55, zoom: 17, duration: ms });
   }
 
   map.on('load', function() {
-    // ── Surge zones ────────────────────────────────────────────────────────
+    // ── Surge layers ────────────────────────────────────────────────────────
     map.addSource('surge-zones', { type: 'geojson', data: buildSurgeGeoJSON(surgeZones) });
-    map.addLayer({
-      id: 'surge-fill', type: 'fill', source: 'surge-zones',
-      paint: {
-        'fill-color': ['interpolate', ['linear'], ['get', 'multiplier'],
-          1.0, 'rgba(213,178,61,0.13)', 1.5, 'rgba(249,115,22,0.14)', 2.0, 'rgba(239,68,68,0.14)'],
-        'fill-opacity': 1
-      }
-    });
-    map.addLayer({
-      id: 'surge-stroke', type: 'line', source: 'surge-zones',
-      paint: {
-        'line-color': ['interpolate', ['linear'], ['get', 'multiplier'],
-          1.0, 'rgba(213,178,61,0.6)', 1.5, 'rgba(249,115,22,0.6)', 2.0, 'rgba(239,68,68,0.6)'],
-        'line-width': 1.5,
-        'line-dasharray': [4, 3]
-      }
-    });
+    map.addLayer({ id: 'surge-fill', type: 'fill', source: 'surge-zones', paint: { 'fill-color': ['interpolate', ['linear'], ['get', 'multiplier'], 1.0, 'rgba(213,178,61,0.13)', 1.5, 'rgba(249,115,22,0.14)', 2.0, 'rgba(239,68,68,0.14)'], 'fill-opacity': 1 } });
+    map.addLayer({ id: 'surge-stroke', type: 'line', source: 'surge-zones', paint: { 'line-color': ['interpolate', ['linear'], ['get', 'multiplier'], 1.0, 'rgba(213,178,61,0.6)', 1.5, 'rgba(249,115,22,0.6)', 2.0, 'rgba(239,68,68,0.6)'], 'line-width': 1.5, 'line-dasharray': [4, 3] } });
 
     surgeZones.forEach(function(z) {
       var stroke = z.multiplier >= 2.0 ? 'rgba(239,68,68,0.6)' : z.multiplier >= 1.5 ? 'rgba(249,115,22,0.6)' : 'rgba(213,178,61,0.6)';
@@ -226,21 +230,15 @@ function buildHtml(
     });
 
     // ── Approach circle (initially hidden) ─────────────────────────────────
-    map.addSource('approach-circle', {
-      type: 'geojson',
-      data: { type: 'Feature', geometry: { type: 'Polygon', coordinates: [[]] }, properties: {} }
-    });
-    map.addLayer({
-      id: 'approach-fill', type: 'fill', source: 'approach-circle',
-      paint: { 'fill-color': '#f59e0b', 'fill-opacity': 0.10 },
-      layout: { visibility: 'none' }
-    });
-    map.addLayer({
-      id: 'approach-stroke', type: 'line', source: 'approach-circle',
-      paint: { 'line-color': '#f59e0b', 'line-width': 2.5, 'line-dasharray': [5, 4] },
-      layout: { visibility: 'none' }
-    });
+    map.addSource('approach-circle', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'Polygon', coordinates: [[]] }, properties: {} } });
+    map.addLayer({ id: 'approach-fill', type: 'fill', source: 'approach-circle', paint: { 'fill-color': '#f59e0b', 'fill-opacity': 0.10 }, layout: { visibility: 'none' } });
+    map.addLayer({ id: 'approach-stroke', type: 'line', source: 'approach-circle', paint: { 'line-color': '#f59e0b', 'line-width': 2.5, 'line-dasharray': [5, 4] }, layout: { visibility: 'none' } });
     approachReady = true;
+
+    // ── Shuttle route source (segment-only; populated via updateRoadPolyline) ──
+    map.addSource('shuttle-route', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] }, properties: {} } });
+    map.addLayer({ id: 'shuttle-casing', type: 'line', source: 'shuttle-route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#ffffff', 'line-width': 5, 'line-opacity': 0.30 } });
+    map.addLayer({ id: 'shuttle-line', type: 'line', source: 'shuttle-route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#6366f1', 'line-width': 4, 'line-opacity': 0.92 } });
 
     // ── On-demand ride markers ─────────────────────────────────────────────
     if (pickup) {
@@ -252,32 +250,31 @@ function buildHtml(
         .setLngLat(dropoff).setPopup(new maplibregl.Popup({ offset: 20, closeButton: false }).setText('Dropoff')).addTo(map);
     }
 
-    // ── Driver marker ──────────────────────────────────────────────────────
-    var driverLoc = driver || pickup;
-    if (driverLoc) {
-      driverMarker = new maplibregl.Marker({ element: makeSvgEl(DRIVER_SVG), anchor: 'bottom' })
-        .setLngLat(driverLoc).setPopup(new maplibregl.Popup({ offset: 22, closeButton: false }).setText('Your location')).addTo(map);
-      if (driverLoc && pickup && !(driverLoc[0] === pickup[0] && driverLoc[1] === pickup[1])) {
-        currentBearing = calcBearing(driverLoc, pickup);
-        var initSvg = driverMarker.getElement().querySelector('svg');
-        if (initSvg) {
-          initSvg.style.transformOrigin = '19px 19px';
-          initSvg.style.transform = 'rotate(' + currentBearing + 'deg)';
-        }
+    // ── Station markers ────────────────────────────────────────────────────
+    if (routePolyline && routePolyline.length >= 2) {
+      rebuildStationMarkers(stationStatuses);
+
+      if (!navMode) {
+        // Legacy flat view: draw full route + fitBounds
+        map.getSource('shuttle-route').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: routePolyline }, properties: {} });
+        var stBounds = new maplibregl.LngLatBounds();
+        routePolyline.forEach(function(pt) { stBounds.extend(pt); });
+        map.fitBounds(stBounds, { padding: 80, maxZoom: 14, duration: 700 });
       }
-      prevPos = driverLoc;
-      setTimeout(function() {
-        if (driverMarker) {
-          driverMarker.getElement().style.transition = 'transform 1400ms linear';
-          var svg = driverMarker.getElement().querySelector('svg');
-          if (svg) svg.style.transition = 'transform 1400ms linear';
-        }
-      }, 200);
+      // In nav mode: leave shuttle-route empty, wait for roadPolyline postMessage
     }
+
+    // ── Driver marker (created immediately so CSS transition is ready) ──────
+    var markerSvg = navMode ? DRIVER_NAV_SVG : DRIVER_SVG;
+    var markerAnchor = navMode ? 'center' : 'bottom';
+    driverMarker = new maplibregl.Marker({ element: makeSvgEl(markerSvg), anchor: markerAnchor })
+      .setLngLat(driverInit).addTo(map);
+    driverMarker.getElement().style.transition = 'transform ' + animDurationMs + 'ms linear';
+    prevPos = driverInit;
 
     // ── On-demand ride route ───────────────────────────────────────────────
     var routePts = [driver || pickup, pickup, dropoff].filter(Boolean);
-    if (routePts.length >= 2) {
+    if (!navMode && routePts.length >= 2) {
       var straightCoords = routePts.map(function(p) { return p; });
       function drawRoute(coords) {
         if (map.getSource('route')) {
@@ -296,37 +293,12 @@ function buildHtml(
           .then(function(data) { if (data && data.code === 'Ok' && data.routes && data.routes.length) drawRoute(data.routes[0].geometry.coordinates); })
           .catch(function() {});
       })();
-    }
-
-    // ── Shuttle fixed-route polyline + station markers ─────────────────────
-    if (routePolyline && routePolyline.length >= 2) {
-      rebuildStationMarkers(stationStatuses);
-
-      function drawShuttleRoute(coords) {
-        var geoData = { type: 'Feature', geometry: { type: 'LineString', coordinates: coords }, properties: {} };
-        if (map.getSource('shuttle-route')) {
-          map.getSource('shuttle-route').setData(geoData);
-        } else {
-          map.addSource('shuttle-route', { type: 'geojson', data: geoData });
-          map.addLayer({ id: 'shuttle-casing', type: 'line', source: 'shuttle-route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#ffffff', 'line-width': 5, 'line-opacity': 0.35 } });
-          map.addLayer({ id: 'shuttle-line', type: 'line', source: 'shuttle-route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#6366f1', 'line-width': 3.5, 'line-opacity': 0.88 } });
-        }
+      var allPts2 = [driver || pickup, pickup, dropoff].filter(Boolean);
+      if (allPts2.length > 1) {
+        var bounds = new maplibregl.LngLatBounds();
+        allPts2.forEach(function(p) { bounds.extend(p); });
+        map.fitBounds(bounds, { padding: 70, maxZoom: 15, duration: 600 });
       }
-
-      drawShuttleRoute(routePolyline);
-      // Road-snapped geometry arrives later via updateRoadPolyline postMessage
-
-      var stBounds = new maplibregl.LngLatBounds();
-      routePolyline.forEach(function(pt) { stBounds.extend(pt); });
-      map.fitBounds(stBounds, { padding: 80, maxZoom: 14, duration: 700 });
-      return;
-    }
-
-    var allPts = [driver, pickup, dropoff].filter(Boolean);
-    if (allPts.length > 1) {
-      var bounds = new maplibregl.LngLatBounds();
-      allPts.forEach(function(p) { bounds.extend(p); });
-      map.fitBounds(bounds, { padding: 70, maxZoom: 15, duration: 600 });
     }
   });
 
@@ -342,44 +314,53 @@ function buildHtml(
     try {
       var msg = JSON.parse(e.data);
 
+      // ── Driver location: smooth glide + nav camera ────────────────────────
       if (msg.type === 'driverLocation') {
         var newPos = [msg.lng, msg.lat];
+        var aMs = msg.animMs || animDurationMs;
+        animDurationMs = aMs;
+
         if (!driverMarker) {
-          driverMarker = new maplibregl.Marker({ element: makeSvgEl(DRIVER_SVG), anchor: 'bottom' })
+          var svg2 = navMode ? DRIVER_NAV_SVG : DRIVER_SVG;
+          var anc2 = navMode ? 'center' : 'bottom';
+          driverMarker = new maplibregl.Marker({ element: makeSvgEl(svg2), anchor: anc2 })
             .setLngLat(newPos).addTo(map);
-          setTimeout(function() {
-            if (driverMarker) {
-              driverMarker.getElement().style.transition = 'transform 1400ms linear';
-              var svg = driverMarker.getElement().querySelector('svg');
-              if (svg) svg.style.transition = 'transform 1400ms linear';
-            }
-          }, 200);
+          driverMarker.getElement().style.transition = 'transform ' + aMs + 'ms linear';
           prevPos = newPos;
         } else {
+          // Update marker transition if speed changed
+          driverMarker.getElement().style.transition = 'transform ' + aMs + 'ms linear';
+
+          // Compute bearing from movement
           if (prevPos && !(prevPos[0] === newPos[0] && prevPos[1] === newPos[1])) {
-            applyBearing(calcBearing(prevPos, newPos));
+            currentBearing = calcBearing(prevPos, newPos);
           }
           prevPos = newPos;
           driverMarker.setLngLat(newPos);
         }
-        if (!userPanned) map.easeTo({ center: newPos, duration: 1000 });
+
+        if (!userPanned) {
+          if (navMode) {
+            map.easeTo({ center: newPos, bearing: currentBearing, pitch: 55, zoom: 17, duration: aMs });
+          } else {
+            map.easeTo({ center: newPos, duration: aMs });
+          }
+        }
       }
 
+      // ── Station status update ─────────────────────────────────────────────
       if (msg.type === 'updateStationStatuses' && msg.statuses) {
         stationStatuses = msg.statuses;
         rebuildStationMarkers(msg.statuses);
       }
 
+      // ── Approach circle show/hide ─────────────────────────────────────────
       if (msg.type === 'setApproachCircle') {
         if (!approachReady) return;
         var src = map.getSource('approach-circle');
         if (!src) return;
         if (msg.show && msg.lat != null && msg.lng != null) {
-          src.setData({
-            type: 'Feature',
-            geometry: { type: 'Polygon', coordinates: [geoCircle(msg.lat, msg.lng, msg.radius || 500)] },
-            properties: {}
-          });
+          src.setData({ type: 'Feature', geometry: { type: 'Polygon', coordinates: [geoCircle(msg.lat, msg.lng, msg.radius || 500)] }, properties: {} });
           map.setLayoutProperty('approach-fill', 'visibility', 'visible');
           map.setLayoutProperty('approach-stroke', 'visibility', 'visible');
         } else {
@@ -388,18 +369,33 @@ function buildHtml(
         }
       }
 
+      // ── Focus camera ──────────────────────────────────────────────────────
       if (msg.type === 'focusLocation' && msg.lat != null && msg.lng != null) {
-        map.flyTo({ center: [msg.lng, msg.lat], zoom: msg.zoom || 16, duration: 800 });
+        map.flyTo({ center: [msg.lng, msg.lat], zoom: msg.zoom || 16, pitch: navMode ? 55 : 0, duration: 800 });
       }
 
-      if (msg.type === 'updateRoadPolyline' && Array.isArray(msg.coords) && msg.coords.length >= 2) {
+      // ── Road segment polyline (segment-only in nav mode) ──────────────────
+      if (msg.type === 'updateRoadPolyline') {
         var rSrc = map.getSource('shuttle-route');
-        if (rSrc) rSrc.setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: msg.coords }, properties: {} });
+        if (!rSrc) return;
+        if (Array.isArray(msg.coords) && msg.coords.length >= 2) {
+          rSrc.setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: msg.coords }, properties: {} });
+        } else {
+          // Clear route while loading next segment
+          rSrc.setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: [] }, properties: {} });
+        }
       }
 
+      // ── Recenter ──────────────────────────────────────────────────────────
       if (msg.type === 'recenter') {
         userPanned = false;
-        if (prevPos) map.easeTo({ center: prevPos, duration: 800 });
+        if (prevPos) {
+          if (navMode) {
+            map.easeTo({ center: prevPos, bearing: currentBearing, pitch: 55, zoom: 17, duration: 800 });
+          } else {
+            map.easeTo({ center: prevPos, duration: 800 });
+          }
+        }
       }
     } catch(_) {}
   });
@@ -412,66 +408,61 @@ function buildHtml(
 export function MapBackdrop({
   pickup, dropoff, driverLocation, surgeZones = [], routePolyline, roadPolyline,
   stationStatuses, approachCircle, focusTarget,
+  navigationMode = false, animDurationMs = 1200,
 }: MapBackdropProps) {
   const webviewRef = useRef<WebView>(null);
-  const lastLocUpdate = useRef(0);
   const [userPanned, setUserPanned] = useState(false);
 
-  // Stable HTML: only rebuilds when the route or surges change (prevents WebView remount)
+  // Stable HTML: only rebuilds when route / surge / nav mode changes
   const html = useMemo(
-    () => buildHtml(pickup, dropoff, driverLocation, surgeZones, routePolyline, stationStatuses ?? []),
+    () => buildHtml(
+      pickup, dropoff, driverLocation, surgeZones, routePolyline,
+      stationStatuses ?? [], navigationMode, animDurationMs,
+    ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [JSON.stringify(routePolyline), JSON.stringify(surgeZones)],
+    [JSON.stringify(routePolyline), JSON.stringify(surgeZones), navigationMode],
   );
 
-  // Live driver location via postMessage (avoids rebuilding HTML)
+  // Live driver position — no throttle so every update reaches the WebView
   useEffect(() => {
-    const now = Date.now();
-    if (now - lastLocUpdate.current < 1500) return;
-    lastLocUpdate.current = now;
     if (!driverLocation || !webviewRef.current) return;
-    webviewRef.current.postMessage(
-      JSON.stringify({ type: 'driverLocation', lat: driverLocation.latitude, lng: driverLocation.longitude })
-    );
-  }, [driverLocation?.latitude, driverLocation?.longitude]);
+    webviewRef.current.postMessage(JSON.stringify({
+      type: 'driverLocation',
+      lat: driverLocation.latitude,
+      lng: driverLocation.longitude,
+      animMs: animDurationMs,
+    }));
+  }, [driverLocation?.latitude, driverLocation?.longitude, animDurationMs]);
 
-  // Dynamic station status updates
+  // Station status updates
   useEffect(() => {
     if (!stationStatuses || !webviewRef.current) return;
-    webviewRef.current.postMessage(
-      JSON.stringify({ type: 'updateStationStatuses', statuses: stationStatuses })
-    );
+    webviewRef.current.postMessage(JSON.stringify({ type: 'updateStationStatuses', statuses: stationStatuses }));
   }, [JSON.stringify(stationStatuses)]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Approach circle show/hide
+  // Approach circle
   useEffect(() => {
     if (!webviewRef.current) return;
     if (approachCircle) {
-      webviewRef.current.postMessage(
-        JSON.stringify({ type: 'setApproachCircle', show: true, lat: approachCircle.latitude, lng: approachCircle.longitude, radius: approachCircle.radius })
-      );
+      webviewRef.current.postMessage(JSON.stringify({ type: 'setApproachCircle', show: true, lat: approachCircle.latitude, lng: approachCircle.longitude, radius: approachCircle.radius }));
     } else {
       webviewRef.current.postMessage(JSON.stringify({ type: 'setApproachCircle', show: false }));
     }
   }, [approachCircle?.latitude, approachCircle?.longitude, approachCircle?.radius, approachCircle == null]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Road polyline update — sends pre-snapped geometry into the WebView
+  // Road polyline: send on every change (including null → clears segment)
   useEffect(() => {
-    if (!roadPolyline?.length || !webviewRef.current) return;
-    webviewRef.current.postMessage(
-      JSON.stringify({
-        type: 'updateRoadPolyline',
-        coords: roadPolyline.map(p => [p.longitude, p.latitude]),
-      })
-    );
+    if (!webviewRef.current) return;
+    webviewRef.current.postMessage(JSON.stringify({
+      type: 'updateRoadPolyline',
+      coords: roadPolyline?.length ? roadPolyline.map(p => [p.longitude, p.latitude]) : null,
+    }));
   }, [JSON.stringify(roadPolyline)]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Focus camera on target
+  // Focus camera
   useEffect(() => {
     if (!focusTarget || !webviewRef.current) return;
-    webviewRef.current.postMessage(
-      JSON.stringify({ type: 'focusLocation', lat: focusTarget.latitude, lng: focusTarget.longitude, zoom: focusTarget.zoom ?? 16 })
-    );
+    webviewRef.current.postMessage(JSON.stringify({ type: 'focusLocation', lat: focusTarget.latitude, lng: focusTarget.longitude, zoom: focusTarget.zoom ?? 16 }));
   }, [focusTarget?.latitude, focusTarget?.longitude]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (

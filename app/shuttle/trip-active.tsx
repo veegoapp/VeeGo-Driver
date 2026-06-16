@@ -82,15 +82,27 @@ export default function ShuttleTripActiveScreen() {
     return haversineMeters(effectivePos.latitude, effectivePos.longitude, nextCoords.latitude, nextCoords.longitude);
   }, [effectivePos?.latitude, effectivePos?.longitude, nextCoords?.latitude, nextCoords?.longitude]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Phase state (declared early — referenced by useRoadEta below) ───────────
+  const [phase, setPhase] = useState<TripPhase>('en_route');
+
   // Road-accurate distance + ETA via OSRM (throttled, with fallback)
   const roadEta = useRoadEta(effectivePos, nextCoords, phase !== 'at_stop' && !!activeLine);
   const distanceM = roadEta.distanceM;
 
-  // Road-snapped full route polyline for map rendering (fetched once per station set)
-  const { coords: roadPolylineCoords } = useRoadPolyline(stationCoords);
+  // Segment-only micro-routing: fetch OSRM only for current station → next station.
+  // Stable waypoints (station coords, not live position) so it fetches once per stop.
+  const segmentWaypoints = useMemo(() => {
+    const cur = stationCoords[currentStopIndex];
+    const nxt = stationCoords[currentStopIndex + 1];
+    if (!cur || !nxt) return null;
+    return [cur, nxt];
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStopIndex, stationCoords.length]);
 
-  // ── Phase state ────────────────────────────────────────────────────────────
-  const [phase, setPhase] = useState<TripPhase>('en_route');
+  const { coords: roadPolylineCoords } = useRoadPolyline(segmentWaypoints);
+
+  // Camera animation duration synced to demo update speed (or real-GPS default)
+  const animDurationMs = demoDriverPosition ? Math.round(1500 / demoSpeed) : 1200;
   const [stopTimer, setStopTimer] = useState(STOP_DURATION_S);
   const [timerActive, setTimerActive] = useState(false);
   const [passengerStatuses, setPassengerStatuses] = useState<Record<string, PassengerStatus>>({});
@@ -305,6 +317,8 @@ export default function ShuttleTripActiveScreen() {
           approachCircle={approachCircle}
           driverLocation={effectivePos ?? undefined}
           focusTarget={focusTarget}
+          navigationMode
+          animDurationMs={animDurationMs}
         />
 
         {/* Floating top bar */}
