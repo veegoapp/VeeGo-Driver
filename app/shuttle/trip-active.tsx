@@ -20,6 +20,7 @@ import { useI18n } from '@/lib/i18nContext';
 import { useSocket } from '@/lib/socketContext';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
 import { endpoints, type ShuttleCompleteResponse } from '@/lib/api';
+import { useDemoMode, DemoSpeedControl } from '@/lib/demo';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 const APPROACH_THRESHOLD_M = 500;
@@ -57,6 +58,8 @@ export default function ShuttleTripActiveScreen() {
   const { t, isRTL } = useI18n();
   const { socket } = useSocket();
   const navigation = useNavigation();
+
+  const { demoSpeed } = useDemoMode();
 
   const {
     activeLine, stops, currentStopIndex, passengers, nextStop, stationCoords, demoDriverPosition,
@@ -145,15 +148,16 @@ export default function ShuttleTripActiveScreen() {
     });
   }, [passengers]);
 
-  // ── Countdown timer ────────────────────────────────────────────────────────
+  // ── Countdown timer (scales with demoSpeed in demo mode) ──────────────────
   useEffect(() => {
     if (!timerActive || stopTimer <= 0) {
       if (stopTimer <= 0) setTimerActive(false);
       return;
     }
-    const id = setTimeout(() => setStopTimer(t => t - 1), 1000);
+    const tickMs = demoDriverPosition ? Math.round(1000 / demoSpeed) : 1000;
+    const id = setTimeout(() => setStopTimer(t => t - 1), tickMs);
     return () => clearTimeout(id);
-  }, [timerActive, stopTimer]);
+  }, [timerActive, stopTimer, demoSpeed, demoDriverPosition]);
 
   // ── Map data ───────────────────────────────────────────────────────────────
   const stationStatuses = useMemo(
@@ -328,6 +332,8 @@ export default function ShuttleTripActiveScreen() {
                 </Text>
               </GlassView>
             )}
+
+            {demoDriverPosition && <DemoSpeedControl />}
           </View>
 
           {/* Approaching banner — sits at bottom of map area */}

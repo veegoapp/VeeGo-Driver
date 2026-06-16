@@ -18,6 +18,7 @@ import {
   DEMO_STATION_COORDS,
 } from './mockData';
 import { demoReducer, DEMO_INITIAL_STATE } from './demoEngine';
+import { useDemoMode } from './DemoContext';
 
 // ── Raw backend shapes (minimal, only what we need) ───────────────────────────
 
@@ -178,6 +179,7 @@ function passengersForStop(
 
 // ── Provider ──────────────────────────────────────────────────────────────────
 export function DemoShuttleProvider({ children }: { children: React.ReactNode }) {
+  const { demoSpeed } = useDemoMode();
   const [state, dispatch] = useReducer(demoReducer, DEMO_INITIAL_STATE);
 
   // Real base data (null while loading or if fetch failed → uses mockData)
@@ -234,25 +236,29 @@ export function DemoShuttleProvider({ children }: { children: React.ReactNode })
     simPosRef.current = start;
     setDemoDriverPosition({ ...start, heading: null, speed: null });
 
-    // Move 7 % of remaining distance every 1.5 s; halt when ≤ 350 m away
+    // Move toward the target; interval and step size scale with demoSpeed.
+    // At 1× → 1500 ms / 7 % step. At 2× → 750 ms / 14 % step. At 5× → 300 ms / 35 % step.
+    const intervalMs = Math.round(1500 / demoSpeed);
+    const stepFraction = 0.07 * demoSpeed;
+
     const interval = setInterval(() => {
       const cur = simPosRef.current;
       if (!cur) { clearInterval(interval); return; }
       const dist = haversineMeters(cur.latitude, cur.longitude, target.latitude, target.longitude);
       if (dist <= 350) { clearInterval(interval); return; }
       const next = {
-        latitude:  cur.latitude  + (target.latitude  - cur.latitude)  * 0.07,
-        longitude: cur.longitude + (target.longitude - cur.longitude) * 0.07,
+        latitude:  cur.latitude  + (target.latitude  - cur.latitude)  * stepFraction,
+        longitude: cur.longitude + (target.longitude - cur.longitude) * stepFraction,
       };
       const movedM = haversineMeters(cur.latitude, cur.longitude, next.latitude, next.longitude);
-      const speedMps = movedM / 1.5; // interval is 1.5 s
+      const speedMps = movedM / (intervalMs / 1000);
       simPosRef.current = next;
       setDemoDriverPosition({ ...next, heading: null, speed: speedMps });
-    }, 1500);
+    }, intervalMs);
 
     return () => clearInterval(interval);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.currentStopIndex, stationCoords]);
+  }, [state.currentStopIndex, stationCoords, demoSpeed]);
 
   // ── Passengers for the current stop (checkedIn driven by demo reducer) ──────
   const checkedInMap = state.checkedInByStop[state.currentStopIndex] ?? {};
