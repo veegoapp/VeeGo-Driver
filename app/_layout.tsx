@@ -19,7 +19,7 @@ import { SocketProvider } from '@/lib/socketContext';
 import { navigateAfterAuth } from '@/lib/postAuthRouter';
 import { setOnAccountSuspended } from '@/lib/api';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
-import { DemoModeProvider, DemoGate } from '@/lib/demo';
+import { DemoModeProvider, DemoGate, useDemoMode } from '@/lib/demo';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -56,6 +56,7 @@ function PushNotificationsBridge() {
 
 function RootLayoutNav() {
   const { token, isLoading } = useAuth();
+  const { isDemoMode } = useDemoMode();
   const router = useRouter();
   const segments = useSegments();
 
@@ -69,6 +70,9 @@ function RootLayoutNav() {
   useEffect(() => {
     // Wait until auth state is fully resolved before making any routing decision.
     if (isLoading) return;
+
+    // Demo mode bypasses all auth routing — user navigated themselves.
+    if (isDemoMode) return;
 
     // segments[0] is undefined at the root route "/" (app/index.tsx).
     const currentScreen = segments[0] as string | undefined;
@@ -88,7 +92,7 @@ function RootLayoutNav() {
     if (inPreAuthZone) {
       navigateAfterAuth(token);
     }
-  }, [token, isLoading, segments]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [token, isLoading, isDemoMode, segments]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Hold the stack while auth is resolving to prevent any flash of pre-auth screens.
   if (isLoading) return null;
