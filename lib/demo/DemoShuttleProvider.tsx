@@ -277,11 +277,11 @@ export function DemoShuttleProvider({ children }: { children: React.ReactNode })
 
     // بناء مسار مقسّم لخطوات صغيرة جداً (50 خطوة) عشان الحركة تبقى سلسة
     // الإصلاح التاني: بدل الـ easing الأسي (اللي بيبطّي في الآخر)، خطوات ثابتة الحجم
-    const APPROACH_STOP_M = 350; // وقف قبل المحطة بـ 350 متر
     const totalDist = haversineMeters(
       startPoint.latitude, startPoint.longitude,
       target.latitude, target.longitude
     );
+    const APPROACH_STOP_M = Math.min(150, totalDist * 0.4);
 
     // احسب عدد الخطوات بحيث كل خطوة ≈ 15-30 متر
     const stepCount = Math.max(20, Math.min(80, Math.round(totalDist / 20)));
