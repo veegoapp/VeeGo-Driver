@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MapBackdrop } from '@/components/MapBackdrop';
+import { Audio } from 'expo-av';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useDriverLocation, haversineMeters } from '@/hooks/useDriverLocation';
@@ -122,6 +123,26 @@ export default function ShuttleTripActiveScreen() {
       if (next !== phase) setPhase(next);
     }
   }, [proximityM]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Approaching alert sound — plays 3× when driver enters 250m zone ───────
+  useEffect(() => {
+    if (phase !== 'approaching') return;
+    let cancelled = false;
+    (async () => {
+      await Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
+      for (let i = 0; i < 3; i++) {
+        if (cancelled) break;
+        const { sound } = await Audio.Sound.createAsync(
+          require('@/assets/sounds/approaching.wav'),
+          { shouldPlay: true, volume: 1.0 },
+        );
+        await sound.playAsync();
+        await new Promise<void>(res => setTimeout(res, 900));
+        sound.unloadAsync();
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── GPS location updates to backend every 10 s during active trip ─────────
   useEffect(() => {
