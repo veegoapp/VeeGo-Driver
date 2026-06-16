@@ -73,27 +73,21 @@ type DemoBase = {
 };
 
 async function fetchRealDemoBase(): Promise<DemoBase | null> {
-  // Step 1: fetch all routes
   const linesRaw = await api.get('/shuttle/lines');
   const routes = parseRoutes(linesRaw);
   if (!routes.length) return null;
 
-  // Step 2: pick first route (prefer an 'in-progress' one if labelled)
   const route = routes[0];
 
-  // Step 3: fetch line detail to get stations with coordinates
   const detailRaw = await api.get(`/shuttle/lines/${route.id}`);
   const stations = parseStations(detailRaw);
 
-  // Need at least 2 stations for a meaningful demo trip
   if (stations.length < 2) return null;
 
-  // Sort by station order, then cap at 6 so the demo always ends at Station 6
   const sorted = [...stations]
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
     .slice(0, 6);
 
-  // Build stop templates (all stations, name + address)
   const stopsTemplate: Omit<ShuttleStop, 'status' | 'boarded' | 'expected'>[] = sorted.map(
     (st, idx) => ({
       id: String(st.id),
@@ -103,7 +97,6 @@ async function fetchRealDemoBase(): Promise<DemoBase | null> {
     })
   );
 
-  // Only stations that have coordinates contribute to the map polyline
   const stationCoords = sorted
     .filter(st => st.latitude != null && st.longitude != null)
     .map(st => ({ latitude: st.latitude!, longitude: st.longitude! }));
@@ -112,8 +105,6 @@ async function fetchRealDemoBase(): Promise<DemoBase | null> {
   const to = route.toLocation ?? route.to ?? sorted[sorted.length - 1].name;
   const routeId = String(route.id);
 
-  // tripId is intentionally undefined — this prevents trip-active and
-  // boarding screens from firing any real API calls during the simulation.
   const activeLine: ShuttleLine = {
     id: routeId,
     tripId: undefined,
@@ -169,12 +160,28 @@ async function fetchRealDemoBase(): Promise<DemoBase | null> {
 }
 
 // ── Passenger helper ──────────────────────────────────────────────────────────
-// Passengers are simulated locally — the demo never fetches real passenger data
-// to avoid requiring auth and to keep boarding actions fully offline.
 function passengersForStop(
   stopIndex: number
 ): Omit<BoardingPassenger, 'checkedIn'>[] {
   return DEMO_PASSENGERS_TEMPLATE[stopIndex] ?? [];
+}
+
+// ── Interpolation helper: returns N intermediate points between two coords ────
+// This makes the movement look smooth and realistic on the map
+function interpolatePath(
+  from: { latitude: number; longitude: number },
+  to: { latitude: number; longitude: number },
+  steps: number
+): Array<{ latitude: number; longitude: number }> {
+  const pts: Array<{ latitude: number; longitude: number }> = [];
+  for (let i = 1; i <= steps; i++) {
+    const t = i / steps;
+    pts.push({
+      latitude: from.latitude + (to.latitude - from.latitude) * t,
+      longitude: from.longitude + (to.longitude - from.longitude) * t,
+    });
+  }
+  return pts;
 }
 
 // ── Provider ──────────────────────────────────────────────────────────────────
@@ -182,11 +189,9 @@ export function DemoShuttleProvider({ children }: { children: React.ReactNode })
   const { demoSpeed } = useDemoMode();
   const [state, dispatch] = useReducer(demoReducer, DEMO_INITIAL_STATE);
 
-  // Real base data (null while loading or if fetch failed → uses mockData)
   const [demoBase, setDemoBase] = useState<DemoBase | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch real route + stations once on mount; fall back silently to mockData
   useEffect(() => {
     let cancelled = false;
     setIsLoading(true);
@@ -195,31 +200,38 @@ export function DemoShuttleProvider({ children }: { children: React.ReactNode })
         if (!cancelled) setDemoBase(base);
       })
       .catch(() => {
-        if (!cancelled) setDemoBase(null); // null → fallback to mockData below
+        if (!cancelled) setDemoBase(null);
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false);
       });
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []);
 
-  // ── Resolved data: real if fetch succeeded, mockData fallback otherwise ────
   const stopsTemplate = demoBase?.stopsTemplate ?? DEMO_STOPS_TEMPLATE;
   const stationCoords = demoBase?.stationCoords ?? DEMO_STATION_COORDS;
   const activeLine = demoBase?.activeLine ?? DEMO_LINE;
   const demoBooking = demoBase?.booking ?? DEMO_BOOKING;
   const demoRoute = demoBase?.route ?? DEMO_ROUTE;
 
-  // ── Simulated GPS: moves from previous station toward the current target ──
-  // Stops within ~350 m so the "approaching" banner triggers in trip-active.
+  // ── Simulated GPS ──────────────────────────────────────────────────────────
+  // الإصلاح الأول: العربية تبدأ من المحطة السابقة بالظبط (مش من مكان بعيد)
+  // وبتتحرك بخطوات صغيرة كتير عشان الحركة تبقى سلسة زي جوجل ماب
   const simPosRef = useRef<{ latitude: number; longitude: number } | null>(null);
+  const pathQueueRef = useRef<Array<{ latitude: number; longitude: number }>>([]);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const [demoDriverPosition, setDemoDriverPosition] = useState<{
     latitude: number; longitude: number; heading: number | null; speed: number | null;
   } | null>(null);
 
   useEffect(() => {
+    // مسح الإنتيرفال القديم
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+
     const target = stationCoords[state.currentStopIndex];
     if (!target) {
       simPosRef.current = null;
@@ -227,47 +239,99 @@ export function DemoShuttleProvider({ children }: { children: React.ReactNode })
       return;
     }
 
-    // Start from the previous station, or ~2.5 km before the first stop
+    // الإصلاح الأساسي: ابدأ من المحطة السابقة بالظبط
+    // لو أول محطة → ابدأ من نقطة قريبة (600 متر) قبل المحطة على نفس المسار
     const prev = stationCoords[state.currentStopIndex - 1];
-    const start = {
-      latitude: prev?.latitude ?? (target.latitude + 0.022),
-      longitude: prev?.longitude ?? target.longitude,
-    };
-    simPosRef.current = start;
-    setDemoDriverPosition({ ...start, heading: null, speed: null });
+    let startPoint: { latitude: number; longitude: number };
 
-    // Move toward the target; interval and step size scale with demoSpeed.
-    // At 1× → 1500 ms / 7 % step. At 2× → 750 ms / 14 % step. At 5× → 300 ms / 35 % step.
-    const intervalMs = Math.round(1500 / demoSpeed);
-    const stepFraction = 0.07 * demoSpeed;
+    if (prev) {
+      // ابدأ من المحطة السابقة بالظبط
+      startPoint = { latitude: prev.latitude, longitude: prev.longitude };
+    } else {
+      // أول محطة: احسب نقطة 600 متر قبلها في نفس اتجاه المسار
+      // لو في محطة تانية، احسب الاتجاه عكسها؛ غير كده افترض اتجاه جنوب
+      const next = stationCoords[state.currentStopIndex + 1];
+      if (next) {
+        // الاتجاه من target لـ next ← اعكسه عشان نيجي من ورا
+        const dLat = target.latitude - next.latitude;
+        const dLng = target.longitude - next.longitude;
+        const dist = Math.sqrt(dLat * dLat + dLng * dLng);
+        const ratio = 0.006 / (dist || 0.001); // تقريباً 600 متر
+        startPoint = {
+          latitude: target.latitude + dLat * ratio,
+          longitude: target.longitude + dLng * ratio,
+        };
+      } else {
+        startPoint = {
+          latitude: target.latitude + 0.006,
+          longitude: target.longitude,
+        };
+      }
+    }
 
-    const interval = setInterval(() => {
+    simPosRef.current = startPoint;
+    setDemoDriverPosition({ ...startPoint, heading: null, speed: null });
+
+    // بناء مسار مقسّم لخطوات صغيرة جداً (50 خطوة) عشان الحركة تبقى سلسة
+    // الإصلاح التاني: بدل الـ easing الأسي (اللي بيبطّي في الآخر)، خطوات ثابتة الحجم
+    const APPROACH_STOP_M = 350; // وقف قبل المحطة بـ 350 متر
+    const totalDist = haversineMeters(
+      startPoint.latitude, startPoint.longitude,
+      target.latitude, target.longitude
+    );
+
+    // احسب عدد الخطوات بحيث كل خطوة ≈ 15-30 متر
+    const stepCount = Math.max(20, Math.min(80, Math.round(totalDist / 20)));
+    const allPoints = interpolatePath(startPoint, target, stepCount);
+
+    // اقطع النقاط اللي بعد نقطة الـ 350 متر
+    let cutoffIdx = allPoints.length;
+    for (let i = 0; i < allPoints.length; i++) {
+      const d = haversineMeters(
+        allPoints[i].latitude, allPoints[i].longitude,
+        target.latitude, target.longitude
+      );
+      if (d <= APPROACH_STOP_M) { cutoffIdx = i; break; }
+    }
+    pathQueueRef.current = allPoints.slice(0, cutoffIdx);
+
+    // كل tick = خطوة واحدة من الـ queue
+    // السرعة: في الـ 1× → 1500ms بين كل خطوة. 2× → 750ms. 5× → 300ms
+    const tickMs = Math.round(1500 / demoSpeed);
+
+    intervalRef.current = setInterval(() => {
+      const queue = pathQueueRef.current;
+      if (!queue.length) {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        return;
+      }
+      const next = queue.shift()!;
       const cur = simPosRef.current;
-      if (!cur) { clearInterval(interval); return; }
-      const dist = haversineMeters(cur.latitude, cur.longitude, target.latitude, target.longitude);
-      if (dist <= 350) { clearInterval(interval); return; }
-      const next = {
-        latitude:  cur.latitude  + (target.latitude  - cur.latitude)  * stepFraction,
-        longitude: cur.longitude + (target.longitude - cur.longitude) * stepFraction,
-      };
-      const movedM = haversineMeters(cur.latitude, cur.longitude, next.latitude, next.longitude);
-      const speedMps = movedM / (intervalMs / 1000);
+      const movedM = cur
+        ? haversineMeters(cur.latitude, cur.longitude, next.latitude, next.longitude)
+        : 0;
+      const speedMps = movedM / (tickMs / 1000);
       simPosRef.current = next;
       setDemoDriverPosition({ ...next, heading: null, speed: speedMps });
-    }, intervalMs);
+    }, tickMs);
 
-    return () => clearInterval(interval);
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.currentStopIndex, stationCoords, demoSpeed]);
 
-  // ── Passengers for the current stop (checkedIn driven by demo reducer) ──────
+  // ── Passengers ────────────────────────────────────────────────────────────
   const checkedInMap = state.checkedInByStop[state.currentStopIndex] ?? {};
   const passengers: BoardingPassenger[] = passengersForStop(state.currentStopIndex).map(p => ({
     ...p,
     checkedIn: checkedInMap[p.id] ?? false,
   }));
 
-  // ── Stops derived from the template + live reducer state ──────────────────
+  // ── Stops ─────────────────────────────────────────────────────────────────
   const stops: ShuttleStop[] = stopsTemplate.map((template, idx) => ({
     ...template,
     boarded:

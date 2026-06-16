@@ -27,7 +27,29 @@ export interface MapBackdropProps {
 
 const DEFAULT_CENTER: [number, number] = [31.2357, 30.0444];
 
-const OSM_STYLE: maplibregl.StyleSpecification = {
+// ── خريطة أنيقة بأسلوب داكن (زي أوبر وكريم) ──────────────────────────────────
+// بدل OSM العادي اللي شكله قديم، بنستخدم CartoDB Dark Matter أو Positron
+// ده بيدي شكل احترافي زي تطبيقات الرايد الكبيرة
+const DARK_MAP_STYLE: maplibregl.StyleSpecification = {
+  version: 8,
+  sources: {
+    carto: {
+      type: 'raster',
+      tiles: [
+        'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
+        'https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
+        'https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
+      ],
+      tileSize: 256,
+      attribution: "© <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> © <a href='https://carto.com/attributions'>CARTO</a>",
+      maxzoom: 20,
+    },
+  },
+  layers: [{ id: 'carto-dark', type: 'raster', source: 'carto' }],
+};
+
+// الخريطة الفاتحة كـ fallback لو الداكنة ما اتحملتش
+const LIGHT_MAP_STYLE: maplibregl.StyleSpecification = {
   version: 8,
   sources: {
     osm: {
@@ -63,6 +85,7 @@ function makeSvgEl(svg: string): HTMLElement {
   return el;
 }
 
+// حساب الاتجاه (Bearing) بين نقطتين — بيخلي سهم العربية يتجه ناحية الحركة
 function calcBearing(from: [number, number], to: [number, number]): number {
   const lat1 = (from[1] * Math.PI) / 180;
   const lat2 = (to[1] * Math.PI) / 180;
@@ -74,29 +97,29 @@ function calcBearing(from: [number, number], to: [number, number]): number {
 
 function stationSvg(n: number, status: 'pending' | 'current' | 'completed'): string {
   if (status === 'current') {
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
-  <circle cx="20" cy="20" r="17" fill="rgba(245,158,11,0.25)"/>
-  <circle cx="20" cy="20" r="13" fill="#f59e0b" stroke="white" stroke-width="3"/>
-  <text x="20" y="25" text-anchor="middle" fill="white" font-size="12" font-family="sans-serif" font-weight="bold">${n}</text>
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44">
+  <circle cx="22" cy="22" r="20" fill="rgba(245,158,11,0.20)"/>
+  <circle cx="22" cy="22" r="14" fill="#f59e0b" stroke="white" stroke-width="3"/>
+  <text x="22" y="27" text-anchor="middle" fill="white" font-size="13" font-family="sans-serif" font-weight="bold">${n}</text>
 </svg>`;
   }
   if (status === 'completed') {
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
-  <circle cx="10" cy="10" r="8" fill="#1f2937" stroke="#374151" stroke-width="1.5"/>
-  <text x="10" y="14" text-anchor="middle" fill="#6b7280" font-size="7" font-family="sans-serif" font-weight="bold">${n}</text>
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22">
+  <circle cx="11" cy="11" r="9" fill="#374151" stroke="#4b5563" stroke-width="1.5"/>
+  <text x="11" y="15" text-anchor="middle" fill="#6b7280" font-size="8" font-family="sans-serif" font-weight="bold">${n}</text>
 </svg>`;
   }
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28">
-  <circle cx="14" cy="14" r="12" fill="#1e1e28" stroke="white" stroke-width="2.5"/>
-  <text x="14" y="18.5" text-anchor="middle" fill="white" font-size="10" font-family="sans-serif" font-weight="bold">${n}</text>
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30">
+  <circle cx="15" cy="15" r="13" fill="#1e293b" stroke="rgba(255,255,255,0.85)" stroke-width="2.5"/>
+  <text x="15" y="20" text-anchor="middle" fill="white" font-size="11" font-family="sans-serif" font-weight="bold">${n}</text>
 </svg>`;
 }
 
-// Navigation arrow — points north; map bearing handles direction
-const DRIVER_NAV_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" viewBox="0 0 52 52">
-  <circle cx="26" cy="26" r="24" fill="rgba(29,78,216,0.22)" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
-  <circle cx="26" cy="26" r="17" fill="#1d4ed8" stroke="white" stroke-width="2.5"/>
-  <path d="M26 11 L36 36 L26 28 L16 36 Z" fill="white" stroke="rgba(255,255,255,0.4)" stroke-linejoin="round" stroke-width="0.5"/>
+// ── سهم العربية في وضع الملاحة — يشبه سهم جوجل ماب ──────────────────────────
+const DRIVER_NAV_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 56 56">
+  <circle cx="28" cy="28" r="26" fill="rgba(37,99,235,0.18)" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
+  <circle cx="28" cy="28" r="18" fill="#1d4ed8" stroke="white" stroke-width="2.5"/>
+  <path d="M28 10 L40 38 L28 30 L16 38 Z" fill="white" stroke="rgba(255,255,255,0.3)" stroke-linejoin="round" stroke-width="0.5"/>
 </svg>`;
 
 const DRIVER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="38" height="46" viewBox="0 0 38 46">
@@ -169,33 +192,49 @@ export function MapBackdrop({
   const isFollowingRef = useRef(true);
   const prevLngLatRef = useRef<[number, number] | null>(null);
   const bearingRef = useRef(0);
+  const mapReadyRef = useRef(false);
   const [showRecenter, setShowRecenter] = useState(false);
 
-  // ── Map init ─────────────────────────────────────────────────────────────────
+  // ── Map init ────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!containerRef.current) return;
 
-    // Initial center: for nav mode use first station; otherwise average of all points
     const stationPts = routePolyline?.length ? routePolyline : [];
     const firstStation = stationPts[0];
     let center: [number, number];
-    if (navigationMode && firstStation) {
-      center = [firstStation.longitude, firstStation.latitude];
+
+    if (navigationMode && (driverLocation ?? firstStation)) {
+      // الإصلاح: في وضع الملاحة، ابدأ من موقع العربية مباشرة لو موجود
+      const startPt = driverLocation ?? firstStation;
+      center = [startPt.longitude, startPt.latitude];
     } else {
       const ridePts = [driverLocation, pickup, dropoff].filter(Boolean) as Array<{ latitude: number; longitude: number }>;
       const centerPts = ridePts.length > 0 ? ridePts : stationPts;
       center = centerPts.length
-        ? [centerPts.reduce((s, p) => s + p.longitude, 0) / centerPts.length, centerPts.reduce((s, p) => s + p.latitude, 0) / centerPts.length]
+        ? [
+            centerPts.reduce((s, p) => s + p.longitude, 0) / centerPts.length,
+            centerPts.reduce((s, p) => s + p.latitude, 0) / centerPts.length,
+          ]
         : DEFAULT_CENTER;
+    }
+
+    // الإصلاح: احسب bearing الأولي لو في موقع عربية ومحطة هدف
+    let initialBearing = 0;
+    if (navigationMode && driverLocation && firstStation) {
+      initialBearing = calcBearing(
+        [driverLocation.longitude, driverLocation.latitude],
+        [firstStation.longitude, firstStation.latitude]
+      );
+      bearingRef.current = initialBearing;
     }
 
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: OSM_STYLE,
+      style: DARK_MAP_STYLE,
       center,
-      zoom: navigationMode ? 17 : 13,
-      pitch: navigationMode ? 55 : 0,
-      bearing: 0,
+      zoom: navigationMode ? 16 : 13,
+      pitch: navigationMode ? 50 : 0,
+      bearing: initialBearing,
       interactive: true,
       attributionControl: { compact: true },
     });
@@ -206,22 +245,38 @@ export function MapBackdrop({
     mapRef.current = map;
 
     map.on('load', async () => {
-      // ── Surge layers ──────────────────────────────────────────────────────
+      mapReadyRef.current = true;
+
+      // ── Surge layers ─────────────────────────────────────────────────────
       map.addSource('surge-zones', { type: 'geojson', data: buildSurgeGeoJSON([]) });
       map.addLayer({ id: 'surge-fill', type: 'fill', source: 'surge-zones', paint: { 'fill-color': ['interpolate', ['linear'], ['get', 'multiplier'], 1.0, 'rgba(213,178,61,0.13)', 1.5, 'rgba(249,115,22,0.14)', 2.0, 'rgba(239,68,68,0.14)'], 'fill-opacity': 1 } });
       map.addLayer({ id: 'surge-stroke', type: 'line', source: 'surge-zones', paint: { 'line-color': ['interpolate', ['linear'], ['get', 'multiplier'], 1.0, 'rgba(213,178,61,0.6)', 1.5, 'rgba(249,115,22,0.6)', 2.0, 'rgba(239,68,68,0.6)'], 'line-width': 1.5, 'line-dasharray': [4, 3] } });
       surgeReadyRef.current = true;
 
-      // ── Shuttle segment route source (populated via roadPolyline effect) ──
+      // ── خط الرحلة (الطريق الفعلي) ────────────────────────────────────────
+      // الإصلاح: أضفنا casing أبيض تحت الخط الأزرق عشان يبقى واضح على الخريطة الداكنة
       map.addSource('shuttle-route', {
         type: 'geojson',
         data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] }, properties: {} },
       });
-      map.addLayer({ id: 'shuttle-casing', type: 'line', source: 'shuttle-route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#ffffff', 'line-width': 5, 'line-opacity': 0.30 } });
-      map.addLayer({ id: 'shuttle-line', type: 'line', source: 'shuttle-route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#6366f1', 'line-width': 4, 'line-opacity': 0.92 } });
+      map.addLayer({
+        id: 'shuttle-casing',
+        type: 'line',
+        source: 'shuttle-route',
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: { 'line-color': '#ffffff', 'line-width': 8, 'line-opacity': 0.15 },
+      });
+      map.addLayer({
+        id: 'shuttle-line',
+        type: 'line',
+        source: 'shuttle-route',
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        // الإصلاح: لون أزرق سماوي أوضح على الخريطة الداكنة (زي جوجل ماب تماماً)
+        paint: { 'line-color': '#3b82f6', 'line-width': 5, 'line-opacity': 0.95 },
+      });
       shuttleRouteReadyRef.current = true;
 
-      // ── Approach circle (hidden) ───────────────────────────────────────────
+      // ── دائرة التقرب ─────────────────────────────────────────────────────
       map.addSource('approach-circle', {
         type: 'geojson',
         data: { type: 'Feature', geometry: { type: 'Polygon', coordinates: [[]] }, properties: {} },
@@ -230,7 +285,7 @@ export function MapBackdrop({
       map.addLayer({ id: 'approach-stroke', type: 'line', source: 'approach-circle', paint: { 'line-color': '#f59e0b', 'line-width': 2.5, 'line-dasharray': [5, 4] }, layout: { visibility: 'none' } });
       approachReadyRef.current = true;
 
-      // ── On-demand ride markers ─────────────────────────────────────────────
+      // ── Pickup / Dropoff markers ──────────────────────────────────────────
       if (pickup) {
         new maplibregl.Marker({ element: makeSvgEl(PICKUP_SVG), anchor: 'bottom' })
           .setLngLat([pickup.longitude, pickup.latitude])
@@ -244,7 +299,7 @@ export function MapBackdrop({
           .addTo(map);
       }
 
-      // ── Station markers ────────────────────────────────────────────────────
+      // ── محطات الشاتيل ────────────────────────────────────────────────────
       if (routePolyline?.length) {
         routePolyline.forEach((pt, idx) => {
           const status = stationStatuses?.[idx] ?? 'pending';
@@ -255,12 +310,10 @@ export function MapBackdrop({
         });
 
         if (!navigationMode) {
-          // Legacy flat view: fitBounds to show all stations
           const bounds = new maplibregl.LngLatBounds();
           routePolyline.forEach((p) => bounds.extend([p.longitude, p.latitude]));
           map.fitBounds(bounds, { padding: 80, maxZoom: 14, duration: 700 });
         }
-        // In nav mode: don't fitBounds; camera will follow driver
       }
 
       // ── Driver marker ─────────────────────────────────────────────────────
@@ -268,15 +321,24 @@ export function MapBackdrop({
       if (driverLoc) {
         const svg = navigationMode ? DRIVER_NAV_SVG : DRIVER_SVG;
         const anchor = navigationMode ? 'center' : 'bottom';
-        const marker = new maplibregl.Marker({ element: makeSvgEl(svg), anchor })
+        const marker = new maplibregl.Marker({
+          element: makeSvgEl(svg),
+          anchor,
+          // الإصلاح: إضافة rotation للماركر عشان السهم يتجه ناحية الحركة
+          rotationAlignment: navigationMode ? 'map' : 'viewport',
+          pitchAlignment: navigationMode ? 'map' : 'viewport',
+        })
           .setLngLat([driverLoc.longitude, driverLoc.latitude])
           .addTo(map);
         marker.getElement().style.transition = `transform ${animDurationMs}ms linear`;
+        if (navigationMode) {
+          marker.setRotation(initialBearing);
+        }
         driverMarkerRef.current = marker;
         prevLngLatRef.current = [driverLoc.longitude, driverLoc.latitude];
       }
 
-      // ── On-demand ride route (non-nav mode only) ────────────────────────
+      // ── On-demand ride route (non-nav mode) ──────────────────────────────
       if (!navigationMode) {
         const routePts = [driverLocation ?? pickup, pickup, dropoff]
           .filter(Boolean) as Array<{ latitude: number; longitude: number }>;
@@ -285,7 +347,7 @@ export function MapBackdrop({
           const routeCoords = (await fetchOSRMRoute(straightCoords)) ?? straightCoords;
           map.addSource('route', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: routeCoords }, properties: {} } });
           map.addLayer({ id: 'route-casing', type: 'line', source: 'route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#ffffff', 'line-width': 6, 'line-opacity': 0.4 } });
-          map.addLayer({ id: 'route-line', type: 'line', source: 'route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#6366f1', 'line-width': 3.5, 'line-opacity': 0.9 } });
+          map.addLayer({ id: 'route-line', type: 'line', source: 'route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#3b82f6', 'line-width': 3.5, 'line-opacity': 0.9 } });
 
           const allPoints = [driverLocation, pickup, dropoff].filter(Boolean) as Array<{ latitude: number; longitude: number }>;
           if (allPoints.length > 1) {
@@ -297,6 +359,7 @@ export function MapBackdrop({
       }
     });
 
+    // الإصلاح: لو المستخدم لمس الشاشة، وقف التتبع التلقائي
     map.on('movestart', (e: any) => {
       if (e.originalEvent) {
         isFollowingRef.current = false;
@@ -305,6 +368,7 @@ export function MapBackdrop({
     });
 
     return () => {
+      mapReadyRef.current = false;
       surgeReadyRef.current = false;
       shuttleRouteReadyRef.current = false;
       approachReadyRef.current = false;
@@ -319,7 +383,7 @@ export function MapBackdrop({
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Surge zones update ────────────────────────────────────────────────────────
+  // ── Surge zones update ──────────────────────────────────────────────────────
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !surgeReadyRef.current) return;
@@ -338,7 +402,7 @@ export function MapBackdrop({
     });
   }, [surgeZones]);
 
-  // ── Station status markers update ─────────────────────────────────────────────
+  // ── Station status markers update ───────────────────────────────────────────
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !routePolyline?.length) return;
@@ -353,7 +417,7 @@ export function MapBackdrop({
     });
   }, [stationStatuses]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Road polyline (segment-only): draw or clear ────────────────────────────────
+  // ── Road polyline update ────────────────────────────────────────────────────
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !shuttleRouteReadyRef.current) return;
@@ -366,12 +430,11 @@ export function MapBackdrop({
         properties: {},
       });
     } else {
-      // Clear route while loading next segment
       source.setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: [] }, properties: {} });
     }
   }, [roadPolyline]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Approach circle update ─────────────────────────────────────────────────────
+  // ── Approach circle update ──────────────────────────────────────────────────
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !approachReadyRef.current) return;
@@ -391,30 +454,41 @@ export function MapBackdrop({
     }
   }, [approachCircle]);
 
-  // ── Focus camera ─────────────────────────────────────────────────────────────
+  // ── Focus camera ────────────────────────────────────────────────────────────
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !focusTarget) return;
-    map.flyTo({ center: [focusTarget.longitude, focusTarget.latitude], zoom: focusTarget.zoom ?? 16, pitch: navigationMode ? 55 : 0, duration: 800 });
+    map.flyTo({
+      center: [focusTarget.longitude, focusTarget.latitude],
+      zoom: focusTarget.zoom ?? 16,
+      pitch: navigationMode ? 50 : 0,
+      duration: 800,
+    });
   }, [focusTarget?.latitude, focusTarget?.longitude]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Driver location: smooth glide + 3D navigation camera ─────────────────────
+  // ── Driver location: حركة سلسة + كاميرا تتبع احترافية ─────────────────────
   useEffect(() => {
     const map = mapRef.current;
     if (!driverLocation || !map) return;
     const lngLat: [number, number] = [driverLocation.longitude, driverLocation.latitude];
 
-    // Compute bearing from previous position
+    // الإصلاح الأساسي: حساب الاتجاه بدقة من الموقع السابق للحالي
     const prev = prevLngLatRef.current;
     if (prev && (prev[0] !== lngLat[0] || prev[1] !== lngLat[1])) {
       bearingRef.current = calcBearing(prev, lngLat);
     }
     prevLngLatRef.current = lngLat;
 
+    // تحديث أو إنشاء ماركر العربية
     if (!driverMarkerRef.current) {
       const svg = navigationMode ? DRIVER_NAV_SVG : DRIVER_SVG;
       const anchor = navigationMode ? 'center' : 'bottom';
-      const marker = new maplibregl.Marker({ element: makeSvgEl(svg), anchor })
+      const marker = new maplibregl.Marker({
+        element: makeSvgEl(svg),
+        anchor,
+        rotationAlignment: navigationMode ? 'map' : 'viewport',
+        pitchAlignment: navigationMode ? 'map' : 'viewport',
+      })
         .setLngLat(lngLat)
         .addTo(map);
       marker.getElement().style.transition = `transform ${animDurationMs}ms linear`;
@@ -422,16 +496,24 @@ export function MapBackdrop({
     } else {
       driverMarkerRef.current.getElement().style.transition = `transform ${animDurationMs}ms linear`;
       driverMarkerRef.current.setLngLat(lngLat);
+      // الإصلاح: دوّر السهم ناحية اتجاه الحركة
+      if (navigationMode) {
+        driverMarkerRef.current.setRotation(bearingRef.current);
+      }
     }
 
+    // تتبع الكاميرا وراء العربية
     if (isFollowingRef.current) {
       if (navigationMode) {
+        // الإصلاح: offset بيحط العربية في التلت التحتاني من الشاشة (زي جوجل ماب)
+        // عشان تشوف الطريق قدامك أكتر من الطريق ورائك
         map.easeTo({
           center: lngLat,
           bearing: bearingRef.current,
-          pitch: 55,
-          zoom: 17,
+          pitch: 50,
+          zoom: 16,
           duration: animDurationMs,
+          offset: [0, 100], // العربية مش في المنتص، في الأسفل شوية
         });
       } else {
         map.easeTo({ center: lngLat, duration: 1000 });
@@ -446,7 +528,14 @@ export function MapBackdrop({
     if (!map || !driverLocation) return;
     const lngLat: [number, number] = [driverLocation.longitude, driverLocation.latitude];
     if (navigationMode) {
-      map.easeTo({ center: lngLat, bearing: bearingRef.current, pitch: 55, zoom: 17, duration: 800 });
+      map.easeTo({
+        center: lngLat,
+        bearing: bearingRef.current,
+        pitch: 50,
+        zoom: 16,
+        duration: 800,
+        offset: [0, 100],
+      });
     } else {
       map.easeTo({ center: lngLat, duration: 800 });
     }
@@ -480,7 +569,7 @@ const webStyles = StyleSheet.create({
     justifyContent: 'center',
   },
   recenterIcon: {
-    color: '#6366f1',
+    color: '#3b82f6',
     fontSize: 20,
     lineHeight: 22,
   },

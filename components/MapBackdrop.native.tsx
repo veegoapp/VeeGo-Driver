@@ -36,39 +36,51 @@ function buildHtml(
 ): string {
   const stationPts = routePolyline?.length ? routePolyline : [];
   const firstStation = stationPts[0];
+
+  // الإصلاح: ابدأ من موقع العربية مباشرة لو موجود
   const driverLngLat = driverLocation
     ? [driverLocation.longitude, driverLocation.latitude]
     : firstStation
     ? [firstStation.longitude, firstStation.latitude]
     : [31.2357, 30.0444];
 
-  const centerPts = driverLocation
-    ? [driverLocation]
-    : stationPts.length
-    ? stationPts
-    : [];
-  const center = centerPts.length
-    ? [
-        centerPts.reduce((s, p) => s + p.longitude, 0) / centerPts.length,
-        centerPts.reduce((s, p) => s + p.latitude, 0) / centerPts.length,
-      ]
-    : [31.2357, 30.0444];
+  // الإصلاح: في nav mode، الكاميرا تبدأ على موقع العربية مش المحطة الأولى
+  const centerPt = navigationMode
+    ? (driverLocation ?? firstStation ?? { longitude: 31.2357, latitude: 30.0444 })
+    : (() => {
+        const pts = [driverLocation, ...(stationPts)].filter(Boolean) as Array<{latitude:number;longitude:number}>;
+        if (!pts.length) return { longitude: 31.2357, latitude: 30.0444 };
+        return {
+          longitude: pts.reduce((s, p) => s + p.longitude, 0) / pts.length,
+          latitude: pts.reduce((s, p) => s + p.latitude, 0) / pts.length,
+        };
+      })();
 
   const pickupJson = pickup ? JSON.stringify([pickup.longitude, pickup.latitude]) : 'null';
   const dropoffJson = dropoff ? JSON.stringify([dropoff.longitude, dropoff.latitude]) : 'null';
   const driverJson = JSON.stringify(driverLngLat);
   const surgeJson = JSON.stringify(surgeZones);
-  const centerJson = JSON.stringify(navigationMode && firstStation
-    ? [firstStation.longitude, firstStation.latitude]
-    : center);
+  const centerJson = JSON.stringify([centerPt.longitude, centerPt.latitude]);
   const routePolylineJson = routePolyline?.length
     ? JSON.stringify(routePolyline.map(p => [p.longitude, p.latitude]))
     : 'null';
   const stationStatusesJson = JSON.stringify(stationStatuses);
   const navModeStr = navigationMode ? 'true' : 'false';
   const animMsStr = String(animDurationMs);
-  const initZoom = navigationMode ? '17' : '13';
-  const initPitch = navigationMode ? '55' : '0';
+  const initZoom = navigationMode ? '16' : '13';
+  const initPitch = navigationMode ? '50' : '0';
+
+  // الإصلاح: حساب bearing أولي لو في موقع عربية ومحطة أولى
+  const initBearingStr = (navigationMode && driverLocation && firstStation)
+    ? `(function(){
+        var lat1=(${driverLocation.latitude})*Math.PI/180;
+        var lat2=(${firstStation.latitude})*Math.PI/180;
+        var dLng=((${firstStation.longitude})-(${driverLocation.longitude}))*Math.PI/180;
+        var y=Math.sin(dLng)*Math.cos(lat2);
+        var x=Math.cos(lat1)*Math.sin(lat2)-Math.sin(lat1)*Math.cos(lat2)*Math.cos(dLng);
+        return (Math.atan2(y,x)*180/Math.PI+360)%360;
+      })()`
+    : '0';
 
   return `<!DOCTYPE html>
 <html>
@@ -100,16 +112,15 @@ function buildHtml(
   var userPanned = false;
   var driverMarker = null;
   var prevPos = null;
-  var currentBearing = 0;
+  var currentBearing = ${initBearingStr};
 
-  // ── Navigation arrow SVG (used in nav mode) ──────────────────────────────────
-  var DRIVER_NAV_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" viewBox="0 0 52 52">' +
-    '<circle cx="26" cy="26" r="24" fill="rgba(29,78,216,0.22)" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>' +
-    '<circle cx="26" cy="26" r="17" fill="#1d4ed8" stroke="white" stroke-width="2.5"/>' +
-    '<path d="M26 11 L36 36 L26 28 L16 36 Z" fill="white" stroke="rgba(255,255,255,0.4)" stroke-linejoin="round" stroke-width="0.5"/>' +
+  // ── سهم العربية في وضع الملاحة — يشبه جوجل ماب ──────────────────────────
+  var DRIVER_NAV_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 56 56">' +
+    '<circle cx="28" cy="28" r="26" fill="rgba(37,99,235,0.18)" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>' +
+    '<circle cx="28" cy="28" r="18" fill="#1d4ed8" stroke="white" stroke-width="2.5"/>' +
+    '<path d="M28 10 L40 38 L28 30 L16 38 Z" fill="white" stroke="rgba(255,255,255,0.3)" stroke-linejoin="round" stroke-width="0.5"/>' +
     '</svg>';
 
-  // ── Standard car SVG (used in non-nav mode) ───────────────────────────────────
   var DRIVER_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="38" height="46" viewBox="0 0 38 46">' +
     '<circle cx="19" cy="19" r="17" fill="#2563eb" opacity="0.18"/>' +
     '<circle cx="19" cy="19" r="13" fill="#2563eb" stroke="white" stroke-width="2.5"/>' +
@@ -120,17 +131,32 @@ function buildHtml(
   var PICKUP_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36"><circle cx="14" cy="14" r="12" fill="#22c55e" stroke="white" stroke-width="2.5"/><text x="14" y="18.5" text-anchor="middle" fill="white" font-size="11" font-family="sans-serif" font-weight="bold">P</text><line x1="14" y1="26" x2="14" y2="34" stroke="#22c55e" stroke-width="2" stroke-linecap="round"/></svg>';
   var DROPOFF_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36"><circle cx="14" cy="14" r="12" fill="#ef4444" stroke="white" stroke-width="2.5"/><text x="14" y="18.5" text-anchor="middle" fill="white" font-size="11" font-family="sans-serif" font-weight="bold">D</text><line x1="14" y1="26" x2="14" y2="34" stroke="#ef4444" stroke-width="2" stroke-linecap="round"/></svg>';
 
+  // ── خريطة داكنة احترافية (زي أوبر وكريم) ────────────────────────────────
+  var MAP_STYLE = {
+    version: 8,
+    sources: {
+      carto: {
+        type: 'raster',
+        tiles: [
+          'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
+          'https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
+          'https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png'
+        ],
+        tileSize: 256,
+        attribution: '\\u00a9 OpenStreetMap \\u00a9 CARTO',
+        maxzoom: 20
+      }
+    },
+    layers: [{ id: 'carto-dark', type: 'raster', source: 'carto' }]
+  };
+
   var map = new maplibregl.Map({
     container: 'map',
-    style: {
-      version: 8,
-      sources: { osm: { type: 'raster', tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], tileSize: 256, attribution: '\u00a9 OpenStreetMap contributors' } },
-      layers: [{ id: 'osm', type: 'raster', source: 'osm' }]
-    },
+    style: MAP_STYLE,
     center: center,
     zoom: ${initZoom},
     pitch: ${initPitch},
-    bearing: 0,
+    bearing: currentBearing,
     interactive: true,
     attributionControl: { compact: true }
   });
@@ -175,21 +201,21 @@ function buildHtml(
 
   function stationSvg(n, status) {
     if (status === 'current') {
-      return '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">' +
-        '<circle cx="20" cy="20" r="17" fill="rgba(245,158,11,0.25)"/>' +
-        '<circle cx="20" cy="20" r="13" fill="#f59e0b" stroke="white" stroke-width="3"/>' +
-        '<text x="20" y="25" text-anchor="middle" fill="white" font-size="12" font-family="sans-serif" font-weight="bold">' + n + '</text>' +
+      return '<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44">' +
+        '<circle cx="22" cy="22" r="20" fill="rgba(245,158,11,0.20)"/>' +
+        '<circle cx="22" cy="22" r="14" fill="#f59e0b" stroke="white" stroke-width="3"/>' +
+        '<text x="22" y="27" text-anchor="middle" fill="white" font-size="13" font-family="sans-serif" font-weight="bold">' + n + '</text>' +
         '</svg>';
     }
     if (status === 'completed') {
-      return '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">' +
-        '<circle cx="10" cy="10" r="8" fill="#1f2937" stroke="#374151" stroke-width="1.5"/>' +
-        '<text x="10" y="14" text-anchor="middle" fill="#6b7280" font-size="7" font-family="sans-serif" font-weight="bold">' + n + '</text>' +
+      return '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22">' +
+        '<circle cx="11" cy="11" r="9" fill="#374151" stroke="#4b5563" stroke-width="1.5"/>' +
+        '<text x="11" y="15" text-anchor="middle" fill="#6b7280" font-size="8" font-family="sans-serif" font-weight="bold">' + n + '</text>' +
         '</svg>';
     }
-    return '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28">' +
-      '<circle cx="14" cy="14" r="12" fill="#1e1e28" stroke="white" stroke-width="2.5"/>' +
-      '<text x="14" y="18.5" text-anchor="middle" fill="white" font-size="10" font-family="sans-serif" font-weight="bold">' + n + '</text>' +
+    return '<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30">' +
+      '<circle cx="15" cy="15" r="13" fill="#1e293b" stroke="rgba(255,255,255,0.85)" stroke-width="2.5"/>' +
+      '<text x="15" y="20" text-anchor="middle" fill="white" font-size="11" font-family="sans-serif" font-weight="bold">' + n + '</text>' +
       '</svg>';
   }
 
@@ -205,18 +231,8 @@ function buildHtml(
     });
   }
 
-  function setMarkerTransition(ms) {
-    if (!driverMarker) return;
-    driverMarker.getElement().style.transition = 'transform ' + ms + 'ms linear';
-  }
-
-  function moveNavCamera(pos, bearing, ms) {
-    if (userPanned) return;
-    map.easeTo({ center: pos, bearing: bearing, pitch: 55, zoom: 17, duration: ms });
-  }
-
   map.on('load', function() {
-    // ── Surge layers ────────────────────────────────────────────────────────
+    // ── Surge layers ──────────────────────────────────────────────────────────
     map.addSource('surge-zones', { type: 'geojson', data: buildSurgeGeoJSON(surgeZones) });
     map.addLayer({ id: 'surge-fill', type: 'fill', source: 'surge-zones', paint: { 'fill-color': ['interpolate', ['linear'], ['get', 'multiplier'], 1.0, 'rgba(213,178,61,0.13)', 1.5, 'rgba(249,115,22,0.14)', 2.0, 'rgba(239,68,68,0.14)'], 'fill-opacity': 1 } });
     map.addLayer({ id: 'surge-stroke', type: 'line', source: 'surge-zones', paint: { 'line-color': ['interpolate', ['linear'], ['get', 'multiplier'], 1.0, 'rgba(213,178,61,0.6)', 1.5, 'rgba(249,115,22,0.6)', 2.0, 'rgba(239,68,68,0.6)'], 'line-width': 1.5, 'line-dasharray': [4, 3] } });
@@ -229,18 +245,18 @@ function buildHtml(
       new maplibregl.Marker({ element: el, anchor: 'center' }).setLngLat([z.longitude, z.latitude]).addTo(map);
     });
 
-    // ── Approach circle (initially hidden) ─────────────────────────────────
+    // ── Approach circle (initially hidden) ───────────────────────────────────
     map.addSource('approach-circle', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'Polygon', coordinates: [[]] }, properties: {} } });
     map.addLayer({ id: 'approach-fill', type: 'fill', source: 'approach-circle', paint: { 'fill-color': '#f59e0b', 'fill-opacity': 0.10 }, layout: { visibility: 'none' } });
     map.addLayer({ id: 'approach-stroke', type: 'line', source: 'approach-circle', paint: { 'line-color': '#f59e0b', 'line-width': 2.5, 'line-dasharray': [5, 4] }, layout: { visibility: 'none' } });
     approachReady = true;
 
-    // ── Shuttle route source (segment-only; populated via updateRoadPolyline) ──
+    // ── خط الرحلة — أزرق واضح على الخريطة الداكنة ───────────────────────────
     map.addSource('shuttle-route', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] }, properties: {} } });
-    map.addLayer({ id: 'shuttle-casing', type: 'line', source: 'shuttle-route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#ffffff', 'line-width': 5, 'line-opacity': 0.30 } });
-    map.addLayer({ id: 'shuttle-line', type: 'line', source: 'shuttle-route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#6366f1', 'line-width': 4, 'line-opacity': 0.92 } });
+    map.addLayer({ id: 'shuttle-casing', type: 'line', source: 'shuttle-route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#ffffff', 'line-width': 8, 'line-opacity': 0.15 } });
+    map.addLayer({ id: 'shuttle-line', type: 'line', source: 'shuttle-route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#3b82f6', 'line-width': 5, 'line-opacity': 0.95 } });
 
-    // ── On-demand ride markers ─────────────────────────────────────────────
+    // ── Pickup / Dropoff markers ──────────────────────────────────────────────
     if (pickup) {
       new maplibregl.Marker({ element: makeSvgEl(PICKUP_SVG), anchor: 'bottom' })
         .setLngLat(pickup).setPopup(new maplibregl.Popup({ offset: 20, closeButton: false }).setText('Pickup')).addTo(map);
@@ -250,53 +266,54 @@ function buildHtml(
         .setLngLat(dropoff).setPopup(new maplibregl.Popup({ offset: 20, closeButton: false }).setText('Dropoff')).addTo(map);
     }
 
-    // ── Station markers ────────────────────────────────────────────────────
+    // ── محطات الشاتيل ─────────────────────────────────────────────────────────
     if (routePolyline && routePolyline.length >= 2) {
       rebuildStationMarkers(stationStatuses);
-
       if (!navMode) {
-        // Legacy flat view: draw full route + fitBounds
         map.getSource('shuttle-route').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: routePolyline }, properties: {} });
         var stBounds = new maplibregl.LngLatBounds();
         routePolyline.forEach(function(pt) { stBounds.extend(pt); });
         map.fitBounds(stBounds, { padding: 80, maxZoom: 14, duration: 700 });
       }
-      // In nav mode: leave shuttle-route empty, wait for roadPolyline postMessage
     }
 
-    // ── Driver marker (created immediately so CSS transition is ready) ──────
+    // ── Driver marker ─────────────────────────────────────────────────────────
     var markerSvg = navMode ? DRIVER_NAV_SVG : DRIVER_SVG;
     var markerAnchor = navMode ? 'center' : 'bottom';
-    driverMarker = new maplibregl.Marker({ element: makeSvgEl(markerSvg), anchor: markerAnchor })
-      .setLngLat(driverInit).addTo(map);
+    driverMarker = new maplibregl.Marker({
+      element: makeSvgEl(markerSvg),
+      anchor: markerAnchor,
+      // الإصلاح: السهم يتجه ناحية الحركة تلقائياً
+      rotationAlignment: navMode ? 'map' : 'viewport',
+      pitchAlignment: navMode ? 'map' : 'viewport'
+    }).setLngLat(driverInit).addTo(map);
     driverMarker.getElement().style.transition = 'transform ' + animDurationMs + 'ms linear';
+    if (navMode) { driverMarker.setRotation(currentBearing); }
     prevPos = driverInit;
 
-    // ── On-demand ride route ───────────────────────────────────────────────
-    var routePts = [driver || pickup, pickup, dropoff].filter(Boolean);
-    if (!navMode && routePts.length >= 2) {
-      var straightCoords = routePts.map(function(p) { return p; });
-      function drawRoute(coords) {
-        if (map.getSource('route')) {
-          map.getSource('route').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: coords }, properties: {} });
-        } else {
-          map.addSource('route', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: coords }, properties: {} } });
-          map.addLayer({ id: 'route-casing', type: 'line', source: 'route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#ffffff', 'line-width': 6, 'line-opacity': 0.4 } });
-          map.addLayer({ id: 'route-line', type: 'line', source: 'route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#6366f1', 'line-width': 3.5, 'line-opacity': 0.9 } });
+    // ── On-demand ride route (non-nav mode) ──────────────────────────────────
+    if (!navMode && pickup) {
+      var routePts = [driverInit, pickup, dropoff].filter(Boolean);
+      if (routePts.length >= 2) {
+        function drawRoute(coords) {
+          if (map.getSource('route')) {
+            map.getSource('route').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: coords }, properties: {} });
+          } else {
+            map.addSource('route', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: coords }, properties: {} } });
+            map.addLayer({ id: 'route-casing', type: 'line', source: 'route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#ffffff', 'line-width': 6, 'line-opacity': 0.4 } });
+            map.addLayer({ id: 'route-line', type: 'line', source: 'route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#3b82f6', 'line-width': 3.5, 'line-opacity': 0.9 } });
+          }
         }
-      }
-      drawRoute(straightCoords);
-      (function() {
-        var c = straightCoords.map(function(p) { return p[0] + ',' + p[1]; }).join(';');
-        fetch('https://router.project-osrm.org/route/v1/driving/' + c + '?overview=full&geometries=geojson', { signal: AbortSignal.timeout(5000) })
-          .then(function(res) { return res.ok ? res.json() : null; })
-          .then(function(data) { if (data && data.code === 'Ok' && data.routes && data.routes.length) drawRoute(data.routes[0].geometry.coordinates); })
-          .catch(function() {});
-      })();
-      var allPts2 = [driver || pickup, pickup, dropoff].filter(Boolean);
-      if (allPts2.length > 1) {
+        drawRoute(routePts);
+        (function() {
+          var c = routePts.map(function(p) { return p[0] + ',' + p[1]; }).join(';');
+          fetch('https://router.project-osrm.org/route/v1/driving/' + c + '?overview=full&geometries=geojson', { signal: AbortSignal.timeout(5000) })
+            .then(function(res) { return res.ok ? res.json() : null; })
+            .then(function(data) { if (data && data.code === 'Ok' && data.routes && data.routes.length) drawRoute(data.routes[0].geometry.coordinates); })
+            .catch(function() {});
+        })();
         var bounds = new maplibregl.LngLatBounds();
-        allPts2.forEach(function(p) { bounds.extend(p); });
+        routePts.forEach(function(p) { bounds.extend(p); });
         map.fitBounds(bounds, { padding: 70, maxZoom: 15, duration: 600 });
       }
     }
@@ -309,12 +326,12 @@ function buildHtml(
     }
   });
 
-  // ── postMessage bridge ─────────────────────────────────────────────────────
+  // ── postMessage bridge ────────────────────────────────────────────────────────
   window.addEventListener('message', function(e) {
     try {
       var msg = JSON.parse(e.data);
 
-      // ── Driver location: smooth glide + nav camera ────────────────────────
+      // ── موقع العربية: حركة سلسة + كاميرا تتبع احترافية ──────────────────
       if (msg.type === 'driverLocation') {
         var newPos = [msg.lng, msg.lat];
         var aMs = msg.animMs || animDurationMs;
@@ -323,38 +340,51 @@ function buildHtml(
         if (!driverMarker) {
           var svg2 = navMode ? DRIVER_NAV_SVG : DRIVER_SVG;
           var anc2 = navMode ? 'center' : 'bottom';
-          driverMarker = new maplibregl.Marker({ element: makeSvgEl(svg2), anchor: anc2 })
-            .setLngLat(newPos).addTo(map);
+          driverMarker = new maplibregl.Marker({
+            element: makeSvgEl(svg2),
+            anchor: anc2,
+            rotationAlignment: navMode ? 'map' : 'viewport',
+            pitchAlignment: navMode ? 'map' : 'viewport'
+          }).setLngLat(newPos).addTo(map);
           driverMarker.getElement().style.transition = 'transform ' + aMs + 'ms linear';
           prevPos = newPos;
         } else {
-          // Update marker transition if speed changed
           driverMarker.getElement().style.transition = 'transform ' + aMs + 'ms linear';
 
-          // Compute bearing from movement
+          // الإصلاح: حساب الاتجاه الصح من الموقع السابق للحالي
           if (prevPos && !(prevPos[0] === newPos[0] && prevPos[1] === newPos[1])) {
             currentBearing = calcBearing(prevPos, newPos);
           }
           prevPos = newPos;
           driverMarker.setLngLat(newPos);
+          // الإصلاح: دوّر السهم ناحية اتجاه الحركة
+          if (navMode) { driverMarker.setRotation(currentBearing); }
         }
 
         if (!userPanned) {
           if (navMode) {
-            map.easeTo({ center: newPos, bearing: currentBearing, pitch: 55, zoom: 17, duration: aMs });
+            // الإصلاح: offset بيحط العربية في الأسفل (زي جوجل ماب)
+            map.easeTo({
+              center: newPos,
+              bearing: currentBearing,
+              pitch: 50,
+              zoom: 16,
+              duration: aMs,
+              offset: [0, 80]
+            });
           } else {
             map.easeTo({ center: newPos, duration: aMs });
           }
         }
       }
 
-      // ── Station status update ─────────────────────────────────────────────
+      // ── تحديث حالة المحطات ────────────────────────────────────────────────
       if (msg.type === 'updateStationStatuses' && msg.statuses) {
         stationStatuses = msg.statuses;
         rebuildStationMarkers(msg.statuses);
       }
 
-      // ── Approach circle show/hide ─────────────────────────────────────────
+      // ── دائرة التقرب ──────────────────────────────────────────────────────
       if (msg.type === 'setApproachCircle') {
         if (!approachReady) return;
         var src = map.getSource('approach-circle');
@@ -369,29 +399,28 @@ function buildHtml(
         }
       }
 
-      // ── Focus camera ──────────────────────────────────────────────────────
+      // ── تحريك الكاميرا لنقطة معينة ───────────────────────────────────────
       if (msg.type === 'focusLocation' && msg.lat != null && msg.lng != null) {
-        map.flyTo({ center: [msg.lng, msg.lat], zoom: msg.zoom || 16, pitch: navMode ? 55 : 0, duration: 800 });
+        map.flyTo({ center: [msg.lng, msg.lat], zoom: msg.zoom || 16, pitch: navMode ? 50 : 0, duration: 800 });
       }
 
-      // ── Road segment polyline (segment-only in nav mode) ──────────────────
+      // ── خط الطريق الفعلي ─────────────────────────────────────────────────
       if (msg.type === 'updateRoadPolyline') {
         var rSrc = map.getSource('shuttle-route');
         if (!rSrc) return;
         if (Array.isArray(msg.coords) && msg.coords.length >= 2) {
           rSrc.setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: msg.coords }, properties: {} });
         } else {
-          // Clear route while loading next segment
           rSrc.setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: [] }, properties: {} });
         }
       }
 
-      // ── Recenter ──────────────────────────────────────────────────────────
+      // ── إعادة التمركز ─────────────────────────────────────────────────────
       if (msg.type === 'recenter') {
         userPanned = false;
         if (prevPos) {
           if (navMode) {
-            map.easeTo({ center: prevPos, bearing: currentBearing, pitch: 55, zoom: 17, duration: 800 });
+            map.easeTo({ center: prevPos, bearing: currentBearing, pitch: 50, zoom: 16, duration: 800, offset: [0, 80] });
           } else {
             map.easeTo({ center: prevPos, duration: 800 });
           }
@@ -413,7 +442,6 @@ export function MapBackdrop({
   const webviewRef = useRef<WebView>(null);
   const [userPanned, setUserPanned] = useState(false);
 
-  // Stable HTML: only rebuilds when route / surge / nav mode changes
   const html = useMemo(
     () => buildHtml(
       pickup, dropoff, driverLocation, surgeZones, routePolyline,
@@ -423,7 +451,7 @@ export function MapBackdrop({
     [JSON.stringify(routePolyline), JSON.stringify(surgeZones), navigationMode],
   );
 
-  // Live driver position — no throttle so every update reaches the WebView
+  // موقع العربية — كل تحديث بيوصل للـ WebView فوراً
   useEffect(() => {
     if (!driverLocation || !webviewRef.current) return;
     webviewRef.current.postMessage(JSON.stringify({
@@ -434,13 +462,13 @@ export function MapBackdrop({
     }));
   }, [driverLocation?.latitude, driverLocation?.longitude, animDurationMs]);
 
-  // Station status updates
+  // حالة المحطات
   useEffect(() => {
     if (!stationStatuses || !webviewRef.current) return;
     webviewRef.current.postMessage(JSON.stringify({ type: 'updateStationStatuses', statuses: stationStatuses }));
   }, [JSON.stringify(stationStatuses)]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Approach circle
+  // دائرة التقرب
   useEffect(() => {
     if (!webviewRef.current) return;
     if (approachCircle) {
@@ -450,7 +478,7 @@ export function MapBackdrop({
     }
   }, [approachCircle?.latitude, approachCircle?.longitude, approachCircle?.radius, approachCircle == null]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Road polyline: send on every change (including null → clears segment)
+  // خط الطريق
   useEffect(() => {
     if (!webviewRef.current) return;
     webviewRef.current.postMessage(JSON.stringify({
@@ -459,7 +487,7 @@ export function MapBackdrop({
     }));
   }, [JSON.stringify(roadPolyline)]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Focus camera
+  // تحريك الكاميرا
   useEffect(() => {
     if (!focusTarget || !webviewRef.current) return;
     webviewRef.current.postMessage(JSON.stringify({ type: 'focusLocation', lat: focusTarget.latitude, lng: focusTarget.longitude, zoom: focusTarget.zoom ?? 16 }));
@@ -512,7 +540,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   recenterIcon: {
-    color: '#6366f1',
+    color: '#3b82f6',
     fontSize: 20,
     lineHeight: 22,
   },
