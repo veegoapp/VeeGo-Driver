@@ -13,6 +13,8 @@ config.resolver.nodeModulesPaths = [
   path.resolve(workspaceRoot, "node_modules"),
 ];
 
+config.resolver.unstable_enableSymlinks = true;
+
 config.resolver.blockList = [
   /node_modules\/.*\/node_modules\/drizzle-kit\/.*/,
   /node_modules\/.pnpm\/drizzle-kit.*\/node_modules\/drizzle-kit\/node_modules\/.*/,
