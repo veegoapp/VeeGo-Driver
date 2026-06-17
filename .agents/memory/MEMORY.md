@@ -5,3 +5,4 @@
 - [Backend readiness fixes](backend-readiness-fixes.md) — 9 mobile-side fixes applied after backend audit; key patterns: guard phase advance on API success, faceDetected field check, shuttle:booking:created over referral events
 - [Backend contract v2 alignment](backend-contract-v2.md) — FINAL contract changes: driver/status PATCH, boardBooking path, stations endpoint with passengers, trip start/complete via trips endpoints not shuttle
 - [Map-first trip experience](map-first-trip.md) — 3-phase trip-active screen (en_route/approaching/at_stop); MapBackdrop extended with stationStatuses+approachCircle+focusTarget; useDriverLocation hook for GPS
+- [ShuttleProvider missing](shuttle-provider-missing.md) — ShuttleProvider was never mounted; all useShuttle() calls returned empty defaults

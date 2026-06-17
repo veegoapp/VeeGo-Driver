@@ -3,7 +3,7 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ShuttleTabBar } from '@/components/ShuttleTabBar';
-import { useShuttle, type SlotReleasedAlert } from '@/lib/shuttleContext';
+import { ShuttleProvider, useShuttle, type SlotReleasedAlert } from '@/lib/shuttleContext';
 import { useServiceGuard } from '@/hooks/useServiceGuard';
 import { ServiceBlockedScreen } from '@/components/ServiceBlockedScreen';
 import { ReferralProvider } from '@/lib/referralContext';
@@ -131,7 +131,11 @@ function ShuttleLayoutContent() {
 }
 
 export default function ShuttleLayout() {
-  return <ShuttleLayoutContent />;
+  return (
+    <ShuttleProvider>
+      <ShuttleLayoutContent />
+    </ShuttleProvider>
+  );
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
