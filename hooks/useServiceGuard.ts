@@ -59,9 +59,9 @@ export function useServiceGuard(explicitType?: ServiceType): {
   useEffect(() => {
     if (blocked && !wasBlockedRef.current) {
       wasBlockedRef.current = true;
-      // Show the blocked UI briefly, then redirect.
+      // Show the blocked UI briefly, then redirect away from this service.
       redirectTimerRef.current = setTimeout(() => {
-        router.replace('/(shuttle)' as any);
+        router.replace('/');
       }, 2800);
     }
 
