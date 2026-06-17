@@ -77,10 +77,9 @@ export default function ShuttleHomeScreen() {
   useFocusEffect(
     useCallback(() => {
       refetchNotifications();
-      // Hard-refetch bookings every time screen gains focus so cancellations
-      // from the admin dashboard appear immediately without waiting for the poll.
+      // Force-refresh bookings on focus so admin cancellations appear immediately.
       refetch();
-      queryClient.resetQueries({ queryKey: ['shuttle-my-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['shuttle-lines'] });
     }, [refetchNotifications, refetch, queryClient])
   );
