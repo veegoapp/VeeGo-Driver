@@ -710,6 +710,14 @@ function BookingCard({
               </Text>
             </View>
           ) : null}
+          {booking.trip && !booking.trip.thresholdMet ? (
+            <View style={[styles.renewalPill, { backgroundColor: '#FEF3C7', borderColor: '#FCD34D', borderWidth: 1 }]}>
+              <Users size={9} color="#92400E" strokeWidth={2.5} />
+              <Text style={[styles.renewalPillText, { color: '#92400E' }]}>
+                {booking.trip.bookedSeats}/{booking.trip.minRequired} pax
+              </Text>
+            </View>
+          ) : null}
           {hasRenewal && (
             <View style={[styles.renewalPill, { backgroundColor: '#FEF3C718' }]}>
               <AlertTriangle size={9} color="#D97706" strokeWidth={2.5} />

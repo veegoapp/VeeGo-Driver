@@ -741,12 +741,20 @@ function UpcomingTripCard({
             )}
           </View>
         </View>
-        <View style={{ alignItems: 'center', justifyContent: 'space-between', alignSelf: 'stretch', paddingTop: 2 }}>
-          <View style={[styles.upcomingStatusBadge, { backgroundColor: '#1e1e2812', borderColor: '#1e1e2825' }]}>
-            <Text style={[styles.upcomingStatusText, { color: '#2d2d42', fontFamily: 'Inter_700Bold' }]}>
-              {booking.status === 'active' ? t.active : t.status_booked}
-            </Text>
-          </View>
+        <View style={{ alignItems: 'flex-end', justifyContent: 'space-between', alignSelf: 'stretch', paddingTop: 2, gap: 6 }}>
+          {booking.trip && !booking.trip.thresholdMet ? (
+            <View style={[styles.upcomingStatusBadge, { backgroundColor: '#FEF3C7', borderColor: '#FCD34D' }]}>
+              <Text style={[styles.upcomingStatusText, { color: '#92400E', fontFamily: 'Inter_700Bold' }]}>
+                {booking.trip.bookedSeats}/{booking.trip.minRequired} pax
+              </Text>
+            </View>
+          ) : (
+            <View style={[styles.upcomingStatusBadge, { backgroundColor: '#1e1e2812', borderColor: '#1e1e2825' }]}>
+              <Text style={[styles.upcomingStatusText, { color: '#2d2d42', fontFamily: 'Inter_700Bold' }]}>
+                {booking.status === 'active' ? t.active : t.status_booked}
+              </Text>
+            </View>
+          )}
           <ChevronRight size={16} color={colors.mutedForeground} strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
         </View>
       </GlassView>

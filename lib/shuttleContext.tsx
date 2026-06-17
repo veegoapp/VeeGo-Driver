@@ -38,6 +38,13 @@ export type ShuttleBooking = {
   status: string;
   renewalDeadline?: string;
   nextWeekBookingId?: string | null;
+  trip?: {
+    thresholdMet: boolean;
+    bookedSeats: number;
+    minRequired: number;
+    totalSeats: number | null;
+    shuttleStatus: 'open' | 'pending' | 'active';
+  } | null;
 };
 
 export type ShuttleStop = {
@@ -201,6 +208,13 @@ type RawDriverBooking = {
   timeSlotId?: string | number;
   weekStart?: string;
   weekEnd?: string;
+  trip?: {
+    thresholdMet?: boolean;
+    bookedSeats?: number;
+    minRequired?: number;
+    totalSeats?: number | null;
+    shuttleStatus?: 'open' | 'pending' | 'active';
+  } | null;
   status?: string;
   renewalDeadline?: string;
   nextWeekBookingId?: string | null;
@@ -222,6 +236,13 @@ function normalizeBooking(b: RawDriverBooking): ShuttleBooking {
     status: b.status ?? '',
     renewalDeadline: b.renewalDeadline,
     nextWeekBookingId: b.nextWeekBookingId,
+    trip: b.trip ? {
+      thresholdMet: b.trip.thresholdMet ?? false,
+      bookedSeats: b.trip.bookedSeats ?? 0,
+      minRequired: b.trip.minRequired ?? 0,
+      totalSeats: b.trip.totalSeats ?? null,
+      shuttleStatus: b.trip.shuttleStatus ?? 'open',
+    } : null,
   };
 }
 
@@ -559,6 +580,12 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
       queryClient.invalidateQueries({ queryKey: ['shuttle-lines'] });
     };
 
+    // Trip crossed the minimum-passenger threshold (pending → active)
+    const handleTripStatus = () => {
+      queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['shuttle-lines'] });
+    };
+
     // Task 3b: SHUTTLE_RENEWAL_CONFIRMED — show success alert + refresh bookings
     const handleRenewalConfirmed = () => {
       queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
@@ -601,6 +628,7 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
     socket.on(SOCKET_EVENTS.SHUTTLE_BOOKING_CREATED, handleBookingCreated);
     socket.on(SOCKET_EVENTS.SLOT_TAKEN, handleSlotTaken);
     socket.on(SOCKET_EVENTS.SLOT_RELEASED, handleSlotReleased);
+    socket.on(SOCKET_EVENTS.SHUTTLE_TRIP_STATUS, handleTripStatus);
 
     return () => {
       socket.off(SOCKET_EVENTS.NOTIFICATION_NEW, handleNotification);
@@ -610,6 +638,7 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
       socket.off(SOCKET_EVENTS.SHUTTLE_BOOKING_CREATED, handleBookingCreated);
       socket.off(SOCKET_EVENTS.SLOT_TAKEN, handleSlotTaken);
       socket.off(SOCKET_EVENTS.SLOT_RELEASED, handleSlotReleased);
+      socket.off(SOCKET_EVENTS.SHUTTLE_TRIP_STATUS, handleTripStatus);
     };
   }, [socket, queryClient]);
 

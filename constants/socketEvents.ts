@@ -50,6 +50,8 @@ export const SOCKET_EVENTS = {
   SHUTTLE_BOOKING_CANCELLED:  "shuttle:booking:cancelled",
   SHUTTLE_BOOKING_REASSIGNED: "shuttle:booking:reassigned",
   SHUTTLE_RENEWAL_CONFIRMED:  "shuttle:renewal:confirmed",
+  // Server → Driver: trip threshold crossed (pending → active)
+  SHUTTLE_TRIP_STATUS:        "shuttle:trip:status",
 
   // Server → All Drivers: real-time slot availability (broadcast to "drivers" room)
   SLOT_TAKEN:                 "slot_taken",
