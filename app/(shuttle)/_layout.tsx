@@ -4,7 +4,6 @@ import { Animated, Platform, Pressable, StyleSheet, Text, View } from 'react-nat
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ShuttleTabBar } from '@/components/ShuttleTabBar';
 import { useShuttle, type SlotReleasedAlert } from '@/lib/shuttleContext';
-import { useDemoMode } from '@/lib/demo';
 import { useServiceGuard } from '@/hooks/useServiceGuard';
 import { ServiceBlockedScreen } from '@/components/ServiceBlockedScreen';
 import { ReferralProvider } from '@/lib/referralContext';
@@ -105,10 +104,9 @@ function SlotReleasedToast() {
 // ─── Layout ───────────────────────────────────────────────────────────────────
 
 function ShuttleLayoutContent() {
-  const { isDemoMode } = useDemoMode();
   const { isBlocked, status } = useServiceGuard('SHUTTLE');
 
-  if (!isDemoMode && isBlocked) {
+  if (isBlocked) {
     return <ServiceBlockedScreen status={status} serviceName="Shuttle" />;
   }
 

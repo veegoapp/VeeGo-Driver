@@ -21,7 +21,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '@/lib/i18nContext';
 import { useAuth } from '@/lib/authContext';
-import { useDemoMode } from '@/lib/demo';
 import { endpoints, ApiError } from '@/lib/api';
 import { api } from '@/lib/api';
 import { saveToken } from '@/lib/auth';
@@ -49,7 +48,6 @@ export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const { t, isRTL } = useI18n();
   const { login } = useAuth();
-  const { enterDemoMode } = useDemoMode();
 
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
 
@@ -121,21 +119,6 @@ export default function LoginScreen() {
               <SignUpForm isRTL={isRTL} onSuccess={(at, rt) => handleRegisterSuccess(at, rt)} />
             )}
           </View>
-
-          <TouchableOpacity
-            style={s.demoBtn}
-            onPress={() => {
-              enterDemoMode();
-              setTimeout(() => {
-                requestAnimationFrame(() => {
-                  expoRouter.replace('/(shuttle)/index' as any);
-                });
-              }, 0);
-            }}
-            activeOpacity={0.7}
-          >
-            <Text style={s.demoBtnText}>Try Demo</Text>
-          </TouchableOpacity>
 
           <Text style={[s.terms, { textAlign: 'center' }]}>
             By continuing you agree to VeeGo's{' '}
@@ -405,10 +388,4 @@ const s = StyleSheet.create({
   termsLink: { color: '#1e1e28', fontWeight: '600' },
   forgotBtn: { alignItems: 'center', paddingVertical: 4 },
   forgotText: { fontSize: 13, color: '#5e5e72', fontFamily: 'Inter_400Regular', textDecorationLine: 'underline' },
-  demoBtn: {
-    alignItems: 'center', paddingVertical: 10, paddingHorizontal: 24,
-    borderRadius: 99, borderWidth: 1.5, borderColor: '#4f46e5',
-    backgroundColor: 'rgba(79,70,229,0.06)',
-  },
-  demoBtnText: { fontSize: 13, color: '#4f46e5', fontFamily: 'Inter_600SemiBold', letterSpacing: 0.3 },
 });

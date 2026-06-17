@@ -17,8 +17,6 @@ import { useDriverLocation, haversineMeters } from '@/hooks/useDriverLocation';
 import { useRoadEta } from '@/hooks/useRoadEta';
 import { useRoadPolyline } from '@/hooks/useRoadPolyline';
 import { useShuttle } from '@/lib/shuttleContext';
-import { useDemoMode } from '@/lib/demo';
-import { DemoSpeedControl } from '@/lib/demo';
 import { useI18n } from '@/lib/i18nContext';
 import { useSocket } from '@/lib/socketContext';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
@@ -59,8 +57,6 @@ export default function ShuttleTripActiveScreen() {
   const { socket } = useSocket();
   const navigation = useNavigation();
 
-  const { isDemoMode, demoSpeed } = useDemoMode();
-
   const shuttleCtx = useShuttle();
   const {
     activeLine, stops, currentStopIndex, passengers, nextStop, stationCoords,
@@ -73,9 +69,8 @@ export default function ShuttleTripActiveScreen() {
   const stationId = currentStop?.id;
 
   // ── GPS ────────────────────────────────────────────────────────────────────
-  const { position: gpsPos } = useDriverLocation(!isDemoMode && !!activeLine);
-  const demoDriverPosition = (shuttleCtx as any).demoDriverPosition as typeof gpsPos | null | undefined;
-  const effectivePos = isDemoMode ? (demoDriverPosition ?? null) : gpsPos;
+  const { position: gpsPos } = useDriverLocation(!!activeLine);
+  const effectivePos = gpsPos;
 
   // Haversine used only for proximity-based phase transitions (fast, no network)
   const proximityM = useMemo(() => {
@@ -102,7 +97,7 @@ export default function ShuttleTripActiveScreen() {
 
   const { coords: roadPolylineCoords } = useRoadPolyline(segmentWaypoints);
 
-  const animDurationMs = isDemoMode ? Math.round(1500 / demoSpeed) : 1200;
+  const animDurationMs = 1200;
   const [stopTimer, setStopTimer] = useState(STOP_DURATION_S);
   const [timerActive, setTimerActive] = useState(false);
   const [passengerStatuses, setPassengerStatuses] = useState<Record<string, PassengerStatus>>({});
@@ -146,7 +141,7 @@ export default function ShuttleTripActiveScreen() {
 
   // ── GPS location updates to backend every 10 s during active trip ─────────
   useEffect(() => {
-    if (isDemoMode || !effectivePos || !tripId || (phase !== 'en_route' && phase !== 'approaching')) return;
+    if (!effectivePos || !tripId || (phase !== 'en_route' && phase !== 'approaching')) return;
     const send = () => {
       endpoints.driver.updateLocation({
         latitude: effectivePos.latitude,
@@ -259,7 +254,7 @@ export default function ShuttleTripActiveScreen() {
     if (!stationId || isArrivingLoading) return;
     setIsArrivingLoading(true);
     try {
-      if (!isDemoMode && tripId) await endpoints.trips.stationArrived(tripId, stationId);
+      if (tripId) await endpoints.trips.stationArrived(tripId, stationId);
       setPhase('at_stop');
       setTimerActive(true);
       if (nextCoords) setFocusTarget({ latitude: nextCoords.latitude, longitude: nextCoords.longitude, zoom: 16 });
@@ -268,13 +263,13 @@ export default function ShuttleTripActiveScreen() {
     } finally {
       setIsArrivingLoading(false);
     }
-  }, [isDemoMode, tripId, stationId, isArrivingLoading, nextCoords, t]);
+  }, [tripId, stationId, isArrivingLoading, nextCoords, t]);
 
   const handleNextStop = useCallback(async () => {
     if (isNextLoading) return;
     setIsNextLoading(true);
     try {
-      if (!isDemoMode && tripId && stationId) {
+      if (tripId && stationId) {
         const boardedIds = Object.entries(passengerStatuses).filter(([, s]) => s === 'boarded').map(([id]) => id);
         const absentIds = Object.entries(passengerStatuses).filter(([, s]) => s === 'no_show').map(([id]) => id);
         await Promise.allSettled(boardedIds.map(id => {
@@ -295,22 +290,11 @@ export default function ShuttleTripActiveScreen() {
     } finally {
       setIsNextLoading(false);
     }
-  }, [isDemoMode, isNextLoading, tripId, stationId, passengerStatuses, nextStop]);
+  }, [isNextLoading, tripId, stationId, passengerStatuses, nextStop]);
 
   const handleFinishRoute = useCallback(async () => {
     if (!activeLine) return;
     isFinishingRef.current = true;
-    if (isDemoMode) {
-      router.replace({
-        pathname: '/shuttle/trip-complete' as any,
-        params: {
-          earnedAmount: '292.50',
-          walletBalance: '1450.00',
-          demoMode: 'true',
-        },
-      });
-      return;
-    }
     try {
       const id = activeLine.tripId;
       if (!id) throw new Error('No trip ID');
@@ -328,7 +312,7 @@ export default function ShuttleTripActiveScreen() {
     } catch {
       router.replace('/shuttle/trip-complete' as any);
     }
-  }, [isDemoMode, activeLine]);
+  }, [activeLine]);
 
   const updatePassengerStatus = useCallback((passengerId: string, status: PassengerStatus) => {
     setPassengerStatuses(prev => ({ ...prev, [passengerId]: status }));
@@ -394,13 +378,6 @@ export default function ShuttleTripActiveScreen() {
             )}
 
           </View>
-
-          {/* Demo speed control */}
-          {isDemoMode && (
-            <View style={{ position: 'absolute', top: topPad + 8, right: 16 }} pointerEvents="auto">
-              <DemoSpeedControl />
-            </View>
-          )}
 
           {/* ── Live Navigation HUD: speed · distance · ETA ─────────────── */}
           {phase === 'en_route' && effectivePos && (

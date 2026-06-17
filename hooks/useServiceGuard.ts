@@ -3,7 +3,6 @@ import { router } from 'expo-router';
 import { useServiceControl, ServiceStatus } from '@/lib/serviceControlContext';
 import { useService, ServiceType } from '@/lib/serviceContext';
 import { useAuth } from '@/lib/authContext';
-import { useDemoMode } from '@/lib/demo';
 
 // Modes that hard-block access to the active service screen.
 // 'coming_soon' is intentionally excluded — it is already unselectable on
@@ -37,23 +36,19 @@ export function useServiceGuard(explicitType?: ServiceType): {
   const { serviceType: contextType } = useService();
   const { getServiceStatus, refresh, isLoading: servicesLoading } = useServiceControl();
   const { isLoading: authLoading } = useAuth();
-  const { isDemoMode } = useDemoMode();
   const type = explicitType ?? contextType;
 
   const status = getServiceStatus(type);
-  // While auth or services are still loading their first fetch, never block.
-  // Demo mode bypasses the guard entirely — no backend config exists for demo.
-  const blocked = (authLoading || servicesLoading || isDemoMode) ? false : isHardBlocked(status);
+  const blocked = (authLoading || servicesLoading) ? false : isHardBlocked(status);
 
   // Track redirect so we only schedule one redirect per block episode.
   const redirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wasBlockedRef = useRef(false);
 
-  // On mount: always re-fetch from API for freshness (spec §4). Skip in demo mode.
   useEffect(() => {
-    if (!isDemoMode) refresh();
+    refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [type, isDemoMode]);
+  }, [type]);
 
   // React to state changes (from refresh or socket).
   useEffect(() => {
