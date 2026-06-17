@@ -127,6 +127,7 @@ function RootLayoutNav() {
         <Stack.Screen name="pending-approval" />
         <Stack.Screen name="forgot-password" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="auth/vehicle-specs" options={{ animation: 'slide_from_right', gestureEnabled: false }} />
+        <Stack.Screen name="+not-found" />
       </Stack>
     </>
   );

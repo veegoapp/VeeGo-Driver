@@ -140,7 +140,7 @@ export default function DirectCancelScreen() {
           {penaltyLine}
         </Text>
         <Pressable
-          onPress={() => router.replace('/(shuttle)/index' as any)}
+          onPress={() => router.replace('/(shuttle)/' as any)}
           style={[styles.doneBtn, { backgroundColor: '#1e1e28' }]}
         >
           <Text style={[styles.doneBtnText, { fontFamily: 'Inter_700Bold' }]}>{t.return_home}</Text>
