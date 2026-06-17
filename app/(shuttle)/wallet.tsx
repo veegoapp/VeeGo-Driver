@@ -1,5 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowDownLeft, ArrowUpRight, Briefcase, FileText, Plus, Trash2, X } from 'lucide-react-native';
+import { ArrowDownLeft, ArrowUpRight, Briefcase, FileText, Plus, Trash2, Wallet, X } from 'lucide-react-native';
 import React, { useRef, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Animated, KeyboardAvoidingView, LayoutChangeEvent, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,7 +7,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
-import { endpoints } from '@/lib/api';
+import { endpoints, api } from '@/lib/api';
+import type { ServiceControl } from '@/lib/serviceControlContext';
 
 type WalletBalance = { balance: number };
 type Transaction = { id: string; title: string; sub: string; amount: number; incoming: boolean };
@@ -54,25 +55,46 @@ export default function ShuttleWalletScreen() {
     scrollRef.current?.scrollTo({ y: txSectionY, animated: true });
   };
 
+  const { data: serviceControlRaw } = useQuery({
+    queryKey: ['services-control'],
+    queryFn: () => api.get<unknown>('/services/control'),
+    staleTime: 60_000,
+  });
+
+  const walletControl: ServiceControl | undefined = (() => {
+    const raw = serviceControlRaw as { services?: ServiceControl[]; data?: ServiceControl[]; serviceControls?: ServiceControl[] } | ServiceControl[] | undefined;
+    const list: ServiceControl[] = Array.isArray(raw) ? raw : (raw?.services ?? raw?.data ?? raw?.serviceControls ?? []);
+    return list.find(s => s.serviceType.toLowerCase() === 'wallet');
+  })();
+
+  const walletComingSoon = walletControl
+    ? (!walletControl.isEnabled || walletControl.displayMode === 'coming_soon')
+    : false;
+
   const { data: balanceRaw, isLoading: balanceLoading, isError: balanceError } = useQuery({
     queryKey: ['wallet-balance'],
     queryFn: endpoints.wallet.balance,
+    enabled: !walletComingSoon,
   });
   const { data: txRaw, isLoading: txLoading, isError: txError } = useQuery({
     queryKey: ['wallet-transactions'],
     queryFn: endpoints.wallet.transactions,
+    enabled: !walletComingSoon,
   });
   const { data: weeklyRaw, isLoading: weeklyLoading } = useQuery({
     queryKey: ['earnings-weekly'],
     queryFn: () => endpoints.earnings.weekly(),
+    enabled: !walletComingSoon,
   });
   const { data: summaryRaw, isLoading: summaryLoading } = useQuery({
     queryKey: ['earnings-summary'],
     queryFn: () => endpoints.earnings.summary(),
+    enabled: !walletComingSoon,
   });
   const { data: payoutMethodsRaw, isLoading: methodsLoading } = useQuery({
     queryKey: ['payout-methods'],
     queryFn: endpoints.wallet.payoutMethods,
+    enabled: !walletComingSoon,
   });
 
   const _balRaw = balanceRaw as WalletBalance | { balance?: number; wallet?: { balance?: number } } | undefined;
@@ -193,6 +215,29 @@ export default function ShuttleWalletScreen() {
       },
     ]);
   };
+
+  if (walletComingSoon) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, gap: 16 }}>
+          <View style={[styles.comingSoonIcon, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+            <Wallet size={36} color={colors.mutedForeground} strokeWidth={1.5} />
+          </View>
+          <Text style={[styles.comingSoonTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: 'center' }]}>
+            {t.wallet_title}
+          </Text>
+          <View style={[styles.comingSoonBadge, { backgroundColor: '#1e1e2812', borderColor: '#1e1e2830' }]}>
+            <Text style={[styles.comingSoonBadgeText, { color: '#2d2d42', fontFamily: 'Inter_700Bold' }]}>
+              Coming Soon
+            </Text>
+          </View>
+          <Text style={[styles.comingSoonSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: 'center' }]}>
+            {walletControl?.message ?? 'Digital wallet & payout features are coming in a future update.'}
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -540,6 +585,11 @@ function SummaryRow({ label, value, positive, highlight, last, colors, isRTL }: 
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  comingSoonIcon: { width: 88, height: 88, borderRadius: 24, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  comingSoonTitle: { fontSize: 22 },
+  comingSoonBadge: { paddingHorizontal: 16, paddingVertical: 6, borderRadius: 99, borderWidth: 1 },
+  comingSoonBadgeText: { fontSize: 12, letterSpacing: 1.5, textTransform: 'uppercase' },
+  comingSoonSub: { fontSize: 14, lineHeight: 22 },
   sectionLabel: { fontSize: 10, letterSpacing: 2, textTransform: 'uppercase' },
   pageTitle: { fontSize: 24, marginTop: 2 },
   balanceCard: { borderRadius: 24, padding: 20, borderWidth: 1, overflow: 'hidden', elevation: 8, shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 16 },
