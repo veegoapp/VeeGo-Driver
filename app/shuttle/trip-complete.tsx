@@ -85,7 +85,7 @@ export default function TripCompleteScreen() {
   const handleReturnHome = () => {
     // Clear all in-trip state (stop index, passengers, startedTripId) before navigating
     resetTrip();
-    router.replace('/(shuttle)/' as any);
+    router.replace('/(shuttle)' as any);
   };
 
   return (
