@@ -77,11 +77,10 @@ export default function ShuttleHomeScreen() {
   useFocusEffect(
     useCallback(() => {
       refetchNotifications();
-      // Force-refresh shuttle bookings & lines when the screen gains focus so
-      // that trips deleted from the admin dashboard disappear immediately instead
-      // of waiting for the 60-second polling interval.
+      // Hard-refetch bookings every time screen gains focus so cancellations
+      // from the admin dashboard appear immediately without waiting for the poll.
       refetch();
-      queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
+      queryClient.resetQueries({ queryKey: ['shuttle-my-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['shuttle-lines'] });
     }, [refetchNotifications, refetch, queryClient])
   );
@@ -90,7 +89,7 @@ export default function ShuttleHomeScreen() {
   const progress = stops.length > 0 ? currentStopIndex / stops.length : 0;
 
   const upcomingBookings = myBookings.filter(
-    b => b.status !== 'completed' && b.status !== 'cancelled'
+    b => b.status === 'booked' || b.status === 'active' || b.status === 'pending_renewal'
   );
 
   // Fix 1: check if any booking departs within 20 minutes (HH:MM comparison)
@@ -647,7 +646,7 @@ export default function ShuttleHomeScreen() {
 
       {/* Floating offline button — centered above tab bar, shown only when offline */}
       {!online && (
-        <View style={[styles.floatingOfflineWrap, { bottom: TAB_BAR_HEIGHT - 12 }]} pointerEvents="box-none">
+        <View style={[styles.floatingOfflineWrap, { bottom: TAB_BAR_HEIGHT + 20 }]} pointerEvents="box-none">
           <View style={styles.floatingPulseWrap}>
             <Pressable
               onPress={toggleOnline}

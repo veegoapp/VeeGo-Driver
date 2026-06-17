@@ -398,7 +398,7 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
       const raw = await endpoints.shuttle.myBookings() as unknown;
       return raw;
     },
-    refetchInterval: 60000,
+    refetchInterval: 20000,
   });
 
   const refetch = () => {
