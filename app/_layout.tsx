@@ -20,6 +20,7 @@ import { navigateAfterAuth } from '@/lib/postAuthRouter';
 import { setOnAccountSuspended } from '@/lib/api';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { DemoModeProvider, DemoGate, useDemoMode } from '@/lib/demo';
+import { ServerStatusBanner } from '@/components/ServerStatusBanner';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -192,6 +193,7 @@ export default function RootLayout() {
                     </ServiceProvider>
                   </I18nProvider>
                 </KeyboardProvider>
+                <ServerStatusBanner />
               </GestureHandlerRootView>
             </QueryClientProvider>
           </ErrorBoundary>

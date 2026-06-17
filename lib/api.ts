@@ -47,7 +47,7 @@ if (!_rawApiUrl) {
     '  EXPO_PUBLIC_API_URL=https://<your-replit-domain>/api'
   );
 }
-const API_BASE_URL: string = _rawApiUrl.startsWith('http') ? _rawApiUrl : `https://${_rawApiUrl}`;
+export const API_BASE_URL: string = _rawApiUrl.startsWith('http') ? _rawApiUrl : `https://${_rawApiUrl}`;
 
 const REQUEST_TIMEOUT_MS = 15000;
 
