@@ -1,15 +1,16 @@
 import { router } from 'expo-router';
 
 /**
- * Always navigates to the shuttle dashboard after authentication.
- * Double-deferred (rAF inside setTimeout) so the Stack navigator has
- * fully registered all screens before the REPLACE action is dispatched.
- * A single requestAnimationFrame is not enough on slow/cold starts.
+ * Navigates to the shuttle dashboard after authentication.
+ * Uses the explicit index path to avoid Expo Router's transparent-group
+ * ambiguity — navigating to '/(shuttle)' dispatches a REPLACE action with
+ * name="(shuttle)" that React Navigation can't resolve; navigating to the
+ * concrete index screen always works.
  */
 export async function navigateAfterAuth(_token: string | null): Promise<void> {
   setTimeout(() => {
     requestAnimationFrame(() => {
-      router.replace('/(shuttle)' as any);
+      router.replace('/(shuttle)/index' as any);
     });
   }, 0);
 }

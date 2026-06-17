@@ -107,7 +107,7 @@ export default function ReferralRequestScreen() {
                 {t.referral_notification_sub}
               </Text>
               <Pressable
-                onPress={() => router.navigate('/(shuttle)' as any)}
+                onPress={() => router.replace('/(shuttle)/index' as any)}
                 style={[styles.doneBtn, { backgroundColor: '#1e1e28' }]}
               >
                 <Text style={[styles.doneBtnText, { fontFamily: 'Inter_700Bold' }]}>{t.return_home}</Text>

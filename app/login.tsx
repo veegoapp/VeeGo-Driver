@@ -128,7 +128,7 @@ export default function LoginScreen() {
               enterDemoMode();
               setTimeout(() => {
                 requestAnimationFrame(() => {
-                  expoRouter.replace('/(shuttle)' as any);
+                  expoRouter.replace('/(shuttle)/index' as any);
                 });
               }, 0);
             }}
