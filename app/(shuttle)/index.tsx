@@ -724,7 +724,6 @@ function UpcomingTripCard({
             {line && line.vehicleType !== 'Unknown' && (
               <View style={[styles.vehicleBadge, { backgroundColor: '#1e1e2810', borderColor: '#1e1e2820' }]}>
                 <Text style={[styles.vehicleBadgeText, { color: '#2d2d42', fontFamily: 'Inter_600SemiBold' }]}>
-                  {/* TODO: Backend Integration - Use vehicle model + plate number from trip data */}
                   {line.vehicleType} · {line.lineNumber}
                 </Text>
               </View>
@@ -733,24 +732,42 @@ function UpcomingTripCard({
               <View style={[styles.seatBadge, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
                 <Users size={11} color={colors.mutedForeground} strokeWidth={2} />
                 <Text style={[styles.seatBadgeText, { color: colors.foreground, fontFamily: 'Inter_600SemiBold' }]}>
-                  {/* TODO: Backend Integration - Fetch real-time booked/total passenger count for this trip */}
                   {t.passengers_label_count}: {line.bookedSeats} / {line.totalSeats}
                 </Text>
               </View>
             )}
           </View>
+          {/* Passenger progress bar */}
+          {line && line.totalSeats > 0 && (
+            <View style={styles.paxBarWrap}>
+              <View style={[styles.paxBarTrack, { backgroundColor: colors.border }]}>
+                <View
+                  style={[
+                    styles.paxBarFill,
+                    {
+                      width: `${Math.min(100, Math.round((line.bookedSeats / line.totalSeats) * 100))}%` as any,
+                      backgroundColor: booking.trip?.thresholdMet === false ? '#F59E0B' : '#1e1e28',
+                    },
+                  ]}
+                />
+              </View>
+              <Text style={[styles.paxBarLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
+                {line.bookedSeats}/{line.totalSeats}
+              </Text>
+            </View>
+          )}
         </View>
         <View style={{ alignItems: 'flex-end', justifyContent: 'space-between', alignSelf: 'stretch', paddingTop: 2, gap: 6 }}>
           {booking.trip && !booking.trip.thresholdMet ? (
             <View style={[styles.upcomingStatusBadge, { backgroundColor: '#FEF3C7', borderColor: '#FCD34D' }]}>
               <Text style={[styles.upcomingStatusText, { color: '#92400E', fontFamily: 'Inter_700Bold' }]}>
-                {booking.trip.bookedSeats}/{booking.trip.minRequired} pax
+                {t.status_pending}
               </Text>
             </View>
           ) : (
-            <View style={[styles.upcomingStatusBadge, { backgroundColor: '#1e1e2812', borderColor: '#1e1e2825' }]}>
-              <Text style={[styles.upcomingStatusText, { color: '#2d2d42', fontFamily: 'Inter_700Bold' }]}>
-                {booking.status === 'active' ? t.active : t.status_booked}
+            <View style={[styles.upcomingStatusBadge, { backgroundColor: '#DCFCE7', borderColor: '#86EFAC' }]}>
+              <Text style={[styles.upcomingStatusText, { color: '#166534', fontFamily: 'Inter_700Bold' }]}>
+                {t.active}
               </Text>
             </View>
           )}
@@ -847,6 +864,10 @@ const styles = StyleSheet.create({
   upcomingMetaDot: { fontSize: 14 },
   upcomingStatusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1 },
   upcomingStatusText: { fontSize: 11, letterSpacing: 0.5 },
+  paxBarWrap: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
+  paxBarTrack: { flex: 1, height: 4, borderRadius: 2, overflow: 'hidden' },
+  paxBarFill: { height: '100%', borderRadius: 2 },
+  paxBarLabel: { fontSize: 10, minWidth: 32, textAlign: 'right' },
   referralBanner: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, borderWidth: 1.5 },
   referralBannerPulse: { width: 8, height: 8, borderRadius: 4 },
   referralBannerBadge: { minWidth: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
