@@ -710,13 +710,20 @@ function BookingCard({
               </Text>
             </View>
           ) : null}
-          {booking.trip && !booking.trip.thresholdMet ? (
-            <View style={[styles.renewalPill, { backgroundColor: '#FEF3C7', borderColor: '#FCD34D', borderWidth: 1 }]}>
-              <Users size={9} color="#92400E" strokeWidth={2.5} />
-              <Text style={[styles.renewalPillText, { color: '#92400E' }]}>
-                {booking.trip.bookedSeats}/{booking.trip.minRequired} pax
-              </Text>
-            </View>
+          {booking.trip ? (
+            !booking.trip.thresholdMet ? (
+              <View style={[styles.renewalPill, { backgroundColor: '#FEF3C7', borderColor: '#FCD34D', borderWidth: 1 }]}>
+                <Text style={[styles.renewalPillText, { color: '#92400E' }]}>
+                  {t.status_pending}
+                </Text>
+              </View>
+            ) : (
+              <View style={[styles.renewalPill, { backgroundColor: '#DCFCE7', borderColor: '#86EFAC', borderWidth: 1 }]}>
+                <Text style={[styles.renewalPillText, { color: '#166534' }]}>
+                  {t.active}
+                </Text>
+              </View>
+            )
           ) : null}
           {hasRenewal && (
             <View style={[styles.renewalPill, { backgroundColor: '#FEF3C718' }]}>

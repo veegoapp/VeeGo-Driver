@@ -532,7 +532,7 @@ const en = {
   bonus_targets_empty_sub: 'New bonus milestones will appear here once assigned',
   bonus_summary_label: 'Summary',
   // ── Bookings screen ──────────────────────────────────────────────────────────
-  my_bookings: 'My Bookings',
+  my_bookings: 'My Trips',
   weekly_schedule_subtitle: 'Weekly schedule & completed trips',
   upcoming_trips_tab: 'Upcoming Trips',
   completed_trips_tab: 'Completed Trips',
@@ -1221,7 +1221,7 @@ const ar: typeof en = {
   bonus_targets_empty_sub: 'ستظهر أهداف المكافآت الجديدة هنا عند تعيينها',
   bonus_summary_label: 'الملخص',
   // ── Bookings screen ──────────────────────────────────────────────────────────
-  my_bookings: 'حجوزاتي',
+  my_bookings: 'رحلاتي',
   weekly_schedule_subtitle: 'المواعيد الأسبوعية والرحلات المكتملة',
   upcoming_trips_tab: 'الرحلات القادمة',
   completed_trips_tab: 'الرحلات المكتملة',
