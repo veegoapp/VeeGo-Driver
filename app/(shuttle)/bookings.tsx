@@ -23,7 +23,6 @@ const TAB_BAR_HEIGHT = 96;
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type MainTab = 'upcoming' | 'completed';
-type WeekFilter = 'current' | 'next';
 
 // TODO: Backend Integration - GET /shuttle/driver/my-trips response shape
 // Expected: { trips: DriverTrip[]; total: number }
@@ -150,7 +149,6 @@ export default function BookingsScreen() {
   const queryClient = useQueryClient();
 
   const [mainTab, setMainTab] = useState<MainTab>('upcoming');
-  const [weekFilter, setWeekFilter] = useState<WeekFilter>('current');
   const [selectedBooking, setSelectedBooking] = useState<ShuttleBooking | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [tripPage, setTripPage] = useState(1);
@@ -181,11 +179,6 @@ export default function BookingsScreen() {
   const upcomingBookings = myBookings.filter(
     b => b.status === 'booked' || b.status === 'active' || b.status === 'pending_renewal'
   );
-  const filteredUpcoming = upcomingBookings.filter(b => {
-    const bucket = getWeekBucket(b.weekStart);
-    return bucket === weekFilter;
-  });
-
   if (__DEV__) {
     const currentSunStr = toLocalDateString(getCurrentWeekSunday());
     console.log('[Bookings] myBookings count:', myBookings.length);
@@ -197,7 +190,7 @@ export default function BookingsScreen() {
         `[Bookings] id=${b.id} status="${b.status}" weekStart="${b.weekStart}" → normalized="${normalized}" bucket="${bucket}"`
       );
     });
-    console.log('[Bookings] upcomingBookings:', upcomingBookings.length, '| weekFilter:', weekFilter, '| filteredUpcoming:', filteredUpcoming.length);
+    console.log('[Bookings] upcomingBookings:', upcomingBookings.length);
   }
 
   // ── Mutations ──────────────────────────────────────────────────────────────
@@ -342,23 +335,7 @@ export default function BookingsScreen() {
         {/* ── Upcoming tab ── */}
         {mainTab === 'upcoming' && (
           <>
-            {/* Week filter chips */}
-            <View style={styles.weekFilterRow}>
-              <WeekFilterBtn
-                label={t.current_week}
-                active={weekFilter === 'current'}
-                onPress={() => setWeekFilter('current')}
-                colors={colors}
-              />
-              <WeekFilterBtn
-                label={t.next_week_label}
-                active={weekFilter === 'next'}
-                onPress={() => setWeekFilter('next')}
-                colors={colors}
-              />
-            </View>
-
-            {filteredUpcoming.length === 0 ? (
+            {upcomingBookings.length === 0 ? (
               <View style={styles.smartEmptyState}>
                 <Calendar size={40} color={colors.mutedForeground} strokeWidth={1.2} />
                 <Text style={[styles.smartEmptyTitle, { color: colors.foreground }]}>
@@ -381,7 +358,7 @@ export default function BookingsScreen() {
               </View>
             ) : (
               <View style={{ gap: 8, marginTop: 4 }}>
-                {filteredUpcoming.map(b => (
+                {upcomingBookings.map(b => (
                   <BookingCard
                     key={b.id}
                     booking={b}
@@ -572,42 +549,6 @@ function MainTabBtn({
           </Text>
         </View>
       )}
-    </Pressable>
-  );
-}
-
-// ─── Week filter button ───────────────────────────────────────────────────────
-
-function WeekFilterBtn({
-  label, active, onPress, colors,
-}: {
-  label: string;
-  active: boolean;
-  onPress: () => void;
-  colors: ReturnType<typeof useColors>;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      style={[
-        styles.weekBtn,
-        {
-          backgroundColor: active ? colors.primary : colors.secondary,
-          borderColor: active ? colors.primary : colors.border,
-        },
-      ]}
-    >
-      <Text
-        style={[
-          styles.weekBtnLabel,
-          {
-            color: active ? '#fff' : colors.mutedForeground,
-            fontFamily: active ? 'Inter_700Bold' : 'Inter_400Regular',
-          },
-        ]}
-      >
-        {label}
-      </Text>
     </Pressable>
   );
 }
@@ -1205,23 +1146,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
   },
   tabBadgeText: { fontSize: 10, fontFamily: 'Inter_700Bold' },
-
-  // Week filter
-  weekFilterRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 16,
-    marginBottom: 4,
-  },
-  weekBtn: {
-    flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-  weekBtnLabel: { fontSize: 13 },
 
   // Empty states
   emptyState: { alignItems: 'center', marginTop: 48, gap: 10 },
