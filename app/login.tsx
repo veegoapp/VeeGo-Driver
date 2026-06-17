@@ -126,7 +126,11 @@ export default function LoginScreen() {
             style={s.demoBtn}
             onPress={() => {
               enterDemoMode();
-              expoRouter.replace('/(shuttle)' as any);
+              setTimeout(() => {
+                requestAnimationFrame(() => {
+                  expoRouter.replace('/(shuttle)' as any);
+                });
+              }, 0);
             }}
             activeOpacity={0.7}
           >
