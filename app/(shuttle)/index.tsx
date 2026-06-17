@@ -278,6 +278,25 @@ export default function ShuttleHomeScreen() {
     router.push('/shuttle/trip-active');
   };
 
+  const toggleOnline = async () => {
+    if (onlineLoading) return;
+    setOnlineLoading(true);
+    const next = !online;
+    try {
+      if (next) {
+        await endpoints.driver.goOnline();
+      } else {
+        await endpoints.driver.goOffline();
+        stopShuttleBroadcast();
+      }
+    } catch {
+      // best-effort
+    } finally {
+      setOnline(next);
+      setOnlineLoading(false);
+    }
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
@@ -313,58 +332,35 @@ export default function ShuttleHomeScreen() {
           </View>
         </View>
 
-        {/* Online toggle */}
-        <View style={styles.onlineRow}>
-          <View style={styles.pulseWrap}>
-            {online && (
+        {/* Online toggle row — shown only when driver is online */}
+        {online && (
+          <View style={styles.onlineRow}>
+            <View style={styles.pulseWrap}>
               <Animated.View style={[styles.pulseRing, {
                 backgroundColor: '#1e1e2840',
                 transform: [{ scale: pulseScale }],
                 opacity: pulseOpacity,
               }]} />
-            )}
-            <Pressable
-              onPress={async () => {
-                if (onlineLoading) return;
-                setOnlineLoading(true);
-                const next = !online;
-                try {
-                  if (next) {
-                    await endpoints.driver.goOnline();
-                  } else {
-                    await endpoints.driver.goOffline();
-                    stopShuttleBroadcast();
-                  }
-                } catch {
-                  // best-effort
-                } finally {
-                  setOnline(next);
-                  setOnlineLoading(false);
-                }
-              }}
-              disabled={onlineLoading}
-              style={({ pressed }) => [styles.onlineBtn, { transform: [{ scale: pressed ? 0.95 : 1 }] }]}
-            >
-              {online ? (
+              <Pressable
+                onPress={toggleOnline}
+                disabled={onlineLoading}
+                style={({ pressed }) => [styles.onlineBtn, { transform: [{ scale: pressed ? 0.95 : 1 }] }]}
+              >
                 <LinearGradient colors={['#2d2d42', '#1e1e28']} style={styles.onlineBtnGrad}>
                   <Wifi size={20} color="#fff" strokeWidth={2} />
                 </LinearGradient>
-              ) : (
-                <View style={[styles.onlineBtnOff, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
-                  <WifiOff size={20} color={colors.mutedForeground} strokeWidth={2} />
-                </View>
-              )}
-            </Pressable>
+              </Pressable>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.onlineStatus, { color: '#2d2d42', fontFamily: 'Inter_700Bold', textAlign: TA }]}>
+                {`${t.online_status} — ${t.shuttle_service}`}
+              </Text>
+              <Text style={[styles.onlineSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>
+                {t.live}
+              </Text>
+            </View>
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.onlineStatus, { color: online ? '#2d2d42' : colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
-              {online ? `${t.online_status} — ${t.shuttle_service}` : t.youre_offline}
-            </Text>
-            <Text style={[styles.onlineSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>
-              {online ? t.live : t.go}
-            </Text>
-          </View>
-        </View>
+        )}
 
         {/* Fix 2: check-in pending banner */}
         {!!shuttleCheckinRequired && (
@@ -648,6 +644,31 @@ export default function ShuttleHomeScreen() {
         )}
 
       </ScrollView>
+
+      {/* Floating offline button — centered above tab bar, shown only when offline */}
+      {!online && (
+        <View style={[styles.floatingOfflineWrap, { bottom: TAB_BAR_HEIGHT - 12 }]} pointerEvents="box-none">
+          <View style={styles.floatingPulseWrap}>
+            <Pressable
+              onPress={toggleOnline}
+              disabled={onlineLoading}
+              style={({ pressed }) => [styles.floatingOfflineBtn, { backgroundColor: colors.secondary, borderColor: colors.border, transform: [{ scale: pressed ? 0.95 : 1 }] }]}
+            >
+              {onlineLoading ? (
+                <ActivityIndicator color={colors.mutedForeground} />
+              ) : (
+                <WifiOff size={28} color={colors.mutedForeground} strokeWidth={2} />
+              )}
+            </Pressable>
+          </View>
+          <Text style={[styles.floatingOfflineLabel, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>
+            {t.youre_offline}
+          </Text>
+          <Text style={[styles.floatingOfflineSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
+            {t.go}
+          </Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -824,6 +845,11 @@ const styles = StyleSheet.create({
   referralBannerPulse: { width: 8, height: 8, borderRadius: 4 },
   referralBannerBadge: { minWidth: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
   referralBannerBadgeText: { fontSize: 11, color: '#fff' },
+  floatingOfflineWrap: { position: 'absolute', left: 0, right: 0, alignItems: 'center', gap: 6, paddingBottom: 8 },
+  floatingPulseWrap: { alignItems: 'center', justifyContent: 'center' },
+  floatingOfflineBtn: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center', borderWidth: 2, elevation: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.12, shadowRadius: 12 },
+  floatingOfflineLabel: { fontSize: 14 },
+  floatingOfflineSub: { fontSize: 12 },
   noLineCard: { alignItems: 'center', padding: 28, gap: 10 },
   noLineTitle: { fontSize: 16, marginTop: 4 },
   noLineSub: { fontSize: 13, textAlign: 'center', lineHeight: 20 },
