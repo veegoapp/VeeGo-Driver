@@ -13,6 +13,7 @@
  */
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
+import { safeBack } from '@/lib/navUtils';
 import { Calendar, Check, ChevronLeft, Clock, Users, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
@@ -160,7 +161,7 @@ export default function ReferralIncomingScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: topPad + 8, borderBottomColor: colors.border }]}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
+        <Pressable onPress={() => safeBack('/(shuttle)')} style={styles.backBtn} hitSlop={8}>
           <ChevronLeft size={24} color={colors.foreground} strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
         </Pressable>
         <Text style={[styles.headerTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>

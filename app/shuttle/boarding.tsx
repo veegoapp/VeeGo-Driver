@@ -1,5 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
+import { safeBack } from '@/lib/navUtils';
 import { AlertCircle, Check, ChevronLeft, Package, Phone, Tag, Users, X } from 'lucide-react-native';
 import React, { useRef, useEffect, useState } from 'react';
 import { Alert, Animated, Image, Platform, Pressable, ScrollView, StyleSheet, Text, View, ImageErrorEventData, NativeSyntheticEvent } from 'react-native';
@@ -122,7 +123,7 @@ export default function ShuttleBoardingScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={[styles.backBtn, { backgroundColor: colors.glass, borderColor: colors.border }]}>
+          <Pressable onPress={() => safeBack('/shuttle/trip-active')} style={[styles.backBtn, { backgroundColor: colors.glass, borderColor: colors.border }]}>
             <ChevronLeft size={20} color={colors.foreground} strokeWidth={2} />
           </Pressable>
           <View style={{ flex: 1 }}>

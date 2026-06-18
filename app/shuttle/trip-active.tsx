@@ -1,5 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, useNavigation } from 'expo-router';
+import { router } from 'expo-router';
+import { safeBack } from '@/lib/navUtils';
 import {
   AlertTriangle, Check, ChevronLeft, Clock, Navigation2, Users, X,
 } from 'lucide-react-native';
@@ -55,8 +56,6 @@ export default function ShuttleTripActiveScreen() {
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
   const { t, isRTL } = useI18n();
   const { socket } = useSocket();
-  const navigation = useNavigation();
-
   const shuttleCtx = useShuttle();
   const {
     activeLine, stops, currentStopIndex, passengers, nextStop, stationCoords,
@@ -355,7 +354,7 @@ export default function ShuttleTripActiveScreen() {
         <View style={[StyleSheet.absoluteFill, { pointerEvents: 'box-none' } as any]}>
           <View style={[styles.topBar, { paddingTop: topPad + 8 }]} pointerEvents="auto">
             <Pressable
-              onPress={() => navigation.goBack()}
+              onPress={() => safeBack('/(shuttle)')}
               style={[styles.backBtn, { backgroundColor: 'rgba(10,10,20,0.72)', borderColor: 'rgba(255,255,255,0.12)' }]}
             >
               <ChevronLeft size={20} color="#fff" strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
