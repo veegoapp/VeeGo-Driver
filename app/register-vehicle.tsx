@@ -1,6 +1,5 @@
 import { ArrowLeft, ArrowRight, ChevronDown, RefreshCw, X } from 'lucide-react-native';
 import { router } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -19,7 +18,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
 
-const VEHICLE_REG_KEY = 'veego_vehicle_reg';
+const CURRENT_YEAR = new Date().getFullYear();
+function generateYears(): number[] {
+  const years: number[] = [];
+  for (let y = CURRENT_YEAR; y >= 2000; y--) years.push(y);
+  return years;
+}
 
 type Brand = { id: string; name: string };
 type VehicleModel = { id: string; name: string };
@@ -30,21 +34,6 @@ function normalizeId(v: unknown): string {
   return String(v ?? '');
 }
 
-function normalizeYears(raw: unknown): number[] {
-  if (!raw) return [];
-  if (Array.isArray(raw)) {
-    return raw.map(item => {
-      if (typeof item === 'number') return item;
-      if (typeof item === 'string') return parseInt(item, 10);
-      if (typeof item === 'object' && item !== null) {
-        const obj = item as Record<string, unknown>;
-        return parseInt(String(obj.year ?? obj.value ?? obj.id ?? 0), 10);
-      }
-      return 0;
-    }).filter(y => y > 1900 && y <= new Date().getFullYear() + 1);
-  }
-  return [];
-}
 
 function normalizeList(raw: unknown): { id: string; name: string }[] {
   if (!Array.isArray(raw)) return [];
@@ -76,7 +65,6 @@ export default function RegisterVehicleScreen() {
 
   const [loadingBrands, setLoadingBrands] = useState(false);
   const [loadingModels, setLoadingModels] = useState(false);
-  const [loadingYears, setLoadingYears] = useState(false);
   const [loadingColors, setLoadingColors] = useState(false);
 
   const [errorBrands, setErrorBrands] = useState(false);
@@ -132,20 +120,6 @@ export default function RegisterVehicleScreen() {
     }
   }, []);
 
-  const fetchYears = useCallback(async (modelId: string) => {
-    setLoadingYears(true);
-    setYears([]);
-    setSelectedYear(null);
-    try {
-      const raw = await endpoints.vehicles.years(modelId);
-      setYears(normalizeYears(raw));
-    } catch {
-      Alert.alert('Error', 'Could not load years. Please try again.');
-    } finally {
-      setLoadingYears(false);
-    }
-  }, []);
-
   const handleSelectBrand = (b: Brand) => {
     setSelectedBrand(b);
     setActivePicker(null);
@@ -155,7 +129,8 @@ export default function RegisterVehicleScreen() {
   const handleSelectModel = (m: VehicleModel) => {
     setSelectedModel(m);
     setActivePicker(null);
-    fetchYears(m.id);
+    setSelectedYear(null);
+    setYears(generateYears());
   };
 
   const handleSelectYear = (y: number) => {
@@ -174,16 +149,12 @@ export default function RegisterVehicleScreen() {
     if (!canContinue) return;
     setSubmitting(true);
     try {
-      const payload = {
+      await endpoints.registration.setVehicleDetails({
         brandId: selectedBrand!.id,
-        brandName: selectedBrand!.name,
         modelId: selectedModel!.id,
-        modelName: selectedModel!.name,
-        year: selectedYear!,
-        colorId: selectedColor!.id,
-        colorName: selectedColor!.name,
-      };
-      await AsyncStorage.setItem(VEHICLE_REG_KEY, JSON.stringify(payload));
+        year: String(selectedYear!),
+        color: selectedColor!.id,
+      });
       router.push('/register-documents');
     } catch {
       Alert.alert('Error', 'Could not save vehicle information. Please try again.');
@@ -204,7 +175,6 @@ export default function RegisterVehicleScreen() {
 
   const pickerLoading = activePicker === 'brand' ? loadingBrands
     : activePicker === 'model' ? loadingModels
-    : activePicker === 'year' ? loadingYears
     : activePicker === 'color' ? loadingColors
     : false;
 
@@ -241,7 +211,7 @@ export default function RegisterVehicleScreen() {
         </TouchableOpacity>
 
         <View style={s.header}>
-          <Text style={[s.step, { textAlign: TA }]}>Step 3 of 4</Text>
+          <Text style={[s.step, { textAlign: TA }]}>Step 2 of 3</Text>
           <Text style={[s.title, { textAlign: TA }]}>{t.vehicle_details}</Text>
           <Text style={[s.sub, { textAlign: TA }]}>{t.vehicle_details_sub}</Text>
         </View>
@@ -275,7 +245,7 @@ export default function RegisterVehicleScreen() {
             label={t.vehicle_year}
             placeholder={t.select_year}
             value={selectedYear ? String(selectedYear) : null}
-            loading={loadingYears}
+            loading={false}
             error={false}
             errorLabel={t.load_failed}
             onPress={() => selectedModel ? setActivePicker('year') : undefined}

@@ -66,7 +66,7 @@ export default function LoginScreen() {
 
   const handleRegisterSuccess = async (accessToken: string, refreshToken: string) => {
     await login(accessToken, refreshToken);
-    expoRouter.replace('/register-documents');
+    expoRouter.replace('/register-vehicle');
   };
 
   return (

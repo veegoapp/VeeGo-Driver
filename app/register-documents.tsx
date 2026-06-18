@@ -168,7 +168,7 @@ export default function RegisterDocumentsScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={s.header}>
-          <Text style={s.step}>Step 4 of 4</Text>
+          <Text style={s.step}>Step 3 of 3</Text>
           <Text style={s.title}>Upload your{'\n'}documents</Text>
           <Text style={s.sub}>
             Upload all required documents to complete your registration. Your account will be reviewed by our team.
