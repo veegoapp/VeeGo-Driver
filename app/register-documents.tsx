@@ -126,7 +126,8 @@ export default function RegisterDocumentsScreen() {
       formData.append('type', slot.backendType);
       await endpoints.driver.uploadDocument(formData);
       setUploaded(prev => ({ ...prev, [slot.id]: true }));
-    } catch {
+    } catch (err) {
+      console.error('[register-documents] upload failed for', slot.backendType, err);
       setFailed(prev => ({ ...prev, [slot.id]: true }));
     } finally {
       setUploading(prev => ({ ...prev, [slot.id]: false }));

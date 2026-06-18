@@ -431,12 +431,24 @@ export const endpoints = {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
       try {
-        return await fetch(`${API_BASE_URL}/driver/me/documents`, {
+        const response = await fetch(`${API_BASE_URL}/driver/me/documents`, {
           method: 'POST',
           headers: token ? { 'Authorization': `Bearer ${token}` } : {},
           body: formData,
           signal: controller.signal,
         });
+        // DEBUG: log response to help diagnose upload issues
+        const cloned = response.clone();
+        cloned.text().then(t => {
+          console.log('[uploadDocument] status:', response.status);
+          console.log('[uploadDocument] body:', t.slice(0, 500));
+        }).catch(() => {});
+        if (!response.ok) {
+          let body: unknown = null;
+          try { body = await response.json(); } catch { body = await response.text(); }
+          throw new ApiError(response.status, response.statusText, body);
+        }
+        return response;
       } finally {
         clearTimeout(timeout);
       }
