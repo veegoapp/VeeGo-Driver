@@ -39,9 +39,12 @@ const queryClient = new QueryClient({
 const PRE_AUTH_SCREENS = new Set(['login', 'language-select', 'onboarding', 'index']);
 
 // Screens that authenticated-but-pending drivers are allowed to stay on.
-// Any other protected route will NOT kick them back — the pending screen
-// itself has a logout button.
-const PENDING_SCREENS = new Set(['pending-approval', 'register-documents']);
+const PENDING_SCREENS = new Set([
+  'pending-approval',
+  'register-vehicle',
+  'register-documents',
+  'register-info',
+]);
 
 /**
  * PushNotificationsBridge — zero-render component.
@@ -73,6 +76,7 @@ function RootLayoutNav() {
     // segments[0] is undefined at the root route "/" (app/index.tsx).
     const currentScreen = segments[0] as string | undefined;
     const inPreAuthZone = !currentScreen || PRE_AUTH_SCREENS.has(currentScreen);
+    const inPendingZone = !!currentScreen && PENDING_SCREENS.has(currentScreen);
 
     if (!token) {
       // Unauthenticated user on a protected screen → send to login.
@@ -83,8 +87,11 @@ function RootLayoutNav() {
       return;
     }
 
+    // Authenticated user on a registration/pending screen → leave them there.
+    if (inPendingZone) return;
+
     // Authenticated user on a pre-auth screen (splash, onboarding, login) →
-    // skip all marketing/onboarding and go directly to the correct dashboard.
+    // check registration progress and route to the correct next step.
     if (inPreAuthZone) {
       navigateAfterAuth(token);
     }
