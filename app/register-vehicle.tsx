@@ -2,7 +2,7 @@ import { ArrowLeft, ArrowRight, ChevronDown, RefreshCw, X, Info } from 'lucide-r
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ApiError } from '@/lib/api';
-import { FALLBACK_BRANDS, FALLBACK_COLORS, getFallbackModels, getFallbackYears } from '@/constants/vehicleCatalog';
+import { getFallbackBrands, FALLBACK_COLORS, getFallbackModels, getFallbackYears } from '@/constants/vehicleCatalog';
 import {
   ActivityIndicator,
   Alert,
@@ -120,7 +120,7 @@ export default function RegisterVehicleScreen() {
         // Backend doesn't allow catalog access for pending drivers — use static fallback.
         // Fix on backend: make GET /vehicles/brands public or allow pending-driver tokens.
         console.warn('[register-vehicle] 403 on brands — using static fallback. Fix backend permissions.');
-        setBrands(FALLBACK_BRANDS);
+        setBrands(getFallbackBrands(serviceType));
       } else {
         setErrorBrands(true);
         if (err instanceof ApiError) {
