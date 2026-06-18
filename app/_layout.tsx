@@ -36,7 +36,7 @@ const queryClient = new QueryClient({
 
 // Screens that only unauthenticated users should ever see.
 // Authenticated users landing on any of these are redirected to the dashboard.
-const PRE_AUTH_SCREENS = new Set(['login', 'language-select', 'onboarding', 'index']);
+const PRE_AUTH_SCREENS = new Set(['login', 'language-select', 'onboarding', 'index', 'verify-otp']);
 
 // Screens that authenticated-but-pending drivers are allowed to stay on.
 const PENDING_SCREENS = new Set([
@@ -44,7 +44,6 @@ const PENDING_SCREENS = new Set([
   'register-vehicle',
   'register-documents',
   'register-info',
-  'verify-otp',
   'register-service-type',
   'register-plate',
 ]);
