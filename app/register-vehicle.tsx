@@ -1,6 +1,7 @@
 import { ArrowLeft, ArrowRight, ChevronDown, RefreshCw, X, Info } from 'lucide-react-native';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
+import { ApiError } from '@/lib/api';
 import {
   ActivityIndicator,
   Alert,
@@ -95,7 +96,9 @@ export default function RegisterVehicleScreen() {
   const [loadingColors, setLoadingColors] = useState(false);
 
   const [errorBrands, setErrorBrands] = useState(false);
+  const [errorBrandsDetail, setErrorBrandsDetail] = useState<string | null>(null);
   const [errorColors, setErrorColors] = useState(false);
+  const [errorColorsDetail, setErrorColorsDetail] = useState<string | null>(null);
   const [emptyYears, setEmptyYears] = useState(false);
 
   const [activePicker, setActivePicker] = useState<PickerType>(null);
@@ -106,11 +109,20 @@ export default function RegisterVehicleScreen() {
   const fetchBrands = useCallback(async () => {
     setLoadingBrands(true);
     setErrorBrands(false);
+    setErrorBrandsDetail(null);
     try {
       const res = await endpoints.vehicles.brands(serviceType);
-      setBrands(res?.data ?? []);
-    } catch {
+      const items = res?.data ?? (Array.isArray(res) ? res as typeof brands : []);
+      setBrands(items);
+    } catch (err) {
       setErrorBrands(true);
+      if (err instanceof ApiError) {
+        setErrorBrandsDetail(`HTTP ${err.status}: ${err.message}`);
+        console.error('[register-vehicle] brands fetch failed:', err.status, err.body);
+      } else {
+        setErrorBrandsDetail(err instanceof Error ? err.message : String(err));
+        console.error('[register-vehicle] brands fetch failed:', err);
+      }
     } finally {
       setLoadingBrands(false);
     }
@@ -119,11 +131,20 @@ export default function RegisterVehicleScreen() {
   const fetchColors = useCallback(async () => {
     setLoadingColors(true);
     setErrorColors(false);
+    setErrorColorsDetail(null);
     try {
       const res = await endpoints.vehicles.colors();
-      setColors(res?.data ?? []);
-    } catch {
+      const items = res?.data ?? (Array.isArray(res) ? res as typeof colors : []);
+      setColors(items);
+    } catch (err) {
       setErrorColors(true);
+      if (err instanceof ApiError) {
+        setErrorColorsDetail(`HTTP ${err.status}: ${err.message}`);
+        console.error('[register-vehicle] colors fetch failed:', err.status, err.body);
+      } else {
+        setErrorColorsDetail(err instanceof Error ? err.message : String(err));
+        console.error('[register-vehicle] colors fetch failed:', err);
+      }
     } finally {
       setLoadingColors(false);
     }
@@ -301,6 +322,7 @@ export default function RegisterVehicleScreen() {
             loading={loadingBrands}
             error={errorBrands}
             errorLabel={t.load_failed}
+            errorDetail={errorBrandsDetail}
             onPress={() => setActivePicker('brand')}
             onRetry={fetchBrands}
             isRTL={isRTL}
@@ -348,6 +370,7 @@ export default function RegisterVehicleScreen() {
             loading={loadingColors}
             error={errorColors}
             errorLabel={t.load_failed}
+            errorDetail={errorColorsDetail}
             colorHex={selectedColor?.hexCode ?? undefined}
             onPress={() => setActivePicker('color')}
             onRetry={fetchColors}
@@ -444,7 +467,7 @@ export default function RegisterVehicleScreen() {
 // ─── DropdownField ─────────────────────────────────────────────────────────────
 
 function DropdownField({
-  label, placeholder, value, loading, error, errorLabel,
+  label, placeholder, value, loading, error, errorLabel, errorDetail,
   colorHex, onPress, onRetry, disabled, isRTL,
 }: {
   label: string;
@@ -453,6 +476,7 @@ function DropdownField({
   loading: boolean;
   error: boolean;
   errorLabel: string;
+  errorDetail?: string | null;
   colorHex?: string;
   onPress: () => void;
   onRetry?: () => void;
@@ -466,10 +490,17 @@ function DropdownField({
     <View style={s.fieldWrap}>
       <Text style={[s.fieldLabel, { textAlign: TA }]}>{label}</Text>
       {error ? (
-        <Pressable style={[s.dropdownRow, s.dropdownError]} onPress={onRetry} hitSlop={4}>
-          <RefreshCw size={16} color="#c0392b" strokeWidth={2} />
-          <Text style={[s.dropdownErrorText, { flex: 1 }]}>{errorLabel}</Text>
-        </Pressable>
+        <>
+          <Pressable style={[s.dropdownRow, s.dropdownError]} onPress={onRetry} hitSlop={4}>
+            <RefreshCw size={16} color="#c0392b" strokeWidth={2} />
+            <Text style={[s.dropdownErrorText, { flex: 1 }]}>{errorLabel}</Text>
+          </Pressable>
+          {errorDetail ? (
+            <Text style={{ fontSize: 11, color: '#c0392b', fontFamily: 'Inter_400Regular', marginTop: 4, paddingHorizontal: 4 }}>
+              {errorDetail}
+            </Text>
+          ) : null}
+        </>
       ) : (
         <Pressable
           style={({ pressed }) => [
