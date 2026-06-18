@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, ChevronDown, RefreshCw, X } from 'lucide-react-native';
+import { ArrowLeft, ArrowRight, ChevronDown, RefreshCw, X, Info } from 'lucide-react-native';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
@@ -16,28 +16,58 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '@/lib/i18nContext';
+import { useService } from '@/lib/serviceContext';
 import { endpoints } from '@/lib/api';
 
-type Brand = { id: string; name: string };
-type VehicleModel = { id: string; name: string };
-type Color = { id: string; name: string; hex?: string };
+// ─── Types matching backend catalog ──────────────────────────────────────────
+
+type VehicleBrand = {
+  id: number;
+  name: string;
+  nameAr: string | null;
+  serviceType: string;
+  isChinese: boolean;
+};
+
+type VehicleModel = {
+  id: number;
+  name: string;
+  nameAr: string | null;
+  seatCapacity: number | null;
+};
+
+type VehicleYear = {
+  id: number | null;
+  year: number;
+  pricingCategory: string | null;
+};
+
+type VehicleColor = {
+  id: number;
+  nameEn: string;
+  nameAr: string;
+  hexCode: string | null;
+};
+
 type PickerType = 'brand' | 'model' | 'year' | 'color' | null;
 
-function normalizeId(v: unknown): string {
-  return String(v ?? '');
+// Maps app ServiceType to the API query param expected by the backend
+function toApiServiceType(t: string): string {
+  const map: Record<string, string> = {
+    CAR: 'car',
+    MOTOR: 'scooter',
+    DELIVERY: 'delivery',
+    SHUTTLE: 'shuttle',
+  };
+  return map[t] ?? t.toLowerCase();
 }
 
-
-function normalizeList(raw: unknown): { id: string; name: string }[] {
-  if (!Array.isArray(raw)) return [];
-  return raw.map(item => {
-    if (typeof item === 'object' && item !== null) {
-      const o = item as Record<string, unknown>;
-      return { id: normalizeId(o.id ?? o._id), name: String(o.name ?? o.label ?? '') };
-    }
-    return { id: String(item), name: String(item) };
-  });
+function formatCategory(raw: string): string {
+  if (raw === 'EconomyPlus') return 'Economy Plus';
+  return raw; // "Economy" and "Comfort" are already display-ready
 }
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function RegisterVehicleScreen() {
   const insets = useSafeAreaInsets();
@@ -46,15 +76,18 @@ export default function RegisterVehicleScreen() {
   const { t, isRTL } = useI18n();
   const TA = isRTL ? 'right' as const : 'left' as const;
 
-  const [brands, setBrands] = useState<Brand[]>([]);
-  const [models, setModels] = useState<VehicleModel[]>([]);
-  const [years, setYears] = useState<number[]>([]);
-  const [colors, setColors] = useState<Color[]>([]);
+  const { serviceType: rawServiceType } = useService();
+  const serviceType = toApiServiceType(rawServiceType); // lowercase for API
 
-  const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
+  const [brands, setBrands] = useState<VehicleBrand[]>([]);
+  const [models, setModels] = useState<VehicleModel[]>([]);
+  const [years, setYears] = useState<VehicleYear[]>([]);
+  const [colors, setColors] = useState<VehicleColor[]>([]);
+
+  const [selectedBrand, setSelectedBrand] = useState<VehicleBrand | null>(null);
   const [selectedModel, setSelectedModel] = useState<VehicleModel | null>(null);
-  const [selectedYear, setSelectedYear] = useState<number | null>(null);
-  const [selectedColor, setSelectedColor] = useState<Color | null>(null);
+  const [selectedYear, setSelectedYear] = useState<VehicleYear | null>(null);
+  const [selectedColor, setSelectedColor] = useState<VehicleColor | null>(null);
 
   const [loadingBrands, setLoadingBrands] = useState(false);
   const [loadingModels, setLoadingModels] = useState(false);
@@ -63,29 +96,32 @@ export default function RegisterVehicleScreen() {
 
   const [errorBrands, setErrorBrands] = useState(false);
   const [errorColors, setErrorColors] = useState(false);
+  const [emptyYears, setEmptyYears] = useState(false);
 
   const [activePicker, setActivePicker] = useState<PickerType>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // ── Fetchers ────────────────────────────────────────────────────────────────
 
   const fetchBrands = useCallback(async () => {
     setLoadingBrands(true);
     setErrorBrands(false);
     try {
-      const raw = await endpoints.vehicles.brands();
-      setBrands(normalizeList(raw));
+      const res = await endpoints.vehicles.brands(serviceType);
+      setBrands(res?.data ?? []);
     } catch {
       setErrorBrands(true);
     } finally {
       setLoadingBrands(false);
     }
-  }, []);
+  }, [serviceType]);
 
   const fetchColors = useCallback(async () => {
     setLoadingColors(true);
     setErrorColors(false);
     try {
-      const raw = await endpoints.vehicles.colors();
-      setColors(normalizeList(raw));
+      const res = await endpoints.vehicles.colors();
+      setColors(res?.data ?? []);
     } catch {
       setErrorColors(true);
     } finally {
@@ -98,15 +134,16 @@ export default function RegisterVehicleScreen() {
     fetchColors();
   }, [fetchBrands, fetchColors]);
 
-  const fetchModels = useCallback(async (brandId: string) => {
+  const fetchModels = useCallback(async (brandId: number) => {
     setLoadingModels(true);
     setModels([]);
     setSelectedModel(null);
     setSelectedYear(null);
     setYears([]);
+    setEmptyYears(false);
     try {
-      const raw = await endpoints.vehicles.models(brandId);
-      setModels(normalizeList(raw));
+      const res = await endpoints.vehicles.models(brandId);
+      setModels(res?.data ?? []);
     } catch {
       Alert.alert('Error', 'Could not load models. Please try again.');
     } finally {
@@ -114,20 +151,16 @@ export default function RegisterVehicleScreen() {
     }
   }, []);
 
-  const handleSelectBrand = (b: Brand) => {
-    setSelectedBrand(b);
-    setActivePicker(null);
-    fetchModels(b.id);
-  };
-
-  const fetchYears = useCallback(async (modelId: string) => {
+  const fetchYears = useCallback(async (modelId: number) => {
     setLoadingYears(true);
     setYears([]);
     setSelectedYear(null);
+    setEmptyYears(false);
     try {
       const res = await endpoints.vehicles.years(modelId);
       const items = res?.data ?? [];
-      setYears(items.map(i => i.year));
+      if (items.length === 0) setEmptyYears(true);
+      setYears(items);
     } catch {
       Alert.alert('Error', 'Could not load years. Please try again.');
     } finally {
@@ -135,21 +168,31 @@ export default function RegisterVehicleScreen() {
     }
   }, []);
 
+  // ── Selection handlers ──────────────────────────────────────────────────────
+
+  const handleSelectBrand = (b: VehicleBrand) => {
+    setSelectedBrand(b);
+    setActivePicker(null);
+    fetchModels(b.id);
+  };
+
   const handleSelectModel = (m: VehicleModel) => {
     setSelectedModel(m);
     setActivePicker(null);
     fetchYears(m.id);
   };
 
-  const handleSelectYear = (y: number) => {
+  const handleSelectYear = (y: VehicleYear) => {
     setSelectedYear(y);
     setActivePicker(null);
   };
 
-  const handleSelectColor = (c: Color) => {
+  const handleSelectColor = (c: VehicleColor) => {
     setSelectedColor(c);
     setActivePicker(null);
   };
+
+  // ── Submit ──────────────────────────────────────────────────────────────────
 
   const canContinue = !!selectedBrand && !!selectedModel && !!selectedYear && !!selectedColor && !submitting;
 
@@ -157,13 +200,12 @@ export default function RegisterVehicleScreen() {
     if (!canContinue) return;
     setSubmitting(true);
     try {
-      const colorIdNum = parseInt(selectedColor!.id, 10);
       await endpoints.registration.setVehicleDetails({
         brandId: selectedBrand!.id,
         modelId: selectedModel!.id,
-        year: String(selectedYear!),
-        color: selectedColor!.name,
-        ...(Number.isFinite(colorIdNum) ? { colorId: colorIdNum } : {}),
+        year: selectedYear!.year,
+        color: selectedColor!.nameEn,
+        colorId: selectedColor!.id,
       });
       router.push('/register-documents');
     } catch {
@@ -173,42 +215,65 @@ export default function RegisterVehicleScreen() {
     }
   };
 
-  const pickerItems: { label: string; key: string }[] = activePicker === 'brand'
-    ? brands.map(b => ({ label: b.name, key: b.id }))
-    : activePicker === 'model'
-    ? models.map(m => ({ label: m.name, key: m.id }))
-    : activePicker === 'year'
-    ? years.map(y => ({ label: String(y), key: String(y) }))
-    : activePicker === 'color'
-    ? colors.map(c => ({ label: c.name, key: c.id }))
-    : [];
+  // ── Picker data ─────────────────────────────────────────────────────────────
 
-  const pickerLoading = activePicker === 'brand' ? loadingBrands
+  type PickerItem = { key: string; label: string; sub?: string; hexCode?: string | null };
+
+  const pickerItems: PickerItem[] =
+    activePicker === 'brand'
+      ? brands.map(b => ({ key: String(b.id), label: b.name }))
+      : activePicker === 'model'
+      ? models.map(m => ({ key: String(m.id), label: m.name }))
+      : activePicker === 'year'
+      ? years.map(y => ({
+          key: String(y.year),
+          label: String(y.year),
+          sub: serviceType === 'car' && y.pricingCategory ? formatCategory(y.pricingCategory) : undefined,
+        }))
+      : activePicker === 'color'
+      ? colors.map(c => ({ key: String(c.id), label: c.nameEn, hexCode: c.hexCode }))
+      : [];
+
+  const pickerLoading =
+    activePicker === 'brand' ? loadingBrands
     : activePicker === 'model' ? loadingModels
     : activePicker === 'year' ? loadingYears
     : activePicker === 'color' ? loadingColors
     : false;
 
-  const pickerTitle = activePicker === 'brand' ? t.vehicle_brand
+  const pickerTitle =
+    activePicker === 'brand' ? t.vehicle_brand
     : activePicker === 'model' ? t.vehicle_model
     : activePicker === 'year' ? t.vehicle_year
     : activePicker === 'color' ? t.vehicle_color
     : '';
 
-  const handlePickerSelect = (key: string) => {
+  const isItemSelected = (item: PickerItem) => {
+    if (activePicker === 'brand') return String(selectedBrand?.id) === item.key;
+    if (activePicker === 'model') return String(selectedModel?.id) === item.key;
+    if (activePicker === 'year') return String(selectedYear?.year) === item.key;
+    if (activePicker === 'color') return String(selectedColor?.id) === item.key;
+    return false;
+  };
+
+  const handlePickerSelect = (item: PickerItem) => {
     if (activePicker === 'brand') {
-      const found = brands.find(b => b.id === key);
+      const found = brands.find(b => String(b.id) === item.key);
       if (found) handleSelectBrand(found);
     } else if (activePicker === 'model') {
-      const found = models.find(m => m.id === key);
+      const found = models.find(m => String(m.id) === item.key);
       if (found) handleSelectModel(found);
     } else if (activePicker === 'year') {
-      handleSelectYear(parseInt(key, 10));
+      const found = years.find(y => String(y.year) === item.key);
+      if (found) handleSelectYear(found);
     } else if (activePicker === 'color') {
-      const found = colors.find(c => c.id === key);
+      const found = colors.find(c => String(c.id) === item.key);
       if (found) handleSelectColor(found);
     }
   };
+
+  // ── Seat capacity chip (shuttle only) ───────────────────────────────────────
+  const showSeatCapacity = serviceType === 'shuttle' && !!selectedModel?.seatCapacity;
 
   return (
     <View style={[s.root, { backgroundColor: '#fafafd' }]}>
@@ -228,6 +293,7 @@ export default function RegisterVehicleScreen() {
         </View>
 
         <View style={s.fields}>
+          {/* Brand */}
           <DropdownField
             label={t.vehicle_brand}
             placeholder={t.select_brand}
@@ -240,6 +306,7 @@ export default function RegisterVehicleScreen() {
             isRTL={isRTL}
           />
 
+          {/* Model */}
           <DropdownField
             label={t.vehicle_model}
             placeholder={t.select_model}
@@ -252,26 +319,36 @@ export default function RegisterVehicleScreen() {
             isRTL={isRTL}
           />
 
+          {/* Seat capacity chip — shuttle models only */}
+          {showSeatCapacity && (
+            <View style={[s.infoChip, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+              <Info size={14} color="#3D52D5" />
+              <Text style={s.infoChipText}>Fixed seat capacity: {selectedModel!.seatCapacity} seats</Text>
+            </View>
+          )}
+
+          {/* Year */}
           <DropdownField
             label={t.vehicle_year}
-            placeholder={t.select_year}
-            value={selectedYear ? String(selectedYear) : null}
+            placeholder={emptyYears ? 'No years available — contact support' : t.select_year}
+            value={selectedYear ? String(selectedYear.year) : null}
             loading={loadingYears}
             error={false}
             errorLabel={t.load_failed}
-            onPress={() => selectedModel ? setActivePicker('year') : undefined}
-            disabled={!selectedModel}
+            onPress={() => (selectedModel && years.length > 0) ? setActivePicker('year') : undefined}
+            disabled={!selectedModel || emptyYears}
             isRTL={isRTL}
           />
 
+          {/* Color */}
           <DropdownField
             label={t.vehicle_color}
             placeholder={t.select_color}
-            value={selectedColor?.name ?? null}
+            value={selectedColor?.nameEn ?? null}
             loading={loadingColors}
             error={errorColors}
             errorLabel={t.load_failed}
-            colorHex={selectedColor?.hex}
+            colorHex={selectedColor?.hexCode ?? undefined}
             onPress={() => setActivePicker('color')}
             onRetry={fetchColors}
             isRTL={isRTL}
@@ -297,6 +374,7 @@ export default function RegisterVehicleScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Picker bottom sheet */}
       <Modal
         visible={activePicker !== null}
         transparent
@@ -312,41 +390,49 @@ export default function RegisterVehicleScreen() {
               <X size={20} color="#5e5e72" strokeWidth={2} />
             </Pressable>
           </View>
+
           {pickerLoading ? (
             <View style={s.sheetLoader}>
               <ActivityIndicator size="large" color="#1e1e28" />
             </View>
           ) : pickerItems.length === 0 ? (
             <View style={s.sheetLoader}>
-              <Text style={s.sheetEmpty}>No options available</Text>
+              <Text style={s.sheetEmpty}>
+                {activePicker === 'year'
+                  ? 'No eligible years registered for this model yet.\nPlease contact support.'
+                  : 'No options available'}
+              </Text>
             </View>
           ) : (
             <FlatList
               data={pickerItems}
               keyExtractor={item => item.key}
               renderItem={({ item }) => {
-                const isSelected = activePicker === 'brand'
-                  ? selectedBrand?.id === item.key
-                  : activePicker === 'model'
-                  ? selectedModel?.id === item.key
-                  : activePicker === 'year'
-                  ? String(selectedYear) === item.key
-                  : activePicker === 'color'
-                  ? selectedColor?.id === item.key
-                  : false;
-
+                const selected = isItemSelected(item);
                 return (
                   <Pressable
-                    style={({ pressed }) => [s.sheetItem, isSelected && s.sheetItemSelected, pressed && { opacity: 0.7 }]}
-                    onPress={() => handlePickerSelect(item.key)}
+                    style={({ pressed }) => [s.sheetItem, selected && s.sheetItemSelected, pressed && { opacity: 0.7 }]}
+                    onPress={() => handlePickerSelect(item)}
                   >
-                    <Text style={[s.sheetItemText, isSelected && s.sheetItemTextSelected]}>{item.label}</Text>
-                    {isSelected && <View style={s.sheetItemDot} />}
+                    <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                      {item.hexCode !== undefined && (
+                        <View style={[s.colorSwatch, { backgroundColor: item.hexCode ?? '#ccc' }]} />
+                      )}
+                      <Text style={[s.sheetItemText, selected && s.sheetItemTextSelected]}>{item.label}</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      {item.sub && (
+                        <View style={s.categoryBadge}>
+                          <Text style={s.categoryBadgeText}>{item.sub}</Text>
+                        </View>
+                      )}
+                      {selected && <View style={s.sheetItemDot} />}
+                    </View>
                   </Pressable>
                 );
               }}
               showsVerticalScrollIndicator={false}
-              style={{ maxHeight: 360 }}
+              style={{ maxHeight: 380 }}
             />
           )}
         </View>
@@ -354,6 +440,8 @@ export default function RegisterVehicleScreen() {
     </View>
   );
 }
+
+// ─── DropdownField ─────────────────────────────────────────────────────────────
 
 function DropdownField({
   label, placeholder, value, loading, error, errorLabel,
@@ -378,11 +466,7 @@ function DropdownField({
     <View style={s.fieldWrap}>
       <Text style={[s.fieldLabel, { textAlign: TA }]}>{label}</Text>
       {error ? (
-        <Pressable
-          style={[s.dropdownRow, s.dropdownError]}
-          onPress={onRetry}
-          hitSlop={4}
-        >
+        <Pressable style={[s.dropdownRow, s.dropdownError]} onPress={onRetry} hitSlop={4}>
           <RefreshCw size={16} color="#c0392b" strokeWidth={2} />
           <Text style={[s.dropdownErrorText, { flex: 1 }]}>{errorLabel}</Text>
         </Pressable>
@@ -397,9 +481,7 @@ function DropdownField({
           disabled={disabled || loading}
         >
           <View style={[s.dropdownInner, { flexDirection: R }]}>
-            {colorHex ? (
-              <View style={[s.colorDot, { backgroundColor: colorHex }]} />
-            ) : null}
+            {colorHex ? <View style={[s.colorDot, { backgroundColor: colorHex }]} /> : null}
             {loading ? (
               <ActivityIndicator size="small" color="#5e5e72" style={{ marginRight: 8 }} />
             ) : (
@@ -417,6 +499,8 @@ function DropdownField({
     </View>
   );
 }
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
   root: { flex: 1 },
@@ -446,6 +530,11 @@ const s = StyleSheet.create({
   dropdownValue: { fontSize: 14, color: '#1e1e28', fontFamily: 'Inter_400Regular' },
   dropdownPlaceholder: { color: '#c3c3cc' },
   colorDot: { width: 16, height: 16, borderRadius: 8, borderWidth: 1, borderColor: '#e5e5ea' },
+  infoChip: {
+    alignItems: 'center', gap: 7, paddingHorizontal: 14, paddingVertical: 10,
+    backgroundColor: '#eef0fd', borderRadius: 14, borderWidth: 1, borderColor: '#c7cdf7',
+  },
+  infoChipText: { fontSize: 13, color: '#3D52D5', fontWeight: '500', fontFamily: 'Inter_500Medium', flex: 1 },
   footer: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
     paddingHorizontal: 24, paddingTop: 16,
@@ -459,27 +548,22 @@ const s = StyleSheet.create({
   },
   continueBtnDisabled: { opacity: 0.35 },
   continueBtnText: { color: 'white', fontSize: 15, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
-  modalBackdrop: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.4)',
-  },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
   sheet: {
     backgroundColor: 'white',
     borderTopLeftRadius: 28, borderTopRightRadius: 28,
-    paddingTop: 12, paddingHorizontal: 0,
+    paddingTop: 12,
     shadowColor: '#1e1e28', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.08, shadowRadius: 16, elevation: 12,
   },
-  sheetHandle: {
-    width: 36, height: 4, borderRadius: 2, backgroundColor: '#e5e5ea',
-    alignSelf: 'center', marginBottom: 12,
-  },
+  sheetHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: '#e5e5ea', alignSelf: 'center', marginBottom: 12 },
   sheetHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 24, paddingBottom: 12,
     borderBottomWidth: 1, borderBottomColor: '#f0f0f5',
   },
   sheetTitle: { fontSize: 16, fontWeight: '700', color: '#1e1e28', fontFamily: 'Inter_700Bold' },
-  sheetLoader: { height: 120, alignItems: 'center', justifyContent: 'center' },
-  sheetEmpty: { fontSize: 14, color: '#5e5e72', fontFamily: 'Inter_400Regular' },
+  sheetLoader: { height: 120, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
+  sheetEmpty: { fontSize: 14, color: '#5e5e72', fontFamily: 'Inter_400Regular', textAlign: 'center', lineHeight: 22 },
   sheetItem: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 24, paddingVertical: 14,
@@ -489,4 +573,10 @@ const s = StyleSheet.create({
   sheetItemText: { fontSize: 15, color: '#1e1e28', fontFamily: 'Inter_400Regular' },
   sheetItemTextSelected: { fontWeight: '600', color: '#3D52D5', fontFamily: 'Inter_600SemiBold' },
   sheetItemDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#3D52D5' },
+  categoryBadge: {
+    backgroundColor: '#f0f4ff', borderRadius: 99, paddingHorizontal: 8, paddingVertical: 3,
+    borderWidth: 1, borderColor: '#d0d8f8',
+  },
+  categoryBadgeText: { fontSize: 11, color: '#3D52D5', fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  colorSwatch: { width: 18, height: 18, borderRadius: 9, borderWidth: 1, borderColor: '#e5e5ea' },
 });

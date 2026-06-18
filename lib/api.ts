@@ -835,26 +835,31 @@ export const endpoints = {
     //   401 — token expired
     //   404 — brandId or modelId not found in /vehicles/meta
     setVehicleDetails: (data: {
-      brandId: string;
-      modelId: string;
-      year: string;
+      brandId: number;
+      modelId: number;
+      year: number;
       color: string;
-      colorId?: number;
+      colorId: number;
     }) => api.post<{ vehicleId: string }>('/driver/register/vehicle-details', data),
   },
 
   // TODO: Backend Integration — Vehicle metadata endpoints
   vehicles: {
-    // GET /vehicles/brands
-    // Returns the full list of supported vehicle manufacturers.
-    // SUCCESS RESPONSE: Array<{ id: string; name: string }>
-    brands: () => api.get<{ id: string; name: string }[]>('/vehicles/brands'),
+    // GET /vehicles/brands?serviceType=
+    // Returns brands filtered by the driver's service type.
+    // SUCCESS RESPONSE: { data: Array<{ id, name, nameAr, serviceType, isChinese }> }
+    brands: (serviceType: string) =>
+      api.get<{ data: { id: number; name: string; nameAr: string | null; serviceType: string; isChinese: boolean }[] }>(
+        `/vehicles/brands?serviceType=${encodeURIComponent(serviceType)}`
+      ),
 
     // GET /vehicles/brands/:brandId/models
-    // Returns models available for the given brand.
-    // Filtered on the server by brandId so large model lists are only fetched on demand.
-    // SUCCESS RESPONSE: Array<{ id: string; name: string; brandId: string }>
-    models: (brandId: string) => api.get<{ id: string; name: string }[]>(`/vehicles/brands/${brandId}/models`),
+    // Returns models available for the given brand. seatCapacity populated for shuttle models.
+    // SUCCESS RESPONSE: { data: Array<{ id, brandId, name, nameAr, minYear, maxYear, seatCapacity }> }
+    models: (brandId: string | number) =>
+      api.get<{ data: { id: number; brandId: number; name: string; nameAr: string | null; minYear: number; maxYear: number | null; seatCapacity: number | null }[] }>(
+        `/vehicles/brands/${brandId}/models`
+      ),
 
     // GET /vehicles/meta  (alternative: fetch brands + models in a single request)
     // Returns { brands: Brand[], models: Model[] } to populate both dropdowns in one call.
@@ -863,13 +868,13 @@ export const endpoints = {
     // GET /vehicles/models/:id/years
     // Returns available model years wrapped in a data array.
     // SUCCESS RESPONSE: { data: Array<{ id: number | null; year: number; pricingCategory: string | null }> }
-    years: (modelId: string) =>
+    years: (modelId: string | number) =>
       api.get<{ data: { id: number | null; year: number; pricingCategory: string | null }[] }>(`/vehicles/models/${modelId}/years`),
 
     // GET /vehicles/colors
-    // Returns the list of supported vehicle colors (id + label + optional hex code).
-    // SUCCESS RESPONSE: Array<{ id: string; label: string; hex?: string }>
-    colors: () => api.get<{ id: string; label: string; hex?: string }[]>('/vehicles/colors'),
+    // Returns the list of supported vehicle colors.
+    // SUCCESS RESPONSE: { data: Array<{ id: number; nameEn: string; nameAr: string; hexCode: string | null }> }
+    colors: () => api.get<{ data: { id: number; nameEn: string; nameAr: string; hexCode: string | null }[] }>('/vehicles/colors'),
   },
 
   settings: {
