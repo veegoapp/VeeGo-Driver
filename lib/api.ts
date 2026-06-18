@@ -155,10 +155,6 @@ async function request<T>(
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    // Reactive locale header — updated by setApiLanguage() whenever the driver
-    // switches language. The backend uses this to return localized entity strings
-    // (route names, station titles, trip details). See the Accept-Language TODO
-    // block at the top of this file for the full backend integration contract.
     'Accept-Language': _acceptLanguage,
   };
 
@@ -168,6 +164,14 @@ async function request<T>(
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  // ── DEBUG: log vehicle catalog requests ──────────────────────────────────
+  const isVehicleDebug = path.includes('/vehicles/');
+  if (isVehicleDebug) {
+    console.log('[API DEBUG]', method, `${API_BASE_URL}${path}`);
+    console.log('[API DEBUG] Authorization:', token ? `Bearer ${token.slice(0, 20)}...` : 'MISSING — no token in storage');
+  }
+  // ─────────────────────────────────────────────────────────────────────────
 
   let response: Response;
   try {
@@ -180,9 +184,20 @@ async function request<T>(
   } catch (err: unknown) {
     clearTimeout(timeout);
     const isAbort = err instanceof Error && err.name === 'AbortError';
+    if (isVehicleDebug) console.log('[API DEBUG] Network error:', err);
     throw new ApiError(0, isAbort ? 'Request timed out' : 'Network error', null);
   }
   clearTimeout(timeout);
+
+  // ── DEBUG: log response ───────────────────────────────────────────────────
+  if (isVehicleDebug) {
+    const cloned = response.clone();
+    cloned.text().then(t => {
+      console.log('[API DEBUG] Status:', response.status, response.statusText);
+      console.log('[API DEBUG] Response body:', t.slice(0, 500));
+    }).catch(() => {});
+  }
+  // ─────────────────────────────────────────────────────────────────────────
 
   // 401 → try silent refresh once
   if (response.status === 401 && !isRetry) {
