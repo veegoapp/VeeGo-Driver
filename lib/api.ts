@@ -839,6 +839,7 @@ export const endpoints = {
       modelId: string;
       year: string;
       color: string;
+      colorId?: number;
     }) => api.post<{ vehicleId: string }>('/driver/register/vehicle-details', data),
   },
 
@@ -858,6 +859,12 @@ export const endpoints = {
     // GET /vehicles/meta  (alternative: fetch brands + models in a single request)
     // Returns { brands: Brand[], models: Model[] } to populate both dropdowns in one call.
     meta: () => api.get<{ brands: { id: string; name: string }[]; models: { id: string; name: string; brandId: string }[] }>('/vehicles/meta'),
+
+    // GET /vehicles/models/:id/years
+    // Returns available model years wrapped in a data array.
+    // SUCCESS RESPONSE: { data: Array<{ id: number | null; year: number; pricingCategory: string | null }> }
+    years: (modelId: string) =>
+      api.get<{ data: { id: number | null; year: number; pricingCategory: string | null }[] }>(`/vehicles/models/${modelId}/years`),
 
     // GET /vehicles/colors
     // Returns the list of supported vehicle colors (id + label + optional hex code).

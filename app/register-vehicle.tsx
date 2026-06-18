@@ -18,13 +18,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
 
-const CURRENT_YEAR = new Date().getFullYear();
-function generateYears(): number[] {
-  const years: number[] = [];
-  for (let y = CURRENT_YEAR; y >= 2000; y--) years.push(y);
-  return years;
-}
-
 type Brand = { id: string; name: string };
 type VehicleModel = { id: string; name: string };
 type Color = { id: string; name: string; hex?: string };
@@ -65,6 +58,7 @@ export default function RegisterVehicleScreen() {
 
   const [loadingBrands, setLoadingBrands] = useState(false);
   const [loadingModels, setLoadingModels] = useState(false);
+  const [loadingYears, setLoadingYears] = useState(false);
   const [loadingColors, setLoadingColors] = useState(false);
 
   const [errorBrands, setErrorBrands] = useState(false);
@@ -126,11 +120,25 @@ export default function RegisterVehicleScreen() {
     fetchModels(b.id);
   };
 
+  const fetchYears = useCallback(async (modelId: string) => {
+    setLoadingYears(true);
+    setYears([]);
+    setSelectedYear(null);
+    try {
+      const res = await endpoints.vehicles.years(modelId);
+      const items = res?.data ?? [];
+      setYears(items.map(i => i.year));
+    } catch {
+      Alert.alert('Error', 'Could not load years. Please try again.');
+    } finally {
+      setLoadingYears(false);
+    }
+  }, []);
+
   const handleSelectModel = (m: VehicleModel) => {
     setSelectedModel(m);
     setActivePicker(null);
-    setSelectedYear(null);
-    setYears(generateYears());
+    fetchYears(m.id);
   };
 
   const handleSelectYear = (y: number) => {
@@ -149,11 +157,13 @@ export default function RegisterVehicleScreen() {
     if (!canContinue) return;
     setSubmitting(true);
     try {
+      const colorIdNum = parseInt(selectedColor!.id, 10);
       await endpoints.registration.setVehicleDetails({
         brandId: selectedBrand!.id,
         modelId: selectedModel!.id,
         year: String(selectedYear!),
-        color: selectedColor!.id,
+        color: selectedColor!.name,
+        ...(Number.isFinite(colorIdNum) ? { colorId: colorIdNum } : {}),
       });
       router.push('/register-documents');
     } catch {
@@ -175,6 +185,7 @@ export default function RegisterVehicleScreen() {
 
   const pickerLoading = activePicker === 'brand' ? loadingBrands
     : activePicker === 'model' ? loadingModels
+    : activePicker === 'year' ? loadingYears
     : activePicker === 'color' ? loadingColors
     : false;
 
@@ -245,7 +256,7 @@ export default function RegisterVehicleScreen() {
             label={t.vehicle_year}
             placeholder={t.select_year}
             value={selectedYear ? String(selectedYear) : null}
-            loading={false}
+            loading={loadingYears}
             error={false}
             errorLabel={t.load_failed}
             onPress={() => selectedModel ? setActivePicker('year') : undefined}
