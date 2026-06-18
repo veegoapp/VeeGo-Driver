@@ -2,6 +2,7 @@ import { ArrowLeft, ArrowRight, ChevronDown, RefreshCw, X, Info } from 'lucide-r
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ApiError } from '@/lib/api';
+import { FALLBACK_BRANDS, FALLBACK_COLORS, getFallbackModels, getFallbackYears } from '@/constants/vehicleCatalog';
 import {
   ActivityIndicator,
   Alert,
@@ -115,13 +116,20 @@ export default function RegisterVehicleScreen() {
       const items = res?.data ?? (Array.isArray(res) ? res as typeof brands : []);
       setBrands(items);
     } catch (err) {
-      setErrorBrands(true);
-      if (err instanceof ApiError) {
-        setErrorBrandsDetail(`HTTP ${err.status}: ${err.message}`);
-        console.error('[register-vehicle] brands fetch failed:', err.status, err.body);
+      if (err instanceof ApiError && err.status === 403) {
+        // Backend doesn't allow catalog access for pending drivers — use static fallback.
+        // Fix on backend: make GET /vehicles/brands public or allow pending-driver tokens.
+        console.warn('[register-vehicle] 403 on brands — using static fallback. Fix backend permissions.');
+        setBrands(FALLBACK_BRANDS);
       } else {
-        setErrorBrandsDetail(err instanceof Error ? err.message : String(err));
-        console.error('[register-vehicle] brands fetch failed:', err);
+        setErrorBrands(true);
+        if (err instanceof ApiError) {
+          setErrorBrandsDetail(`HTTP ${err.status}: ${err.message}`);
+          console.error('[register-vehicle] brands fetch failed:', err.status, err.body);
+        } else {
+          setErrorBrandsDetail(err instanceof Error ? err.message : String(err));
+          console.error('[register-vehicle] brands fetch failed:', err);
+        }
       }
     } finally {
       setLoadingBrands(false);
@@ -137,13 +145,20 @@ export default function RegisterVehicleScreen() {
       const items = res?.data ?? (Array.isArray(res) ? res as typeof colors : []);
       setColors(items);
     } catch (err) {
-      setErrorColors(true);
-      if (err instanceof ApiError) {
-        setErrorColorsDetail(`HTTP ${err.status}: ${err.message}`);
-        console.error('[register-vehicle] colors fetch failed:', err.status, err.body);
+      if (err instanceof ApiError && err.status === 403) {
+        // Backend doesn't allow catalog access for pending drivers — use static fallback.
+        // Fix on backend: make GET /vehicles/colors public or allow pending-driver tokens.
+        console.warn('[register-vehicle] 403 on colors — using static fallback. Fix backend permissions.');
+        setColors(FALLBACK_COLORS);
       } else {
-        setErrorColorsDetail(err instanceof Error ? err.message : String(err));
-        console.error('[register-vehicle] colors fetch failed:', err);
+        setErrorColors(true);
+        if (err instanceof ApiError) {
+          setErrorColorsDetail(`HTTP ${err.status}: ${err.message}`);
+          console.error('[register-vehicle] colors fetch failed:', err.status, err.body);
+        } else {
+          setErrorColorsDetail(err instanceof Error ? err.message : String(err));
+          console.error('[register-vehicle] colors fetch failed:', err);
+        }
       }
     } finally {
       setLoadingColors(false);
@@ -165,8 +180,13 @@ export default function RegisterVehicleScreen() {
     try {
       const res = await endpoints.vehicles.models(brandId);
       setModels(res?.data ?? []);
-    } catch {
-      Alert.alert('Error', 'Could not load models. Please try again.');
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 403) {
+        console.warn('[register-vehicle] 403 on models — using static fallback.');
+        setModels(getFallbackModels(brandId));
+      } else {
+        Alert.alert('Error', 'Could not load models. Please try again.');
+      }
     } finally {
       setLoadingModels(false);
     }
@@ -182,8 +202,13 @@ export default function RegisterVehicleScreen() {
       const items = res?.data ?? [];
       if (items.length === 0) setEmptyYears(true);
       setYears(items);
-    } catch {
-      Alert.alert('Error', 'Could not load years. Please try again.');
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 403) {
+        console.warn('[register-vehicle] 403 on years — using static fallback.');
+        setYears(getFallbackYears());
+      } else {
+        Alert.alert('Error', 'Could not load years. Please try again.');
+      }
     } finally {
       setLoadingYears(false);
     }
