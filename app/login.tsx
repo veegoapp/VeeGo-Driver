@@ -22,8 +22,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '@/lib/i18nContext';
 import { useAuth } from '@/lib/authContext';
 import { endpoints, ApiError } from '@/lib/api';
-import { api } from '@/lib/api';
-import { saveToken } from '@/lib/auth';
 import { navigateAfterAuth } from '@/lib/postAuthRouter';
 
 type Tab = 'signin' | 'signup';
@@ -54,19 +52,13 @@ export default function LoginScreen() {
   const handleSignInSuccess = async (
     accessToken: string,
     refreshToken: string,
-    isActive: boolean,
   ) => {
     await login(accessToken, refreshToken);
-    if (!isActive) {
-      expoRouter.replace('/pending-approval');
-      return;
-    }
     await navigateAfterAuth(accessToken);
   };
 
-  const handleRegisterSuccess = async (accessToken: string, refreshToken: string) => {
-    await login(accessToken, refreshToken);
-    expoRouter.replace('/register-vehicle');
+  const handleOtpRequired = (phone: string) => {
+    expoRouter.replace({ pathname: '/verify-otp', params: { phone } } as any);
   };
 
   return (
@@ -114,9 +106,9 @@ export default function LoginScreen() {
             </View>
 
             {tab === 'signin' ? (
-              <SignInForm isRTL={isRTL} onSuccess={(at, rt, active) => handleSignInSuccess(at, rt, active)} />
+              <SignInForm isRTL={isRTL} onSuccess={(at, rt) => handleSignInSuccess(at, rt)} onOtpRequired={handleOtpRequired} />
             ) : (
-              <SignUpForm isRTL={isRTL} onSuccess={(at, rt) => handleRegisterSuccess(at, rt)} />
+              <SignUpForm isRTL={isRTL} onOtpRequired={handleOtpRequired} />
             )}
           </View>
 
@@ -130,8 +122,11 @@ export default function LoginScreen() {
   );
 }
 
-// Task 5: credential + password sign-in form
-function SignInForm({ isRTL, onSuccess }: { isRTL: boolean; onSuccess: (at: string, rt: string, isActive: boolean) => void }) {
+function SignInForm({ isRTL, onSuccess, onOtpRequired }: {
+  isRTL: boolean;
+  onSuccess: (at: string, rt: string) => void;
+  onOtpRequired: (phone: string) => void;
+}) {
   const [credential, setCredential] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
@@ -147,19 +142,21 @@ function SignInForm({ isRTL, onSuccess }: { isRTL: boolean; onSuccess: (at: stri
     setLoading(true);
     try {
       const result = await endpoints.auth.driverLogin(credential.trim(), password);
-      const at = (result.accessToken ?? result.token) as string;
-      const rt = result.refreshToken as string;
-      // Check isActive — pending drivers see the approval screen instead of the dashboard.
-      let isActive = true;
-      try {
-        await saveToken(at);
-        const me = await api.get<{ isActive?: boolean }>('/driver/me');
-        isActive = me?.isActive !== false;
-      } catch {
-        // If the check fails, assume active so login still works
+      if ('requiresOtp' in result && result.requiresOtp) {
+        onOtpRequired(result.phone);
+        return;
       }
-      onSuccess(at, rt, isActive);
+      const r = result as { accessToken: string; refreshToken: string };
+      onSuccess(r.accessToken, r.refreshToken);
     } catch (err) {
+      // 403 requiresOtp — backend may throw instead of returning
+      if (err instanceof ApiError && err.status === 403) {
+        const body = err.body as { requiresOtp?: boolean; phone?: string } | null;
+        if (body?.requiresOtp && body?.phone) {
+          onOtpRequired(body.phone);
+          return;
+        }
+      }
       setError(getErrorMessage(err));
     } finally {
       setLoading(false);
@@ -231,8 +228,7 @@ function SignInForm({ isRTL, onSuccess }: { isRTL: boolean; onSuccess: (at: stri
   );
 }
 
-// Task 5: full registration form using POST /driver/auth/register
-function SignUpForm({ isRTL, onSuccess }: { isRTL: boolean; onSuccess: (at: string, rt: string) => void }) {
+function SignUpForm({ isRTL, onOtpRequired }: { isRTL: boolean; onOtpRequired: (phone: string) => void }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -262,7 +258,8 @@ function SignUpForm({ isRTL, onSuccess }: { isRTL: boolean; onSuccess: (at: stri
         licenseNumber: licenseNumber.trim() || undefined,
         nationalId: nationalId.trim() || undefined,
       });
-      onSuccess((result.accessToken ?? result.token) as string, result.refreshToken as string);
+      // Phase 2: register returns requiresOtp, not tokens
+      onOtpRequired(result.phone);
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {

@@ -44,6 +44,9 @@ const PENDING_SCREENS = new Set([
   'register-vehicle',
   'register-documents',
   'register-info',
+  'verify-otp',
+  'register-service-type',
+  'register-plate',
 ]);
 
 /**
@@ -129,7 +132,10 @@ function RootLayoutNav() {
         <Stack.Screen name="selfie" />
         <Stack.Screen name="suspended" options={{ gestureEnabled: false }} />
         <Stack.Screen name="shuttle/rate-passengers" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="verify-otp" />
+        <Stack.Screen name="register-service-type" />
         <Stack.Screen name="register-vehicle" />
+        <Stack.Screen name="register-plate" />
         <Stack.Screen name="register-documents" />
         <Stack.Screen name="pending-approval" />
         <Stack.Screen name="forgot-password" options={{ animation: 'slide_from_right' }} />

@@ -287,12 +287,21 @@ export const endpoints = {
   auth: {
     logout: () => request<void>('POST', '/driver/auth/logout'),
     driverLogin: (credential: string, password: string) =>
-      request<{ token?: string; accessToken?: string; refreshToken: string; user?: Record<string, unknown>; driver: Record<string, unknown> }>(
-        'POST', '/driver/auth/login', { credential, password }
-      ),
+      request<
+        | { accessToken: string; refreshToken: string; user: Record<string, unknown>; driver: Record<string, unknown> }
+        | { requiresOtp: true; phone: string; retryAfter?: number }
+      >('POST', '/driver/auth/login', { credential, password }),
     driverRegister: (data: { name: string; email: string; phone: string; password: string; licenseNumber?: string; nationalId?: string }) =>
-      request<{ token?: string; accessToken?: string; refreshToken: string; user?: Record<string, unknown>; driver: Record<string, unknown> }>(
+      request<{ requiresOtp: true; phone: string }>(
         'POST', '/driver/auth/register', data
+      ),
+    sendOtp: (phone: string) =>
+      request<{ success: boolean; message: string }>(
+        'POST', '/auth/send-otp', { phone }
+      ),
+    verifyOtp: (phone: string, otp: string) =>
+      request<{ success: boolean; accessToken: string; refreshToken: string; user: Record<string, unknown>; driver: Record<string, unknown> }>(
+        'POST', '/auth/verify-otp', { phone, otp }
       ),
     forgotPassword: (credential: string) =>
       request<{ message: string }>(
@@ -389,7 +398,18 @@ export const endpoints = {
         tripId: data.tripId != null ? Number(data.tripId) : undefined,
       }),
     status: () => api.get('/driver/me/status'),
-    vehicle: () => api.get('/driver/me/vehicle'),
+    onboarding: () => api.get<{
+      onboardingStatus: 'pending' | 'pending_review' | 'approved' | 'rejected';
+      rejectionReason: string | null;
+      serviceType: string | null;
+      requiredDocuments: string[];
+      missingDocuments: string[];
+      documentProgress: { type: string; uploaded: boolean; verificationStatus: string | null; uploadedAt: string | null }[];
+      totalRequired: number;
+      totalUploaded: number;
+      totalApproved: number;
+    }>('/driver/me/onboarding'),
+    vehicle: () => api.get<{ id?: number | string; plateLetters?: string | null; plateNumbers?: string | null; plateNumber?: string | null } | null>('/driver/me/vehicle'),
     documents: () => api.get('/driver/me/documents'),
     uploadDocument: async (formData: FormData) => {
       const token = await getToken();
@@ -822,6 +842,10 @@ export const endpoints = {
     //   401 — token expired
     setServiceType: (serviceType: string) =>
       api.post<{ serviceType: string }>('/driver/register/service-type', { serviceType }),
+    plateNumber: (plateLetters: string, plateNumbers: string) =>
+      api.post<{ vehicleId: string; plateNumber: string; plateLetters: string; plateNumbers: string }>(
+        '/driver/register/plate-number', { plateLetters, plateNumbers }
+      ),
 
     // POST /driver/register/vehicle-details
     // Stores brand, model, year, and color chosen in the vehicle-specs setup step.
@@ -875,6 +899,10 @@ export const endpoints = {
     // Returns the list of supported vehicle colors.
     // SUCCESS RESPONSE: { data: Array<{ id: number; nameEn: string; nameAr: string; hexCode: string | null }> }
     colors: () => api.get<{ data: { id: number; nameEn: string; nameAr: string; hexCode: string | null }[] }>('/vehicles/colors'),
+  },
+
+  services: {
+    available: () => api.get<{ data: { serviceType: string; isEnabled: boolean; displayMode: string; unavailableMessage: string | null }[] }>('/services/available'),
   },
 
   settings: {

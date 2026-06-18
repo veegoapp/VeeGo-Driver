@@ -28,7 +28,14 @@ type DocSlot = {
   icon: React.ComponentType<{ size: number; color: string }>;
 };
 
-const SECTIONS: { title: string; slots: DocSlot[] }[] = [
+// 8 mandatory docs for ALL service types + criminal record as optional
+const SECTIONS: { title: string; slots: DocSlot[]; optional?: boolean }[] = [
+  {
+    title: 'Profile Photo',
+    slots: [
+      { id: 'profile_photo', backendType: 'profile_photo', label: 'Profile photo', hint: 'Clear face photo, look at camera', icon: User },
+    ],
+  },
   {
     title: 'National ID',
     slots: [
@@ -57,13 +64,16 @@ const SECTIONS: { title: string; slots: DocSlot[] }[] = [
     ],
   },
   {
-    title: 'Profile Photo',
+    title: 'Criminal Record',
+    optional: true,
     slots: [
-      { id: 'profile_photo', backendType: 'profile_photo', label: 'Profile photo', hint: 'Clear face photo', icon: User },
+      { id: 'criminal_record', backendType: 'criminal_record', label: 'Criminal record', hint: 'Official police clearance certificate', icon: FileText },
     ],
   },
 ];
 
+// Only mandatory IDs (not criminal_record) must be uploaded to proceed
+const MANDATORY_IDS = SECTIONS.filter(sec => !sec.optional).flatMap(sec => sec.slots.map(sl => sl.id));
 const ALL_IDS = SECTIONS.flatMap(s => s.slots.map(sl => sl.id));
 
 export default function RegisterDocumentsScreen() {
@@ -79,8 +89,8 @@ export default function RegisterDocumentsScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [cameraBlocked, setCameraBlocked] = useState(false);
 
-  const allDone = ALL_IDS.every(id => uploaded[id]);
-  const doneCount = ALL_IDS.filter(id => uploaded[id]).length;
+  const allDone = MANDATORY_IDS.every(id => uploaded[id]);
+  const doneCount = MANDATORY_IDS.filter(id => uploaded[id]).length;
 
   const captureDoc = async (slot: DocSlot) => {
     if (uploading[slot.id]) return;
@@ -168,7 +178,7 @@ export default function RegisterDocumentsScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={s.header}>
-          <Text style={s.step}>Step 3 of 3</Text>
+          <Text style={s.step}>Step 4 of 4</Text>
           <Text style={s.title}>Upload your{'\n'}documents</Text>
           <Text style={s.sub}>
             Upload all required documents to complete your registration. Your account will be reviewed by our team.
@@ -179,13 +189,18 @@ export default function RegisterDocumentsScreen() {
           <View style={s.progressBar}>
             <View style={[s.progressFill, { width: `${(doneCount / ALL_IDS.length) * 100}%` }]} />
           </View>
-          <Text style={s.progressText}>{doneCount} / {ALL_IDS.length} uploaded</Text>
+          <Text style={s.progressText}>{doneCount} / {MANDATORY_IDS.length} required uploaded</Text>
         </View>
 
         <View style={s.sections}>
           {SECTIONS.map((section) => (
             <View key={section.title} style={s.section}>
-              <Text style={s.sectionTitle}>{section.title}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Text style={s.sectionTitle}>{section.title}</Text>
+                {section.optional && (
+                  <View style={s.optionalBadge}><Text style={s.optionalBadgeText}>Optional</Text></View>
+                )}
+              </View>
               <View style={s.slotsRow}>
                 {section.slots.map((slot) => {
                   const uri = photos[slot.id];
@@ -260,7 +275,7 @@ export default function RegisterDocumentsScreen() {
           <View style={s.noteBox}>
             <AlertCircle size={15} color="#5e5e72" />
             <Text style={s.noteText}>
-              All {ALL_IDS.length} documents are required to complete registration. Upload each one then tap Submit.
+              All {MANDATORY_IDS.length} required documents must be uploaded. Criminal record is optional — you can upload it later, but it will be required after 30 trips.
             </Text>
           </View>
         )}
@@ -326,6 +341,8 @@ const s = StyleSheet.create({
   sections: { gap: 24 },
   section: { gap: 12 },
   sectionTitle: { fontSize: 12, fontWeight: '700', color: '#1e1e28', letterSpacing: 0.8, textTransform: 'uppercase', fontFamily: 'Inter_700Bold' },
+  optionalBadge: { backgroundColor: '#f2f2f5', borderRadius: 99, paddingHorizontal: 8, paddingVertical: 2 },
+  optionalBadgeText: { fontSize: 10, color: '#5e5e72', fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
   slotsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   slot: {
     width: '47.5%', aspectRatio: 4 / 3,

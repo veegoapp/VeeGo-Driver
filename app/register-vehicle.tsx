@@ -207,7 +207,7 @@ export default function RegisterVehicleScreen() {
         color: selectedColor!.nameEn,
         colorId: selectedColor!.id,
       });
-      router.push('/register-documents');
+      router.push('/register-plate');
     } catch {
       Alert.alert('Error', 'Could not save vehicle information. Please try again.');
     } finally {
@@ -287,7 +287,7 @@ export default function RegisterVehicleScreen() {
         </TouchableOpacity>
 
         <View style={s.header}>
-          <Text style={[s.step, { textAlign: TA }]}>Step 2 of 3</Text>
+          <Text style={[s.step, { textAlign: TA }]}>Step 2 of 4</Text>
           <Text style={[s.title, { textAlign: TA }]}>{t.vehicle_details}</Text>
           <Text style={[s.sub, { textAlign: TA }]}>{t.vehicle_details_sub}</Text>
         </View>

@@ -3,36 +3,52 @@ import { api } from '@/lib/api';
 
 /**
  * Called every time an authenticated user lands on a pre-auth screen.
- * Checks registration progress and routes to the correct next step:
+ * Uses GET /driver/me/onboarding as the single source of truth to decide
+ * where the driver should be in the registration flow.
  *
- *   no vehicle       → /register-vehicle
- *   vehicle, no docs → /register-documents
- *   vehicle + docs   → /pending-approval  (not yet active)
- *   active driver    → /(shuttle)/
- *
- * Falls back to the shuttle dashboard on any unexpected error so the
- * app never gets stuck.
+ * Decision tree:
+ *   approved                    → /(shuttle)/  (dashboard)
+ *   no serviceType              → /register-service-type
+ *   no vehicle                  → /register-vehicle
+ *   vehicle but no plate        → /register-plate
+ *   missing required documents  → /register-documents
+ *   pending / pending_review    → /pending-approval
+ *   rejected                    → /pending-approval  (shows rejection UI)
  */
 export async function navigateAfterAuth(_token: string | null): Promise<void> {
-  // Double-defer so the root Stack navigator is fully mounted before we navigate.
   setTimeout(async () => {
     requestAnimationFrame(async () => {
       try {
-        // 1. Check if driver is already active
-        const me = await api.get<{ isActive?: boolean }>('/driver/me');
+        // Single call — contains everything we need
+        const onboarding = await api.get<{
+          onboardingStatus: 'pending' | 'pending_review' | 'approved' | 'rejected';
+          serviceType: string | null;
+          missingDocuments: string[];
+        }>('/driver/me/onboarding');
 
-        if (me?.isActive) {
+        // ── 1. Fully approved → dashboard
+        if (onboarding?.onboardingStatus === 'approved') {
           router.replace('/(shuttle)/' as any);
           return;
         }
 
-        // 2. Not yet active — check vehicle registration
+        // ── 2. No service type selected yet
+        if (!onboarding?.serviceType) {
+          router.replace('/register-service-type');
+          return;
+        }
+
+        // ── 3. Check vehicle + plate
         let hasVehicle = false;
+        let hasPlate = false;
         try {
-          const vehicle = await api.get<Record<string, unknown> | null>('/driver/me/vehicle');
-          hasVehicle = !!(vehicle && vehicle.id != null);
+          const vehicle = await api.get<{ id?: unknown; plateLetters?: string | null } | null>('/driver/me/vehicle');
+          hasVehicle = !!(vehicle && (vehicle as any).id != null);
+          // plateLetters is null until POST /driver/register/plate-number is called
+          hasPlate = hasVehicle && !!(vehicle as any).plateLetters;
         } catch {
           hasVehicle = false;
+          hasPlate = false;
         }
 
         if (!hasVehicle) {
@@ -40,30 +56,22 @@ export async function navigateAfterAuth(_token: string | null): Promise<void> {
           return;
         }
 
-        // 3. Has vehicle — check if any documents have been submitted
-        let hasDocuments = false;
-        try {
-          const docs = await api.get<unknown>('/driver/me/documents');
-          if (Array.isArray(docs)) {
-            hasDocuments = (docs as unknown[]).length > 0;
-          } else if (docs && typeof docs === 'object') {
-            const d = docs as Record<string, unknown>;
-            const arr = d.documents ?? d.data ?? [];
-            hasDocuments = Array.isArray(arr) && (arr as unknown[]).length > 0;
-          }
-        } catch {
-          hasDocuments = false;
+        if (!hasPlate) {
+          router.replace('/register-plate');
+          return;
         }
 
-        if (!hasDocuments) {
+        // ── 4. Check missing documents
+        const missing = onboarding?.missingDocuments ?? [];
+        if (missing.length > 0) {
           router.replace('/register-documents');
           return;
         }
 
-        // 4. Vehicle + docs submitted — waiting for admin approval
+        // ── 5. All steps done — waiting for admin review or rejected
         router.replace('/pending-approval');
       } catch {
-        // Unexpected error — fall back to dashboard
+        // Fallback — unexpected error (network, auth expired, etc.)
         router.replace('/(shuttle)/' as any);
       }
     });
