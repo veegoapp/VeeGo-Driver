@@ -24,7 +24,8 @@ const RESEND_COOLDOWN = 60;
 
 export default function VerifyOtpScreen() {
   const insets = useSafeAreaInsets();
-  const { phone, maskedPhone: maskedPhoneParam } = useLocalSearchParams<{ phone: string; maskedPhone?: string }>();
+  const { phone: phoneParam, maskedPhone: maskedPhoneParam } = useLocalSearchParams<{ phone: string; maskedPhone?: string }>();
+  const phone = phoneParam ? decodeURIComponent(phoneParam) : '';
   const { login } = useAuth();
 
   const [otp, setOtp] = useState('');

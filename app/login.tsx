@@ -58,7 +58,7 @@ export default function LoginScreen() {
   };
 
   const handleOtpRequired = (phone: string, maskedPhone?: string) => {
-    expoRouter.replace({ pathname: '/verify-otp', params: { phone, maskedPhone: maskedPhone ?? phone } } as any);
+    expoRouter.replace({ pathname: '/verify-otp', params: { phone: encodeURIComponent(phone), maskedPhone: maskedPhone ?? phone } } as any);
   };
 
   return (
