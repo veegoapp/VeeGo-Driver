@@ -116,10 +116,8 @@ export default function RegisterVehicleScreen() {
       const items = res?.data ?? (Array.isArray(res) ? res as typeof brands : []);
       setBrands(items);
     } catch (err) {
-      if (err instanceof ApiError && err.status === 403) {
-        // Backend doesn't allow catalog access for pending drivers — use static fallback.
-        // Fix on backend: make GET /vehicles/brands public or allow pending-driver tokens.
-        console.warn('[register-vehicle] 403 on brands — using static fallback. Fix backend permissions.');
+      if (err instanceof ApiError && (err.status === 403 || err.status === 401)) {
+        console.warn('[register-vehicle] auth error on brands — using static fallback.');
         setBrands(getFallbackBrands(serviceType));
       } else {
         setErrorBrands(true);
@@ -145,10 +143,8 @@ export default function RegisterVehicleScreen() {
       const items = res?.data ?? (Array.isArray(res) ? res as typeof colors : []);
       setColors(items);
     } catch (err) {
-      if (err instanceof ApiError && err.status === 403) {
-        // Backend doesn't allow catalog access for pending drivers — use static fallback.
-        // Fix on backend: make GET /vehicles/colors public or allow pending-driver tokens.
-        console.warn('[register-vehicle] 403 on colors — using static fallback. Fix backend permissions.');
+      if (err instanceof ApiError && (err.status === 403 || err.status === 401)) {
+        console.warn('[register-vehicle] auth error on colors — using static fallback.');
         setColors(FALLBACK_COLORS);
       } else {
         setErrorColors(true);
