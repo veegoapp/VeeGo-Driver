@@ -1,7 +1,11 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowDownLeft, ArrowUpRight, Briefcase, FileText, Plus, Trash2, Wallet, Wrench, X } from 'lucide-react-native';
+import { ArrowDownLeft, ArrowUpRight, FileText, Wallet, Wrench, X, Zap, Building2, Phone, ShoppingBag, CreditCard } from 'lucide-react-native';
 import React, { useRef, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Animated, KeyboardAvoidingView, LayoutChangeEvent, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator, Alert, Animated, KeyboardAvoidingView,
+  LayoutChangeEvent, Modal, Platform, Pressable, ScrollView,
+  StyleSheet, Text, TextInput, View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { GlassView } from '@/components/GlassView';
@@ -11,54 +15,96 @@ import { endpoints } from '@/lib/api';
 import { useSocket } from '@/lib/socketContext';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
 
-type WalletBalance = { balance: number };
-type Transaction = { id: string; title: string; sub: string; amount: number; incoming: boolean };
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+type WalletFeature = {
+  isEnabled: boolean;
+  displayMode: 'live' | 'coming_soon' | 'maintenance' | 'unavailable';
+  unavailableMessage?: string | null;
+};
+
+type AccountField = {
+  key: string;
+  label: string;
+  labelAr: string;
+  type: 'text' | 'tel' | 'number' | 'email';
+  required: boolean;
+  placeholder?: string;
+};
+
+type PayoutMethod = {
+  id: string;
+  key: string;
+  name: string;
+  nameAr?: string;
+  description?: string;
+  descriptionAr?: string;
+  icon?: string;
+  processingTime?: string;
+  processingTimeAr?: string;
+  minAmount?: number | null;
+  maxAmount?: number | null;
+  requiresAccountDetails: boolean;
+  accountFields?: AccountField[];
+  isAvailable: boolean;
+};
+
+type WalletBalance = { balance: number; totalPaid?: number; totalPending?: number };
 type WeekDay = { day: string; amount: string | number };
 type EarningsSummary = {
-  summary: {
-    totalEarnings: string;
-    totalPaid: string;
-    totalPending: string;
-    totalConfirmed: string;
-  };
+  summary: { totalEarnings: string; totalPaid: string; totalPending: string; totalConfirmed: string };
   recentEarnings: { amount: string }[];
 };
-type PayoutMethod = { id: string; name?: string; description?: string; isAvailable?: boolean; last4?: string; bankName?: string; type?: string; isDefault?: boolean; accountNumber?: string; accountName?: string; phoneNumber?: string };
-type MethodType = 'bank_transfer' | 'vodafone_cash' | 'instapay';
+type Transaction = {
+  id: string | number;
+  amount: number;
+  status?: string;
+  date?: string;
+  title?: string;
+  sub?: string;
+  incoming?: boolean;
+  description?: string;
+};
 
 const TAB_BAR_HEIGHT = 96;
+
+// Maps icon string from backend to lucide component
+function MethodIcon({ icon, color }: { icon?: string; color: string }) {
+  const size = 20;
+  const sw = 2;
+  switch (icon) {
+    case 'zap': return <Zap size={size} color={color} strokeWidth={sw} />;
+    case 'phone': return <Phone size={size} color={color} strokeWidth={sw} />;
+    case 'building': return <Building2 size={size} color={color} strokeWidth={sw} />;
+    case 'shopping-bag': return <ShoppingBag size={size} color={color} strokeWidth={sw} />;
+    default: return <CreditCard size={size} color={color} strokeWidth={sw} />;
+  }
+}
+
+// ── Screen ────────────────────────────────────────────────────────────────────
 
 export default function ShuttleWalletScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
-  const { t, isRTL } = useI18n();
+  const { t, isRTL, language } = useI18n();
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
   const TA = isRTL ? 'right' as const : 'left' as const;
   const queryClient = useQueryClient();
+  const { socket } = useSocket();
 
+  // Payout modal state
   const [payoutVisible, setPayoutVisible] = useState(false);
   const [payoutAmount, setPayoutAmount] = useState('');
+  const [selectedMethod, setSelectedMethod] = useState<PayoutMethod | null>(null);
+  const [accountDetails, setAccountDetails] = useState<Record<string, string>>({});
   const [isPayingOut, setIsPayingOut] = useState(false);
+  const [payoutStep, setPayoutStep] = useState<'amount' | 'details'>('amount');
+
   const scrollRef = useRef<ScrollView>(null);
   const [txSectionY, setTxSectionY] = useState(0);
 
-  const [addMethodVisible, setAddMethodVisible] = useState(false);
-  const [methodType, setMethodType] = useState<MethodType>('bank_transfer');
-  const [accountNumber, setAccountNumber] = useState('');
-  const [accountName, setAccountName] = useState('');
-  const [bankName, setBankName] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [isAddingMethod, setIsAddingMethod] = useState(false);
-  const [removingId, setRemovingId] = useState<string | null>(null);
-
-  const handleHistoryPress = () => {
-    scrollRef.current?.scrollTo({ y: txSectionY, animated: true });
-  };
-
-  const { socket } = useSocket();
-
-  type WalletFeature = { isEnabled: boolean; displayMode: 'live' | 'coming_soon' | 'maintenance'; unavailableMessage?: string | null };
+  // ── Wallet feature flag ────────────────────────────────────────────────────
   const [walletFeatureOverride, setWalletFeatureOverride] = useState<WalletFeature | null>(null);
 
   const { data: walletFeatureRaw } = useQuery({
@@ -72,7 +118,6 @@ export default function ShuttleWalletScreen() {
     return (raw as { data?: WalletFeature })?.data ?? (raw as WalletFeature) ?? { isEnabled: false, displayMode: 'coming_soon' };
   })();
 
-  // Real-time toggle from admin
   useEffect(() => {
     if (!socket) return;
     const handler = (payload: WalletFeature) => setWalletFeatureOverride(payload);
@@ -82,6 +127,7 @@ export default function ShuttleWalletScreen() {
 
   const walletLive = walletFeature.isEnabled && walletFeature.displayMode === 'live';
 
+  // ── Queries (only when wallet is live) ────────────────────────────────────
   const { data: balanceRaw, isLoading: balanceLoading, isError: balanceError } = useQuery({
     queryKey: ['wallet-balance'],
     queryFn: endpoints.wallet.balance,
@@ -89,7 +135,7 @@ export default function ShuttleWalletScreen() {
   });
   const { data: txRaw, isLoading: txLoading, isError: txError } = useQuery({
     queryKey: ['wallet-transactions'],
-    queryFn: endpoints.wallet.transactions,
+    queryFn: () => endpoints.wallet.transactions(1, 20),
     enabled: walletLive,
   });
   const { data: weeklyRaw, isLoading: weeklyLoading } = useQuery({
@@ -108,14 +154,19 @@ export default function ShuttleWalletScreen() {
     enabled: walletLive,
   });
 
-  const _balRaw = balanceRaw as WalletBalance | { balance?: number; wallet?: { balance?: number } } | undefined;
+  // ── Data extraction ────────────────────────────────────────────────────────
+  const _balRaw = balanceRaw as WalletBalance | { wallet?: { balance?: number } } | undefined;
   const balanceData: WalletBalance = {
-    balance: (typeof (_balRaw as WalletBalance)?.balance === 'number'
-      ? (_balRaw as WalletBalance).balance
-      : parseFloat(String((_balRaw as { wallet?: { balance?: number } })?.wallet?.balance ?? (_balRaw as { balance?: unknown })?.balance ?? 0))),
+    balance: parseFloat(String(
+      ((_balRaw as WalletBalance)?.balance) ??
+      ((_balRaw as { wallet?: { balance?: number } })?.wallet?.balance) ?? 0
+    )),
+    totalPaid: parseFloat(String((_balRaw as WalletBalance)?.totalPaid ?? 0)),
+    totalPending: parseFloat(String((_balRaw as WalletBalance)?.totalPending ?? 0)),
   };
-  const _txRaw = txRaw as Transaction[] | { transactions?: Transaction[]; data?: Transaction[] } | undefined;
-  const txs: Transaction[] = Array.isArray(_txRaw) ? _txRaw : ((_txRaw as { transactions?: Transaction[] })?.transactions ?? ((_txRaw as { data?: Transaction[] })?.data ?? []));
+
+  const _txRaw = txRaw as Transaction[] | { data?: Transaction[] } | undefined;
+  const txs: Transaction[] = Array.isArray(_txRaw) ? _txRaw : ((_txRaw as { data?: Transaction[] })?.data ?? []);
 
   const weekEarnings: WeekDay[] = ((weeklyRaw as { weeklyBreakdown?: WeekDay[] } | undefined)?.weeklyBreakdown ?? []);
   const maxEarning = weekEarnings.length ? Math.max(...weekEarnings.map(d => parseFloat(String(d.amount)))) : 1;
@@ -123,15 +174,15 @@ export default function ShuttleWalletScreen() {
   const weekTotal = weekEarnings.reduce((s, d) => s + parseFloat(String(d.amount)), 0);
   const todayAmount = parseFloat(String(summary?.recentEarnings?.[0]?.amount ?? 0));
 
-  const payoutMethods: PayoutMethod[] = Array.isArray(payoutMethodsRaw)
-    ? (payoutMethodsRaw as PayoutMethod[])
-    : ((payoutMethodsRaw as { data?: PayoutMethod[]; methods?: PayoutMethod[] })?.data
-      ?? (payoutMethodsRaw as { methods?: PayoutMethod[] })?.methods
-      ?? []);
+  const _pmRaw = payoutMethodsRaw as PayoutMethod[] | { data?: PayoutMethod[] } | undefined;
+  const payoutMethods: PayoutMethod[] = (
+    Array.isArray(_pmRaw) ? _pmRaw : ((_pmRaw as { data?: PayoutMethod[] })?.data ?? [])
+  ).filter(m => m.isAvailable);
 
   const isLoading = balanceLoading || txLoading || weeklyLoading || summaryLoading || methodsLoading;
   const isError = balanceError || txError;
 
+  // ── Animations ─────────────────────────────────────────────────────────────
   const heroAnim = useRef(new Animated.Value(0)).current;
   const barAnims = useRef(Array.from({ length: 7 }, () => new Animated.Value(0))).current;
 
@@ -149,30 +200,54 @@ export default function ShuttleWalletScreen() {
     ]).start();
   }, [balanceLoading, weeklyLoading, weekEarnings.length]);
 
-  const handlePayoutOpen = () => {
-    setPayoutAmount(String(balanceData?.balance ?? ''));
+  // ── Payout flow ────────────────────────────────────────────────────────────
+  const openPayout = () => {
+    setPayoutAmount(String(balanceData.balance.toFixed(2)));
+    setSelectedMethod(payoutMethods[0] ?? null);
+    setAccountDetails({});
+    setPayoutStep('amount');
     setPayoutVisible(true);
   };
 
-  const handlePayoutConfirm = async () => {
+  const handlePayoutNext = () => {
     const amount = parseFloat(payoutAmount);
     if (!amount || amount <= 0) {
       Alert.alert('Invalid amount', 'Please enter a valid amount greater than 0.');
       return;
     }
+    if (!selectedMethod) {
+      Alert.alert('Select method', 'Please select a payout method.');
+      return;
+    }
+    if (selectedMethod.requiresAccountDetails) {
+      setPayoutStep('details');
+    } else {
+      handlePayoutSubmit(amount, selectedMethod, {});
+    }
+  };
+
+  const handlePayoutSubmit = async (amount: number, method: PayoutMethod, details: Record<string, string>) => {
+    // Validate required fields
+    if (method.requiresAccountDetails && method.accountFields) {
+      for (const f of method.accountFields) {
+        if (f.required && !details[f.key]?.trim()) {
+          Alert.alert('Required field', `${isRTL ? f.labelAr : f.label} is required.`);
+          return;
+        }
+      }
+    }
     setIsPayingOut(true);
     try {
-      const res = await endpoints.wallet.payout(amount, methodType) as { ok?: boolean; message?: string; error?: string; available?: number } | undefined;
+      const res = await endpoints.wallet.payout(amount, method.key) as { ok?: boolean; message?: string; error?: string; available?: number } | undefined;
       if (res && res.error) {
-        const availableNote = res.available != null ? ` (${t.available}: ${res.available.toFixed(2)} ${t.egp})` : '';
-        Alert.alert('Error', `${res.error}${availableNote}`);
+        const note = res.available != null ? ` (${t.available}: ${res.available.toFixed(2)} ${t.egp})` : '';
+        Alert.alert('Error', `${res.error}${note}`);
         return;
       }
       await queryClient.invalidateQueries({ queryKey: ['wallet-balance'] });
       await queryClient.invalidateQueries({ queryKey: ['wallet-transactions'] });
       setPayoutVisible(false);
-      setPayoutAmount('');
-      Alert.alert('Success', res?.message ?? `${amount.toFixed(2)} ${t.egp} payout initiated.`);
+      Alert.alert('✓', res?.message ?? `${amount.toFixed(2)} ${t.egp} payout submitted.`);
     } catch {
       Alert.alert('Error', 'Payout failed. Please try again.');
     } finally {
@@ -180,58 +255,7 @@ export default function ShuttleWalletScreen() {
     }
   };
 
-  const resetAddForm = () => {
-    setMethodType('bank_transfer');
-    setAccountNumber('');
-    setAccountName('');
-    setBankName('');
-    setPhoneNumber('');
-  };
-
-  const handleAddMethod = async () => {
-    if (!accountNumber.trim() || !accountName.trim()) return;
-    if (methodType === 'bank_transfer' && !bankName.trim()) return;
-    if ((methodType === 'vodafone_cash' || methodType === 'instapay') && !phoneNumber.trim()) return;
-    setIsAddingMethod(true);
-    try {
-      await endpoints.wallet.addPayoutMethod({
-        type: methodType,
-        accountNumber: accountNumber.trim(),
-        accountName: accountName.trim(),
-        ...(methodType === 'bank_transfer' ? { bankName: bankName.trim() } : {}),
-        ...(methodType !== 'bank_transfer' ? { phoneNumber: phoneNumber.trim() } : {}),
-      });
-      await queryClient.invalidateQueries({ queryKey: ['payout-methods'] });
-      setAddMethodVisible(false);
-      resetAddForm();
-    } catch {
-      Alert.alert(t.error, t.add_method_error);
-    } finally {
-      setIsAddingMethod(false);
-    }
-  };
-
-  const handleRemoveMethod = (id: string, displayName: string) => {
-    Alert.alert(t.remove_method_confirm, displayName, [
-      { text: t.cancel, style: 'cancel' },
-      {
-        text: t.remove_method,
-        style: 'destructive',
-        onPress: async () => {
-          setRemovingId(id);
-          try {
-            await endpoints.wallet.removePayoutMethod(id);
-            await queryClient.invalidateQueries({ queryKey: ['payout-methods'] });
-          } catch {
-            Alert.alert(t.error, t.remove_method_error);
-          } finally {
-            setRemovingId(null);
-          }
-        },
-      },
-    ]);
-  };
-
+  // ── Not-live screen ────────────────────────────────────────────────────────
   if (!walletLive) {
     const isMaintenance = walletFeature.displayMode === 'maintenance';
     return (
@@ -273,16 +297,12 @@ export default function ShuttleWalletScreen() {
   if (isError) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' }]}>
-        <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 14 }}>Failed to load wallet. Please try again.</Text>
+        <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 14 }}>
+          Failed to load wallet. Please try again.
+        </Text>
       </View>
     );
   }
-
-  const METHOD_TYPES: { key: MethodType; label: string }[] = [
-    { key: 'bank_transfer', label: t.bank_transfer },
-    { key: 'vodafone_cash', label: t.vodafone_cash },
-    { key: 'instapay', label: t.instapay },
-  ];
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -295,12 +315,13 @@ export default function ShuttleWalletScreen() {
         <Text style={[styles.sectionLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.wallet_title}</Text>
         <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.shuttle_service} · {t.earnings}</Text>
 
+        {/* Balance card */}
         <Animated.View style={[{ marginTop: 20, opacity: heroAnim, transform: [{ translateY: heroAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
           <View style={[styles.balanceCard, { backgroundColor: colors.secondary, borderColor: '#1e1e2833' }]}>
             <View style={[styles.balanceBlob, { backgroundColor: '#1e1e2820' }]} />
             <Text style={[styles.availableLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.available}</Text>
             <View style={styles.balanceRow}>
-              <Text style={[styles.balanceAmount, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{(balanceData?.balance ?? 0).toFixed(2)}</Text>
+              <Text style={[styles.balanceAmount, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{balanceData.balance.toFixed(2)}</Text>
               <Text style={[styles.balanceCurrency, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>{t.egp}</Text>
             </View>
             <View style={styles.earningsMini}>
@@ -320,57 +341,24 @@ export default function ShuttleWalletScreen() {
               </View>
             </View>
 
-            {payoutVisible ? (
-              <View style={styles.payoutInput}>
-                <View style={[styles.payoutRow, { borderColor: colors.border }]}>
-                  <TextInput
-                    value={payoutAmount}
-                    onChangeText={setPayoutAmount}
-                    keyboardType="decimal-pad"
-                    placeholder="Amount"
-                    placeholderTextColor={colors.mutedForeground}
-                    style={[styles.payoutTextInput, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}
-                    autoFocus
-                  />
-                  <Text style={[{ color: colors.mutedForeground, fontFamily: 'Inter_700Bold', fontSize: 14 }]}>{t.egp}</Text>
-                </View>
-                <View style={styles.actionRow}>
-                  <Pressable onPress={() => setPayoutVisible(false)} style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.8 : 1 }]}>
-                    <GlassView strong style={styles.secondaryAction} borderRadius={16}>
-                      <X size={16} color={colors.foreground} strokeWidth={2} />
-                      <Text style={[styles.actionText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>Cancel</Text>
-                    </GlassView>
-                  </Pressable>
-                  <Pressable onPress={handlePayoutConfirm} disabled={isPayingOut} style={({ pressed }) => [styles.primaryAction, { opacity: pressed || isPayingOut ? 0.8 : 1 }]}>
-                    <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.actionGrad}>
-                      {isPayingOut
-                        ? <ActivityIndicator color="#fff" size="small" />
-                        : <ArrowDownLeft size={16} color="#fff" strokeWidth={2} />
-                      }
-                      <Text style={[styles.actionText, { color: '#fff', fontFamily: 'Inter_700Bold' }]}>Confirm</Text>
-                    </LinearGradient>
-                  </Pressable>
-                </View>
-              </View>
-            ) : (
-              <View style={styles.actionRow}>
-                <Pressable onPress={handlePayoutOpen} style={({ pressed }) => [styles.primaryAction, { opacity: pressed ? 0.9 : 1 }]}>
-                  <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.actionGrad}>
-                    <ArrowDownLeft size={16} color="#fff" strokeWidth={2} />
-                    <Text style={[styles.actionText, { color: '#fff', fontFamily: 'Inter_700Bold' }]}>{t.cash_out}</Text>
-                  </LinearGradient>
-                </Pressable>
-                <Pressable onPress={handleHistoryPress} style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.9 : 1 }]}>
-                  <GlassView strong style={styles.secondaryAction} borderRadius={16}>
-                    <FileText size={16} color={colors.foreground} strokeWidth={2} />
-                    <Text style={[styles.actionText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.history}</Text>
-                  </GlassView>
-                </Pressable>
-              </View>
-            )}
+            <View style={styles.actionRow}>
+              <Pressable onPress={openPayout} style={({ pressed }) => [styles.primaryAction, { opacity: pressed ? 0.9 : 1 }]}>
+                <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.actionGrad}>
+                  <ArrowDownLeft size={16} color="#fff" strokeWidth={2} />
+                  <Text style={[styles.actionText, { color: '#fff', fontFamily: 'Inter_700Bold' }]}>{t.cash_out}</Text>
+                </LinearGradient>
+              </Pressable>
+              <Pressable onPress={() => scrollRef.current?.scrollTo({ y: txSectionY, animated: true })} style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.9 : 1 }]}>
+                <GlassView strong style={styles.secondaryAction} borderRadius={16}>
+                  <FileText size={16} color={colors.foreground} strokeWidth={2} />
+                  <Text style={[styles.actionText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.history}</Text>
+                </GlassView>
+              </Pressable>
+            </View>
           </View>
         </Animated.View>
 
+        {/* Weekly chart */}
         <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', marginTop: 24, marginBottom: 16, textAlign: TA }]}>
           {t.this_week}
         </Text>
@@ -380,10 +368,7 @@ export default function ShuttleWalletScreen() {
               <View key={`${d.day}-${i}`} style={styles.barCol}>
                 <View style={styles.barTrack}>
                   <Animated.View style={[styles.barFill, {
-                    height: barAnims[i].interpolate({
-                      inputRange: [0, 1],
-                      outputRange: ['0%', '100%'],
-                    }),
+                    height: barAnims[i].interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
                     backgroundColor: i === weekEarnings.length - 1 ? '#1e1e28' : colors.secondary,
                   }]}>
                     {i === weekEarnings.length - 1 && (
@@ -391,7 +376,9 @@ export default function ShuttleWalletScreen() {
                     )}
                   </Animated.View>
                 </View>
-                <Text style={[styles.barDay, { color: i === weekEarnings.length - 1 ? '#2d2d42' : colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>{String(d.day)}</Text>
+                <Text style={[styles.barDay, { color: i === weekEarnings.length - 1 ? '#2d2d42' : colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>
+                  {String(d.day)}
+                </Text>
               </View>
             )) : (
               <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
@@ -401,6 +388,7 @@ export default function ShuttleWalletScreen() {
           </View>
         </GlassView>
 
+        {/* Earnings summary */}
         <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', marginTop: 24, marginBottom: 12, textAlign: TA }]}>{t.net_earnings}</Text>
         <GlassView borderRadius={16} style={{ padding: 4 }}>
           <SummaryRow label={t.status_confirmed} value={`+${parseFloat(String(summary?.summary?.totalConfirmed ?? 0)).toFixed(2)} ${t.egp}`} positive colors={colors} isRTL={isRTL} />
@@ -409,60 +397,7 @@ export default function ShuttleWalletScreen() {
           <SummaryRow label={t.net_earnings} value={`${parseFloat(String(summary?.summary?.totalEarnings ?? 0)).toFixed(2)} ${t.egp}`} highlight colors={colors} isRTL={isRTL} last />
         </GlassView>
 
-        <View style={[styles.sectionHeader, { flexDirection: R }]}>
-          <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.payout_methods}</Text>
-        </View>
-        <View style={{ gap: 8 }}>
-          {payoutMethods.length === 0 ? (
-            <GlassView style={[styles.methodCard, { justifyContent: 'center' }]} borderRadius={16}>
-              <Text style={[styles.methodSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: 'center' }]}>
-                {t.no_payout_methods}
-              </Text>
-            </GlassView>
-          ) : (
-            payoutMethods.map((m) => {
-              const displayName = m.bankName ?? m.name ?? m.accountName ?? 'Bank account';
-              const last4 = m.last4 ? ` — ****${m.last4}` : '';
-              return (
-                <GlassView key={m.id} style={[styles.methodCard, { flexDirection: R }]} borderRadius={16}>
-                  <View style={[styles.methodIcon, { backgroundColor: '#1e1e2820' }]}>
-                    <Briefcase size={20} color="#2d2d42" strokeWidth={2} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.methodName, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{displayName}{last4}</Text>
-                    <Text style={[styles.methodSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>
-                      {m.isDefault ? `${t.default_card} · ` : ''}1-2 business days
-                    </Text>
-                  </View>
-                  {m.isDefault && (
-                    <Text style={[styles.defaultBadge, { color: '#2d2d42', fontFamily: 'Inter_700Bold' }]}>{t.default_card}</Text>
-                  )}
-                  <Pressable
-                    onPress={() => handleRemoveMethod(m.id, displayName)}
-                    disabled={removingId === m.id}
-                    style={({ pressed }) => [styles.trashBtn, { opacity: pressed || removingId === m.id ? 0.5 : 1 }]}
-                    hitSlop={8}
-                  >
-                    {removingId === m.id
-                      ? <ActivityIndicator size="small" color={colors.destructive} />
-                      : <Trash2 size={16} color={colors.destructive} strokeWidth={2} />
-                    }
-                  </Pressable>
-                </GlassView>
-              );
-            })
-          )}
-        </View>
-        <Pressable
-          onPress={() => setAddMethodVisible(true)}
-          style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1, marginTop: 10 }]}
-        >
-          <GlassView strong style={[styles.addMethodBtn, { flexDirection: R }]} borderRadius={14}>
-            <Plus size={16} color={colors.foreground} strokeWidth={2} />
-            <Text style={[styles.addMethodText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.add_payout_method}</Text>
-          </GlassView>
-        </Pressable>
-
+        {/* Transactions */}
         <Text
           onLayout={(e: LayoutChangeEvent) => setTxSectionY(e.nativeEvent.layout.y)}
           style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', marginTop: 24, marginBottom: 12, textAlign: TA }]}
@@ -470,121 +405,165 @@ export default function ShuttleWalletScreen() {
           {t.transactions_label}
         </Text>
         <GlassView borderRadius={16}>
-          {txs.map((tx, i) => (
-            <View key={tx.id} style={[styles.txItem, i > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}>
-              <View style={[styles.txIcon, { backgroundColor: tx.incoming ? '#1e1e2820' : colors.secondary }]}>
-                {tx.incoming
-                  ? <ArrowDownLeft size={16} color="#2d2d42" strokeWidth={2} />
-                  : <ArrowUpRight size={16} color={colors.mutedForeground} strokeWidth={2} />
-                }
-              </View>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={[styles.txTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]} numberOfLines={1}>{tx.title}</Text>
-                <Text style={[styles.txSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]} numberOfLines={1}>{tx.sub}</Text>
-              </View>
-              <Text style={[styles.txAmount, { color: tx.incoming ? '#2d2d42' : colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-                {tx.incoming ? '+' : '−'}{tx.amount.toFixed(2)} {t.egp}
-              </Text>
+          {txs.length === 0 ? (
+            <View style={{ padding: 24, alignItems: 'center' }}>
+              <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13 }}>No transactions yet</Text>
             </View>
-          ))}
+          ) : txs.map((tx, i) => {
+            const isIncoming = tx.incoming ?? (tx.status === 'confirmed');
+            const txAmount = typeof tx.amount === 'number' ? tx.amount : parseFloat(String(tx.amount));
+            const txTitle = tx.title ?? (isIncoming ? 'Trip earnings' : 'Payout');
+            const txSub = tx.sub ?? tx.description ?? tx.date ?? '';
+            return (
+              <View key={String(tx.id)} style={[styles.txItem, i > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}>
+                <View style={[styles.txIcon, { backgroundColor: isIncoming ? '#1e1e2820' : colors.secondary }]}>
+                  {isIncoming
+                    ? <ArrowDownLeft size={16} color="#2d2d42" strokeWidth={2} />
+                    : <ArrowUpRight size={16} color={colors.mutedForeground} strokeWidth={2} />
+                  }
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={[styles.txTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]} numberOfLines={1}>{txTitle}</Text>
+                  <Text style={[styles.txSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]} numberOfLines={1}>{txSub}</Text>
+                </View>
+                <Text style={[styles.txAmount, { color: isIncoming ? '#2d2d42' : colors.foreground, fontFamily: 'Inter_700Bold' }]}>
+                  {isIncoming ? '+' : '−'}{txAmount.toFixed(2)} {t.egp}
+                </Text>
+              </View>
+            );
+          })}
         </GlassView>
       </ScrollView>
 
+      {/* ── Payout modal ── */}
       <Modal
-        visible={addMethodVisible}
+        visible={payoutVisible}
         animationType="slide"
         transparent
-        onRequestClose={() => { setAddMethodVisible(false); resetAddForm(); }}
+        onRequestClose={() => setPayoutVisible(false)}
       >
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => { setAddMethodVisible(false); resetAddForm(); }} />
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setPayoutVisible(false)} />
           <View style={[styles.modalSheet, { backgroundColor: colors.background }]}>
+            {/* Header */}
             <View style={[styles.modalHeader, { flexDirection: R }]}>
-              <Text style={[styles.modalTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.add_payout_method}</Text>
-              <Pressable onPress={() => { setAddMethodVisible(false); resetAddForm(); }} hitSlop={8}>
+              <Text style={[styles.modalTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
+                {payoutStep === 'amount' ? t.cash_out : (isRTL ? selectedMethod?.nameAr : selectedMethod?.name) ?? t.cash_out}
+              </Text>
+              <Pressable onPress={() => {
+                if (payoutStep === 'details') { setPayoutStep('amount'); } else { setPayoutVisible(false); }
+              }} hitSlop={8}>
                 <X size={20} color={colors.mutedForeground} strokeWidth={2} />
               </Pressable>
             </View>
 
-            <Text style={[styles.fieldLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.payout_method_type}</Text>
-            <View style={[styles.typeRow, { flexDirection: R }]}>
-              {METHOD_TYPES.map(({ key, label }) => (
+            {payoutStep === 'amount' ? (
+              <>
+                {/* Amount input */}
+                <Text style={[styles.fieldLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>Amount</Text>
+                <View style={[styles.amountRow, { borderColor: colors.border }]}>
+                  <TextInput
+                    value={payoutAmount}
+                    onChangeText={setPayoutAmount}
+                    keyboardType="decimal-pad"
+                    placeholder="0.00"
+                    placeholderTextColor={colors.mutedForeground}
+                    style={[styles.amountInput, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}
+                    autoFocus
+                  />
+                  <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_700Bold', fontSize: 14 }}>{t.egp}</Text>
+                </View>
+                <Text style={[{ fontSize: 11, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', marginBottom: 16, textAlign: TA }]}>
+                  {t.available}: {balanceData.balance.toFixed(2)} {t.egp}
+                </Text>
+
+                {/* Method selector */}
+                <Text style={[styles.fieldLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.payout_methods}</Text>
+                {methodsLoading ? (
+                  <ActivityIndicator color={colors.primary} style={{ marginVertical: 12 }} />
+                ) : payoutMethods.length === 0 ? (
+                  <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13, marginBottom: 16 }}>
+                    No payout methods available
+                  </Text>
+                ) : (
+                  <View style={{ gap: 8, marginBottom: 16 }}>
+                    {payoutMethods.map(m => {
+                      const isSelected = selectedMethod?.id === m.id;
+                      const label = isRTL ? (m.nameAr ?? m.name) : m.name;
+                      const timing = isRTL ? (m.processingTimeAr ?? m.processingTime) : m.processingTime;
+                      return (
+                        <Pressable
+                          key={m.id}
+                          onPress={() => setSelectedMethod(m)}
+                          style={[styles.methodOption, {
+                            backgroundColor: isSelected ? '#1e1e2812' : colors.secondary,
+                            borderColor: isSelected ? '#1e1e2866' : colors.border,
+                            flexDirection: R,
+                          }]}
+                        >
+                          <View style={[styles.methodOptionIcon, { backgroundColor: isSelected ? '#1e1e2820' : colors.background }]}>
+                            <MethodIcon icon={m.icon} color={isSelected ? '#2d2d42' : colors.mutedForeground} />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={[{ fontSize: 14, color: isSelected ? '#1e1e28' : colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{label}</Text>
+                            {timing && <Text style={[{ fontSize: 11, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>{timing}</Text>}
+                          </View>
+                          <View style={[styles.radioOuter, { borderColor: isSelected ? '#1e1e28' : colors.border }]}>
+                            {isSelected && <View style={[styles.radioInner, { backgroundColor: '#1e1e28' }]} />}
+                          </View>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                )}
+
                 <Pressable
-                  key={key}
-                  onPress={() => setMethodType(key)}
-                  style={[styles.typeChip, {
-                    backgroundColor: methodType === key ? '#1e1e2820' : colors.secondary,
-                    borderColor: methodType === key ? '#1e1e2866' : 'transparent',
-                    flex: 1,
-                  }]}
+                  onPress={handlePayoutNext}
+                  style={({ pressed }) => [styles.submitBtn, { opacity: pressed ? 0.85 : 1 }]}
                 >
-                  <Text style={[styles.typeChipText, {
-                    color: methodType === key ? '#2d2d42' : colors.mutedForeground,
-                    fontFamily: methodType === key ? 'Inter_700Bold' : 'Inter_400Regular',
-                    textAlign: 'center',
-                  }]}>{label}</Text>
+                  <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.submitGrad}>
+                    <Text style={{ color: '#fff', fontFamily: 'Inter_700Bold', fontSize: 14 }}>
+                      {selectedMethod?.requiresAccountDetails ? 'Next →' : t.confirm}
+                    </Text>
+                  </LinearGradient>
                 </Pressable>
-              ))}
-            </View>
-
-            <Text style={[styles.fieldLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.account_number}</Text>
-            <TextInput
-              value={accountNumber}
-              onChangeText={setAccountNumber}
-              keyboardType="numeric"
-              placeholder="000000000000"
-              placeholderTextColor={colors.mutedForeground}
-              style={[styles.fieldInput, { color: colors.foreground, borderColor: colors.border, fontFamily: 'Inter_400Regular', textAlign: TA }]}
-            />
-
-            <Text style={[styles.fieldLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.account_name}</Text>
-            <TextInput
-              value={accountName}
-              onChangeText={setAccountName}
-              placeholder={t.account_name}
-              placeholderTextColor={colors.mutedForeground}
-              style={[styles.fieldInput, { color: colors.foreground, borderColor: colors.border, fontFamily: 'Inter_400Regular', textAlign: TA }]}
-            />
-
-            {methodType === 'bank_transfer' && (
+              </>
+            ) : (
               <>
-                <Text style={[styles.fieldLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.bank_name}</Text>
-                <TextInput
-                  value={bankName}
-                  onChangeText={setBankName}
-                  placeholder={t.bank_name}
-                  placeholderTextColor={colors.mutedForeground}
-                  style={[styles.fieldInput, { color: colors.foreground, borderColor: colors.border, fontFamily: 'Inter_400Regular', textAlign: TA }]}
-                />
+                {/* Dynamic account details form */}
+                {selectedMethod?.accountFields?.map(field => (
+                  <View key={field.key}>
+                    <Text style={[styles.fieldLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
+                      {isRTL ? field.labelAr : field.label}{field.required ? ' *' : ''}
+                    </Text>
+                    <TextInput
+                      value={accountDetails[field.key] ?? ''}
+                      onChangeText={v => setAccountDetails(prev => ({ ...prev, [field.key]: v }))}
+                      keyboardType={field.type === 'tel' || field.type === 'number' ? 'phone-pad' : field.type === 'email' ? 'email-address' : 'default'}
+                      placeholder={field.placeholder ?? ''}
+                      placeholderTextColor={colors.mutedForeground}
+                      style={[styles.fieldInput, { color: colors.foreground, borderColor: colors.border, fontFamily: 'Inter_400Regular', textAlign: TA }]}
+                    />
+                  </View>
+                ))}
+
+                <Pressable
+                  onPress={() => {
+                    const amount = parseFloat(payoutAmount);
+                    if (selectedMethod) handlePayoutSubmit(amount, selectedMethod, accountDetails);
+                  }}
+                  disabled={isPayingOut}
+                  style={({ pressed }) => [styles.submitBtn, { opacity: pressed || isPayingOut ? 0.8 : 1, marginTop: 20 }]}
+                >
+                  <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.submitGrad}>
+                    {isPayingOut
+                      ? <ActivityIndicator color="#fff" size="small" />
+                      : <Text style={{ color: '#fff', fontFamily: 'Inter_700Bold', fontSize: 14 }}>{t.confirm}</Text>
+                    }
+                  </LinearGradient>
+                </Pressable>
               </>
             )}
-
-            {(methodType === 'vodafone_cash' || methodType === 'instapay') && (
-              <>
-                <Text style={[styles.fieldLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.phone}</Text>
-                <TextInput
-                  value={phoneNumber}
-                  onChangeText={setPhoneNumber}
-                  keyboardType="phone-pad"
-                  placeholder={t.phone_placeholder}
-                  placeholderTextColor={colors.mutedForeground}
-                  style={[styles.fieldInput, { color: colors.foreground, borderColor: colors.border, fontFamily: 'Inter_400Regular', textAlign: TA }]}
-                />
-              </>
-            )}
-
-            <Pressable
-              onPress={handleAddMethod}
-              disabled={isAddingMethod}
-              style={({ pressed }) => [styles.submitBtn, { opacity: pressed || isAddingMethod ? 0.8 : 1 }]}
-            >
-              <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.submitGrad}>
-                {isAddingMethod
-                  ? <ActivityIndicator color="#fff" size="small" />
-                  : <Text style={{ color: '#fff', fontFamily: 'Inter_700Bold', fontSize: 14 }}>{t.confirm}</Text>
-                }
-              </LinearGradient>
-            </Pressable>
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -592,7 +571,12 @@ export default function ShuttleWalletScreen() {
   );
 }
 
-function SummaryRow({ label, value, positive, highlight, last, colors, isRTL }: { label: string; value: string; positive?: boolean; highlight?: boolean; last?: boolean; colors: ReturnType<typeof useColors>; isRTL: boolean }) {
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function SummaryRow({ label, value, positive, highlight, last, colors, isRTL }: {
+  label: string; value: string; positive?: boolean; highlight?: boolean; last?: boolean;
+  colors: ReturnType<typeof useColors>; isRTL: boolean;
+}) {
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
   const TA = isRTL ? 'right' as const : 'left' as const;
   return (
@@ -605,6 +589,8 @@ function SummaryRow({ label, value, positive, highlight, last, colors, isRTL }: 
     </View>
   );
 }
+
+// ── Styles ────────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
@@ -626,9 +612,6 @@ const styles = StyleSheet.create({
   earningsMiniDiv: { width: 1, height: 28 },
   earningsMiniLabel: { fontSize: 9, letterSpacing: 1.5, textTransform: 'uppercase' },
   earningsMiniValue: { fontSize: 13, marginTop: 4 },
-  payoutInput: { marginTop: 16, gap: 10 },
-  payoutRow: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10 },
-  payoutTextInput: { flex: 1, fontSize: 20, height: 36 },
   actionRow: { flexDirection: 'row', gap: 8, marginTop: 20 },
   primaryAction: { flex: 1, height: 48, borderRadius: 16, overflow: 'hidden', elevation: 6, shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 8 },
   actionGrad: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
@@ -643,31 +626,24 @@ const styles = StyleSheet.create({
   summaryRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14 },
   summaryLabel: { fontSize: 13 },
   summaryValue: { fontSize: 13 },
-  sectionHeader: { alignItems: 'center', justifyContent: 'space-between', marginTop: 24, marginBottom: 12 },
   sectionTitle: { fontSize: 12, letterSpacing: 2, textTransform: 'uppercase' },
-  addBtn: { fontSize: 12 },
-  methodCard: { alignItems: 'center', gap: 12, padding: 12 },
-  methodIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  methodName: { fontSize: 14 },
-  methodSub: { fontSize: 12, marginTop: 2 },
-  defaultBadge: { fontSize: 10, letterSpacing: 1, textTransform: 'uppercase' },
-  trashBtn: { padding: 6 },
-  addMethodBtn: { height: 44, alignItems: 'center', justifyContent: 'center', gap: 8 },
-  addMethodText: { fontSize: 13 },
   txItem: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16 },
   txIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   txTitle: { fontSize: 14 },
   txSub: { fontSize: 12, marginTop: 2 },
   txAmount: { fontSize: 14 },
   modalOverlay: { flex: 1, justifyContent: 'flex-end' },
-  modalSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40, gap: 0, elevation: 24, shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.2, shadowRadius: 16 },
+  modalSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40, elevation: 24, shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.2, shadowRadius: 16 },
   modalHeader: { alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
   modalTitle: { fontSize: 16 },
+  amountRow: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 6 },
+  amountInput: { flex: 1, fontSize: 24, height: 36 },
   fieldLabel: { fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase', marginTop: 14, marginBottom: 6 },
   fieldInput: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, fontSize: 15, marginBottom: 2 },
-  typeRow: { gap: 6, marginBottom: 4 },
-  typeChip: { paddingVertical: 8, paddingHorizontal: 4, borderRadius: 10, borderWidth: 1 },
-  typeChipText: { fontSize: 12 },
-  submitBtn: { height: 48, borderRadius: 16, overflow: 'hidden', marginTop: 20, elevation: 6, shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 8 },
+  methodOption: { padding: 12, borderRadius: 14, borderWidth: 1, alignItems: 'center', gap: 10 },
+  methodOptionIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  radioOuter: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  radioInner: { width: 10, height: 10, borderRadius: 5 },
+  submitBtn: { height: 48, borderRadius: 16, overflow: 'hidden', elevation: 6, shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 8 },
   submitGrad: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 });
