@@ -192,21 +192,24 @@ export default function RegisterVehicleScreen() {
     }
   }, []);
 
-  const fetchYears = useCallback(async (modelId: number) => {
+  // Uses the new combined endpoint: GET /vehicles/brands/:brandId/models/:modelId
+  // Returns model details + years in a single public request.
+  const fetchModelYears = useCallback(async (brandId: number, modelId: number) => {
     setLoadingYears(true);
     setYears([]);
     setSelectedYear(null);
     setEmptyYears(false);
     try {
-      const res = await endpoints.vehicles.years(modelId);
-      const items = res?.data ?? [];
-      if (items.length === 0) setEmptyYears(true);
-      setYears(items);
+      const res = await endpoints.vehicles.modelWithYears(brandId, modelId);
+      const years = res?.data?.years ?? [];
+      if (years.length === 0) setEmptyYears(true);
+      setYears(years);
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) {
-        console.warn('[register-vehicle] 403 on years — using static fallback.');
+        console.warn('[register-vehicle] 403 on modelWithYears — using static fallback.');
         setYears(getFallbackYears());
       } else {
+        console.error('[register-vehicle] modelWithYears failed:', err);
         Alert.alert('Error', 'Could not load years. Please try again.');
       }
     } finally {
@@ -225,7 +228,9 @@ export default function RegisterVehicleScreen() {
   const handleSelectModel = (m: VehicleModel) => {
     setSelectedModel(m);
     setActivePicker(null);
-    fetchYears(m.id);
+    if (selectedBrand) {
+      fetchModelYears(selectedBrand.id, m.id);
+    }
   };
 
   const handleSelectYear = (y: VehicleYear) => {

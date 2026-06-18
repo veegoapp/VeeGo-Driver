@@ -895,6 +895,27 @@ export const endpoints = {
     years: (modelId: string | number) =>
       api.get<{ data: { id: number | null; year: number; pricingCategory: string | null }[] }>(`/vehicles/models/${modelId}/years`),
 
+    // GET /vehicles/brands/:brandId/models/:modelId  — PUBLIC (no auth required)
+    // Returns model details + its available years in a single request.
+    // Use this instead of fetching models list then years separately.
+    // SUCCESS RESPONSE: { data: { id, brandId, name, nameAr, seatCapacity, minYear, maxYear, isActive,
+    //   years: Array<{ id, year, pricingCategory }> } }
+    // If no years in DB, backend auto-generates range from minYear → current year.
+    modelWithYears: (brandId: string | number, modelId: string | number) =>
+      api.get<{
+        data: {
+          id: number;
+          brandId: number;
+          name: string;
+          nameAr: string | null;
+          seatCapacity: number | null;
+          minYear: number;
+          maxYear: number | null;
+          isActive: boolean;
+          years: { id: number | null; year: number; pricingCategory: string | null }[];
+        };
+      }>(`/vehicles/brands/${brandId}/models/${modelId}`),
+
     // GET /vehicles/colors
     // Returns the list of supported vehicle colors.
     // SUCCESS RESPONSE: { data: Array<{ id: number; nameEn: string; nameAr: string; hexCode: string | null }> }
