@@ -426,33 +426,34 @@ export const endpoints = {
     }>('/driver/me/onboarding'),
     vehicle: () => api.get<{ id?: number | string; plateLetters?: string | null; plateNumbers?: string | null; plateNumber?: string | null } | null>('/driver/me/vehicle'),
     documents: () => api.get('/driver/me/documents'),
-    uploadDocument: async (formData: FormData) => {
+    // Step 1: Upload a file to storage and receive a hosted URL back.
+    // POST /driver/upload  (multipart: field "file")
+    // Returns: { fileUrl: string }
+    uploadFile: async (formData: FormData): Promise<{ fileUrl: string }> => {
       const token = await getToken();
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
       try {
-        const response = await fetch(`${API_BASE_URL}/driver/me/documents`, {
+        const response = await fetch(`${API_BASE_URL}/driver/upload`, {
           method: 'POST',
           headers: token ? { 'Authorization': `Bearer ${token}` } : {},
           body: formData,
           signal: controller.signal,
         });
-        // DEBUG: log response to help diagnose upload issues
-        const cloned = response.clone();
-        cloned.text().then(t => {
-          console.log('[uploadDocument] status:', response.status);
-          console.log('[uploadDocument] body:', t.slice(0, 500));
-        }).catch(() => {});
         if (!response.ok) {
           let body: unknown = null;
           try { body = await response.json(); } catch { body = await response.text(); }
           throw new ApiError(response.status, response.statusText, body);
         }
-        return response;
+        return await response.json();
       } finally {
         clearTimeout(timeout);
       }
     },
+    // Step 2: Register an already-uploaded document URL with the backend.
+    // POST /driver/me/documents  (JSON body)
+    registerDocument: (type: string, fileUrl: string, mimeType = 'image/jpeg') =>
+      request<{ id: string; type: string; fileUrl: string }>('POST', '/driver/me/documents', { type, fileUrl, mimeType }),
     // Fix 2: shuttle check-in — POST /driver/checkin with selfie + optional tripId
     checkin: async (formData: FormData) => {
       const token = await getToken();

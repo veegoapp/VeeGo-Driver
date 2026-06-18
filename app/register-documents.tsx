@@ -117,14 +117,18 @@ export default function RegisterDocumentsScreen() {
     setUploaded(prev => ({ ...prev, [slot.id]: false }));
 
     try {
+      // Step 1: upload file to storage → get hosted URL
       const formData = new FormData();
       formData.append('file', {
         uri: asset.uri,
         type: 'image/jpeg',
         name: `${slot.backendType}.jpg`,
       } as unknown as Blob);
-      formData.append('type', slot.backendType);
-      await endpoints.driver.uploadDocument(formData);
+      const { fileUrl } = await endpoints.driver.uploadFile(formData);
+
+      // Step 2: register the URL with the backend
+      await endpoints.driver.registerDocument(slot.backendType, fileUrl, 'image/jpeg');
+
       setUploaded(prev => ({ ...prev, [slot.id]: true }));
     } catch (err) {
       console.error('[register-documents] upload failed for', slot.backendType, err);
