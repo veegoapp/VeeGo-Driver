@@ -57,8 +57,8 @@ export default function LoginScreen() {
     await navigateAfterAuth(accessToken);
   };
 
-  const handleOtpRequired = (phone: string) => {
-    expoRouter.replace({ pathname: '/verify-otp', params: { phone } } as any);
+  const handleOtpRequired = (phone: string, maskedPhone?: string) => {
+    expoRouter.replace({ pathname: '/verify-otp', params: { phone, maskedPhone: maskedPhone ?? phone } } as any);
   };
 
   return (
@@ -125,7 +125,7 @@ export default function LoginScreen() {
 function SignInForm({ isRTL, onSuccess, onOtpRequired }: {
   isRTL: boolean;
   onSuccess: (at: string, rt: string) => void;
-  onOtpRequired: (phone: string) => void;
+  onOtpRequired: (phone: string, maskedPhone?: string) => void;
 }) {
   const [credential, setCredential] = useState('');
   const [password, setPassword] = useState('');
@@ -228,7 +228,7 @@ function SignInForm({ isRTL, onSuccess, onOtpRequired }: {
   );
 }
 
-function SignUpForm({ isRTL, onOtpRequired }: { isRTL: boolean; onOtpRequired: (phone: string) => void }) {
+function SignUpForm({ isRTL, onOtpRequired }: { isRTL: boolean; onOtpRequired: (phone: string, maskedPhone?: string) => void }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -259,7 +259,7 @@ function SignUpForm({ isRTL, onOtpRequired }: { isRTL: boolean; onOtpRequired: (
         nationalId: nationalId.trim() || undefined,
       });
       // Phase 2: register returns requiresOtp, not tokens
-      onOtpRequired(result.phone);
+      onOtpRequired(result.phone, result.maskedPhone);
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {

@@ -24,7 +24,7 @@ const RESEND_COOLDOWN = 60;
 
 export default function VerifyOtpScreen() {
   const insets = useSafeAreaInsets();
-  const { phone } = useLocalSearchParams<{ phone: string }>();
+  const { phone, maskedPhone: maskedPhoneParam } = useLocalSearchParams<{ phone: string; maskedPhone?: string }>();
   const { login } = useAuth();
 
   const [otp, setOtp] = useState('');
@@ -88,12 +88,7 @@ export default function VerifyOtpScreen() {
     }
   };
 
-  // Masked phone display: +20100***567
-  const maskedPhone = phone
-    ? phone.length > 7
-      ? phone.slice(0, 5) + '***' + phone.slice(-3)
-      : phone
-    : '';
+  const maskedPhone = maskedPhoneParam || phone || '';
 
   return (
     <LinearGradient colors={['#f4f4fb', '#ededf4']} style={s.root}>

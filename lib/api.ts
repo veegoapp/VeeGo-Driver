@@ -292,7 +292,7 @@ export const endpoints = {
         | { requiresOtp: true; phone: string; retryAfter?: number }
       >('POST', '/driver/auth/login', { credential, password }),
     driverRegister: (data: { name: string; email: string; phone: string; password: string; licenseNumber?: string; nationalId?: string }) =>
-      request<{ requiresOtp: true; phone: string }>(
+      request<{ requiresOtp: true; phone: string; maskedPhone: string }>(
         'POST', '/driver/auth/register', data
       ),
     sendOtp: (phone: string) =>
