@@ -143,7 +143,7 @@ function SignInForm({ isRTL, onSuccess, onOtpRequired }: {
     try {
       const result = await endpoints.auth.driverLogin(credential.trim(), password);
       if ('requiresOtp' in result && result.requiresOtp) {
-        onOtpRequired(result.phone);
+        onOtpRequired(result.phone, result.maskedPhone);
         return;
       }
       const r = result as { accessToken: string; refreshToken: string };

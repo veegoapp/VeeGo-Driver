@@ -289,7 +289,7 @@ export const endpoints = {
     driverLogin: (credential: string, password: string) =>
       request<
         | { accessToken: string; refreshToken: string; user: Record<string, unknown>; driver: Record<string, unknown> }
-        | { requiresOtp: true; phone: string; retryAfter?: number }
+        | { requiresOtp: true; phone: string; maskedPhone: string; retryAfter?: number }
       >('POST', '/driver/auth/login', { credential, password }),
     driverRegister: (data: { name: string; email: string; phone: string; password: string; licenseNumber?: string; nationalId?: string }) =>
       request<{ requiresOtp: true; phone: string; maskedPhone: string }>(
