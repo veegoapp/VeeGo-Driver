@@ -1,5 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowDownLeft, ArrowUpRight, Briefcase, FileText, Plus, Trash2, Wallet, X } from 'lucide-react-native';
+import { ArrowDownLeft, ArrowUpRight, Briefcase, FileText, Plus, Trash2, Wallet, Wrench, X } from 'lucide-react-native';
 import React, { useRef, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Animated, KeyboardAvoidingView, LayoutChangeEvent, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,8 +7,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
-import { endpoints, api } from '@/lib/api';
-import type { ServiceControl } from '@/lib/serviceControlContext';
+import { endpoints } from '@/lib/api';
+import { useSocket } from '@/lib/socketContext';
+import { SOCKET_EVENTS } from '@/constants/socketEvents';
 
 type WalletBalance = { balance: number };
 type Transaction = { id: string; title: string; sub: string; amount: number; incoming: boolean };
@@ -22,7 +23,7 @@ type EarningsSummary = {
   };
   recentEarnings: { amount: string }[];
 };
-type PayoutMethod = { id: string; name?: string; last4?: string; bankName?: string; type?: string; isDefault?: boolean; accountNumber?: string; accountName?: string; phoneNumber?: string };
+type PayoutMethod = { id: string; name?: string; description?: string; isAvailable?: boolean; last4?: string; bankName?: string; type?: string; isDefault?: boolean; accountNumber?: string; accountName?: string; phoneNumber?: string };
 type MethodType = 'bank_transfer' | 'vodafone_cash' | 'instapay';
 
 const TAB_BAR_HEIGHT = 96;
@@ -55,46 +56,56 @@ export default function ShuttleWalletScreen() {
     scrollRef.current?.scrollTo({ y: txSectionY, animated: true });
   };
 
-  const { data: serviceControlRaw } = useQuery({
-    queryKey: ['services-control'],
-    queryFn: () => api.get<unknown>('/services/control'),
+  const { socket } = useSocket();
+
+  type WalletFeature = { isEnabled: boolean; displayMode: 'live' | 'coming_soon' | 'maintenance'; unavailableMessage?: string | null };
+  const [walletFeatureOverride, setWalletFeatureOverride] = useState<WalletFeature | null>(null);
+
+  const { data: walletFeatureRaw } = useQuery({
+    queryKey: ['wallet-feature'],
+    queryFn: endpoints.wallet.feature,
     staleTime: 60_000,
   });
 
-  const walletControl: ServiceControl | undefined = (() => {
-    const raw = serviceControlRaw as { services?: ServiceControl[]; data?: ServiceControl[]; serviceControls?: ServiceControl[] } | ServiceControl[] | undefined;
-    const list: ServiceControl[] = Array.isArray(raw) ? raw : (raw?.services ?? raw?.data ?? raw?.serviceControls ?? []);
-    return list.find(s => s.serviceType.toLowerCase() === 'wallet');
+  const walletFeature: WalletFeature = walletFeatureOverride ?? (() => {
+    const raw = walletFeatureRaw as { data?: WalletFeature } | WalletFeature | undefined;
+    return (raw as { data?: WalletFeature })?.data ?? (raw as WalletFeature) ?? { isEnabled: false, displayMode: 'coming_soon' };
   })();
 
-  const walletComingSoon = walletControl
-    ? (!walletControl.isEnabled || walletControl.displayMode === 'coming_soon')
-    : false;
+  // Real-time toggle from admin
+  useEffect(() => {
+    if (!socket) return;
+    const handler = (payload: WalletFeature) => setWalletFeatureOverride(payload);
+    socket.on(SOCKET_EVENTS.DRIVER_WALLET_FEATURE, handler);
+    return () => { socket.off(SOCKET_EVENTS.DRIVER_WALLET_FEATURE, handler); };
+  }, [socket]);
+
+  const walletLive = walletFeature.isEnabled && walletFeature.displayMode === 'live';
 
   const { data: balanceRaw, isLoading: balanceLoading, isError: balanceError } = useQuery({
     queryKey: ['wallet-balance'],
     queryFn: endpoints.wallet.balance,
-    enabled: !walletComingSoon,
+    enabled: walletLive,
   });
   const { data: txRaw, isLoading: txLoading, isError: txError } = useQuery({
     queryKey: ['wallet-transactions'],
     queryFn: endpoints.wallet.transactions,
-    enabled: !walletComingSoon,
+    enabled: walletLive,
   });
   const { data: weeklyRaw, isLoading: weeklyLoading } = useQuery({
     queryKey: ['earnings-weekly'],
     queryFn: () => endpoints.earnings.weekly(),
-    enabled: !walletComingSoon,
+    enabled: walletLive,
   });
   const { data: summaryRaw, isLoading: summaryLoading } = useQuery({
     queryKey: ['earnings-summary'],
     queryFn: () => endpoints.earnings.summary(),
-    enabled: !walletComingSoon,
+    enabled: walletLive,
   });
   const { data: payoutMethodsRaw, isLoading: methodsLoading } = useQuery({
     queryKey: ['payout-methods'],
     queryFn: endpoints.wallet.payoutMethods,
-    enabled: !walletComingSoon,
+    enabled: walletLive,
   });
 
   const _balRaw = balanceRaw as WalletBalance | { balance?: number; wallet?: { balance?: number } } | undefined;
@@ -151,12 +162,17 @@ export default function ShuttleWalletScreen() {
     }
     setIsPayingOut(true);
     try {
-      await endpoints.wallet.payout(amount);
+      const res = await endpoints.wallet.payout(amount, methodType) as { ok?: boolean; message?: string; error?: string; available?: number } | undefined;
+      if (res && res.error) {
+        const availableNote = res.available != null ? ` (${t.available}: ${res.available.toFixed(2)} ${t.egp})` : '';
+        Alert.alert('Error', `${res.error}${availableNote}`);
+        return;
+      }
       await queryClient.invalidateQueries({ queryKey: ['wallet-balance'] });
       await queryClient.invalidateQueries({ queryKey: ['wallet-transactions'] });
       setPayoutVisible(false);
       setPayoutAmount('');
-      Alert.alert('Success', `${amount.toFixed(2)} ${t.egp} payout initiated.`);
+      Alert.alert('Success', res?.message ?? `${amount.toFixed(2)} ${t.egp} payout initiated.`);
     } catch {
       Alert.alert('Error', 'Payout failed. Please try again.');
     } finally {
@@ -216,23 +232,30 @@ export default function ShuttleWalletScreen() {
     ]);
   };
 
-  if (walletComingSoon) {
+  if (!walletLive) {
+    const isMaintenance = walletFeature.displayMode === 'maintenance';
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, gap: 16 }}>
           <View style={[styles.comingSoonIcon, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
-            <Wallet size={36} color={colors.mutedForeground} strokeWidth={1.5} />
+            {isMaintenance
+              ? <Wrench size={36} color={colors.mutedForeground} strokeWidth={1.5} />
+              : <Wallet size={36} color={colors.mutedForeground} strokeWidth={1.5} />
+            }
           </View>
           <Text style={[styles.comingSoonTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: 'center' }]}>
             {t.wallet_title}
           </Text>
           <View style={[styles.comingSoonBadge, { backgroundColor: '#1e1e2812', borderColor: '#1e1e2830' }]}>
             <Text style={[styles.comingSoonBadgeText, { color: '#2d2d42', fontFamily: 'Inter_700Bold' }]}>
-              Coming Soon
+              {isMaintenance ? 'Under Maintenance' : 'Coming Soon'}
             </Text>
           </View>
           <Text style={[styles.comingSoonSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: 'center' }]}>
-            {walletControl?.message ?? 'Digital wallet & payout features are coming in a future update.'}
+            {walletFeature.unavailableMessage ?? (isMaintenance
+              ? 'Wallet is temporarily under maintenance. Please check back soon.'
+              : 'Digital wallet & payout features are coming in a future update.'
+            )}
           </Text>
         </View>
       </View>

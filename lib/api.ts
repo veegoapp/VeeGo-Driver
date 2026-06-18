@@ -498,13 +498,12 @@ export const endpoints = {
   },
 
   wallet: {
+    feature: () => api.get('/config/driver-wallet-feature'),
     balance: () => api.get('/driver/wallet/balance'),
-    transactions: () => api.get('/driver/earnings/history'),
-    payout: (amount: number) => api.post('/driver/wallet/payout', { amount }),
+    transactions: (page = 1, limit = 20) => api.get(`/driver/earnings/history?page=${page}&limit=${limit}`),
+    payout: (amount: number, method: string) => api.post('/driver/wallet/payout', { amount, method }),
     payoutMethods: () => api.get('/driver/wallet/payout-methods'),
-    /* defined — not yet connected to UI */
     addPayoutMethod: (data: unknown) => api.post('/driver/wallet/payout-methods', data),
-    /* defined — not yet connected to UI */
     removePayoutMethod: (id: string) => api.del(`/driver/wallet/payout-methods/${id}`),
   },
 
