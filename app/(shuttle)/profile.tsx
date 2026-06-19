@@ -1,5 +1,6 @@
 import Constants from 'expo-constants';
 import * as ImagePicker from 'expo-image-picker';
+import * as Clipboard from 'expo-clipboard';
 import { router } from 'expo-router';
 import {
   Camera,
@@ -13,12 +14,12 @@ import {
   Lock,
   LogOut,
   MessageSquare,
-  Settings,
   Shield,
   Star,
   Target,
   TrendingUp,
   Truck,
+  User,
 } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
@@ -127,13 +128,9 @@ export default function ShuttleProfileScreen() {
   // ── Clipboard ─────────────────────────────────────────────────────────
   const handleCopyCode = async () => {
     try {
-      if (typeof navigator !== 'undefined' && navigator.clipboard) {
-        await navigator.clipboard.writeText(referralCode);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2500);
-        return;
-      }
-      Alert.alert(t.referral_code_section, referralCode);
+      await Clipboard.setStringAsync(referralCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
     } catch {
       Alert.alert(t.referral_code_section, referralCode);
     }
@@ -441,20 +438,13 @@ export default function ShuttleProfileScreen() {
             isRTL={isRTL}
           />
           <View style={[styles.divider, { backgroundColor: BORDER_COLOR }]} />
-          {/* Settings row */}
-          <Pressable
-            onPress={() => router.push('/settings' as never)}
-            style={({ pressed }) => [styles.menuRow, { flexDirection: R, backgroundColor: pressed ? colors.secondary + '55' : 'transparent' }]}
-          >
-            <View style={[styles.menuIconWrap, { backgroundColor: colors.secondary }]}>
-              <Settings size={18} color={colors.foreground} strokeWidth={2} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.menuLabel, { color: colors.foreground, textAlign: TA }]}>{t.settings_label}</Text>
-              <Text style={[styles.menuSub, { color: colors.mutedForeground, textAlign: TA }]}>{t.push_notifs}</Text>
-            </View>
-            <ChevronRight size={16} color={colors.mutedForeground} strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
-          </Pressable>
+          <MenuRow
+            icon={<User size={18} color={colors.foreground} strokeWidth={2} />}
+            label={t.profile_info_label}
+            onPress={() => router.push('/personal-info')}
+            colors={colors}
+            isRTL={isRTL}
+          />
           <View style={[styles.divider, { backgroundColor: BORDER_COLOR }]} />
           {/* Language inline toggle */}
           <View style={[styles.menuRow, { flexDirection: R }]}>
