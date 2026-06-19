@@ -7,7 +7,7 @@ import { ServiceBlockedScreen } from '@/components/ServiceBlockedScreen';
 
 const SERVICE_NAMES: Record<string, string> = {
   CAR: 'Car Rides',
-  MOTOR: 'Motorbike',
+  SCOOTER: 'Scooter',
   DELIVERY: 'Delivery',
 };
 

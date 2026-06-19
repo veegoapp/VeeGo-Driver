@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from './authContext';
 import { getUserIdFromToken } from './auth';
 
-export type ServiceType = 'CAR' | 'MOTOR' | 'DELIVERY' | 'SHUTTLE';
+export type ServiceType = 'CAR' | 'SCOOTER' | 'DELIVERY' | 'SHUTTLE';
 
 // Per-user map key — value is JSON: { [userId]: ServiceType }
 const SERVICE_MAP_KEY = 'veego_service_map';
@@ -50,16 +50,32 @@ export function ServiceProvider({ children }: { children: React.ReactNode }) {
     ]).then(([storedTheme, mapJson, deviceService]) => {
       if (storedTheme !== null) setIsDarkModeState(storedTheme === 'dark');
 
+      // One-time migration: 'MOTOR' was renamed to 'SCOOTER' in the app.
+      // Any value read from storage is migrated before use and written back
+      // so subsequent reads are already correct.
+      const migrate = (v: string | null | undefined): ServiceType | null => {
+        if (!v) return null;
+        return (v === 'MOTOR' ? 'SCOOTER' : v) as ServiceType;
+      };
+
       // Priority 1: per-user map entry
       let resolvedService: ServiceType | null = null;
       if (userId && mapJson) {
-        const map = JSON.parse(mapJson) as Record<string, ServiceType>;
-        resolvedService = map[userId] ?? null;
+        const map = JSON.parse(mapJson) as Record<string, string>;
+        const raw = map[userId] ?? null;
+        resolvedService = migrate(raw);
+        if (raw === 'MOTOR') {
+          map[userId] = 'SCOOTER';
+          AsyncStorage.setItem(SERVICE_MAP_KEY, JSON.stringify(map)).catch(() => {});
+        }
       }
 
       // Priority 2: device-level fallback (covers null userId or missing entry)
-      if (!resolvedService && deviceService) {
-        resolvedService = deviceService as ServiceType;
+      if (!resolvedService) {
+        resolvedService = migrate(deviceService);
+        if (deviceService === 'MOTOR') {
+          AsyncStorage.setItem(DEVICE_SERVICE_KEY, 'SCOOTER').catch(() => {});
+        }
       }
 
       if (resolvedService) {

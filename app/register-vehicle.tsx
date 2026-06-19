@@ -57,7 +57,7 @@ type PickerType = 'brand' | 'model' | 'year' | 'color' | null;
 function toApiServiceType(t: string): string {
   const map: Record<string, string> = {
     CAR: 'car',
-    MOTOR: 'scooter',
+    SCOOTER: 'scooter',
     DELIVERY: 'delivery',
     SHUTTLE: 'shuttle',
   };
