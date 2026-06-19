@@ -113,12 +113,13 @@ function RootLayoutNav() {
         <Stack.Screen name="(shuttle)" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="ride/[rideId]" />
         <Stack.Screen name="ratings" />
-        <Stack.Screen name="settings" />
         <Stack.Screen name="support" />
         <Stack.Screen name="safety" />
         <Stack.Screen name="documents" />
         <Stack.Screen name="vehicle" />
         <Stack.Screen name="messages" />
+        <Stack.Screen name="personal-info" options={{ animation: 'slide_from_right', gestureEnabled: true }} />
+        <Stack.Screen name="bonus-targets" options={{ animation: 'slide_from_right', gestureEnabled: true }} />
         <Stack.Screen name="shuttle/trip-active" />
         <Stack.Screen name="shuttle/boarding" />
         <Stack.Screen name="shuttle/trip-details" />
