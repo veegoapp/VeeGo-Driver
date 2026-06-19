@@ -1031,7 +1031,27 @@ export const endpoints = {
     summary: (range: 'today' | 'week' | 'month') =>
       api.get<FinancialAnalytics>(`/driver/financial-analytics?range=${range}`),
   },
+
+  tracking: {
+    sendLocation: (data: LocationSnapshot) =>
+      api.post<{ success: boolean }>('/tracking/location', data),
+    sendBatch: (locations: LocationSnapshot[]) =>
+      api.post<{ success: boolean; inserted: number }>('/tracking/locations/batch', { locations }),
+  },
 };
+
+export interface LocationSnapshot {
+  entityType: 'driver';
+  latitude: number;
+  longitude: number;
+  speed?: number;
+  heading?: number;
+  accuracy?: number;
+  recordedAt: string;
+  tripId?: number | null;
+  rideId?: number | null;
+  isOfflineSync: boolean;
+}
 
 export interface RideMessage {
   id: number;
