@@ -250,7 +250,7 @@ export default function DocumentsScreen() {
                             <Text style={[s.statusText, { color: '#27ae60' }]}>{docStatus === 'approved' ? t.doc_status_approved : t.doc_status_verified_badge}</Text>
                           </View>
                           {apiDoc?.expires && (
-                            <Text style={[s.slotHint, { marginTop: 2 }]}>Exp: {apiDoc.expires}</Text>
+                            <Text style={[s.slotHint, { marginTop: 2 }]}>{t.doc_expires_label}: {apiDoc.expires}</Text>
                           )}
                         </View>
                       ) : isExpiring ? (
@@ -264,7 +264,7 @@ export default function DocumentsScreen() {
                             <Text style={[s.statusText, { color: '#e67e22' }]}>{t.doc_status_expiring}</Text>
                           </View>
                           {apiDoc?.expires && (
-                            <Text style={[s.slotHint, { marginTop: 2 }]}>Exp: {apiDoc.expires}</Text>
+                            <Text style={[s.slotHint, { marginTop: 2 }]}>{t.doc_expires_label}: {apiDoc.expires}</Text>
                           )}
                           <View style={s.cameraBtn}>
                             <Camera size={14} color="white" />
@@ -297,7 +297,7 @@ export default function DocumentsScreen() {
                             <Text style={[s.statusText, { color: '#c0392b' }]}>{t.doc_status_expired}</Text>
                           </View>
                           {apiDoc?.expires && (
-                            <Text style={[s.slotHint, { marginTop: 2 }]}>Exp: {apiDoc.expires}</Text>
+                            <Text style={[s.slotHint, { marginTop: 2 }]}>{t.doc_expires_label}: {apiDoc.expires}</Text>
                           )}
                           <View style={s.cameraBtn}>
                             <Camera size={14} color="white" />

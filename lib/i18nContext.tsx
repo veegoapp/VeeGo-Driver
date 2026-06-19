@@ -966,6 +966,7 @@ const en = {
   doc_status_under_review: 'Under Review',
   doc_status_expired: 'Expired',
   doc_retake_photo: 'Retake',
+  doc_expires_label: 'Exp',
   doc_criminal_required_note: 'Criminal record becomes required after 30 trips.',
   // ── Safety screen ─────────────────────────────────────────────────────────────
   call_police_label: 'Emergency · 122',
@@ -1956,6 +1957,7 @@ const ar: typeof en = {
   doc_status_under_review: 'قيد المراجعة',
   doc_status_expired: 'منتهي الصلاحية',
   doc_retake_photo: 'إعادة التصوير',
+  doc_expires_label: 'ينتهي',
   doc_criminal_required_note: 'السجل الجنائي يصبح مطلوباً بعد 30 رحلة.',
   // ── Safety screen ─────────────────────────────────────────────────────────────
   call_police_label: 'طوارئ · 122',
