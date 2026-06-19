@@ -26,7 +26,7 @@ const PILL_PX = 8;
 export function BottomTabBar({ state, navigation }: TabBarProps) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { t } = useI18n();
+  const { t, isRTL } = useI18n();
   const activeIndex = state.index;
   const [tabWidth, setTabWidth] = useState(0);
   const pillX = useRef(new Animated.Value(0)).current;
@@ -34,7 +34,9 @@ export function BottomTabBar({ state, navigation }: TabBarProps) {
 
   useEffect(() => {
     if (tabWidth <= 0) return;
-    const targetX = activeIndex * tabWidth;
+    const targetX = isRTL
+      ? (TAB_ITEMS.length - 1 - activeIndex) * tabWidth
+      : activeIndex * tabWidth;
     Animated.spring(pillX, {
       toValue: targetX,
       stiffness: 380,
