@@ -1,12 +1,13 @@
 import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { Award, ChevronRight, LogOut, Moon, Star, Sun } from 'lucide-react-native';
+import { Award, ChevronRight, Copy, LogOut, Moon, Star, Sun } from 'lucide-react-native';
 import { FeatherIcon } from '@/lib/iconMap';
-import React from 'react';
-import { ActivityIndicator, Image, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { ActivityIndicator, Alert, Image, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
+import * as Clipboard from 'expo-clipboard';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useService } from '@/lib/serviceContext';
@@ -24,6 +25,7 @@ type DriverProfile = {
   acceptanceRate: number;
   cancelRate: number;
   level: string;
+  referralCode?: string;
   vehicle?: { make: string; model: string; plate: string };
 };
 
@@ -34,6 +36,7 @@ export default function ProfileScreen() {
   const { isDarkMode, setIsDarkMode } = useService();
   const { t, isRTL } = useI18n();
   const { logout } = useAuth();
+  const [codeCopied, setCodeCopied] = useState(false);
 
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
   const TA = isRTL ? 'right' as const : 'left' as const;
@@ -43,6 +46,14 @@ export default function ProfileScreen() {
     queryFn: endpoints.driver.me as () => Promise<DriverProfile>,
   });
   const driver = driverRaw;
+
+  const handleCopyCode = async () => {
+    const code = driver?.referralCode;
+    if (!code) return;
+    await Clipboard.setStringAsync(code);
+    setCodeCopied(true);
+    setTimeout(() => setCodeCopied(false), 2500);
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -73,6 +84,14 @@ export default function ProfileScreen() {
                 <Text style={[styles.driverMeta, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold', textAlign: 'center' }]}>
                   {driver?.level ?? '—'} · {driver?.trips ?? '—'} {t.trips}
                 </Text>
+                {driver?.referralCode ? (
+                  <Pressable onPress={handleCopyCode} style={[styles.driverCodeRow, { backgroundColor: colors.secondary + 'B3', borderColor: colors.border }]}>
+                    <Text style={[styles.driverCodeLabel, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>{t.driver_code_label}</Text>
+                    <Text style={[styles.driverCodeValue, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{driver.referralCode}</Text>
+                    <Copy size={14} color={codeCopied ? colors.primary : colors.mutedForeground} strokeWidth={2} />
+                    {codeCopied && <Text style={[styles.codeCopiedText, { color: colors.primary, fontFamily: 'Inter_600SemiBold' }]}>{t.driver_code_copied}</Text>}
+                  </Pressable>
+                ) : null}
                 <View style={[styles.statsGrid, { flexDirection: R }]}>
                   <MiniStat label={t.rating_stat} value={driver?.rating?.toFixed(2) ?? '—'} icon={<Star size={14} color={colors.accent} fill={colors.accent} strokeWidth={2} />} colors={colors} />
                   <MiniStat label={t.accept_rate} value={driver?.acceptanceRate != null ? `${driver.acceptanceRate}%` : '—'} colors={colors} />
@@ -84,6 +103,7 @@ export default function ProfileScreen() {
         </GlassView>
 
         <GlassView style={styles.menuGroup} borderRadius={20}>
+          <MenuItem icon="user" label={t.profile_info_label} onPress={() => router.push('/personal-info')} colors={colors} isRTL={isRTL} />
           <MenuItem icon="star" label={t.ratings_reviews} sub={driver?.trips ? `${driver.trips} reviews` : '—'} onPress={() => router.push('/ratings')} colors={colors} isRTL={isRTL} />
           <MenuItem
             icon="truck"
@@ -95,15 +115,14 @@ export default function ProfileScreen() {
           />
           <MenuItem icon="file-text" label={t.documents_label} onPress={() => router.push('/documents')} colors={colors} isRTL={isRTL} />
           <MenuItem icon="target" label={t.bonus_targets} onPress={() => router.push('/bonus-targets')} colors={colors} isRTL={isRTL} />
-          <MenuItem icon="clock" label="Ride History" sub="Past rides, fares & ratings" onPress={() => router.push('/ride/history' as any)} colors={colors} isRTL={isRTL} />
-          <MenuItem icon="shield" label={t.safety_toolkit} sub="Emergency, verification" onPress={() => router.push('/safety')} colors={colors} isRTL={isRTL} last />
+          <MenuItem icon="clock" label={t.ride_history_label} sub={t.ride_history_sub} onPress={() => router.push('/ride/history' as any)} colors={colors} isRTL={isRTL} />
+          <MenuItem icon="shield" label={t.safety_toolkit} sub={t.safety_sub} onPress={() => router.push('/safety')} colors={colors} isRTL={isRTL} last />
         </GlassView>
 
         <GlassView style={[styles.menuGroup, { marginTop: 12 }]} borderRadius={20}>
           <MenuItem icon="help-circle" label={t.help_support} onPress={() => router.push('/support')} colors={colors} isRTL={isRTL} />
           <MenuItem icon="message-square" label={t.messages_label} onPress={() => router.push('/messages')} colors={colors} isRTL={isRTL} />
-          <MenuItem icon="settings" label={t.settings_label} onPress={() => router.push('/settings')} colors={colors} isRTL={isRTL} />
-          <View style={[styles.menuItem, { flexDirection: R, borderTopWidth: 1, borderTopColor: colors.border }]}>
+          <View style={[styles.menuItem, { flexDirection: R, borderTopWidth: 1, borderTopColor: colors.border, borderBottomWidth: 0 }]}>
             <View style={[styles.menuIcon, { backgroundColor: colors.secondary + 'B3' }]}>
               {isDarkMode
                 ? <Moon size={18} color={colors.foreground} strokeWidth={2} />
@@ -180,6 +199,10 @@ const styles = StyleSheet.create({
   awardBadge: { position: 'absolute', bottom: -4, right: -4, width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', elevation: 4, shadowColor: '#2d2d42', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.35, shadowRadius: 8 },
   driverName: { fontSize: 20, marginTop: 12 },
   driverMeta: { fontSize: 12, marginTop: 4 },
+  driverCodeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 12, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8, marginTop: 12 },
+  driverCodeLabel: { fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5 },
+  driverCodeValue: { fontSize: 14, flex: 1 },
+  codeCopiedText: { fontSize: 11 },
   statsGrid: { gap: 8, marginTop: 20, width: '100%' },
   miniStat: { flex: 1, borderRadius: 16, paddingVertical: 10, paddingHorizontal: 4, alignItems: 'center' },
   miniStatValue: { flexDirection: 'row', alignItems: 'center', gap: 4 },

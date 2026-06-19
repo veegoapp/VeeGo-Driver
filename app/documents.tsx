@@ -1,4 +1,4 @@
-import { CheckCircle2, Camera, CreditCard, Car, FileText, Info, Award, Shield, AlertCircle, Clock } from 'lucide-react-native';
+import { CheckCircle2, Camera, CreditCard, Car, FileText, Info, Award, Shield, AlertCircle, Clock, ArrowLeft } from 'lucide-react-native';
 
 const DOC_ICONS: Record<string, React.ComponentType<{ size: number; color: string }>> = {
   card: CreditCard,
@@ -7,7 +7,6 @@ const DOC_ICONS: Record<string, React.ComponentType<{ size: number; color: strin
   car: Car,
   shield: Shield,
 };
-import { ArrowLeft, ArrowRight } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
@@ -27,6 +26,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { endpoints } from '@/lib/api';
 import { useI18n } from '@/lib/i18nContext';
+import { useColors } from '@/hooks/useColors';
 
 type DocSlot = {
   id: string;
@@ -39,7 +39,7 @@ type DocSlot = {
 type ApiDocument = {
   id: string;
   title: string;
-  status: 'verified' | 'pending' | 'expiring' | 'rejected';
+  status: 'verified' | 'approved' | 'pending' | 'expiring' | 'expired' | 'rejected';
   expires?: string;
 };
 
@@ -48,8 +48,8 @@ const MANDATORY_IDS = ['id_front', 'id_back', 'vlic_front', 'vlic_back', 'dlic_f
 export default function DocumentsScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useI18n();
+  const colors = useColors();
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
-  const botPad = Platform.OS === 'web' ? 34 : insets.bottom;
   const queryClient = useQueryClient();
 
   const SECTIONS: { title: string; slots: DocSlot[] }[] = [
@@ -107,6 +107,10 @@ export default function DocumentsScreen() {
   }
 
   const captureDoc = async (slot: DocSlot) => {
+    const apiDoc = apiStatusMap[slot.id];
+    const isApproved = apiDoc?.status === 'verified' || apiDoc?.status === 'approved';
+    if (isApproved) return;
+
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     let result: ImagePicker.ImagePickerResult;
     if (status === 'granted') {
@@ -136,8 +140,8 @@ export default function DocumentsScreen() {
       try {
         const formData = new FormData();
         formData.append('file', { uri: asset.uri, type: 'image/jpeg', name: `${slot.id}.jpg` } as unknown as Blob);
-        formData.append('type', slot.id);
-        await endpoints.driver.uploadDocument(formData);
+        const { fileUrl } = await endpoints.driver.uploadFile(formData);
+        await endpoints.driver.registerDocument(slot.id, fileUrl);
         await queryClient.invalidateQueries({ queryKey: ['documents'] });
       } catch {
         // best-effort: local preview stays, upload can be retried
@@ -147,25 +151,27 @@ export default function DocumentsScreen() {
     }
   };
 
-  const slotDone = (slot: DocSlot) => !!photos[slot.id] || apiStatusMap[slot.id]?.status === 'verified';
-  const mandatoryDone = MANDATORY_IDS.every(id => slotDone({ id } as DocSlot));
+  const slotDone = (slot: DocSlot) => {
+    if (photos[slot.id]) return true;
+    const status = apiStatusMap[slot.id]?.status;
+    return status === 'verified' || status === 'approved';
+  };
   const totalDone = SECTIONS.flatMap(s => s.slots).filter(sl => slotDone(sl)).length;
   const totalSlots = SECTIONS.flatMap(s => s.slots).length;
 
   return (
-    <View style={[s.root, { backgroundColor: '#fafafd' }]}>
+    <View style={[s.root, { backgroundColor: colors.background }]}>
       <ScrollView
-        contentContainerStyle={{ paddingTop: topPad + 16, paddingBottom: botPad + 120, paddingHorizontal: 24 }}
+        contentContainerStyle={{ paddingTop: topPad + 16, paddingBottom: 40, paddingHorizontal: 24 }}
         showsVerticalScrollIndicator={false}
       >
-        <TouchableOpacity onPress={() => router.back()} style={s.backBtn} activeOpacity={0.7}>
-          <ArrowLeft size={20} color="#1e1e28" strokeWidth={2} />
+        <TouchableOpacity onPress={() => router.back()} style={[s.backBtn, { backgroundColor: colors.glass, borderColor: colors.border }]} activeOpacity={0.7}>
+          <ArrowLeft size={20} color={colors.foreground} strokeWidth={2} />
         </TouchableOpacity>
 
         <View style={s.header}>
-          <Text style={s.step}>{t.reg_step_3_of_4}</Text>
-          <Text style={s.title}>{t.docs_title}</Text>
-          <Text style={s.sub}>{t.docs_sub}</Text>
+          <Text style={[s.title, { color: colors.foreground }]}>{t.docs_profile_title}</Text>
+          <Text style={[s.sub, { color: colors.mutedForeground }]}>{t.docs_profile_sub}</Text>
         </View>
 
         {isLoading ? (
@@ -181,26 +187,27 @@ export default function DocumentsScreen() {
         ) : null}
 
         <View style={s.progress}>
-          <View style={s.progressBar}>
-            <View style={[s.progressFill, { width: `${(totalDone / totalSlots) * 100}%` }]} />
+          <View style={[s.progressBar, { backgroundColor: colors.secondary }]}>
+            <View style={[s.progressFill, { width: `${(totalDone / totalSlots) * 100}%`, backgroundColor: colors.primary }]} />
           </View>
-          <Text style={s.progressText}>{t.docs_progress.replace('{done}', String(totalDone)).replace('{total}', String(totalSlots))}</Text>
+          <Text style={[s.progressText, { color: colors.mutedForeground }]}>{t.docs_progress.replace('{done}', String(totalDone)).replace('{total}', String(totalSlots))}</Text>
         </View>
 
         <View style={s.sections}>
           {SECTIONS.map((section) => (
             <View key={section.title} style={s.section}>
-              <Text style={s.sectionTitle}>{section.title}</Text>
+              <Text style={[s.sectionTitle, { color: colors.foreground }]}>{section.title}</Text>
               <View style={s.slotsRow}>
                 {section.slots.map((slot) => {
                   const uri = photos[slot.id];
                   const apiDoc = apiStatusMap[slot.id];
                   const isUploading = uploading[slot.id];
                   const docStatus = apiDoc?.status;
-                  const isVerified = docStatus === 'verified';
+                  const isVerified = docStatus === 'verified' || docStatus === 'approved';
                   const isExpiring = docStatus === 'expiring';
                   const isPending = docStatus === 'pending';
                   const isRejected = docStatus === 'rejected';
+                  const isExpired = docStatus === 'expired';
 
                   return (
                     <TouchableOpacity
@@ -209,11 +216,11 @@ export default function DocumentsScreen() {
                         s.slot,
                         (uri || isVerified) && s.slotDone,
                         isExpiring && s.slotExpiring,
-                        isRejected && s.slotRejected,
+                        (isRejected || isExpired) && s.slotRejected,
                         section.slots.length === 1 && s.slotFull,
                       ]}
-                      onPress={() => captureDoc(slot)}
-                      activeOpacity={0.85}
+                      onPress={() => !isVerified ? captureDoc(slot) : undefined}
+                      activeOpacity={isVerified ? 1 : 0.85}
                     >
                       {uri ? (
                         <>
@@ -229,7 +236,7 @@ export default function DocumentsScreen() {
                           )}
                           <TouchableOpacity style={s.slotRetake} onPress={() => captureDoc(slot)} activeOpacity={0.8}>
                             <Camera size={12} color="#1e1e28" />
-                            <Text style={s.slotRetakeText}>Retake</Text>
+                            <Text style={s.slotRetakeText}>{t.doc_retake_photo}</Text>
                           </TouchableOpacity>
                         </>
                       ) : isVerified ? (
@@ -240,7 +247,7 @@ export default function DocumentsScreen() {
                           <Text style={s.slotLabel}>{slot.label}</Text>
                           <View style={[s.statusBadge, { backgroundColor: '#e6f9f0' }]}>
                             <CheckCircle2 size={10} color="#27ae60" />
-                            <Text style={[s.statusText, { color: '#27ae60' }]}>Verified</Text>
+                            <Text style={[s.statusText, { color: '#27ae60' }]}>{docStatus === 'approved' ? t.doc_status_approved : t.doc_status_verified_badge}</Text>
                           </View>
                           {apiDoc?.expires && (
                             <Text style={[s.slotHint, { marginTop: 2 }]}>Exp: {apiDoc.expires}</Text>
@@ -279,6 +286,24 @@ export default function DocumentsScreen() {
                             <Text style={s.cameraBtnText}>{t.doc_reupload}</Text>
                           </View>
                         </View>
+                      ) : isExpired ? (
+                        <View style={s.slotEmpty}>
+                          <View style={[s.slotIconBox, { backgroundColor: '#fdecea' }]}>
+                            <AlertCircle size={22} color="#c0392b" />
+                          </View>
+                          <Text style={s.slotLabel}>{slot.label}</Text>
+                          <View style={[s.statusBadge, { backgroundColor: '#fdecea' }]}>
+                            <AlertCircle size={10} color="#c0392b" />
+                            <Text style={[s.statusText, { color: '#c0392b' }]}>{t.doc_status_expired}</Text>
+                          </View>
+                          {apiDoc?.expires && (
+                            <Text style={[s.slotHint, { marginTop: 2 }]}>Exp: {apiDoc.expires}</Text>
+                          )}
+                          <View style={s.cameraBtn}>
+                            <Camera size={14} color="white" />
+                            <Text style={s.cameraBtnText}>{t.doc_reupload}</Text>
+                          </View>
+                        </View>
                       ) : isPending ? (
                         <View style={s.slotEmpty}>
                           <View style={[s.slotIconBox, { backgroundColor: '#f2f2f5' }]}>
@@ -287,7 +312,7 @@ export default function DocumentsScreen() {
                           <Text style={s.slotLabel}>{slot.label}</Text>
                           <View style={[s.statusBadge, { backgroundColor: '#f2f2f5' }]}>
                             <Clock size={10} color="#5e5e72" />
-                            <Text style={[s.statusText, { color: '#5e5e72' }]}>Under review</Text>
+                            <Text style={[s.statusText, { color: '#5e5e72' }]}>{t.doc_status_under_review}</Text>
                           </View>
                         </View>
                       ) : (
@@ -316,27 +341,11 @@ export default function DocumentsScreen() {
           ))}
         </View>
 
-        {!mandatoryDone && (
-          <View style={s.noteBox}>
-            <Info size={16} color="#5e5e72" />
-            <Text style={s.noteText}>{t.docs_criminal_note}</Text>
-          </View>
-        )}
+        <View style={s.noteBox}>
+          <Info size={16} color="#5e5e72" />
+          <Text style={s.noteText}>{t.doc_criminal_required_note}</Text>
+        </View>
       </ScrollView>
-
-      <View style={[s.footer, { paddingBottom: botPad + 24 }]}>
-        <TouchableOpacity
-          style={[s.continueBtn, !mandatoryDone && s.continueBtnDisabled]}
-          onPress={() => router.push('/selfie')}
-          disabled={!mandatoryDone}
-          activeOpacity={0.9}
-        >
-          <Text style={s.continueBtnText}>
-            {mandatoryDone ? t.docs_continue_ready : t.docs_continue_pending.replace('{n}', String(MANDATORY_IDS.filter(id => !slotDone({ id } as DocSlot)).length))}
-          </Text>
-          {mandatoryDone && <ArrowRight size={18} color="white" strokeWidth={2} />}
-        </TouchableOpacity>
-      </View>
     </View>
   );
 }
@@ -344,9 +353,9 @@ export default function DocumentsScreen() {
 const s = StyleSheet.create({
   root: { flex: 1 },
   backBtn: {
-    width: 42, height: 42, borderRadius: 14, backgroundColor: 'white',
+    width: 42, height: 42, borderRadius: 14,
     alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: '#e5e5ea',
+    borderWidth: 1,
   },
   header: { marginTop: 20, marginBottom: 20, gap: 8 },
   step: { fontSize: 12, fontWeight: '600', color: '#5e5e72', letterSpacing: 1, textTransform: 'uppercase', fontFamily: 'Inter_600SemiBold' },
@@ -414,17 +423,4 @@ const s = StyleSheet.create({
     backgroundColor: '#f2f2f5', borderRadius: 14, padding: 14, marginTop: 16,
   },
   noteText: { flex: 1, fontSize: 12, color: '#5e5e72', lineHeight: 18, fontFamily: 'Inter_400Regular' },
-  footer: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    paddingHorizontal: 24, paddingTop: 16,
-    backgroundColor: 'rgba(250,250,253,0.95)',
-    borderTopWidth: 1, borderTopColor: '#e5e5ea',
-  },
-  continueBtn: {
-    height: 56, borderRadius: 20, backgroundColor: '#1e1e28',
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 20, elevation: 8,
-  },
-  continueBtnDisabled: { opacity: 0.35 },
-  continueBtnText: { color: 'white', fontSize: 14, fontWeight: '600', fontFamily: 'Inter_600SemiBold', textAlign: 'center' },
 });

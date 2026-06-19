@@ -70,7 +70,7 @@ export default function MessagesScreen() {
         </Pressable>
 
         <View style={styles.titleRow}>
-          <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>Messages</Text>
+          <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.messages_title}</Text>
           {hasUnread && (
             <Pressable
               onPress={() => markAllMutation.mutate()}
@@ -96,10 +96,10 @@ export default function MessagesScreen() {
           <GlassView style={styles.centeredState} borderRadius={20}>
             <Bell size={32} color={colors.mutedForeground} strokeWidth={1.5} />
             <Text style={[styles.stateTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-              Could not load messages
+              {t.messages_load_err_title}
             </Text>
             <Text style={[styles.stateSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-              Pull down to retry.
+              {t.messages_load_err_sub}
             </Text>
           </GlassView>
         )}
@@ -108,10 +108,10 @@ export default function MessagesScreen() {
           <GlassView style={styles.centeredState} borderRadius={20}>
             <InboxIcon size={32} color={colors.mutedForeground} strokeWidth={1.5} />
             <Text style={[styles.stateTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-              No messages yet
+              {t.messages_empty_title}
             </Text>
             <Text style={[styles.stateSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-              Announcements and notifications will appear here.
+              {t.messages_empty_sub}
             </Text>
           </GlassView>
         )}
