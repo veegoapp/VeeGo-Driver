@@ -82,7 +82,6 @@ export default function ShuttleProfileScreen() {
   const [avatarSubmitting, setAvatarSubmitting] = useState(false);
 
   // ── Primary: GET /driver/profile (enriched) ────────────────────────────
-  // TODO: Backend Integration — GET /driver/profile must be live on the server.
   // Falls back gracefully to GET /driver/me if endpoint returns an error.
   const {
     data: enriched,
@@ -117,8 +116,6 @@ export default function ShuttleProfileScreen() {
   const documentStatus = enriched?.documentStatus ?? null;
   const bonusTargets = enriched?.bonusTargets ?? [];
 
-  // Referral code: from enriched endpoint or derive from base ID
-  // TODO: Backend Integration — referralCode must be returned by GET /driver/profile
   const referralCode: string = enriched?.referralCode
     ?? (id ? `VGO-${String(id).slice(0, 4).toUpperCase()}` : 'VGO-XXXX');
 
@@ -172,9 +169,6 @@ export default function ShuttleProfileScreen() {
 
     setAvatarSubmitting(true);
     try {
-      // TODO: Backend Integration — POST /driver/profile/avatar-request
-      // Multipart payload: { newAvatarImage: file, changeReason: string }
-      // Awaits Admin approval before the photo goes live.
       const formData = new FormData();
       formData.append('changeReason', avatarReason.trim());
       const fileName = selectedImageUri.split('/').pop() ?? 'avatar.jpg';
