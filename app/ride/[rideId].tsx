@@ -11,6 +11,7 @@ import { ServiceBlockedScreen } from '@/components/ServiceBlockedScreen';
 import { useColors } from '@/hooks/useColors';
 import { useServiceGuard } from '@/hooks/useServiceGuard';
 import { useWaitingCharge } from '@/hooks/useWaitingCharge';
+import { useActiveLocationTracking } from '@/hooks/useActiveLocationTracking';
 import { endpoints } from '@/lib/api';
 import { useI18n } from '@/lib/i18nContext';
 import { useSocket } from '@/lib/socketContext';
@@ -71,6 +72,11 @@ export default function RideScreen() {
 
   const driverData = driverRaw as DriverData | undefined;
   const waitingCharge = useWaitingCharge(driverData?.id, rideId);
+
+  useActiveLocationTracking({
+    enabled: !!rideId && phase !== 'completed',
+    rideId: rideId ? Number(rideId) : null,
+  });
 
   useEffect(() => {
     if (!rideRaw || hasRecovered.current) return;

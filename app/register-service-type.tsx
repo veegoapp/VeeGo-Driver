@@ -1,4 +1,4 @@
-import { ArrowRight, Car, Bike, Package, Bus, Lock } from 'lucide-react-native';
+import { ArrowRight, Car, Bike as ScooterIcon, Package, Bus, Lock } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useState } from 'react';
@@ -19,7 +19,7 @@ import { endpoints, ApiError } from '@/lib/api';
 
 type ServiceOption = {
   key: string;       // value sent to backend: 'car'|'shuttle'|'scooter'|'delivery'
-  appType: string;   // maps to ServiceContext type: 'CAR'|'SHUTTLE'|'MOTOR'|'DELIVERY'
+  appType: string;   // maps to ServiceContext type: 'CAR'|'SHUTTLE'|'SCOOTER'|'DELIVERY'
   label: string;
   labelAr: string;
   desc: string;
@@ -42,10 +42,10 @@ const SERVICE_OPTIONS: ServiceOption[] = [
     Icon: Car, accentColor: '#0ea5e9',
   },
   {
-    key: 'scooter', appType: 'MOTOR',
+    key: 'scooter', appType: 'SCOOTER',
     label: 'Scooter', labelAr: 'موتوسيكل',
     desc: 'Quick city rides', descAr: 'رحلات سريعة داخل المدينة',
-    Icon: Bike, accentColor: '#f97316',
+    Icon: ScooterIcon, accentColor: '#f97316',
   },
   {
     key: 'delivery', appType: 'DELIVERY',

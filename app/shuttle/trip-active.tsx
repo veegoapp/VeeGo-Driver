@@ -17,6 +17,7 @@ import { useColors } from '@/hooks/useColors';
 import { useDriverLocation, haversineMeters } from '@/hooks/useDriverLocation';
 import { useRoadEta } from '@/hooks/useRoadEta';
 import { useRoadPolyline } from '@/hooks/useRoadPolyline';
+import { useActiveLocationTracking } from '@/hooks/useActiveLocationTracking';
 import { useShuttle } from '@/lib/shuttleContext';
 import { useI18n } from '@/lib/i18nContext';
 import { useSocket } from '@/lib/socketContext';
@@ -66,6 +67,11 @@ export default function ShuttleTripActiveScreen() {
   const isLastStop = currentStopIndex >= stops.length - 1;
   const tripId = activeLine?.tripId;
   const stationId = currentStop?.id;
+
+  useActiveLocationTracking({
+    enabled: !!activeLine,
+    tripId: tripId != null ? Number(tripId) : null,
+  });
 
   // ── GPS ────────────────────────────────────────────────────────────────────
   const { position: gpsPos } = useDriverLocation(!!activeLine);

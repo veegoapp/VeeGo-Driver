@@ -90,7 +90,7 @@ const ServiceControlContext = createContext<ServiceControlContextValue>({
 // ── Frontend → backend serviceType normalisation ──────────────────────────
 
 const FRONTEND_TO_BACKEND_MAP: Record<string, string> = {
-  MOTOR: 'scooter',
+  SCOOTER: 'scooter',
 };
 
 function normalizeToBackendType(type: string): string {
