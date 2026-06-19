@@ -334,7 +334,7 @@ export default function RegisterVehicleScreen() {
         </TouchableOpacity>
 
         <View style={s.header}>
-          <Text style={[s.step, { textAlign: TA }]}>Step 2 of 4</Text>
+          <Text style={[s.step, { textAlign: TA }]}>{t.reg_step_2_of_4}</Text>
           <Text style={[s.title, { textAlign: TA }]}>{t.vehicle_details}</Text>
           <Text style={[s.sub, { textAlign: TA }]}>{t.vehicle_details_sub}</Text>
         </View>
@@ -371,14 +371,14 @@ export default function RegisterVehicleScreen() {
           {showSeatCapacity && (
             <View style={[s.infoChip, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
               <Info size={14} color="#3D52D5" />
-              <Text style={s.infoChipText}>Fixed seat capacity: {selectedModel!.seatCapacity} seats</Text>
+              <Text style={s.infoChipText}>{t.reg_seat_capacity.replace('{n}', String(selectedModel!.seatCapacity))}</Text>
             </View>
           )}
 
           {/* Year */}
           <DropdownField
             label={t.vehicle_year}
-            placeholder={emptyYears ? 'No years available — contact support' : t.select_year}
+            placeholder={emptyYears ? t.reg_no_years : t.select_year}
             value={selectedYear ? String(selectedYear.year) : null}
             loading={loadingYears}
             error={false}
@@ -416,7 +416,7 @@ export default function RegisterVehicleScreen() {
             <ActivityIndicator color="white" />
           ) : (
             <>
-              <Text style={s.continueBtnText}>Continue to documents</Text>
+              <Text style={s.continueBtnText}>{t.reg_vehicle_continue}</Text>
               <ArrowRight size={18} color="white" strokeWidth={2} />
             </>
           )}
@@ -447,9 +447,7 @@ export default function RegisterVehicleScreen() {
           ) : pickerItems.length === 0 ? (
             <View style={s.sheetLoader}>
               <Text style={s.sheetEmpty}>
-                {activePicker === 'year'
-                  ? 'No eligible years registered for this model yet.\nPlease contact support.'
-                  : 'No options available'}
+                {activePicker === 'year' ? t.reg_year_no_eligible : t.reg_no_options}
               </Text>
             </View>
           ) : (

@@ -101,10 +101,7 @@ export default function SelfieScreen() {
         const result = await response.json() as { faceDetected?: boolean; message?: string };
         if (result.faceDetected === false) {
           setPhoto(null);
-          Alert.alert(
-            'No Face Detected',
-            result.message ?? 'We could not detect a face. Please ensure your face is clearly visible and retake the photo.',
-          );
+          Alert.alert(t.no_face_detected_title, result.message ?? t.no_face_detected_msg);
           return;
         }
         if (intervalRef.current) clearInterval(intervalRef.current);
@@ -118,7 +115,7 @@ export default function SelfieScreen() {
         }, 1200);
       }
     } catch {
-      Alert.alert('Upload failed', 'Could not upload your selfie. Please try again.');
+      Alert.alert(t.selfie_upload_failed_title, t.selfie_upload_failed_msg);
     } finally {
       setIsUploading(false);
     }
@@ -148,7 +145,7 @@ export default function SelfieScreen() {
             }}
             activeOpacity={0.7}
           >
-            <Text style={s.retryPermText}>I've granted permission — try again</Text>
+            <Text style={s.retryPermText}>{t.retry_camera_btn}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -162,12 +159,12 @@ export default function SelfieScreen() {
           <CheckCircle2 size={72} color="#1e1e28" />
         </View>
         <Text style={s.successTitle}>
-          {shuttleCheckinMode ? t.verified_title_checkin : "You're all set!"}
+          {shuttleCheckinMode ? t.verified_title_checkin : t.selfie_all_set}
         </Text>
         <Text style={s.successSub}>
           {shuttleCheckinMode
             ? t.verified_sub_checkin
-            : 'Your account is being reviewed. You can start accepting trips shortly.'}
+            : t.selfie_review_sub}
         </Text>
       </View>
     );
@@ -189,9 +186,9 @@ export default function SelfieScreen() {
             </>
           ) : (
             <>
-              <Text style={s.step}>Step 4 of 4</Text>
-              <Text style={s.title}>Face{'\n'}verification</Text>
-              <Text style={s.sub}>Take a clear selfie so we can verify your identity. Make sure your face is well-lit.</Text>
+              <Text style={s.step}>{t.reg_step_4_of_4}</Text>
+              <Text style={s.title}>{t.selfie_title}</Text>
+              <Text style={s.sub}>{t.selfie_sub}</Text>
             </>
           )}
         </View>
@@ -281,7 +278,7 @@ export default function SelfieScreen() {
                 <ActivityIndicator color="white" />
               ) : (
                 <>
-                  <Text style={s.confirmBtnText}>{shuttleCheckinMode ? t.confirm_checkin : 'Confirm & finish'}</Text>
+                  <Text style={s.confirmBtnText}>{shuttleCheckinMode ? t.confirm_checkin : t.selfie_confirm}</Text>
                   <Check size={18} color="white" strokeWidth={2} />
                 </>
               )}

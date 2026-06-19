@@ -19,9 +19,11 @@ import { useColors } from '@/hooks/useColors';
 import { useSocket } from '@/lib/socketContext';
 import { endpoints, type RideMessage } from '@/lib/api';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
+import { useI18n } from '@/lib/i18nContext';
 
 export default function RideChatScreen() {
   const colors = useColors();
+  const { t } = useI18n();
   const insets = useSafeAreaInsets();
   const { rideId } = useLocalSearchParams<{ rideId: string }>();
   const { socket } = useSocket();
@@ -89,7 +91,7 @@ export default function RideChatScreen() {
         >
           <ArrowLeft size={20} color={colors.foreground} strokeWidth={2} />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>Message Rider</Text>
+        <Text style={[styles.headerTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.message_rider_title}</Text>
       </View>
 
       {isLoading ? (
@@ -98,7 +100,7 @@ export default function RideChatScreen() {
         </View>
       ) : messages.length === 0 ? (
         <View style={styles.centered}>
-          <Text style={[styles.emptyText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>No messages yet. Say hello!</Text>
+          <Text style={[styles.emptyText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{t.no_messages_hint}</Text>
         </View>
       ) : (
         <FlatList
@@ -131,7 +133,7 @@ export default function RideChatScreen() {
           style={[styles.input, { color: colors.foreground, backgroundColor: colors.secondary, fontFamily: 'Inter_400Regular' }]}
           value={text}
           onChangeText={setText}
-          placeholder="Type a message..."
+          placeholder={t.type_message}
           placeholderTextColor={colors.mutedForeground}
           multiline
           maxLength={500}

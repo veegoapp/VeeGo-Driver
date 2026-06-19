@@ -60,14 +60,14 @@ export default function RatePassengersScreen() {
         setPassengers(
           boarded.map(p => ({
             id: p.id,
-            name: p.passengerName ?? 'Passenger',
+            name: p.passengerName ?? t.passenger_fallback,
             avatar: p.passengerAvatar,
             rated: false,
             stars: 5,
           }))
         );
       } catch {
-        Alert.alert('Error', 'Could not load passengers. Please try again.');
+        Alert.alert(t.error, t.load_passengers_err);
       } finally {
         setLoading(false);
       }
@@ -109,7 +109,7 @@ export default function RatePassengersScreen() {
         router.back();
       }, 2000);
     } else {
-      Alert.alert('Partial Error', 'Some ratings could not be submitted. Please try again.');
+      Alert.alert(t.partial_rating_err_title, t.partial_rating_err_msg);
     }
   };
 
@@ -147,10 +147,10 @@ export default function RatePassengersScreen() {
           </Pressable>
           <View style={{ flex: 1 }}>
             <Text style={[s.pageTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-              Rate Passengers
+              {t.rate_passengers_title}
             </Text>
             <Text style={[s.pageSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-              {passengers.length} passengers to rate
+              {t.n_passengers_to_rate.replace('{n}', String(passengers.length))}
             </Text>
           </View>
         </View>
@@ -158,7 +158,7 @@ export default function RatePassengersScreen() {
         {passengers.length === 0 ? (
           <View style={[s.center, { marginTop: 60 }]}>
             <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 14, textAlign: 'center' }}>
-              No passengers to rate for this trip.
+              {t.no_passengers_to_rate}
             </Text>
           </View>
         ) : (
@@ -179,7 +179,7 @@ export default function RatePassengersScreen() {
                     </Text>
                     {p.rated && (
                       <Text style={{ color: '#22c55e', fontSize: 12, fontFamily: 'Inter_600SemiBold' }}>
-                        ✓ Rated
+                        {t.rated_label}
                       </Text>
                     )}
                   </View>
@@ -218,7 +218,7 @@ export default function RatePassengersScreen() {
               <ActivityIndicator color="#fff" />
             ) : (
               <Text style={[s.submitBtnText, { fontFamily: 'Inter_700Bold' }]}>
-                Submit Ratings
+                {t.submit_ratings_btn}
               </Text>
             )}
           </Pressable>

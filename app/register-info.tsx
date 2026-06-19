@@ -16,11 +16,13 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { endpoints } from '@/lib/api';
+import { useI18n } from '@/lib/i18nContext';
 
 export default function RegisterInfoScreen() {
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
   const botPad = Platform.OS === 'web' ? 34 : insets.bottom;
+  const { t } = useI18n();
 
   const [name, setName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -36,7 +38,7 @@ export default function RegisterInfoScreen() {
       });
       router.push('/register-vehicle');
     } catch {
-      Alert.alert('Error', 'Could not save your information. Please try again.');
+      Alert.alert(t.error, t.reg_info_err);
     } finally {
       setIsSubmitting(false);
     }
@@ -59,17 +61,17 @@ export default function RegisterInfoScreen() {
           </TouchableOpacity>
 
           <View style={s.header}>
-            <Text style={s.step}>Step 2 of 4</Text>
-            <Text style={s.title}>Personal{'\n'}information</Text>
-            <Text style={s.sub}>We need a few details to verify your identity.</Text>
+            <Text style={s.step}>{t.reg_step_2_of_4}</Text>
+            <Text style={s.title}>{t.reg_info_title}</Text>
+            <Text style={s.sub}>{t.reg_info_sub}</Text>
           </View>
 
           <View style={s.fields}>
             <Field
-              label="Full name"
+              label={t.reg_info_full_name_label}
               value={name}
               onChangeText={setName}
-              placeholder="Your full legal name"
+              placeholder={t.reg_info_name_placeholder}
               autoCapitalize="words"
             />
           </View>
@@ -87,7 +89,7 @@ export default function RegisterInfoScreen() {
             <ActivityIndicator color="white" />
           ) : (
             <>
-              <Text style={s.continueBtnText}>Continue to documents</Text>
+              <Text style={s.continueBtnText}>{t.reg_vehicle_continue}</Text>
               <ArrowRight size={18} color="white" strokeWidth={2} />
             </>
           )}

@@ -18,6 +18,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { endpoints } from '@/lib/api';
+import { useI18n } from '@/lib/i18nContext';
 
 type DriverMe = {
   id: string;
@@ -34,6 +35,7 @@ type Field = { key: keyof Omit<DriverMe, 'id' | 'rating' | 'trips'>; label: stri
 
 export default function PersonalInfoScreen() {
   const colors = useColors();
+  const { t } = useI18n();
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
   const queryClient = useQueryClient();
@@ -65,7 +67,7 @@ export default function PersonalInfoScreen() {
       setEditing(false);
     },
     onError: () => {
-      Alert.alert('Error', 'Could not save changes. Please try again.');
+      Alert.alert(t.error, t.personal_info_save_err);
     },
   });
 
@@ -78,11 +80,11 @@ export default function PersonalInfoScreen() {
   };
 
   const FIELDS: Field[] = [
-    { key: 'name', label: 'Full name', icon: <User size={18} color={colors.mutedForeground} strokeWidth={2} />, keyboard: 'default' },
-    { key: 'email', label: 'Email', icon: <Mail size={18} color={colors.mutedForeground} strokeWidth={2} />, keyboard: 'email-address', editable: false },
-    { key: 'phone', label: 'Phone', icon: <Phone size={18} color={colors.mutedForeground} strokeWidth={2} />, keyboard: 'phone-pad' },
-    { key: 'licenseNumber', label: 'License number', icon: <CreditCard size={18} color={colors.mutedForeground} strokeWidth={2} />, keyboard: 'default', editable: false },
-    { key: 'nationalId', label: 'National ID', icon: <FileText size={18} color={colors.mutedForeground} strokeWidth={2} />, keyboard: 'default', editable: false },
+    { key: 'name', label: t.field_full_name, icon: <User size={18} color={colors.mutedForeground} strokeWidth={2} />, keyboard: 'default' },
+    { key: 'email', label: t.field_email, icon: <Mail size={18} color={colors.mutedForeground} strokeWidth={2} />, keyboard: 'email-address', editable: false },
+    { key: 'phone', label: t.field_phone, icon: <Phone size={18} color={colors.mutedForeground} strokeWidth={2} />, keyboard: 'phone-pad' },
+    { key: 'licenseNumber', label: t.field_license_number, icon: <CreditCard size={18} color={colors.mutedForeground} strokeWidth={2} />, keyboard: 'default', editable: false },
+    { key: 'nationalId', label: t.field_national_id, icon: <FileText size={18} color={colors.mutedForeground} strokeWidth={2} />, keyboard: 'default', editable: false },
   ];
 
   return (
@@ -100,7 +102,7 @@ export default function PersonalInfoScreen() {
             >
               <ArrowLeft size={20} color={colors.foreground} strokeWidth={2} />
             </Pressable>
-            <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>Personal info</Text>
+            <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.personal_info}</Text>
             {!isLoading && (
               <Pressable
                 onPress={() => editing ? handleSave() : setEditing(true)}
@@ -174,7 +176,7 @@ export default function PersonalInfoScreen() {
                     </View>
                     {field.editable === false && editing && (
                       <View style={[styles.lockedBadge, { backgroundColor: colors.secondary }]}>
-                        <Text style={[styles.lockedText, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>Locked</Text>
+                        <Text style={[styles.lockedText, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>{t.locked_badge}</Text>
                       </View>
                     )}
                   </View>
@@ -185,7 +187,7 @@ export default function PersonalInfoScreen() {
 
           {editing && (
             <Text style={[styles.editHint, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-              Email, license number, and national ID cannot be changed here. Contact support if needed.
+              {t.personal_info_edit_hint}
             </Text>
           )}
         </ScrollView>

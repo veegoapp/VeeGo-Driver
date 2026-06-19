@@ -8,19 +8,19 @@ import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
 
-const TOPICS = [
-  'Payments & earnings',
-  'Account & login',
-  'Trip issues',
-  'Vehicle & documents',
-  'Safety',
-  'App technical issues',
-];
-
 export default function SupportScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { t, isRTL } = useI18n();
+
+  const TOPICS = [
+    t.support_topic_payments,
+    t.support_topic_account,
+    t.support_topic_trip,
+    t.support_topic_vehicle,
+    t.support_topic_safety,
+    t.support_topic_app,
+  ];
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
 
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
@@ -46,7 +46,7 @@ export default function SupportScreen() {
       setSelectedTopic(null);
       setDescription('');
     } catch {
-      Alert.alert('Error', 'Could not submit your ticket. Please try again.');
+      Alert.alert(t.error, t.support_err);
     } finally {
       setIsSubmitting(false);
     }
@@ -114,7 +114,7 @@ export default function SupportScreen() {
         </GlassView>
 
         <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', marginTop: 28, textAlign: TA }]}>
-          Submit a ticket
+          {t.support_submit_ticket_title}
         </Text>
 
         {submitted ? (
@@ -123,19 +123,19 @@ export default function SupportScreen() {
               <Check size={24} color={colors.success} strokeWidth={2.5} />
             </View>
             <Text style={[styles.successTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: 'center' }]}>
-              Ticket submitted!
+              {t.support_ticket_submitted}
             </Text>
             <Text style={[styles.successSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: 'center' }]}>
-              Our support team will get back to you within 24 hours.
+              {t.support_ticket_response}
             </Text>
             <Pressable onPress={() => setSubmitted(false)} style={({ pressed }) => [styles.newTicketBtn, { backgroundColor: colors.secondary, opacity: pressed ? 0.7 : 1 }]}>
-              <Text style={[{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', fontSize: 13 }]}>Submit another</Text>
+              <Text style={[{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', fontSize: 13 }]}>{t.support_submit_another}</Text>
             </Pressable>
           </GlassView>
         ) : (
           <GlassView style={styles.ticketForm} borderRadius={20}>
             <Text style={[styles.formLabel, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold', textAlign: TA }]}>
-              Issue type
+              {t.support_issue_type_label}
             </Text>
             {selectedTopic ? (
               <View style={[styles.selectedTopicChip, { backgroundColor: colors.primary + '18', borderColor: colors.primary + '40' }]}>
@@ -146,17 +146,17 @@ export default function SupportScreen() {
               </View>
             ) : (
               <Text style={[{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13, marginBottom: 12 }]}>
-                Tap a topic above to select it.
+                {t.support_tap_topic}
               </Text>
             )}
 
             <Text style={[styles.formLabel, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold', marginTop: 12, textAlign: TA }]}>
-              Description
+              {t.support_description_label}
             </Text>
             <TextInput
               value={description}
               onChangeText={setDescription}
-              placeholder="Describe your issue in detail…"
+              placeholder={t.support_describe_placeholder}
               placeholderTextColor={colors.mutedForeground}
               multiline
               numberOfLines={4}
@@ -177,7 +177,7 @@ export default function SupportScreen() {
                 <>
                   <Send size={16} color={canSubmit ? colors.primaryForeground : colors.mutedForeground} strokeWidth={2} />
                   <Text style={[styles.submitBtnText, { color: canSubmit ? colors.primaryForeground : colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>
-                    Send ticket
+                    {t.support_send_ticket}
                   </Text>
                 </>
               )}

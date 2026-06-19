@@ -212,11 +212,11 @@ export default function ShuttleWalletScreen() {
   const handlePayoutNext = () => {
     const amount = parseFloat(payoutAmount);
     if (!amount || amount <= 0) {
-      Alert.alert('Invalid amount', 'Please enter a valid amount greater than 0.');
+      Alert.alert(t.invalid_amount_title, t.invalid_amount_msg);
       return;
     }
     if (!selectedMethod) {
-      Alert.alert('Select method', 'Please select a payout method.');
+      Alert.alert(t.select_method_title, t.select_method_msg);
       return;
     }
     if (selectedMethod.requiresAccountDetails) {
@@ -231,7 +231,7 @@ export default function ShuttleWalletScreen() {
     if (method.requiresAccountDetails && method.accountFields) {
       for (const f of method.accountFields) {
         if (f.required && !details[f.key]?.trim()) {
-          Alert.alert('Required field', `${isRTL ? f.labelAr : f.label} is required.`);
+          Alert.alert(t.required_field_title, `${isRTL ? f.labelAr : f.label} is required.`);
           return;
         }
       }
@@ -241,7 +241,7 @@ export default function ShuttleWalletScreen() {
       const res = await endpoints.wallet.payout(amount, method.key) as { ok?: boolean; message?: string; error?: string; available?: number } | undefined;
       if (res && res.error) {
         const note = res.available != null ? ` (${t.available}: ${res.available.toFixed(2)} ${t.egp})` : '';
-        Alert.alert('Error', `${res.error}${note}`);
+        Alert.alert(t.error, `${res.error}${note}`);
         return;
       }
       await queryClient.invalidateQueries({ queryKey: ['wallet-balance'] });
@@ -249,7 +249,7 @@ export default function ShuttleWalletScreen() {
       setPayoutVisible(false);
       Alert.alert('✓', res?.message ?? `${amount.toFixed(2)} ${t.egp} payout submitted.`);
     } catch {
-      Alert.alert('Error', 'Payout failed. Please try again.');
+      Alert.alert(t.error, t.payout_failed_msg);
     } finally {
       setIsPayingOut(false);
     }
@@ -272,14 +272,11 @@ export default function ShuttleWalletScreen() {
           </Text>
           <View style={[styles.comingSoonBadge, { backgroundColor: '#1e1e2812', borderColor: '#1e1e2830' }]}>
             <Text style={[styles.comingSoonBadgeText, { color: '#2d2d42', fontFamily: 'Inter_700Bold' }]}>
-              {isMaintenance ? 'Under Maintenance' : 'Coming Soon'}
+              {isMaintenance ? t.under_maintenance : t.coming_soon_badge}
             </Text>
           </View>
           <Text style={[styles.comingSoonSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: 'center' }]}>
-            {walletFeature.unavailableMessage ?? (isMaintenance
-              ? 'Wallet is temporarily under maintenance. Please check back soon.'
-              : 'Digital wallet & payout features are coming in a future update.'
-            )}
+            {walletFeature.unavailableMessage ?? (isMaintenance ? t.maintenance_wallet_msg : t.coming_soon_wallet_msg)}
           </Text>
         </View>
       </View>
@@ -298,7 +295,7 @@ export default function ShuttleWalletScreen() {
     return (
       <View style={[styles.container, { backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' }]}>
         <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 14 }}>
-          Failed to load wallet. Please try again.
+          {t.wallet_load_err}
         </Text>
       </View>
     );
@@ -337,7 +334,7 @@ export default function ShuttleWalletScreen() {
               <View style={[styles.earningsMiniDiv, { backgroundColor: colors.border }]} />
               <View style={styles.earningsMiniItem}>
                 <Text style={[styles.earningsMiniLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>{t.routes}</Text>
-                <Text style={[styles.earningsMiniValue, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{weekEarnings.length} days</Text>
+                <Text style={[styles.earningsMiniValue, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{weekEarnings.length} {t.days_label}</Text>
               </View>
             </View>
 
@@ -382,7 +379,7 @@ export default function ShuttleWalletScreen() {
               </View>
             )) : (
               <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 12 }}>No data yet</Text>
+                <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 12 }}>{t.no_data_yet}</Text>
               </View>
             )}
           </View>
@@ -407,12 +404,12 @@ export default function ShuttleWalletScreen() {
         <GlassView borderRadius={16}>
           {txs.length === 0 ? (
             <View style={{ padding: 24, alignItems: 'center' }}>
-              <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13 }}>No transactions yet</Text>
+              <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13 }}>{t.no_transactions_yet}</Text>
             </View>
           ) : txs.map((tx, i) => {
             const isIncoming = tx.incoming ?? (tx.status === 'confirmed');
             const txAmount = typeof tx.amount === 'number' ? tx.amount : parseFloat(String(tx.amount));
-            const txTitle = tx.title ?? (isIncoming ? 'Trip earnings' : 'Payout');
+            const txTitle = tx.title ?? (isIncoming ? t.trip_earnings_label : t.cash_out);
             const txSub = tx.sub ?? tx.description ?? tx.date ?? '';
             return (
               <View key={String(tx.id)} style={[styles.txItem, i > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}>
@@ -460,7 +457,7 @@ export default function ShuttleWalletScreen() {
             {payoutStep === 'amount' ? (
               <>
                 {/* Amount input */}
-                <Text style={[styles.fieldLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>Amount</Text>
+                <Text style={[styles.fieldLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.amount_label}</Text>
                 <View style={[styles.amountRow, { borderColor: colors.border }]}>
                   <TextInput
                     value={payoutAmount}
@@ -483,7 +480,7 @@ export default function ShuttleWalletScreen() {
                   <ActivityIndicator color={colors.primary} style={{ marginVertical: 12 }} />
                 ) : payoutMethods.length === 0 ? (
                   <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13, marginBottom: 16 }}>
-                    No payout methods available
+                    {t.no_payout_methods_avail}
                   </Text>
                 ) : (
                   <View style={{ gap: 8, marginBottom: 16 }}>
@@ -523,7 +520,7 @@ export default function ShuttleWalletScreen() {
                 >
                   <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.submitGrad}>
                     <Text style={{ color: '#fff', fontFamily: 'Inter_700Bold', fontSize: 14 }}>
-                      {selectedMethod?.requiresAccountDetails ? 'Next →' : t.confirm}
+                      {selectedMethod?.requiresAccountDetails ? t.payout_next_btn : t.confirm}
                     </Text>
                   </LinearGradient>
                 </Pressable>

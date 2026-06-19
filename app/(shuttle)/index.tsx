@@ -189,7 +189,7 @@ export default function ShuttleHomeScreen() {
     if (!renewalBooking?.renewalDeadline) { setRenewalCountdown(''); return; }
     const tick = () => {
       const ms = new Date(renewalBooking.renewalDeadline!).getTime() - Date.now();
-      if (ms <= 0) { setRenewalCountdown('Expired'); return; }
+      if (ms <= 0) { setRenewalCountdown(''); return; }
       const h = Math.floor(ms / 3600000);
       const m = Math.floor((ms % 3600000) / 60000);
       const s = Math.floor((ms % 60000) / 1000);
@@ -204,10 +204,10 @@ export default function ShuttleHomeScreen() {
     mutationFn: (id: string) => endpoints.shuttle.confirmRenewal(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
-      Alert.alert('✅ Renewal Confirmed', 'Your slot is reserved for next week!', [{ text: 'OK' }]);
+      Alert.alert(t.renewal_confirmed_title, t.renewal_confirmed_msg, [{ text: t.ok }]);
     },
     onError: () => {
-      Alert.alert('Renewal Failed', 'Could not confirm renewal. Please try again.', [{ text: 'OK' }]);
+      Alert.alert(t.renewal_failed_title, t.renewal_failed_error, [{ text: t.ok }]);
     },
   });
 
@@ -395,7 +395,7 @@ export default function ShuttleHomeScreen() {
         )}
 
         {/* Renewal banner */}
-        {renewalBooking && renewalCountdown !== 'Expired' && (
+        {renewalBooking && renewalCountdown.length > 0 && (
           <GlassView style={[styles.renewalCard, { borderColor: '#F59E0B55', borderWidth: 1 }]} borderRadius={16}>
             <View style={[styles.renewalIconWrap, { backgroundColor: '#F59E0B20' }]}>
               <AlertTriangle size={18} color="#D97706" strokeWidth={2} />

@@ -18,13 +18,7 @@ import { useSocket } from '@/lib/socketContext';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
 
 type Phase = 'to_pickup' | 'arrived' | 'in_trip' | 'completed';
-
-const PHASE_COPY: Record<Phase, { label: string; cta: string; next: Phase }> = {
-  to_pickup: { label: 'Heading to pickup', cta: 'Arrived at pickup', next: 'arrived' },
-  arrived: { label: 'Pick up rider', cta: 'Start trip', next: 'in_trip' },
-  in_trip: { label: 'Drop off', cta: 'Complete trip', next: 'completed' },
-  completed: { label: 'Trip completed', cta: 'Done', next: 'completed' },
-};
+type PhaseCopy = { label: string; cta: string; next: Phase };
 
 type RideData = {
   id: string;
@@ -46,6 +40,12 @@ type DriverData = { id: string };
 export default function RideScreen() {
   const colors = useColors();
   const { t } = useI18n();
+  const PHASE_COPY: Record<Phase, PhaseCopy> = {
+    to_pickup: { label: t.phase_to_pickup, cta: t.phase_to_pickup_cta, next: 'arrived' },
+    arrived: { label: t.phase_arrived, cta: t.phase_arrived_cta, next: 'in_trip' },
+    in_trip: { label: t.phase_in_trip, cta: t.phase_in_trip_cta, next: 'completed' },
+    completed: { label: t.phase_completed_label, cta: t.phase_done_btn, next: 'completed' },
+  };
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
   const { isBlocked, status: serviceStatus } = useServiceGuard('CAR');
@@ -99,9 +99,9 @@ export default function RideScreen() {
       const cancelledId = String(data?.rideId ?? '');
       if (cancelledId && cancelledId !== rideId) return;
       Alert.alert(
-        'Ride Cancelled',
-        'The rider has cancelled this trip.',
-        [{ text: 'OK', onPress: () => router.replace('/(tabs)') }],
+        t.ride_cancelled_title,
+        t.ride_cancelled_msg,
+        [{ text: t.ok, onPress: () => router.replace('/(tabs)') }],
       );
     };
     socket.on(SOCKET_EVENTS.RIDE_CANCELLED, handleCancelled);
@@ -121,14 +121,14 @@ export default function RideScreen() {
       const parts: string[] = [];
       if (r?.pickup?.eta) parts.push(r.pickup.eta);
       if (r?.pickup?.distance) parts.push(r.pickup.distance);
-      return parts.length > 0 ? parts.join(' · ') : 'Calculating...';
+      return parts.length > 0 ? parts.join(' · ') : t.calculating;
     }
-    if (phase === 'arrived') return 'Waiting for rider';
+    if (phase === 'arrived') return t.waiting_for_rider;
     if (phase === 'in_trip') {
       const parts: string[] = [];
       if (r?.duration) parts.push(r.duration);
       if (r?.dropoff?.distance) parts.push(r.dropoff.distance);
-      return parts.length > 0 ? parts.join(' · ') : 'Calculating...';
+      return parts.length > 0 ? parts.join(' · ') : t.calculating;
     }
     return '';
   }
@@ -180,7 +180,7 @@ export default function RideScreen() {
       setPhase(p.next);
     } catch (err: unknown) {
       const body = (err as { body?: { error?: string } })?.body;
-      Alert.alert('Action Failed', body?.error ?? 'Please try again.');
+      Alert.alert(t.action_failed_title, body?.error ?? t.try_again_msg);
     } finally {
       setBusy(false);
     }
@@ -209,9 +209,9 @@ export default function RideScreen() {
       } else {
         await endpoints.rides.sos(rideId ?? '', { latitude, longitude });
       }
-      Alert.alert('SOS Sent', 'The operations team has been alerted. Help is on the way.');
+      Alert.alert(t.sos_sent_title, t.sos_sent_msg);
     } catch {
-      Alert.alert('SOS Failed', 'Could not send SOS. Please call emergency services: 197');
+      Alert.alert(t.sos_failed_title, t.sos_failed_msg);
     } finally {
       setSosBusy(false);
     }
@@ -262,12 +262,12 @@ export default function RideScreen() {
               <Check size={48} color={colors.primaryForeground} strokeWidth={3} />
             </LinearGradient>
           </Animated.View>
-          <Text style={[styles.completedTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>Trip completed!</Text>
+          <Text style={[styles.completedTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.trip_done_title}</Text>
           <Text style={[styles.fareEarned, { color: colors.primary, fontFamily: 'Inter_700Bold' }]}>+{parseFloat(String(r?.fare ?? 0)).toFixed(2)} DT</Text>
-          <Text style={[styles.fareNote, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>Added to today's earnings</Text>
+          <Text style={[styles.fareNote, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{t.added_to_earnings}</Text>
 
           <GlassView style={styles.ratingCard} borderRadius={16}>
-            <Text style={[styles.ratingCardLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>Rate {r?.rider.name ?? 'rider'}</Text>
+            <Text style={[styles.ratingCardLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>{t.rate_rider_label.replace('{name}', r?.rider.name ?? '—')}</Text>
             <View style={styles.starsRow}>
               {[1, 2, 3, 4, 5].map(n => (
                 <Pressable key={n} onPress={() => setRating(n)}>
@@ -279,7 +279,7 @@ export default function RideScreen() {
 
           <Pressable onPress={handleDone} style={styles.doneBtn}>
             <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.doneBtnGrad}>
-              <Text style={[styles.doneBtnText, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>Back to driving</Text>
+              <Text style={[styles.doneBtnText, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>{t.back_to_driving}</Text>
             </LinearGradient>
           </Pressable>
         </Animated.View>
@@ -356,7 +356,7 @@ export default function RideScreen() {
             <View style={styles.bottomRow}>
               <View style={styles.safetyRow}>
                 <Shield size={14} color={colors.mutedForeground} strokeWidth={2} />
-                <Text style={[styles.safetyText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>Safety toolkit · Trip recorded</Text>
+                <Text style={[styles.safetyText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{t.safety_toolkit_trip}</Text>
               </View>
               <Pressable
                 onPress={handleSOS}
