@@ -20,22 +20,24 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { endpoints, ApiError } from '@/lib/api';
+import { useI18n } from '@/lib/i18nContext';
 
 type Step = 'request' | 'reset' | 'done';
+type TDict = ReturnType<typeof useI18n>['t'];
 
-function getErrorMessage(err: unknown): string {
+function getErrorMessage(err: unknown, t: TDict): string {
   if (err instanceof ApiError) {
-    if (err.status === 0) return 'Cannot reach the server. Please check your connection.';
-    if (err.status === 404) return 'No account found with this email or phone number.';
-    if (err.status === 400) return 'Invalid code. Please check and try again.';
-    if (err.status === 410) return 'This code has expired. Please request a new one.';
-    if (err.status === 429) return 'Too many attempts. Please wait and try again.';
-    if (err.status >= 500) return 'Server error. Please try again later.';
+    if (err.status === 0) return t.err_no_connection;
+    if (err.status === 404) return t.err_fp_not_found;
+    if (err.status === 400) return t.err_code_invalid;
+    if (err.status === 410) return t.err_code_expired;
+    if (err.status === 429) return t.err_too_many_attempts;
+    if (err.status >= 500) return t.err_server_error;
     const body = err.body as { error?: string } | null;
     if (body?.error) return body.error;
   }
-  if (err instanceof TypeError) return 'Cannot reach the server. Please check your connection.';
-  return 'Something went wrong. Please try again.';
+  if (err instanceof TypeError) return t.err_no_connection;
+  return t.err_generic;
 }
 
 export default function ForgotPasswordScreen() {
@@ -96,6 +98,7 @@ export default function ForgotPasswordScreen() {
 }
 
 function RequestStep({ onSuccess }: { onSuccess: (credential: string) => void }) {
+  const { t } = useI18n();
   const [credential, setCredential] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -110,7 +113,7 @@ function RequestStep({ onSuccess }: { onSuccess: (credential: string) => void })
       await endpoints.auth.forgotPassword(credential.trim());
       onSuccess(credential.trim());
     } catch (err) {
-      setError(getErrorMessage(err));
+      setError(getErrorMessage(err, t));
     } finally {
       setLoading(false);
     }
@@ -119,17 +122,15 @@ function RequestStep({ onSuccess }: { onSuccess: (credential: string) => void })
   return (
     <View style={s.form}>
       <View style={s.formHeader}>
-        <Text style={s.formTitle}>Forgot password?</Text>
-        <Text style={s.formSub}>
-          Enter the email or phone number linked to your account. We'll send you a reset code.
-        </Text>
+        <Text style={s.formTitle}>{t.forgot_password_title}</Text>
+        <Text style={s.formSub}>{t.forgot_password_sub}</Text>
       </View>
 
       <View style={s.inputWrap}>
         <View style={s.inputIcon}><Phone size={16} color="#5e5e72" /></View>
         <TextInput
           style={s.inputField}
-          placeholder="Email or phone number"
+          placeholder={t.email_or_phone}
           placeholderTextColor="#c3c3cc"
           value={credential}
           onChangeText={(v) => { setCredential(v); setError(null); }}
@@ -154,7 +155,7 @@ function RequestStep({ onSuccess }: { onSuccess: (credential: string) => void })
       >
         {loading
           ? <ActivityIndicator color="white" size="small" />
-          : <><Text style={s.primaryBtnText}>Send reset code</Text><ArrowRight size={16} color="white" /></>
+          : <><Text style={s.primaryBtnText}>{t.send_reset_code}</Text><ArrowRight size={16} color="white" /></>
         }
       </Pressable>
     </View>
@@ -178,6 +179,7 @@ function ResetStep({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const { t } = useI18n();
   const passwordRef = useRef<TextInput>(null);
   const confirmRef = useRef<TextInput>(null);
 
@@ -191,7 +193,7 @@ function ResetStep({
   const handle = async () => {
     if (!canSubmit || loading) return;
     if (!passwordsMatch) {
-      setError('Passwords do not match.');
+      setError(t.passwords_dont_match);
       return;
     }
     setError(null);
@@ -200,7 +202,7 @@ function ResetStep({
       await endpoints.auth.resetPassword(credential, code.trim(), password);
       onSuccess();
     } catch (err) {
-      setError(getErrorMessage(err));
+      setError(getErrorMessage(err, t));
     } finally {
       setLoading(false);
     }
@@ -214,11 +216,11 @@ function ResetStep({
   return (
     <View style={s.form}>
       <View style={s.formHeader}>
-        <Text style={s.formTitle}>Enter reset code</Text>
+        <Text style={s.formTitle}>{t.enter_reset_code_title}</Text>
         <Text style={s.formSub}>
-          We sent a code to{' '}
-          <Text style={{ fontFamily: 'Inter_600SemiBold', color: '#1e1e28' }}>{maskedCredential}</Text>.
-          Enter it below along with your new password.
+          {t.reset_code_sent_to}{' '}
+          <Text style={{ fontFamily: 'Inter_600SemiBold', color: '#1e1e28' }}>{maskedCredential}</Text>
+          {t.reset_code_enter_below}
         </Text>
       </View>
 
@@ -226,7 +228,7 @@ function ResetStep({
         <View style={s.inputIcon}><Mail size={16} color="#5e5e72" /></View>
         <TextInput
           style={[s.inputField, { letterSpacing: 4, fontSize: 16 }]}
-          placeholder="Reset code"
+          placeholder={t.reset_password_btn}
           placeholderTextColor="#c3c3cc"
           value={code}
           onChangeText={(v) => { setCode(v.replace(/\D/g, '')); setError(null); }}
@@ -240,7 +242,7 @@ function ResetStep({
 
       <View style={s.divider}>
         <View style={s.dividerLine} />
-        <Text style={s.dividerText}>New password</Text>
+        <Text style={s.dividerText}>{t.new_password_label}</Text>
         <View style={s.dividerLine} />
       </View>
 
@@ -249,7 +251,7 @@ function ResetStep({
         <TextInput
           ref={passwordRef}
           style={[s.inputField, { flex: 1 }]}
-          placeholder="New password (min 8 chars)"
+          placeholder={t.new_password_placeholder}
           placeholderTextColor="#c3c3cc"
           value={password}
           onChangeText={(v) => { setPassword(v); setError(null); }}
@@ -269,7 +271,7 @@ function ResetStep({
         <TextInput
           ref={confirmRef}
           style={[s.inputField, { flex: 1 }]}
-          placeholder="Confirm new password"
+          placeholder={t.confirm_password_placeholder}
           placeholderTextColor="#c3c3cc"
           value={confirmPassword}
           onChangeText={(v) => { setConfirmPassword(v); setError(null); }}
@@ -287,7 +289,7 @@ function ResetStep({
       {!passwordsMatch && confirmPassword.length > 0 && (
         <View style={s.errorRow}>
           <AlertCircle size={14} color="#e53935" />
-          <Text style={s.errorText}>Passwords do not match.</Text>
+          <Text style={s.errorText}>{t.passwords_dont_match}</Text>
         </View>
       )}
 
@@ -305,30 +307,29 @@ function ResetStep({
       >
         {loading
           ? <ActivityIndicator color="white" size="small" />
-          : <><Text style={s.primaryBtnText}>Reset password</Text><ArrowRight size={16} color="white" /></>
+          : <><Text style={s.primaryBtnText}>{t.reset_password_btn}</Text><ArrowRight size={16} color="white" /></>
         }
       </Pressable>
 
       <TouchableOpacity style={s.resendRow} onPress={onResend} activeOpacity={0.7}>
-        <Text style={s.resendText}>Didn't receive the code? </Text>
-        <Text style={s.resendLink}>Resend</Text>
+        <Text style={s.resendText}>{t.didnt_receive_code} </Text>
+        <Text style={s.resendLink}>{t.resend_link}</Text>
       </TouchableOpacity>
     </View>
   );
 }
 
 function DoneStep({ onGoToLogin }: { onGoToLogin: () => void }) {
+  const { t } = useI18n();
   return (
     <View style={[s.form, s.doneForm]}>
       <View style={s.doneIcon}>
         <CheckCircle2 size={40} color="#1e1e28" />
       </View>
-      <Text style={s.doneTitle}>Password reset!</Text>
-      <Text style={s.doneSub}>
-        Your password has been updated successfully. You can now sign in with your new password.
-      </Text>
+      <Text style={s.doneTitle}>{t.password_reset_title}</Text>
+      <Text style={s.doneSub}>{t.password_reset_sub}</Text>
       <Pressable style={s.primaryBtn} onPress={onGoToLogin}>
-        <Text style={s.primaryBtnText}>Go to sign in</Text>
+        <Text style={s.primaryBtnText}>{t.go_to_sign_in}</Text>
         <ArrowRight size={16} color="white" />
       </Pressable>
     </View>

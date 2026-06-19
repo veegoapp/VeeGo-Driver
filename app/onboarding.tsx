@@ -8,6 +8,7 @@ import { Navigation } from 'lucide-react-native';
 import { ArrowRight } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Rect, G } from 'react-native-svg';
+import { useI18n } from '@/lib/i18nContext';
 
 const { width } = Dimensions.get('window');
 
@@ -118,31 +119,17 @@ const ill = StyleSheet.create({
   },
 });
 
-const STEPS = [
-  {
-    tag: 'Drive & Earn',
-    title: 'Your road,\nyour income',
-    body: 'Accept trips, earn instantly. Full transparency on every fare — no surprises.',
-    Illust: IllustDrive,
-  },
-  {
-    tag: 'Full control',
-    title: 'Your dashboard,\nyour rules',
-    body: 'Track your earnings, manage your shifts, and monitor your performance in real-time.',
-    Illust: IllustStats,
-  },
-  {
-    tag: 'Safe & supported',
-    title: 'Never drive\nalone',
-    body: '24/7 support, emergency tools, and a community of verified drivers behind you.',
-    Illust: IllustSafe,
-  },
-];
-
 export default function OnboardingScreen() {
+  const { t } = useI18n();
   const [step, setStep] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
   const insets = useSafeAreaInsets();
+
+  const STEPS = [
+    { tag: t.onboarding_step1_tag, title: t.onboarding_step1_title, body: t.onboarding_step1_body, Illust: IllustDrive },
+    { tag: t.onboarding_step2_tag, title: t.onboarding_step2_title, body: t.onboarding_step2_body, Illust: IllustStats },
+    { tag: t.onboarding_step3_tag, title: t.onboarding_step3_title, body: t.onboarding_step3_body, Illust: IllustSafe },
+  ];
 
   const next = () => {
     if (step < STEPS.length - 1) {
@@ -167,7 +154,7 @@ export default function OnboardingScreen() {
           </View>
         </View>
         <TouchableOpacity onPress={() => router.replace('/login')} style={s.skipBtn} activeOpacity={0.7}>
-          <Text style={s.skipText}>Skip</Text>
+          <Text style={s.skipText}>{t.skip}</Text>
         </TouchableOpacity>
       </View>
 
@@ -192,7 +179,7 @@ export default function OnboardingScreen() {
           ))}
         </View>
         <TouchableOpacity style={s.nextBtn} onPress={next} activeOpacity={0.9}>
-          <Text style={s.nextText}>{step === STEPS.length - 1 ? 'Get started' : 'Continue'}</Text>
+          <Text style={s.nextText}>{step === STEPS.length - 1 ? t.get_started : t.continue_label}</Text>
           <ArrowRight size={16} color="white" strokeWidth={2} />
         </TouchableOpacity>
       </View>
@@ -200,7 +187,8 @@ export default function OnboardingScreen() {
   );
 }
 
-function Slide({ step, active }: { step: typeof STEPS[0]; active: boolean }) {
+type SlideStep = { tag: string; title: string; body: string; Illust: React.ComponentType };
+function Slide({ step, active }: { step: SlideStep; active: boolean }) {
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(20)).current;
 

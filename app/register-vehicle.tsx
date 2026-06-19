@@ -181,7 +181,7 @@ export default function RegisterVehicleScreen() {
         console.warn('[register-vehicle] 403 on models — using static fallback.');
         setModels(getFallbackModels(brandId));
       } else {
-        Alert.alert('Error', 'Could not load models. Please try again.');
+        Alert.alert(t.error, t.reg_models_err);
       }
     } finally {
       setLoadingModels(false);
@@ -206,7 +206,7 @@ export default function RegisterVehicleScreen() {
         setYears(getFallbackYears());
       } else {
         console.error('[register-vehicle] modelWithYears failed:', err);
-        Alert.alert('Error', 'Could not load years. Please try again.');
+        Alert.alert(t.error, t.reg_years_err);
       }
     } finally {
       setLoadingYears(false);
@@ -256,7 +256,7 @@ export default function RegisterVehicleScreen() {
       });
       router.push('/register-plate');
     } catch {
-      Alert.alert('Error', 'Could not save vehicle information. Please try again.');
+      Alert.alert(t.error, t.reg_vehicle_err_save);
     } finally {
       setSubmitting(false);
     }

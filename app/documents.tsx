@@ -26,6 +26,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { endpoints } from '@/lib/api';
+import { useI18n } from '@/lib/i18nContext';
 
 type DocSlot = {
   id: string;
@@ -42,52 +43,53 @@ type ApiDocument = {
   expires?: string;
 };
 
-const SECTIONS: { title: string; slots: DocSlot[] }[] = [
-  {
-    title: 'National ID',
-    slots: [
-      { id: 'id_front', label: 'Front side', hint: 'Clear photo of front', required: true, icon: 'card' },
-      { id: 'id_back', label: 'Back side', hint: 'Clear photo of back', required: true, icon: 'card' },
-    ],
-  },
-  {
-    title: 'Vehicle License',
-    slots: [
-      { id: 'vlic_front', label: 'Front side', hint: 'License front page', required: true, icon: 'filetext' },
-      { id: 'vlic_back', label: 'Back side', hint: 'License back page', required: true, icon: 'filetext' },
-    ],
-  },
-  {
-    title: 'Driving License',
-    slots: [
-      { id: 'dlic_front', label: 'Front side', hint: 'License front page', required: true, icon: 'award' },
-      { id: 'dlic_back', label: 'Back side', hint: 'License back page', required: true, icon: 'award' },
-    ],
-  },
-  {
-    title: 'Vehicle Photos',
-    slots: [
-      { id: 'car_front', label: 'Front view', hint: 'Full front of vehicle', required: true, icon: 'car' },
-      { id: 'car_back', label: 'Back view', hint: 'Full back of vehicle', required: true, icon: 'car' },
-      { id: 'car_left', label: 'Left side', hint: 'Left side of vehicle', required: true, icon: 'car' },
-      { id: 'car_right', label: 'Right side', hint: 'Right side of vehicle', required: true, icon: 'car' },
-    ],
-  },
-  {
-    title: 'Criminal Record',
-    slots: [
-      { id: 'criminal', label: 'Criminal clearance', hint: 'Optional until 30 trips', required: false, icon: 'shield' },
-    ],
-  },
-];
-
-const MANDATORY_IDS = SECTIONS.flatMap(s => s.slots.filter(sl => sl.required).map(sl => sl.id));
+const MANDATORY_IDS = ['id_front', 'id_back', 'vlic_front', 'vlic_back', 'dlic_front', 'dlic_back', 'car_front', 'car_back', 'car_left', 'car_right'];
 
 export default function DocumentsScreen() {
   const insets = useSafeAreaInsets();
+  const { t } = useI18n();
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
   const botPad = Platform.OS === 'web' ? 34 : insets.bottom;
   const queryClient = useQueryClient();
+
+  const SECTIONS: { title: string; slots: DocSlot[] }[] = [
+    {
+      title: t.doc_national_id,
+      slots: [
+        { id: 'id_front', label: t.doc_front_side, hint: t.doc_front_hint, required: true, icon: 'card' },
+        { id: 'id_back', label: t.doc_back_side, hint: t.doc_back_hint, required: true, icon: 'card' },
+      ],
+    },
+    {
+      title: t.doc_vehicle_license,
+      slots: [
+        { id: 'vlic_front', label: t.doc_front_side, hint: t.doc_lic_front_hint, required: true, icon: 'filetext' },
+        { id: 'vlic_back', label: t.doc_back_side, hint: t.doc_lic_back_hint, required: true, icon: 'filetext' },
+      ],
+    },
+    {
+      title: t.doc_driving_license,
+      slots: [
+        { id: 'dlic_front', label: t.doc_front_side, hint: t.doc_lic_front_hint, required: true, icon: 'award' },
+        { id: 'dlic_back', label: t.doc_back_side, hint: t.doc_lic_back_hint, required: true, icon: 'award' },
+      ],
+    },
+    {
+      title: t.doc_vehicle_photos,
+      slots: [
+        { id: 'car_front', label: t.doc_front_view, hint: t.doc_front_view_hint, required: true, icon: 'car' },
+        { id: 'car_back', label: t.doc_back_view, hint: t.doc_back_view_hint, required: true, icon: 'car' },
+        { id: 'car_left', label: t.doc_left_side, hint: t.doc_left_hint, required: true, icon: 'car' },
+        { id: 'car_right', label: t.doc_right_side, hint: t.doc_right_hint, required: true, icon: 'car' },
+      ],
+    },
+    {
+      title: t.doc_criminal_record,
+      slots: [
+        { id: 'criminal', label: t.doc_criminal_label, hint: t.doc_criminal_hint, required: false, icon: 'shield' },
+      ],
+    },
+  ];
 
   const [photos, setPhotos] = useState<Record<string, string>>({});
   const [uploading, setUploading] = useState<Record<string, boolean>>({});
@@ -117,7 +119,7 @@ export default function DocumentsScreen() {
     } else {
       const lib = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (lib.status !== 'granted') {
-        Alert.alert('Permission needed', 'Please allow camera or gallery access to upload documents.');
+        Alert.alert(t.doc_permission_title, t.doc_permission_msg);
         return;
       }
       result = await ImagePicker.launchImageLibraryAsync({
@@ -161,22 +163,20 @@ export default function DocumentsScreen() {
         </TouchableOpacity>
 
         <View style={s.header}>
-          <Text style={s.step}>Step 3 of 4</Text>
-          <Text style={s.title}>Upload{'\n'}documents</Text>
-          <Text style={s.sub}>All photos must be taken with the camera. Make sure they are clear and well-lit.</Text>
+          <Text style={s.step}>{t.reg_step_3_of_4}</Text>
+          <Text style={s.title}>{t.docs_title}</Text>
+          <Text style={s.sub}>{t.docs_sub}</Text>
         </View>
 
         {isLoading ? (
           <View style={{ alignItems: 'center', paddingVertical: 32 }}>
             <ActivityIndicator color="#1e1e28" />
-            <Text style={[s.sub, { marginTop: 8, textAlign: 'center' }]}>Loading your documents…</Text>
+            <Text style={[s.sub, { marginTop: 8, textAlign: 'center' }]}>{t.docs_loading}</Text>
           </View>
         ) : error ? (
           <View style={[s.noteBox, { backgroundColor: '#fff0f0' }]}>
             <AlertCircle size={16} color="#c0392b" />
-            <Text style={[s.noteText, { color: '#c0392b' }]}>
-              Could not load document status. You can still upload new documents below.
-            </Text>
+            <Text style={[s.noteText, { color: '#c0392b' }]}>{t.docs_load_error}</Text>
           </View>
         ) : null}
 
@@ -184,7 +184,7 @@ export default function DocumentsScreen() {
           <View style={s.progressBar}>
             <View style={[s.progressFill, { width: `${(totalDone / totalSlots) * 100}%` }]} />
           </View>
-          <Text style={s.progressText}>{totalDone} / {totalSlots} uploaded</Text>
+          <Text style={s.progressText}>{t.docs_progress.replace('{done}', String(totalDone)).replace('{total}', String(totalSlots))}</Text>
         </View>
 
         <View style={s.sections}>
@@ -254,14 +254,14 @@ export default function DocumentsScreen() {
                           <Text style={s.slotLabel}>{slot.label}</Text>
                           <View style={[s.statusBadge, { backgroundColor: '#fff3e0' }]}>
                             <Clock size={10} color="#e67e22" />
-                            <Text style={[s.statusText, { color: '#e67e22' }]}>Expiring</Text>
+                            <Text style={[s.statusText, { color: '#e67e22' }]}>{t.doc_status_expiring}</Text>
                           </View>
                           {apiDoc?.expires && (
                             <Text style={[s.slotHint, { marginTop: 2 }]}>Exp: {apiDoc.expires}</Text>
                           )}
                           <View style={s.cameraBtn}>
                             <Camera size={14} color="white" />
-                            <Text style={s.cameraBtnText}>Renew</Text>
+                            <Text style={s.cameraBtnText}>{t.doc_renew}</Text>
                           </View>
                         </View>
                       ) : isRejected ? (
@@ -272,11 +272,11 @@ export default function DocumentsScreen() {
                           <Text style={s.slotLabel}>{slot.label}</Text>
                           <View style={[s.statusBadge, { backgroundColor: '#fdecea' }]}>
                             <AlertCircle size={10} color="#c0392b" />
-                            <Text style={[s.statusText, { color: '#c0392b' }]}>Rejected</Text>
+                            <Text style={[s.statusText, { color: '#c0392b' }]}>{t.doc_status_rejected}</Text>
                           </View>
                           <View style={s.cameraBtn}>
                             <Camera size={14} color="white" />
-                            <Text style={s.cameraBtnText}>Re-upload</Text>
+                            <Text style={s.cameraBtnText}>{t.doc_reupload}</Text>
                           </View>
                         </View>
                       ) : isPending ? (
@@ -299,12 +299,12 @@ export default function DocumentsScreen() {
                           <Text style={s.slotHint}>{slot.hint}</Text>
                           {!slot.required && (
                             <View style={s.optionalBadge}>
-                              <Text style={s.optionalText}>Optional</Text>
+                              <Text style={s.optionalText}>{t.doc_optional_badge}</Text>
                             </View>
                           )}
                           <View style={s.cameraBtn}>
                             <Camera size={14} color="white" />
-                            <Text style={s.cameraBtnText}>Take photo</Text>
+                            <Text style={s.cameraBtnText}>{t.doc_take_photo}</Text>
                           </View>
                         </View>
                       )}
@@ -319,9 +319,7 @@ export default function DocumentsScreen() {
         {!mandatoryDone && (
           <View style={s.noteBox}>
             <Info size={16} color="#5e5e72" />
-            <Text style={s.noteText}>
-              Criminal record is optional until you complete 30 trips, after which the app will pause until it is uploaded.
-            </Text>
+            <Text style={s.noteText}>{t.docs_criminal_note}</Text>
           </View>
         )}
       </ScrollView>
@@ -334,7 +332,7 @@ export default function DocumentsScreen() {
           activeOpacity={0.9}
         >
           <Text style={s.continueBtnText}>
-            {mandatoryDone ? 'Continue to face verification' : `${MANDATORY_IDS.filter(id => !slotDone({ id } as DocSlot)).length} required docs remaining`}
+            {mandatoryDone ? t.docs_continue_ready : t.docs_continue_pending.replace('{n}', String(MANDATORY_IDS.filter(id => !slotDone({ id } as DocSlot)).length))}
           </Text>
           {mandatoryDone && <ArrowRight size={18} color="white" strokeWidth={2} />}
         </TouchableOpacity>

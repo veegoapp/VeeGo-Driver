@@ -85,7 +85,7 @@ export default function WalletScreen() {
   const handlePayoutConfirm = async () => {
     const amount = parseFloat(payoutAmount);
     if (!amount || amount <= 0) {
-      Alert.alert('Invalid amount', 'Please enter a valid amount greater than 0.');
+      Alert.alert(t.invalid_amount_title, t.invalid_amount_msg);
       return;
     }
     setIsPayingOut(true);
@@ -95,9 +95,9 @@ export default function WalletScreen() {
       await queryClient.invalidateQueries({ queryKey: ['wallet-transactions'] });
       setPayoutVisible(false);
       setPayoutAmount('');
-      Alert.alert('Success', `${amount.toFixed(2)} ${t.egp} payout initiated.`);
+      Alert.alert(t.payout_success_title, `${amount.toFixed(2)} ${t.egp} payout initiated.`);
     } catch {
-      Alert.alert('Error', 'Payout failed. Please try again.');
+      Alert.alert(t.error, t.payout_fail_msg);
     } finally {
       setIsPayingOut(false);
     }
@@ -166,7 +166,7 @@ export default function WalletScreen() {
   if (isError) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' }]}>
-        <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 14 }}>Failed to load wallet. Please try again.</Text>
+        <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 14 }}>{t.wallet_load_fail}</Text>
       </View>
     );
   }
@@ -203,7 +203,7 @@ export default function WalletScreen() {
                     value={payoutAmount}
                     onChangeText={setPayoutAmount}
                     keyboardType="decimal-pad"
-                    placeholder="Amount"
+                    placeholder={t.amount_placeholder}
                     placeholderTextColor={colors.mutedForeground}
                     style={[styles.payoutTextInput, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}
                     autoFocus
@@ -214,7 +214,7 @@ export default function WalletScreen() {
                   <Pressable onPress={() => setPayoutVisible(false)} style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.8 : 1 }]}>
                     <GlassView strong style={[styles.secondaryAction, { flexDirection: R }]} borderRadius={16}>
                       <X size={16} color={colors.foreground} strokeWidth={2} />
-                      <Text style={[styles.actionText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>Cancel</Text>
+                      <Text style={[styles.actionText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.cancel}</Text>
                     </GlassView>
                   </Pressable>
                   <Pressable onPress={handlePayoutConfirm} disabled={isPayingOut} style={({ pressed }) => [styles.primaryAction, { opacity: pressed || isPayingOut ? 0.8 : 1 }]}>
@@ -223,7 +223,7 @@ export default function WalletScreen() {
                         ? <ActivityIndicator color={colors.primaryForeground} size="small" />
                         : <ArrowDownLeft size={16} color={colors.primaryForeground} strokeWidth={2} />
                       }
-                      <Text style={[styles.actionText, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>Confirm</Text>
+                      <Text style={[styles.actionText, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>{t.confirm}</Text>
                     </LinearGradient>
                   </Pressable>
                 </View>
@@ -252,7 +252,7 @@ export default function WalletScreen() {
         </View>
         <View style={{ gap: 8 }}>
           {payoutMethods.length > 0 ? payoutMethods.map((method) => {
-            const displayName = method.label ?? method.name ?? method.accountName ?? method.bankName ?? 'Payment method';
+            const displayName = method.label ?? method.name ?? method.accountName ?? method.bankName ?? t.payment_method_fallback;
             return (
               <GlassView key={method.id} style={[styles.methodCard, { flexDirection: R }]} borderRadius={16}>
                 <View style={[styles.methodIcon, { backgroundColor: method.isDefault ? colors.primary + '26' : colors.secondary }]}>

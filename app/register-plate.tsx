@@ -21,7 +21,7 @@ export default function RegisterPlateScreen() {
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
   const botPad = Platform.OS === 'web' ? 34 : insets.bottom;
-  const { isRTL } = useI18n();
+  const { t, isRTL } = useI18n();
   const TA = isRTL ? 'right' as const : 'left' as const;
 
   const [letters, setLetters] = useState('');
@@ -43,10 +43,10 @@ export default function RegisterPlateScreen() {
       await endpoints.registration.plateNumber(letters.trim().toUpperCase(), numbers.trim());
       router.push('/register-documents');
     } catch (err) {
-      let msg = 'Could not save plate number. Please try again.';
+      let msg = t.reg_plate_err_save;
       if (err instanceof ApiError) {
         const body = err.body as { error?: string } | null;
-        if (err.status === 409) msg = 'This plate number is already registered on another vehicle.';
+        if (err.status === 409) msg = t.reg_plate_err_duplicate;
         else if (body?.error) msg = body.error;
       }
       setError(msg);
@@ -68,11 +68,9 @@ export default function RegisterPlateScreen() {
           </TouchableOpacity>
 
           <View style={s.header}>
-            <Text style={[s.step, { textAlign: TA }]}>Step 3 of 4</Text>
-            <Text style={[s.title, { textAlign: TA }]}>Vehicle{'\n'}plate number</Text>
-            <Text style={[s.sub, { textAlign: TA }]}>
-              Enter the plate number exactly as it appears on your vehicle.
-            </Text>
+            <Text style={[s.step, { textAlign: TA }]}>{t.reg_step_3_of_4}</Text>
+            <Text style={[s.title, { textAlign: TA }]}>{t.reg_plate_title}</Text>
+            <Text style={[s.sub, { textAlign: TA }]}>{t.reg_plate_sub}</Text>
           </View>
 
           {/* Plate preview */}
@@ -86,7 +84,7 @@ export default function RegisterPlateScreen() {
           <View style={s.fieldsRow}>
             {/* Letters */}
             <View style={[s.fieldWrap, { flex: 1 }]}>
-              <Text style={[s.fieldLabel, { textAlign: TA }]}>Letters (3)</Text>
+              <Text style={[s.fieldLabel, { textAlign: TA }]}>{t.reg_plate_letters_label}</Text>
               <View style={s.inputRow}>
                 <TextInput
                   style={[s.input, { textAlign: 'center', letterSpacing: 6, fontSize: 18, fontWeight: '700' }]}
@@ -102,14 +100,14 @@ export default function RegisterPlateScreen() {
                   maxLength={3}
                 />
               </View>
-              <Text style={s.fieldHint}>3 characters</Text>
+              <Text style={s.fieldHint}>{t.reg_plate_letters_hint}</Text>
             </View>
 
             <View style={s.fieldSep} />
 
             {/* Numbers */}
             <View style={[s.fieldWrap, { flex: 1 }]}>
-              <Text style={[s.fieldLabel, { textAlign: TA }]}>Numbers (1–4)</Text>
+              <Text style={[s.fieldLabel, { textAlign: TA }]}>{t.reg_plate_numbers_label}</Text>
               <View style={s.inputRow}>
                 <TextInput
                   style={[s.input, { textAlign: 'center', letterSpacing: 4, fontSize: 18, fontWeight: '700' }]}
@@ -124,7 +122,7 @@ export default function RegisterPlateScreen() {
                   maxLength={4}
                 />
               </View>
-              <Text style={s.fieldHint}>1–4 digits</Text>
+              <Text style={s.fieldHint}>{t.reg_plate_numbers_hint}</Text>
             </View>
           </View>
 
@@ -136,9 +134,7 @@ export default function RegisterPlateScreen() {
           )}
 
           <View style={s.noteBox}>
-            <Text style={s.noteText}>
-              Make sure the plate number matches your vehicle registration document exactly.
-            </Text>
+            <Text style={s.noteText}>{t.reg_plate_note}</Text>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -154,7 +150,7 @@ export default function RegisterPlateScreen() {
             <ActivityIndicator color="white" />
           ) : (
             <>
-              <Text style={s.continueBtnText}>Continue to documents</Text>
+              <Text style={s.continueBtnText}>{t.reg_plate_continue}</Text>
               <ArrowRight size={18} color="white" strokeWidth={2} />
             </>
           )}

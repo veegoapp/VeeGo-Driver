@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { endpoints } from '@/lib/api';
+import { useI18n } from '@/lib/i18nContext';
 
 async function tryGetLocation(): Promise<{ latitude: number; longitude: number }> {
   try {
@@ -24,6 +25,7 @@ async function tryGetLocation(): Promise<{ latitude: number; longitude: number }
 export default function SafetyScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { t } = useI18n();
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
 
   const [shareBusy, setShareBusy] = useState(false);
@@ -43,9 +45,9 @@ export default function SafetyScreen() {
     setShareBusy(true);
     try {
       const result = await endpoints.safety.shareTrip({ rideId: activeRideId });
-      Alert.alert('Trip Shared', result.message ?? 'Your trip status has been shared with your emergency contact.');
+      Alert.alert(t.share_trip_success_title, result.message ?? t.share_trip_sub);
     } catch {
-      Alert.alert('Error', 'Could not share trip status. Please try again.');
+      Alert.alert(t.error, t.share_trip_error);
     } finally {
       setShareBusy(false);
     }
@@ -57,9 +59,9 @@ export default function SafetyScreen() {
     try {
       const coords = await tryGetLocation();
       const result = await endpoints.safety.rideCheck({ rideId: activeRideId, ...coords });
-      Alert.alert('RideCheck Activated', result.message ?? 'Monitoring is active. We will alert if anything seems wrong.');
+      Alert.alert(t.ridecheck_success_title, result.message ?? t.ridecheck_sub);
     } catch {
-      Alert.alert('Error', 'Could not activate RideCheck. Please try again.');
+      Alert.alert(t.error, t.ridecheck_error);
     } finally {
       setRideCheckBusy(false);
     }
@@ -73,12 +75,12 @@ export default function SafetyScreen() {
       await endpoints.safety.recording({ rideId: activeRideId, action });
       setIsRecording(!isRecording);
       if (action === 'start') {
-        Alert.alert('Recording Started', 'Audio is being recorded and encrypted securely.');
+        Alert.alert(t.audio_rec_started_title, t.audio_rec_started_msg);
       } else {
-        Alert.alert('Recording Stopped', 'Recording has been saved and encrypted.');
+        Alert.alert(t.audio_rec_stopped_title, t.audio_rec_stopped_msg);
       }
     } catch {
-      Alert.alert('Error', 'Could not toggle audio recording. Please try again.');
+      Alert.alert(t.error, t.audio_rec_toggle_error);
     } finally {
       setRecordBusy(false);
     }
@@ -102,8 +104,8 @@ export default function SafetyScreen() {
             <Shield size={24} color={colors.primaryForeground} strokeWidth={2} />
           </LinearGradient>
           <View>
-            <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>Safety toolkit</Text>
-            <Text style={[styles.pageSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>Available 24/7 while you're driving</Text>
+            <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.help_safety}</Text>
+            <Text style={[styles.pageSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{t.safety_available_24_7}</Text>
           </View>
         </View>
 
@@ -116,7 +118,6 @@ export default function SafetyScreen() {
         </Pressable>
 
         <View style={{ marginTop: 20, gap: 8 }}>
-          {/* Share trip status */}
           <Pressable
             onPress={handleShareTrip}
             disabled={shareBusy}
@@ -127,15 +128,14 @@ export default function SafetyScreen() {
                 <Share2 size={18} color={colors.primary} strokeWidth={2} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.itemTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>Share trip status</Text>
+                <Text style={[styles.itemTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.share_trip_title}</Text>
                 <Text style={[styles.itemSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-                  {shareBusy ? 'Sharing...' : 'Send live location to your emergency contact'}
+                  {shareBusy ? t.share_trip_loading : t.share_trip_sub}
                 </Text>
               </View>
             </GlassView>
           </Pressable>
 
-          {/* RideCheck */}
           <Pressable
             onPress={handleRideCheck}
             disabled={rideCheckBusy}
@@ -146,15 +146,14 @@ export default function SafetyScreen() {
                 <Eye size={18} color={colors.primary} strokeWidth={2} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.itemTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>RideCheck</Text>
+                <Text style={[styles.itemTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.ridecheck_title}</Text>
                 <Text style={[styles.itemSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-                  {rideCheckBusy ? 'Activating...' : "We monitor your trip and alert if anything's wrong"}
+                  {rideCheckBusy ? t.ridecheck_activating : t.ridecheck_sub}
                 </Text>
               </View>
             </GlassView>
           </Pressable>
 
-          {/* Audio recording */}
           <Pressable
             onPress={handleRecording}
             disabled={recordBusy}
@@ -168,14 +167,14 @@ export default function SafetyScreen() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.itemTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-                  {isRecording ? 'Stop recording' : 'Audio recording'}
+                  {isRecording ? t.audio_rec_stop_title : t.audio_rec_start_title}
                 </Text>
                 <Text style={[styles.itemSub, { color: isRecording ? '#ef4444' : colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
                   {recordBusy
-                    ? (isRecording ? 'Stopping...' : 'Starting...')
+                    ? (isRecording ? t.audio_rec_stopping : t.audio_rec_starting)
                     : isRecording
-                      ? 'Recording in progress — tap to stop'
-                      : 'Encrypted recordings during trips'}
+                      ? t.audio_rec_active_sub
+                      : t.audio_rec_default_sub}
                 </Text>
               </View>
               {isRecording && (

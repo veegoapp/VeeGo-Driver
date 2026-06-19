@@ -60,9 +60,9 @@ export default function TripsScreen() {
 
   const filterLabels: Record<FilterKey, string> = {
     all: t.all,
-    scheduled: 'Scheduled',
-    active: 'Active',
-    completed: 'Completed',
+    scheduled: t.filter_scheduled,
+    active: t.active,
+    completed: t.completed_label,
   };
 
   const { data: rawData, isLoading, isError } = useQuery({
@@ -104,7 +104,7 @@ export default function TripsScreen() {
       await endpoints.trips.accept(tripId);
       queryClient.invalidateQueries({ queryKey: ['trips'] });
     } catch {
-      Alert.alert('Error', 'Could not accept trip. Please try again.');
+      Alert.alert(t.error, t.trip_accept_error);
     }
   };
 
@@ -113,7 +113,7 @@ export default function TripsScreen() {
       await endpoints.trips.reject(tripId);
       queryClient.invalidateQueries({ queryKey: ['trips'] });
     } catch {
-      Alert.alert('Error', 'Could not reject trip. Please try again.');
+      Alert.alert(t.error, t.trip_reject_error);
     }
   };
 
@@ -122,7 +122,7 @@ export default function TripsScreen() {
       await endpoints.trips.start(tripId);
       queryClient.invalidateQueries({ queryKey: ['trips'] });
     } catch {
-      Alert.alert('Error', 'Could not start trip. Please try again.');
+      Alert.alert(t.error, t.trip_start_error);
     }
   };
 
@@ -131,7 +131,7 @@ export default function TripsScreen() {
       await endpoints.trips.complete(tripId);
       queryClient.invalidateQueries({ queryKey: ['trips'] });
     } catch {
-      Alert.alert('Error', 'Could not complete trip. Please try again.');
+      Alert.alert(t.error, t.trip_complete_error);
     }
   };
 
@@ -144,7 +144,7 @@ export default function TripsScreen() {
       setCancelTarget(null);
       setCancelReason('');
     } catch {
-      Alert.alert('Error', 'Could not cancel trip. Please try again.');
+      Alert.alert(t.error, t.trip_cancel_error);
     } finally {
       setCancelBusy(false);
     }
@@ -161,11 +161,11 @@ export default function TripsScreen() {
       >
         <View style={styles.modalOverlay}>
           <GlassView strong style={styles.modalCard} borderRadius={24}>
-            <Text style={[styles.modalTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>Cancel trip</Text>
-            <Text style={[styles.modalSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>Please provide a reason</Text>
+            <Text style={[styles.modalTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.cancel_trip}</Text>
+            <Text style={[styles.modalSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{t.cancel_reason_prompt}</Text>
             <TextInput
               style={[styles.modalInput, { borderColor: colors.border, color: colors.foreground, backgroundColor: colors.secondary }]}
-              placeholder="e.g. Vehicle breakdown"
+              placeholder={t.cancel_reason_placeholder}
               placeholderTextColor={colors.mutedForeground}
               value={cancelReason}
               onChangeText={setCancelReason}
@@ -177,7 +177,7 @@ export default function TripsScreen() {
                 style={[styles.modalBtn, { backgroundColor: colors.secondary }]}
                 onPress={() => { setCancelTarget(null); setCancelReason(''); }}
               >
-                <Text style={[styles.modalBtnText, { color: colors.foreground, fontFamily: 'Inter_600SemiBold' }]}>Back</Text>
+                <Text style={[styles.modalBtnText, { color: colors.foreground, fontFamily: 'Inter_600SemiBold' }]}>{t.back}</Text>
               </Pressable>
               <Pressable
                 style={[styles.modalBtn, { backgroundColor: colors.destructive, opacity: (!cancelReason.trim() || cancelBusy) ? 0.6 : 1 }]}
@@ -186,7 +186,7 @@ export default function TripsScreen() {
               >
                 {cancelBusy
                   ? <ActivityIndicator size="small" color="#fff" />
-                  : <Text style={[styles.modalBtnText, { color: '#fff', fontFamily: 'Inter_600SemiBold' }]}>Cancel trip</Text>
+                  : <Text style={[styles.modalBtnText, { color: '#fff', fontFamily: 'Inter_600SemiBold' }]}>{t.cancel_trip}</Text>
                 }
               </Pressable>
             </View>
@@ -230,14 +230,14 @@ export default function TripsScreen() {
           </View>
         ) : isError ? (
           <View style={{ marginTop: 60, alignItems: 'center' }}>
-            <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 14 }}>Failed to load trips. Please try again.</Text>
+            <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 14 }}>{t.trips_load_fail}</Text>
           </View>
         ) : tripsData.length === 0 ? (
           <View style={{ marginTop: 60, alignItems: 'center', gap: 8 }}>
             <Text style={{ fontSize: 32 }}>🚗</Text>
-            <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: 16 }}>No trips yet</Text>
+            <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: 16 }}>{t.trips_empty_title}</Text>
             <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13 }}>
-              {filter === 'all' ? 'Your completed trips will appear here.' : `No ${filter} trips found.`}
+              {filter === 'all' ? t.no_trip_history_sub : `${filterLabels[filter]}`}
             </Text>
           </View>
         ) : (
@@ -295,7 +295,7 @@ export default function TripsScreen() {
                 onPress={() => setPage(p => p + 1)}
                 style={{ marginTop: 8, marginBottom: 16, alignItems: 'center', paddingVertical: 14, borderRadius: 16, backgroundColor: 'rgba(61,82,213,0.08)' }}
               >
-                <Text style={{ color: '#3D52D5', fontFamily: 'Inter_600SemiBold', fontSize: 14 }}>Load more</Text>
+                <Text style={{ color: '#3D52D5', fontFamily: 'Inter_600SemiBold', fontSize: 14 }}>{t.load_more_label}</Text>
               </Pressable>
             )}
             {isLoading && page > 1 && (
@@ -311,12 +311,13 @@ export default function TripsScreen() {
 }
 
 function StatusBadge({ status, colors }: { status: Trip['status']; colors: ReturnType<typeof useColors> }) {
+  const { t } = useI18n();
   const map: Record<Trip['status'], { label: string; bg: string; fg: string }> = {
-    waiting_driver: { label: 'Pending', bg: '#f59e0b22', fg: '#f59e0b' },
-    driver_assigned: { label: 'Assigned', bg: '#3D52D522', fg: '#3D52D5' },
-    active: { label: 'Active', bg: '#22c55e22', fg: '#22c55e' },
-    completed: { label: 'Done', bg: colors.secondary, fg: colors.mutedForeground },
-    cancelled: { label: 'Cancelled', bg: '#ef444422', fg: '#ef4444' },
+    waiting_driver: { label: t.status_pending, bg: '#f59e0b22', fg: '#f59e0b' },
+    driver_assigned: { label: t.status_assigned, bg: '#3D52D522', fg: '#3D52D5' },
+    active: { label: t.active, bg: '#22c55e22', fg: '#22c55e' },
+    completed: { label: t.completed_label, bg: colors.secondary, fg: colors.mutedForeground },
+    cancelled: { label: t.status_cancelled, bg: '#ef444422', fg: '#ef4444' },
   };
   const s = map[status] ?? map.completed;
   return (
@@ -337,6 +338,7 @@ function TripActionBar({ trip, colors, isRTL, onAccept, onReject, onStart, onCom
   onComplete: () => void;
   onCancel: () => void;
 }) {
+  const { t } = useI18n();
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
   const [busy, setBusy] = useState(false);
 
@@ -351,14 +353,14 @@ function TripActionBar({ trip, colors, isRTL, onAccept, onReject, onStart, onCom
       <View style={[styles.actionBar, { flexDirection: R }]}>
         <Pressable style={[styles.actionBtnSecondary, { backgroundColor: colors.secondary, flex: 1, opacity: busy ? 0.6 : 1 }]} onPress={wrap(onReject)} disabled={busy}>
           <X size={14} color={colors.foreground} strokeWidth={2} />
-          <Text style={[styles.actionBtnText, { color: colors.foreground, fontFamily: 'Inter_600SemiBold' }]}>Reject</Text>
+          <Text style={[styles.actionBtnText, { color: colors.foreground, fontFamily: 'Inter_600SemiBold' }]}>{t.reject_trip_btn}</Text>
         </Pressable>
         <Pressable style={[styles.actionBtnPrimary, { flex: 2, opacity: busy ? 0.6 : 1 }]} onPress={wrap(onAccept)} disabled={busy}>
           <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.actionBtnGrad}>
             {busy ? <ActivityIndicator size="small" color="#fff" /> : (
               <>
                 <Check size={14} color="#fff" strokeWidth={2} />
-                <Text style={[styles.actionBtnText, { color: '#fff', fontFamily: 'Inter_700Bold' }]}>Accept</Text>
+                <Text style={[styles.actionBtnText, { color: '#fff', fontFamily: 'Inter_700Bold' }]}>{t.accept_rate}</Text>
               </>
             )}
           </LinearGradient>
@@ -373,7 +375,7 @@ function TripActionBar({ trip, colors, isRTL, onAccept, onReject, onStart, onCom
         <Pressable style={[styles.actionBtnPrimary, { opacity: busy ? 0.6 : 1 }]} onPress={wrap(onStart)} disabled={busy}>
           <LinearGradient colors={['#22c55e', '#16a34a']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.actionBtnGrad}>
             {busy ? <ActivityIndicator size="small" color="#fff" /> : (
-              <Text style={[styles.actionBtnText, { color: '#fff', fontFamily: 'Inter_700Bold' }]}>Start Trip</Text>
+              <Text style={[styles.actionBtnText, { color: '#fff', fontFamily: 'Inter_700Bold' }]}>{t.start_trip}</Text>
             )}
           </LinearGradient>
         </Pressable>
@@ -385,14 +387,14 @@ function TripActionBar({ trip, colors, isRTL, onAccept, onReject, onStart, onCom
     return (
       <View style={[styles.actionBar, { flexDirection: R }]}>
         <Pressable style={[styles.actionBtnSecondary, { backgroundColor: '#ef444415', flex: 1, opacity: busy ? 0.6 : 1 }]} onPress={onCancel} disabled={busy}>
-          <Text style={[styles.actionBtnText, { color: '#ef4444', fontFamily: 'Inter_600SemiBold' }]}>Cancel</Text>
+          <Text style={[styles.actionBtnText, { color: '#ef4444', fontFamily: 'Inter_600SemiBold' }]}>{t.cancel}</Text>
         </Pressable>
         <Pressable style={[styles.actionBtnPrimary, { flex: 2, opacity: busy ? 0.6 : 1 }]} onPress={wrap(onComplete)} disabled={busy}>
           <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.actionBtnGrad}>
             {busy ? <ActivityIndicator size="small" color="#fff" /> : (
               <>
                 <Check size={14} color="#fff" strokeWidth={2} />
-                <Text style={[styles.actionBtnText, { color: '#fff', fontFamily: 'Inter_700Bold' }]}>Complete</Text>
+                <Text style={[styles.actionBtnText, { color: '#fff', fontFamily: 'Inter_700Bold' }]}>{t.complete_trip_btn}</Text>
               </>
             )}
           </LinearGradient>

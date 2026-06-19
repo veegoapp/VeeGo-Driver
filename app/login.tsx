@@ -26,19 +26,19 @@ import { navigateAfterAuth } from '@/lib/postAuthRouter';
 
 type Tab = 'signin' | 'signup';
 
-function getErrorMessage(err: unknown): string {
+function getErrorMessage(err: unknown, t: ReturnType<typeof useI18n>['t']): string {
   if (err instanceof ApiError) {
-    if (err.status === 0) return 'Cannot reach the server. Please check your connection.';
-    if (err.status === 401 || err.status === 400) return 'Invalid credentials. Please check and try again.';
-    if (err.status === 404) return 'Account not found. Please sign up first.';
-    if (err.status === 409) return 'An account with this email or phone already exists.';
-    if (err.status === 429) return 'Server is unavailable right now. Please try again later.';
-    if (err.status >= 500) return 'Server error. Please try again later.';
+    if (err.status === 0) return t.err_no_connection;
+    if (err.status === 401 || err.status === 400) return t.err_invalid_credentials;
+    if (err.status === 404) return t.err_account_not_found;
+    if (err.status === 409) return t.err_account_exists;
+    if (err.status === 429) return t.err_server_busy;
+    if (err.status >= 500) return t.err_server_error;
     const body = err.body as { error?: string } | null;
     if (body?.error) return body.error;
   }
-  if (err instanceof TypeError) return 'Cannot reach the server. Please check your connection.';
-  return 'Something went wrong. Please try again.';
+  if (err instanceof TypeError) return t.err_no_connection;
+  return t.err_generic;
 }
 
 export default function LoginScreen() {
@@ -113,8 +113,8 @@ export default function LoginScreen() {
           </View>
 
           <Text style={[s.terms, { textAlign: 'center' }]}>
-            By continuing you agree to VeeGo's{' '}
-            <Text style={s.termsLink}>Driver Terms & Privacy Policy</Text>
+            {t.driver_terms_prefix}{' '}
+            <Text style={s.termsLink}>{t.driver_terms_link}</Text>
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -127,6 +127,7 @@ function SignInForm({ isRTL, onSuccess, onOtpRequired }: {
   onSuccess: (at: string, rt: string) => void;
   onOtpRequired: (phone: string, maskedPhone?: string) => void;
 }) {
+  const { t } = useI18n();
   const [credential, setCredential] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
@@ -157,7 +158,7 @@ function SignInForm({ isRTL, onSuccess, onOtpRequired }: {
           return;
         }
       }
-      setError(getErrorMessage(err));
+      setError(getErrorMessage(err, t));
     } finally {
       setLoading(false);
     }
@@ -166,16 +167,15 @@ function SignInForm({ isRTL, onSuccess, onOtpRequired }: {
   return (
     <View style={s.form}>
       <View style={s.formHeader}>
-        <Text style={[s.formTitle, { textAlign: TA }]}>Welcome back</Text>
-        <Text style={[s.formSub, { textAlign: TA }]}>Sign in with your email or phone number</Text>
+        <Text style={[s.formTitle, { textAlign: TA }]}>{t.login_welcome_back}</Text>
+        <Text style={[s.formSub, { textAlign: TA }]}>{t.login_signin_sub}</Text>
       </View>
 
-      {/* credential field */}
       <View style={[s.inputWrap, { flexDirection: R }]}>
         <View style={s.inputIcon}><Phone size={16} color="#5e5e72" /></View>
         <TextInput
           style={[s.inputField, { textAlign: TA }]}
-          placeholder="Email or phone number"
+          placeholder={t.email_or_phone}
           placeholderTextColor="#c3c3cc"
           value={credential}
           onChangeText={v => { setCredential(v); setError(null); }}
@@ -185,12 +185,11 @@ function SignInForm({ isRTL, onSuccess, onOtpRequired }: {
         />
       </View>
 
-      {/* password field */}
       <View style={[s.inputWrap, { flexDirection: R }]}>
         <View style={s.inputIcon}><Lock size={16} color="#5e5e72" /></View>
         <TextInput
           style={[s.inputField, { textAlign: TA, flex: 1 }]}
-          placeholder="Password"
+          placeholder={t.password}
           placeholderTextColor="#c3c3cc"
           value={password}
           onChangeText={v => { setPassword(v); setError(null); }}
@@ -212,7 +211,7 @@ function SignInForm({ isRTL, onSuccess, onOtpRequired }: {
 
       <Pressable style={[s.primaryBtn, { flexDirection: R }, (!credential.trim() || !password || loading) && { opacity: 0.6 }]} onPress={handle} disabled={!credential.trim() || !password || loading}>
         {loading ? <ActivityIndicator color="white" size="small" /> : (
-          <><Text style={s.primaryBtnText}>Sign in</Text><ArrowRight size={16} color="white" /></>
+          <><Text style={s.primaryBtnText}>{t.sign_in}</Text><ArrowRight size={16} color="white" /></>
         )}
       </Pressable>
 
@@ -221,7 +220,7 @@ function SignInForm({ isRTL, onSuccess, onOtpRequired }: {
         onPress={() => expoRouter.push('/forgot-password')}
         activeOpacity={0.7}
       >
-        <Text style={s.forgotText}>Forgot password?</Text>
+        <Text style={s.forgotText}>{t.forgot_password_title}</Text>
       </TouchableOpacity>
 
     </View>
@@ -229,6 +228,7 @@ function SignInForm({ isRTL, onSuccess, onOtpRequired }: {
 }
 
 function SignUpForm({ isRTL, onOtpRequired }: { isRTL: boolean; onOtpRequired: (phone: string, maskedPhone?: string) => void }) {
+  const { t } = useI18n();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -261,7 +261,7 @@ function SignUpForm({ isRTL, onOtpRequired }: { isRTL: boolean; onOtpRequired: (
       // Phase 2: register returns requiresOtp, not tokens
       onOtpRequired(result.phone, result.maskedPhone);
     } catch (err) {
-      setError(getErrorMessage(err));
+      setError(getErrorMessage(err, t));
     } finally {
       setLoading(false);
     }
@@ -270,37 +270,36 @@ function SignUpForm({ isRTL, onOtpRequired }: { isRTL: boolean; onOtpRequired: (
   return (
     <View style={s.form}>
       <View style={s.formHeader}>
-        <Text style={[s.formTitle, { textAlign: TA }]}>Create account</Text>
-        <Text style={[s.formSub, { textAlign: TA }]}>Fill in your details to get started</Text>
+        <Text style={[s.formTitle, { textAlign: TA }]}>{t.sign_up}</Text>
+        <Text style={[s.formSub, { textAlign: TA }]}>{t.driver_signup_sub}</Text>
       </View>
 
       <View style={[s.inputWrap, { flexDirection: R }]}>
         <View style={s.inputIcon}><User size={16} color="#5e5e72" /></View>
-        <TextInput style={[s.inputField, { textAlign: TA }]} placeholder="Full name" placeholderTextColor="#c3c3cc" value={name} onChangeText={setName} autoCapitalize="words" autoCorrect={false} />
+        <TextInput style={[s.inputField, { textAlign: TA }]} placeholder={t.full_name} placeholderTextColor="#c3c3cc" value={name} onChangeText={setName} autoCapitalize="words" autoCorrect={false} />
       </View>
 
       <View style={[s.inputWrap, { flexDirection: R }]}>
         <View style={s.inputIcon}><Mail size={16} color="#5e5e72" /></View>
-        <TextInput style={[s.inputField, { textAlign: TA }]} placeholder="Email address" placeholderTextColor="#c3c3cc" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} />
+        <TextInput style={[s.inputField, { textAlign: TA }]} placeholder={t.email_address} placeholderTextColor="#c3c3cc" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} />
       </View>
 
       <View style={[s.inputWrap, { flexDirection: R }]}>
         <View style={s.inputIcon}><Phone size={16} color="#5e5e72" /></View>
-        <TextInput style={[s.inputField, { textAlign: TA }]} placeholder="Phone number" placeholderTextColor="#c3c3cc" value={phone} onChangeText={setPhone} keyboardType="phone-pad" autoCapitalize="none" />
+        <TextInput style={[s.inputField, { textAlign: TA }]} placeholder={t.phone} placeholderTextColor="#c3c3cc" value={phone} onChangeText={setPhone} keyboardType="phone-pad" autoCapitalize="none" />
       </View>
 
       <View style={[s.inputWrap, { flexDirection: R }]}>
         <View style={s.inputIcon}><Lock size={16} color="#5e5e72" /></View>
-        <TextInput style={[s.inputField, { textAlign: TA, flex: 1 }]} placeholder="Password (min 8 chars)" placeholderTextColor="#c3c3cc" value={password} onChangeText={setPassword} secureTextEntry={!showPass} autoCapitalize="none" autoCorrect={false} />
+        <TextInput style={[s.inputField, { textAlign: TA, flex: 1 }]} placeholder={t.password_min_8} placeholderTextColor="#c3c3cc" value={password} onChangeText={setPassword} secureTextEntry={!showPass} autoCapitalize="none" autoCorrect={false} />
         <TouchableOpacity onPress={() => setShowPass(p => !p)} style={{ padding: 4 }}>
           {showPass ? <EyeOff size={16} color="#5e5e72" /> : <Eye size={16} color="#5e5e72" />}
         </TouchableOpacity>
       </View>
 
-      {/* Optional fields toggle */}
       <TouchableOpacity onPress={() => setShowOptional(v => !v)} style={[s.optionalToggle, { flexDirection: R }]}>
         <CreditCard size={14} color="#5e5e72" />
-        <Text style={s.optionalToggleText}>{showOptional ? 'Hide' : 'Add'} license & national ID (optional)</Text>
+        <Text style={s.optionalToggleText}>{showOptional ? t.hide_optional_docs : t.add_optional_docs}</Text>
         {isRTL ? <ArrowLeft size={14} color="#5e5e72" /> : <ArrowRight size={14} color="#5e5e72" />}
       </TouchableOpacity>
 
@@ -308,11 +307,11 @@ function SignUpForm({ isRTL, onOtpRequired }: { isRTL: boolean; onOtpRequired: (
         <>
           <View style={[s.inputWrap, { flexDirection: R }]}>
             <View style={s.inputIcon}><CreditCard size={16} color="#5e5e72" /></View>
-            <TextInput style={[s.inputField, { textAlign: TA }]} placeholder="License number" placeholderTextColor="#c3c3cc" value={licenseNumber} onChangeText={setLicenseNumber} autoCapitalize="characters" autoCorrect={false} />
+            <TextInput style={[s.inputField, { textAlign: TA }]} placeholder={t.license_number} placeholderTextColor="#c3c3cc" value={licenseNumber} onChangeText={setLicenseNumber} autoCapitalize="characters" autoCorrect={false} />
           </View>
           <View style={[s.inputWrap, { flexDirection: R }]}>
             <View style={s.inputIcon}><CreditCard size={16} color="#5e5e72" /></View>
-            <TextInput style={[s.inputField, { textAlign: TA }]} placeholder="National ID" placeholderTextColor="#c3c3cc" value={nationalId} onChangeText={setNationalId} autoCapitalize="characters" autoCorrect={false} />
+            <TextInput style={[s.inputField, { textAlign: TA }]} placeholder={t.national_id} placeholderTextColor="#c3c3cc" value={nationalId} onChangeText={setNationalId} autoCapitalize="characters" autoCorrect={false} />
           </View>
         </>
       )}
@@ -326,7 +325,7 @@ function SignUpForm({ isRTL, onOtpRequired }: { isRTL: boolean; onOtpRequired: (
 
       <Pressable style={[s.primaryBtn, { flexDirection: R }, (!canSubmit || loading) && { opacity: 0.6 }]} onPress={handle} disabled={!canSubmit || loading}>
         {loading ? <ActivityIndicator color="white" size="small" /> : (
-          <><Text style={s.primaryBtnText}>Create account</Text><ArrowRight size={16} color="white" /></>
+          <><Text style={s.primaryBtnText}>{t.sign_up}</Text><ArrowRight size={16} color="white" /></>
         )}
       </Pressable>
     </View>
