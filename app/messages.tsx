@@ -25,36 +25,42 @@ export default function MessagesScreen() {
   const { t } = useI18n();
   const queryClient = useQueryClient();
 
-  const { data: notifications, isLoading, isError } = useQuery<Notification[]>({
+  const { data: rawNotifications, isLoading, isError } = useQuery({
     queryKey: ['notifications'],
-    queryFn: () => endpoints.notifications.list() as Promise<Notification[]>,
+    queryFn: () => endpoints.notifications.list(),
   });
 
-  const hasUnread = (notifications ?? []).some(n => !n.read);
+  const notifications: Notification[] = Array.isArray(rawNotifications)
+    ? rawNotifications as Notification[]
+    : Array.isArray((rawNotifications as { data?: unknown })?.data)
+      ? (rawNotifications as { data: Notification[] }).data
+      : [];
+
+  const hasUnread = notifications.some(n => !n.read);
+
+  const patchCache = (patcher: (items: Notification[]) => Notification[]) => {
+    queryClient.setQueryData(['notifications'], (prev: unknown) => {
+      if (Array.isArray(prev)) return patcher(prev as Notification[]);
+      if (prev && Array.isArray((prev as { data?: unknown }).data)) {
+        return { ...(prev as object), data: patcher((prev as { data: Notification[] }).data) };
+      }
+      return prev;
+    });
+  };
 
   const markAllMutation = useMutation({
     mutationFn: () => endpoints.notifications.markAllRead() as Promise<unknown>,
-    onMutate: () => {
-      queryClient.setQueryData<Notification[]>(['notifications'], prev =>
-        prev?.map(item => ({ ...item, read: true }))
-      );
-    },
-    onError: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
-    },
+    onMutate: () => { patchCache(items => items.map(item => ({ ...item, read: true }))); },
+    onError: () => { queryClient.invalidateQueries({ queryKey: ['notifications'] }); },
   });
 
   const handleTap = async (n: Notification) => {
     if (!n.read) {
-      queryClient.setQueryData<Notification[]>(['notifications'], prev =>
-        prev?.map(item => item.id === n.id ? { ...item, read: true } : item)
-      );
+      patchCache(items => items.map(item => item.id === n.id ? { ...item, read: true } : item));
       try {
         await endpoints.notifications.markRead(n.id);
       } catch {
-        queryClient.setQueryData<Notification[]>(['notifications'], prev =>
-          prev?.map(item => item.id === n.id ? { ...item, read: false } : item)
-        );
+        patchCache(items => items.map(item => item.id === n.id ? { ...item, read: false } : item));
       }
     }
   };
