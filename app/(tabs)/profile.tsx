@@ -45,7 +45,19 @@ export default function ProfileScreen() {
     queryKey: ['driver'],
     queryFn: endpoints.driver.me as () => Promise<DriverProfile>,
   });
+
+  const { data: documentsRaw } = useQuery<{ type: string; fileUrl?: string; url?: string }[]>({
+    queryKey: ['driver-documents'],
+    queryFn: endpoints.driver.documents as () => Promise<{ type: string; fileUrl?: string; url?: string }[]>,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const profilePhotoUrl = documentsRaw?.find(d => d.type === 'profile_photo')?.fileUrl
+    ?? documentsRaw?.find(d => d.type === 'profile_photo')?.url
+    ?? null;
+
   const driver = driverRaw;
+  const avatarUri = driver?.avatar ?? profilePhotoUrl ?? `https://ui-avatars.com/api/?name=${encodeURIComponent(driver?.name ?? 'Driver')}&background=1e1e28&color=fff`;
 
   const handleCopyCode = async () => {
     const code = driver?.referralCode;
@@ -71,7 +83,7 @@ export default function ProfileScreen() {
               <>
                 <View style={styles.avatarWrap}>
                   <Image
-                    source={{ uri: driver?.avatar ?? `https://ui-avatars.com/api/?name=${encodeURIComponent(driver?.name ?? 'Driver')}&background=1e1e28&color=fff` }}
+                    source={{ uri: avatarUri }}
                     style={[styles.avatar, { borderColor: colors.primary + '66' }]}
                   />
                   <LinearGradient colors={['#2d2d42', '#D5B23D']} style={styles.awardBadge}>
