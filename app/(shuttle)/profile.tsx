@@ -30,6 +30,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -41,6 +42,7 @@ import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import type { Language } from '@/lib/i18nContext';
 import { useAuth } from '@/lib/authContext';
+import { useService } from '@/lib/serviceContext';
 import { endpoints } from '@/lib/api';
 import type { DriverProfileEnriched } from '@/lib/api';
 
@@ -71,6 +73,7 @@ export default function ShuttleProfileScreen() {
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
   const { t, isRTL, language, setLanguage } = useI18n();
   const { logout } = useAuth();
+  const { isDarkMode, setIsDarkMode } = useService();
 
   const TA = isRTL ? 'right' as const : 'left' as const;
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
@@ -114,7 +117,8 @@ export default function ShuttleProfileScreen() {
   const trips = enriched?.trips ?? base?.trips ?? null;
   const vehicle = enriched?.vehicle ?? base?.vehicle ?? null;
   const documentStatus = enriched?.documentStatus ?? null;
-  const bonusTargets = enriched?.bonusTargets ?? [];
+  // bonusTargets no longer shown inline — kept for potential future use
+  // const bonusTargets = enriched?.bonusTargets ?? [];
 
   const referralCode: string = enriched?.referralCode
     ?? (id ? `VGO-${String(id).slice(0, 4).toUpperCase()}` : 'VGO-XXXX');
@@ -219,7 +223,7 @@ export default function ShuttleProfileScreen() {
         </Text>
 
         {/* ── GROUP 1: Master Driver Card ─────────────────────────────── */}
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           {isLoading ? (
             <ActivityIndicator size="large" color={colors.primary} style={{ marginVertical: 32 }} />
           ) : (
@@ -290,7 +294,7 @@ export default function ShuttleProfileScreen() {
         </View>
 
         {/* ── Referral Code (كود الإحالة للسائق) ─────────────────────── */}
-        <View style={[styles.card, styles.referralCard, { flexDirection: R }]}>
+        <View style={[styles.card, styles.referralCard, { flexDirection: R, backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={[styles.referralIconWrap, { backgroundColor: colors.secondary }]}>
             <GitBranch size={20} color={colors.primary} strokeWidth={2} />
           </View>
@@ -322,10 +326,36 @@ export default function ShuttleProfileScreen() {
           <Text style={[styles.copiedMsg, { color: '#16a34a' }]}>{t.code_copied}</Text>
         )}
 
-        {/* ── GROUP 2: Core Operations & Earnings ───────────────────── */}
-        {/* Vehicle & Documents combined */}
+        {/* ── Personal Info ───────────────────────────────────────────── */}
+        <SectionHeader label={t.personal_info} colors={colors} isRTL={isRTL} />
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <MenuRow
+            icon={<User size={18} color={colors.foreground} strokeWidth={2} />}
+            label={t.profile_info_label}
+            onPress={() => router.push('/shuttle/profile-info' as never)}
+            colors={colors}
+            isRTL={isRTL}
+            last
+          />
+        </View>
+
+        {/* Financial Analytics */}
+        <SectionHeader label={t.financial_analytics_section} colors={colors} isRTL={isRTL} />
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <MenuRow
+            icon={<TrendingUp size={18} color={colors.foreground} strokeWidth={2} />}
+            label={t.earnings_commissions_label}
+            sub={t.cash_commission_net}
+            onPress={() => router.push('/shuttle/earnings' as never)}
+            colors={colors}
+            isRTL={isRTL}
+            last
+          />
+        </View>
+
+        {/* Vehicle & Documents */}
         <SectionHeader label={t.vehicle_documents} colors={colors} isRTL={isRTL} />
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <MenuRow
             icon={<Truck size={18} color={colors.foreground} strokeWidth={2} />}
             label={t.vehicle_label}
@@ -347,75 +377,22 @@ export default function ShuttleProfileScreen() {
           />
         </View>
 
-        {/* Financial Analytics */}
-        <SectionHeader label={t.financial_analytics_section} colors={colors} isRTL={isRTL} />
-        <View style={styles.card}>
+        {/* Bonus Targets */}
+        <SectionHeader label={t.bonus_targets} colors={colors} isRTL={isRTL} />
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <MenuRow
-            icon={<TrendingUp size={18} color={colors.foreground} strokeWidth={2} />}
-            label={t.earnings_commissions_label}
-            sub={t.cash_commission_net}
-            onPress={() => router.push('/shuttle/earnings' as never)}
+            icon={<Target size={18} color={colors.foreground} strokeWidth={2} />}
+            label={t.bonus_targets}
+            onPress={() => router.push('/bonus-targets')}
             colors={colors}
             isRTL={isRTL}
             last
           />
         </View>
 
-        {/* Bonus Targets */}
-        <SectionHeader label={t.bonus_targets} colors={colors} isRTL={isRTL} />
-        <View style={styles.card}>
-          {isLoading ? (
-            <View style={{ padding: 20 }}>
-              <ActivityIndicator size="small" color={colors.primary} />
-            </View>
-          ) : bonusTargets.length === 0 ? (
-            <Text style={[styles.emptyBonus, { color: colors.mutedForeground, textAlign: TA }]}>
-              {t.no_bonus_targets}
-            </Text>
-          ) : (
-            bonusTargets.map((bt, idx) => {
-              const progress = Math.min(bt.currentTrips / Math.max(bt.targetTrips, 1), 1);
-              const isLast = idx === bonusTargets.length - 1;
-              return (
-                <View key={bt.id}>
-                  <View style={[styles.bonusRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
-                    <View style={{ flex: 1 }}>
-                      <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Text style={[styles.bonusTitle, { color: colors.foreground, textAlign: TA }]}>
-                          {bt.title}
-                        </Text>
-                        <Text style={[styles.bonusAmount, { color: colors.accent }]}>
-                          +{bt.bonusAmount} EGP
-                        </Text>
-                      </View>
-                      <Text style={[styles.bonusSub, { color: colors.mutedForeground, textAlign: TA }]}>
-                        {bt.currentTrips} {t.bonus_progress_of} {bt.targetTrips} {t.bonus_progress_trips}
-                      </Text>
-                      <View style={[styles.progressTrack, { backgroundColor: colors.secondary }]}>
-                        <View
-                          style={[
-                            styles.progressFill,
-                            {
-                              width: `${Math.round(progress * 100)}%` as `${number}%`,
-                              backgroundColor: bt.completed ? '#16a34a' : colors.accent,
-                            },
-                          ]}
-                        />
-                      </View>
-                    </View>
-                  </View>
-                  {!isLast && <View style={[styles.divider, { backgroundColor: BORDER_COLOR }]} />}
-                </View>
-              );
-            })
-          )}
-        </View>
-
-        {/* ── GROUP 3: Preferences & Support ────────────────────────── */}
-
         {/* Communication & Settings */}
         <SectionHeader label={t.communication_settings} colors={colors} isRTL={isRTL} />
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <MenuRow
             icon={<Inbox size={18} color={colors.foreground} strokeWidth={2} />}
             label={t.notifications}
@@ -428,14 +405,6 @@ export default function ShuttleProfileScreen() {
             icon={<MessageSquare size={18} color={colors.foreground} strokeWidth={2} />}
             label={t.messages_label}
             onPress={() => router.push('/messages')}
-            colors={colors}
-            isRTL={isRTL}
-          />
-          <View style={[styles.divider, { backgroundColor: BORDER_COLOR }]} />
-          <MenuRow
-            icon={<User size={18} color={colors.foreground} strokeWidth={2} />}
-            label={t.profile_info_label}
-            onPress={() => router.push('/shuttle/profile-info' as never)}
             colors={colors}
             isRTL={isRTL}
           />
@@ -468,24 +437,35 @@ export default function ShuttleProfileScreen() {
               </View>
             </View>
           </View>
+          <View style={[styles.divider, { backgroundColor: BORDER_COLOR }]} />
+          {/* Dark Mode toggle */}
+          <View style={[styles.menuRow, { flexDirection: R }]}>
+            <View style={[styles.menuIconWrap, { backgroundColor: colors.secondary }]}>
+              <Text style={{ fontSize: 16 }}>{isDarkMode ? '🌙' : '☀️'}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.menuLabel, { color: colors.foreground, textAlign: TA }]}>{t.dark_mode}</Text>
+              <Text style={[styles.menuSub, { color: colors.mutedForeground, textAlign: TA }]}>
+                {isDarkMode ? t.dark_theme_active : t.light_theme_active}
+              </Text>
+            </View>
+            <Switch
+              value={isDarkMode}
+              onValueChange={setIsDarkMode}
+              trackColor={{ false: BORDER_COLOR, true: colors.primary + 'aa' }}
+              thumbColor={isDarkMode ? colors.primary : '#fff'}
+            />
+          </View>
         </View>
 
         {/* Help & Safety */}
         <SectionHeader label={t.help_safety} colors={colors} isRTL={isRTL} />
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <MenuRow
             icon={<Clock size={18} color={colors.foreground} strokeWidth={2} />}
             label={t.trip_history}
             sub={t.history_subtitle}
             onPress={() => router.push('/shuttle/history' as never)}
-            colors={colors}
-            isRTL={isRTL}
-          />
-          <View style={[styles.divider, { backgroundColor: BORDER_COLOR }]} />
-          <MenuRow
-            icon={<Target size={18} color={colors.foreground} strokeWidth={2} />}
-            label={t.bonus_targets}
-            onPress={() => router.push('/bonus-targets')}
             colors={colors}
             isRTL={isRTL}
           />
@@ -511,7 +491,7 @@ export default function ShuttleProfileScreen() {
         {/* Sign out */}
         <Pressable
           onPress={async () => { await logout(); router.replace('/login'); }}
-          style={({ pressed }) => [styles.signOutBtn, { backgroundColor: pressed ? '#fef2f2' : '#fff', flexDirection: R }]}
+          style={({ pressed }) => [styles.signOutBtn, { backgroundColor: pressed ? colors.destructive + '18' : colors.card, borderColor: colors.border, flexDirection: R }]}
         >
           <LogOut size={19} color={colors.destructive} strokeWidth={2} />
           <Text style={[styles.signOutText, { color: colors.destructive }]}>{t.sign_out}</Text>
@@ -681,12 +661,10 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
 
-  // White card
+  // Card — background supplied dynamically via inline style
   card: {
-    backgroundColor: '#fff',
     borderRadius: CARD_RADIUS,
     borderWidth: 1,
-    borderColor: BORDER_COLOR,
     marginBottom: 8,
     overflow: 'hidden',
   },

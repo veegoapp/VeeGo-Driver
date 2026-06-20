@@ -6,12 +6,13 @@ import {
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Alert, Dimensions, Platform, Pressable, ScrollView,
+  Alert, Dimensions, Linking, Platform, Pressable, ScrollView,
   StyleSheet, Text, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MapBackdrop } from '@/components/MapBackdrop';
 import { Audio } from 'expo-av';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useDriverLocation, haversineMeters } from '@/hooks/useDriverLocation';
@@ -323,6 +324,59 @@ export default function ShuttleTripActiveScreen() {
     setPassengerStatuses(prev => ({ ...prev, [passengerId]: status }));
   }, []);
 
+  // ── SOS / Safety button ────────────────────────────────────────────────────
+  const handleSOS = useCallback(async () => {
+    const raw = await AsyncStorage.getItem('veego_emergency_contact');
+    const ec = raw ? (() => { try { return JSON.parse(raw); } catch { return null; } })() : null;
+
+    Alert.alert(
+      t.sos_confirm_title,
+      t.sos_confirm_body,
+      [
+        { text: t.cancel, style: 'cancel' },
+        {
+          text: t.sos_call_122,
+          onPress: () => Linking.openURL('tel:122').catch(() => {}),
+        },
+        {
+          text: t.sos_whatsapp_alert,
+          style: 'destructive',
+          onPress: async () => {
+            if (!ec?.phone) {
+              Alert.alert(t.sos_confirm_title, t.sos_no_contact_set);
+              return;
+            }
+            try {
+              const loc = effectivePos;
+              const mapLink = loc ? `https://maps.google.com/?q=${loc.latitude},${loc.longitude}` : '';
+              const passengerList = passengers.length > 0
+                ? passengers.map(p => `• ${p.name} — ${p.phone}`).join('\n')
+                : '—';
+              const lines = [
+                '🚨 SOS ALERT 🚨',
+                `Route: ${activeLine?.lineName ?? '—'} | Trip #${tripId ?? '—'}`,
+                `Stop: ${currentStop?.name ?? '—'} (${currentStopIndex + 1}/${stops.length})`,
+                `Passengers:\n${passengerList}`,
+                mapLink ? `📍 Location: ${mapLink}` : '📍 Location unavailable',
+              ].join('\n\n');
+              const phoneClean = ec.phone.replace(/\D/g, '');
+              await Linking.openURL(`whatsapp://send?phone=${phoneClean}&text=${encodeURIComponent(lines)}`);
+              if (tripId) {
+                endpoints.rides.sos(String(tripId), {
+                  latitude: loc?.latitude ?? 0,
+                  longitude: loc?.longitude ?? 0,
+                  notes: `SOS from trip-active: stop ${currentStop?.name}`,
+                }).catch(() => {});
+              }
+            } catch {
+              Alert.alert(t.sos_confirm_title, t.whatsapp_emergency_no_contact);
+            }
+          },
+        },
+      ]
+    );
+  }, [effectivePos, passengers, activeLine, tripId, currentStop, currentStopIndex, stops.length, t]);
+
   // ── Progress dots ──────────────────────────────────────────────────────────
   const progressDots = (
     <View style={styles.progressDots}>
@@ -381,6 +435,18 @@ export default function ShuttleTripActiveScreen() {
                 </Text>
               </GlassView>
             )}
+
+            {/* SOS button */}
+            <Pressable
+              onPress={handleSOS}
+              style={({ pressed }) => [
+                styles.sosBtn,
+                { transform: [{ scale: pressed ? 0.93 : 1 }] },
+              ]}
+            >
+              <AlertTriangle size={14} color="#fff" strokeWidth={2.5} />
+              <Text style={styles.sosBtnText}>SOS</Text>
+            </Pressable>
 
           </View>
 
@@ -770,6 +836,19 @@ const styles = StyleSheet.create({
   passengerPhone: { fontSize: 12 },
   statusBtns: { flexDirection: 'row', gap: 8 },
   statusBtn: { width: 44, height: 44, borderRadius: 13, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+
+  // SOS button
+  sosBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: '#dc2626', borderRadius: 18,
+    paddingHorizontal: 11, paddingVertical: 7,
+    shadowColor: '#dc2626', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.5, shadowRadius: 6, elevation: 6,
+    borderWidth: 1, borderColor: 'rgba(255,100,100,0.35)',
+  },
+  sosBtnText: {
+    fontSize: 12, color: '#fff', fontFamily: 'Inter_700Bold', letterSpacing: 0.5,
+  },
 
   // Primary action button
   paymentCashBadge: { alignSelf: 'flex-start', marginTop: 4, backgroundColor: '#fef3c7', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: '#fcd34d' },

@@ -1,9 +1,11 @@
 import colors from "@/constants/colors";
+import { useService } from "@/lib/serviceContext";
 
 /**
  * Returns the design tokens for the current color scheme.
- * Dark mode is disabled — always returns the light palette.
+ * Respects the isDarkMode toggle from ServiceContext.
  */
 export function useColors() {
-  return { ...colors.light, radius: colors.radius };
+  const { isDarkMode } = useService();
+  return { ...(isDarkMode ? colors.dark : colors.light), radius: colors.radius };
 }

@@ -201,7 +201,7 @@ export default function EarningsScreen() {
         {/* ── Summary cards ───────────────────────────────────────────── */}
         {!isLoading && !isError && (
           <>
-            <View style={[styles.summaryCard, { borderColor: colors.border, backgroundColor: '#fff' }]}>
+            <View style={[styles.summaryCard, { borderColor: colors.border, backgroundColor: colors.card }]}>
               {/* Total Cash Collected */}
               <View style={[styles.summaryRow, { borderBottomColor: colors.border }]}>
                 <View style={[styles.summaryIconWrap, { backgroundColor: '#F0FDF4' }]}>
