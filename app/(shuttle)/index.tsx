@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import * as Location from 'expo-location';
 import { AlertTriangle, ArrowRight, Bell, Calendar, ChevronRight, Clock, GitBranch, Navigation, RefreshCw, Users, Wifi, WifiOff, X } from 'lucide-react-native';
+import { useLocationBroadcast } from '@/hooks/useLocationBroadcast';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -45,10 +45,11 @@ export default function ShuttleHomeScreen() {
   const pulseScale = useRef(new Animated.Value(0.8)).current;
   const pulseOpacity = useRef(new Animated.Value(0.8)).current;
   const cardAnim = useRef(new Animated.Value(0)).current;
-  // Fix 1: location broadcast interval ref
-  const locationBroadcastRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const { socket } = useSocket();
+
+  // Broadcast GPS location every 5 s while the driver is online
+  useLocationBroadcast({ enabled: online, tripId: activeLine?.tripId ?? null });
 
   const { data: driverRaw } = useQuery({ queryKey: ['driver'], queryFn: endpoints.driver.me });
   const { data: driverStatusRaw } = useQuery({
@@ -90,74 +91,6 @@ export default function ShuttleHomeScreen() {
   const upcomingBookings = myBookings.filter(
     b => b.status === 'booked' || b.status === 'active' || b.status === 'pending_renewal'
   );
-
-  // Fix 1: check if any booking departs within 20 minutes (HH:MM comparison)
-  const isShuttleAboutToDepart = useCallback(() => {
-    return upcomingBookings.some(b => {
-      const match = b.departureTime.match(/(\d{1,2}):(\d{2})/);
-      if (!match) return false;
-      const h = parseInt(match[1], 10);
-      const m = parseInt(match[2], 10);
-      const now = new Date();
-      const nowMins = now.getHours() * 60 + now.getMinutes();
-      const deptMins = h * 60 + m;
-      return deptMins >= nowMins && deptMins - nowMins <= 20;
-    });
-  }, [upcomingBookings]);
-
-  // Fix 1: start/stop shuttle location broadcasting via socket
-  const startShuttleBroadcast = useCallback(async () => {
-    if (locationBroadcastRef.current) return;
-    if (Platform.OS === 'web') return;
-
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') return;
-
-    const emit = async () => {
-      if (!socket) return;
-      try {
-        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-        const tripId = activeLine?.tripId;
-        socket.emit(SOCKET_EVENTS.DRIVER_LOCATION_UPDATE, {
-          tripId,
-          lat: loc.coords.latitude,
-          lng: loc.coords.longitude,
-          heading: loc.coords.heading ?? 0,
-        });
-      } catch {
-        // best-effort
-      }
-    };
-
-    emit();
-    locationBroadcastRef.current = setInterval(emit, 3000);
-  }, [socket, activeLine?.tripId]);
-
-  const stopShuttleBroadcast = useCallback(() => {
-    if (locationBroadcastRef.current) {
-      clearInterval(locationBroadcastRef.current);
-      locationBroadcastRef.current = null;
-    }
-  }, []);
-
-  // Fix 1: start broadcasting when online + shuttle trip is active or about to depart
-  useEffect(() => {
-    const shouldBroadcast = online && (!!activeLine || isShuttleAboutToDepart());
-    if (shouldBroadcast) {
-      startShuttleBroadcast();
-    } else {
-      stopShuttleBroadcast();
-    }
-    return () => {
-      // Stop when active line becomes completed/cancelled
-      if (activeLine?.status === 'completed') {
-        stopShuttleBroadcast();
-      }
-    };
-  }, [online, activeLine, isShuttleAboutToDepart, startShuttleBroadcast, stopShuttleBroadcast]);
-
-  // Clean up on unmount
-  useEffect(() => () => stopShuttleBroadcast(), []);
 
   // Fix 2: listen for shuttle:checkin:required
   useEffect(() => {
@@ -285,12 +218,11 @@ export default function ShuttleHomeScreen() {
         await endpoints.driver.goOnline();
       } else {
         await endpoints.driver.goOffline();
-        stopShuttleBroadcast();
       }
-    } catch {
-      // best-effort
-    } finally {
       setOnline(next);
+    } catch {
+      // API failed — keep current state so UI stays in sync with backend
+    } finally {
       setOnlineLoading(false);
     }
   };
