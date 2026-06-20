@@ -26,10 +26,14 @@ export default function SplashScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const {} = useService();
-  const { language } = useI18n();
+  const { language, isLanguageLoading } = useI18n();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
   const logoScale = useRef(new Animated.Value(0.7)).current;
+
+  if (isLanguageLoading) {
+    return null;
+  }
 
   if (!language) {
     return <Redirect href="/language-select" />;

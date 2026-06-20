@@ -2119,6 +2119,7 @@ function makeSafeTranslations(locale: Language): Translations {
 
 type I18nContextValue = {
   language: Language | null;
+  isLanguageLoading: boolean;
   setLanguage: (lang: Language) => void;
   t: Translations;
   isRTL: boolean;
@@ -2126,6 +2127,7 @@ type I18nContextValue = {
 
 const I18nContext = createContext<I18nContextValue>({
   language: null,
+  isLanguageLoading: true,
   setLanguage: () => {},
   t: en,
   isRTL: false,
@@ -2133,6 +2135,7 @@ const I18nContext = createContext<I18nContextValue>({
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState<Language | null>(null);
+  const [isLanguageLoading, setIsLanguageLoading] = useState(true);
 
   // Load persisted language on mount and sync I18nManager silently (no alert at boot)
   useEffect(() => {
@@ -2144,7 +2147,10 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
           setApiLanguage(stored);
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        setIsLanguageLoading(false);
+      });
   }, []);
 
   const setLanguage = (lang: Language): void => {
@@ -2177,7 +2183,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   const isRTL = language === 'ar';
 
   return (
-    <I18nContext.Provider value={{ language, setLanguage, t, isRTL }}>
+    <I18nContext.Provider value={{ language, isLanguageLoading, setLanguage, t, isRTL }}>
       {children}
     </I18nContext.Provider>
   );
