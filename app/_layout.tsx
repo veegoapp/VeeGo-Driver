@@ -120,6 +120,7 @@ function RootLayoutNav() {
         <Stack.Screen name="messages" />
         <Stack.Screen name="personal-info" options={{ animation: 'slide_from_right', gestureEnabled: true }} />
         <Stack.Screen name="bonus-targets" options={{ animation: 'slide_from_right', gestureEnabled: true }} />
+        <Stack.Screen name="shuttle/profile-info" options={{ animation: 'slide_from_right', gestureEnabled: true }} />
         <Stack.Screen name="shuttle/trip-active" />
         <Stack.Screen name="shuttle/boarding" />
         <Stack.Screen name="shuttle/trip-details" />

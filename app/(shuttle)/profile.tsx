@@ -435,7 +435,7 @@ export default function ShuttleProfileScreen() {
           <MenuRow
             icon={<User size={18} color={colors.foreground} strokeWidth={2} />}
             label={t.profile_info_label}
-            onPress={() => router.push('/personal-info')}
+            onPress={() => router.push('/shuttle/profile-info' as never)}
             colors={colors}
             isRTL={isRTL}
           />
