@@ -67,9 +67,9 @@ export default function VehicleScreen() {
 
   const make = vehicleData?.make ?? profileVehicle?.make ?? null;
   const model = vehicleData?.model ?? profileVehicle?.model ?? null;
-  const year = vehicleData?.year ?? null;
-  const color = vehicleData?.color ?? null;
-  const colorAr = vehicleData?.colorAr ?? null;
+  const year = vehicleData?.year ?? profileVehicle?.year ?? null;
+  const color = vehicleData?.color ?? profileVehicle?.color ?? null;
+  const colorAr = vehicleData?.colorAr ?? profileVehicle?.colorAr ?? null;
   const vehicleType = vehicleData?.type ?? vehicleData?.vehicleType ?? null;
 
   // Plate: prefer combined plateLetters+plateNumbers, fallback to plateNumber, then profile

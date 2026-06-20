@@ -84,7 +84,7 @@ export interface DriverProfileEnriched {
   rating: number;
   trips: number;
   referralCode: string;
-  vehicle: { make: string; model: string; plate: string } | null;
+  vehicle: { make: string; model: string; plate: string; year?: number | string | null; color?: string | null; colorAr?: string | null } | null;
   documentStatus: 'accepted' | 'pending' | 'rejected' | null;
   bonusTargets: Array<{
     id: string;
@@ -377,7 +377,7 @@ export const endpoints = {
       totalUploaded: number;
       totalApproved: number;
     }>('/driver/me/onboarding'),
-    vehicle: () => api.get<{ id?: number | string; plateLetters?: string | null; plateNumbers?: string | null; plateNumber?: string | null } | null>('/driver/me/vehicle'),
+    vehicle: () => api.get<{ id?: number | string; plateLetters?: string | null; plateNumbers?: string | null; plateNumber?: string | null; make?: string | null; model?: string | null; year?: number | string | null; color?: string | null; colorAr?: string | null; type?: string | null; vehicleType?: string | null } | null>('/driver/me/vehicle'),
     documents: () => api.get('/driver/me/documents'),
     // Step 1: Upload a file to storage and receive a hosted URL back.
     // POST /driver/upload  (multipart: field "file")
