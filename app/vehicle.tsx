@@ -30,6 +30,15 @@ type VehicleEndpointData = {
   colorAr?: string | null;
   type?: string | null;
   vehicleType?: string | null;
+  // Backend wraps vehicle details inside a nested key
+  vehicle?: {
+    make?: string | null;
+    model?: string | null;
+    year?: number | string | null;
+    color?: string | null;
+    colorAr?: string | null;
+    plate?: string | null;
+  } | null;
 };
 
 const BORDER_COLOR = 'rgba(0,0,0,0.08)';
@@ -61,18 +70,15 @@ export default function VehicleScreen() {
 
   const isLoading = vehicleLoading || profileLoading;
 
-  // Merge both sources — vehicle endpoint is authoritative for plate/id,
-  // profile enriched fills in make/model when vehicle endpoint doesn't have them.
+  // Backend returns { vehicle: {...} | null, vehicleType: string } — unwrap the nested vehicle
+  const nestedVehicle = vehicleData?.vehicle ?? null;
   const profileVehicle = profile?.vehicle ?? null;
 
-  console.log('[Vehicle] vehicleData:', JSON.stringify(vehicleData));
-  console.log('[Vehicle] profileVehicle:', JSON.stringify(profileVehicle));
-
-  const make = vehicleData?.make ?? profileVehicle?.make ?? null;
-  const model = vehicleData?.model ?? profileVehicle?.model ?? null;
-  const year = vehicleData?.year ?? profileVehicle?.year ?? null;
-  const color = vehicleData?.color ?? profileVehicle?.color ?? null;
-  const colorAr = vehicleData?.colorAr ?? profileVehicle?.colorAr ?? null;
+  const make = vehicleData?.make ?? nestedVehicle?.make ?? profileVehicle?.make ?? null;
+  const model = vehicleData?.model ?? nestedVehicle?.model ?? profileVehicle?.model ?? null;
+  const year = vehicleData?.year ?? nestedVehicle?.year ?? profileVehicle?.year ?? null;
+  const color = vehicleData?.color ?? nestedVehicle?.color ?? profileVehicle?.color ?? null;
+  const colorAr = vehicleData?.colorAr ?? nestedVehicle?.colorAr ?? profileVehicle?.colorAr ?? null;
   const vehicleType = vehicleData?.type ?? vehicleData?.vehicleType ?? null;
 
   // Plate: prefer combined plateLetters+plateNumbers, fallback to plateNumber, then profile
@@ -81,7 +87,7 @@ export default function VehicleScreen() {
       return `${vehicleData.plateLetters} ${vehicleData.plateNumbers}`;
     }
     if (vehicleData?.plateNumber) return vehicleData.plateNumber;
-    return profileVehicle?.plate ?? null;
+    return nestedVehicle?.plate ?? profileVehicle?.plate ?? null;
   })();
 
   const displayColor = isRTL && colorAr ? colorAr : (color ?? null);
