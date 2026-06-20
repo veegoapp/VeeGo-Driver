@@ -378,6 +378,8 @@ export const endpoints = {
       totalApproved: number;
     }>('/driver/me/onboarding'),
     vehicle: () => api.get<{ id?: number | string; plateLetters?: string | null; plateNumbers?: string | null; plateNumber?: string | null; make?: string | null; model?: string | null; year?: number | string | null; color?: string | null; colorAr?: string | null; type?: string | null; vehicleType?: string | null } | null>('/driver/me/vehicle'),
+    updateVehicle: (data: { year?: number | string; color?: string }) =>
+      api.patch<{ id: number; make: string; model: string; plate: string; year: number | null; color: string | null }>('/driver/me/vehicle', data),
     documents: () => api.get('/driver/me/documents'),
     // Step 1: Upload a file to storage and receive a hosted URL back.
     // POST /driver/upload  (multipart: field "file")
