@@ -272,7 +272,7 @@ export default function ShuttleProfileScreen() {
                     {t.driver_id_label}
                   </Text>
                   <Text style={[styles.lockedValue, { color: colors.foreground, textAlign: TA }]}>
-                    #{id.slice(0, 8).toUpperCase()}
+                    #{String(id).slice(0, 8).toUpperCase()}
                   </Text>
                 </View>
               )}
