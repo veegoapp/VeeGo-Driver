@@ -3,8 +3,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Award, ChevronRight, Copy, LogOut, Moon, Star, Sun } from 'lucide-react-native';
 import { FeatherIcon } from '@/lib/iconMap';
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { ActivityIndicator, Alert, Image, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
@@ -14,7 +15,11 @@ import { useService } from '@/lib/serviceContext';
 import { useI18n } from '@/lib/i18nContext';
 import { useAuth } from '@/lib/authContext';
 import { endpoints } from '@/lib/api';
+import { TermsModal } from '@/components/TermsModal';
 import { TAB_BAR_HEIGHT } from '.';
+
+const TERMS_VERSION_KEY = 'driver_terms_accepted_version';
+type TermsData = { id: number; version: number; contentAr: string; contentEn: string; updatedAt: string };
 
 type DriverProfile = {
   id: string;
@@ -37,6 +42,46 @@ export default function ProfileScreen() {
   const { t, isRTL } = useI18n();
   const { logout } = useAuth();
   const [codeCopied, setCodeCopied] = useState(false);
+  const [termsModalVisible, setTermsModalVisible] = useState(false);
+  const [termsData, setTermsData] = useState<TermsData | null>(null);
+  const [termsLoading, setTermsLoading] = useState(false);
+  const [termsAcceptLoading, setTermsAcceptLoading] = useState(false);
+  const [acceptedVersion, setAcceptedVersion] = useState<number | null>(null);
+
+  // Load locally stored accepted version once
+  React.useEffect(() => {
+    AsyncStorage.getItem(TERMS_VERSION_KEY).then(v => {
+      if (v) setAcceptedVersion(Number(v));
+    });
+  }, []);
+
+  const handleOpenTerms = useCallback(async () => {
+    setTermsLoading(true);
+    try {
+      const data = await endpoints.terms.fetchDriver();
+      setTermsData(data);
+      setTermsModalVisible(true);
+    } catch {
+      Alert.alert('', 'Failed to load terms. Please try again.');
+    } finally {
+      setTermsLoading(false);
+    }
+  }, []);
+
+  const handleAcceptTerms = useCallback(async () => {
+    if (!termsData) return;
+    setTermsAcceptLoading(true);
+    try {
+      await endpoints.terms.accept(termsData.version);
+      await AsyncStorage.setItem(TERMS_VERSION_KEY, String(termsData.version));
+      setAcceptedVersion(termsData.version);
+      setTermsModalVisible(false);
+    } catch {
+      // fail silently, user can try again
+    } finally {
+      setTermsAcceptLoading(false);
+    }
+  }, [termsData]);
 
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
   const TA = isRTL ? 'right' as const : 'left' as const;
@@ -134,6 +179,7 @@ export default function ProfileScreen() {
         <GlassView style={[styles.menuGroup, { marginTop: 12 }]} borderRadius={20}>
           <MenuItem icon="help-circle" label={t.help_support} onPress={() => router.push('/support')} colors={colors} isRTL={isRTL} />
           <MenuItem icon="message-square" label={t.messages_label} onPress={() => router.push('/messages')} colors={colors} isRTL={isRTL} />
+          <MenuItem icon="file-text" label={t.terms_menu_label} onPress={handleOpenTerms} colors={colors} isRTL={isRTL} sub={termsLoading ? '...' : undefined} />
           <View style={[styles.menuItem, { flexDirection: R, borderTopWidth: 1, borderTopColor: colors.border, borderBottomWidth: 0 }]}>
             <View style={[styles.menuIcon, { backgroundColor: colors.secondary + 'B3' }]}>
               {isDarkMode
@@ -165,6 +211,18 @@ export default function ProfileScreen() {
 
         <Text style={[styles.version, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>VeeGo Driver · v{Constants.expoConfig?.version ?? '—'}</Text>
       </ScrollView>
+
+      {termsData && (
+        <TermsModal
+          visible={termsModalVisible}
+          contentEn={termsData.contentEn}
+          contentAr={termsData.contentAr}
+          showAcceptButton={acceptedVersion == null || termsData.version > acceptedVersion}
+          acceptLoading={termsAcceptLoading}
+          onAccept={handleAcceptTerms}
+          onClose={() => setTermsModalVisible(false)}
+        />
+      )}
     </View>
   );
 }

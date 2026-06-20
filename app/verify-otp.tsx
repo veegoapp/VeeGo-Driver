@@ -15,6 +15,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '@/lib/authContext';
 import { endpoints, ApiError } from '@/lib/api';
 import { navigateAfterAuth } from '@/lib/postAuthRouter';
@@ -54,6 +55,15 @@ export default function VerifyOtpScreen() {
     try {
       const result = await endpoints.auth.verifyOtp(phone ?? '', otp);
       await login(result.accessToken, result.refreshToken);
+      // Accept terms silently if the driver agreed during signup
+      try {
+        const pendingVersion = await AsyncStorage.getItem('driver_terms_pending_version');
+        if (pendingVersion) {
+          await endpoints.terms.accept(Number(pendingVersion));
+          await AsyncStorage.setItem('driver_terms_accepted_version', pendingVersion);
+          await AsyncStorage.removeItem('driver_terms_pending_version');
+        }
+      } catch { /* fail silently */ }
       await navigateAfterAuth(result.accessToken);
     } catch (err) {
       let msg = 'Something went wrong. Please try again.';

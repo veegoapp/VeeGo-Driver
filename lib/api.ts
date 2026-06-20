@@ -991,6 +991,21 @@ export const endpoints = {
     sendBatch: (locations: LocationSnapshot[]) =>
       api.post<{ success: boolean; inserted: number }>('/tracking/locations/batch', { locations }),
   },
+
+  terms: {
+    fetchDriver: () => request<{
+      id: number;
+      targetApp: string;
+      version: number;
+      contentAr: string;
+      contentEn: string;
+      updatedAt: string;
+    }>('GET', '/terms/driver'),
+    accept: (version: number) =>
+      api.post<{ ok: boolean; app: string; version: number; acceptedAt: string }>(
+        '/terms/accept', { app: 'driver', version }
+      ),
+  },
 };
 
 export interface LocationSnapshot {

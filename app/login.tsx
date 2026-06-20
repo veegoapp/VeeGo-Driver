@@ -2,10 +2,10 @@
 // Sign In → endpoints.auth.driverLogin({ credential, password })
 // Sign Up → endpoints.auth.driverRegister({ name, email, phone, password, licenseNumber?, nationalId? })
 
-import { Navigation, User, Mail, Phone, Lock, Eye, EyeOff, AlertCircle, ArrowLeft, ArrowRight, CreditCard } from 'lucide-react-native';
+import { Navigation, User, Mail, Phone, Lock, Eye, EyeOff, AlertCircle, ArrowLeft, ArrowRight, CreditCard, CheckSquare, Square } from 'lucide-react-native';
 import { router as expoRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -18,11 +18,15 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '@/lib/i18nContext';
 import { useAuth } from '@/lib/authContext';
 import { endpoints, ApiError } from '@/lib/api';
 import { navigateAfterAuth } from '@/lib/postAuthRouter';
+import { TermsModal } from '@/components/TermsModal';
+
+const TERMS_VERSION_KEY = 'driver_terms_accepted_version';
 
 type Tab = 'signin' | 'signup';
 
@@ -227,6 +231,8 @@ function SignInForm({ isRTL, onSuccess, onOtpRequired }: {
   );
 }
 
+type TermsData = { id: number; version: number; contentAr: string; contentEn: string; updatedAt: string };
+
 function SignUpForm({ isRTL, onOtpRequired }: { isRTL: boolean; onOtpRequired: (phone: string, maskedPhone?: string) => void }) {
   const { t } = useI18n();
   const [name, setName] = useState('');
@@ -240,10 +246,18 @@ function SignUpForm({ isRTL, onOtpRequired }: { isRTL: boolean; onOtpRequired: (
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [termsData, setTermsData] = useState<TermsData | null>(null);
+  const [termsChecked, setTermsChecked] = useState(false);
+  const [termsModalVisible, setTermsModalVisible] = useState(false);
+
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
   const TA = isRTL ? 'right' as const : 'left' as const;
 
-  const canSubmit = name.trim().length > 1 && email.trim().length > 3 && phone.trim().length > 7 && password.length >= 8;
+  useEffect(() => {
+    endpoints.terms.fetchDriver().then(setTermsData).catch(() => {/* fail silently */});
+  }, []);
+
+  const canSubmit = name.trim().length > 1 && email.trim().length > 3 && phone.trim().length > 7 && password.length >= 8 && termsChecked;
 
   const handle = async () => {
     if (!canSubmit) return;
@@ -258,6 +272,11 @@ function SignUpForm({ isRTL, onOtpRequired }: { isRTL: boolean; onOtpRequired: (
         licenseNumber: licenseNumber.trim() || undefined,
         nationalId: nationalId.trim() || undefined,
       });
+      // Accept terms silently after registration — token arrives after OTP
+      // so we store the pending version to accept once we have the token
+      if (termsData) {
+        try { await AsyncStorage.setItem('driver_terms_pending_version', String(termsData.version)); } catch { /* ignore */ }
+      }
       // Phase 2: register returns requiresOtp, not tokens
       onOtpRequired(result.phone, result.maskedPhone);
     } catch (err) {
@@ -265,6 +284,11 @@ function SignUpForm({ isRTL, onOtpRequired }: { isRTL: boolean; onOtpRequired: (
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleTermsAcceptFromModal = () => {
+    setTermsChecked(true);
+    setTermsModalVisible(false);
   };
 
   return (
@@ -316,6 +340,27 @@ function SignUpForm({ isRTL, onOtpRequired }: { isRTL: boolean; onOtpRequired: (
         </>
       )}
 
+      {/* Terms checkbox */}
+      <TouchableOpacity
+        onPress={() => setTermsChecked(v => !v)}
+        style={[s.termsCheckRow, { flexDirection: R }]}
+        activeOpacity={0.7}
+      >
+        {termsChecked
+          ? <CheckSquare size={20} color="#1e1e28" strokeWidth={2} />
+          : <Square size={20} color="#5e5e72" strokeWidth={2} />
+        }
+        <Text style={[s.termsCheckText, { textAlign: TA }]}>
+          {t.terms_agree_checkbox}{' '}
+          <Text
+            style={s.termsCheckLink}
+            onPress={() => setTermsModalVisible(true)}
+          >
+            {t.terms_agree_link}
+          </Text>
+        </Text>
+      </TouchableOpacity>
+
       {error && (
         <View style={s.errorRow}>
           <AlertCircle size={14} color="#e53935" />
@@ -328,6 +373,17 @@ function SignUpForm({ isRTL, onOtpRequired }: { isRTL: boolean; onOtpRequired: (
           <><Text style={s.primaryBtnText}>{t.sign_up}</Text><ArrowRight size={16} color="white" /></>
         )}
       </Pressable>
+
+      {termsData && (
+        <TermsModal
+          visible={termsModalVisible}
+          contentEn={termsData.contentEn}
+          contentAr={termsData.contentAr}
+          showAcceptButton
+          onAccept={handleTermsAcceptFromModal}
+          onClose={() => setTermsModalVisible(false)}
+        />
+      )}
     </View>
   );
 }
@@ -380,6 +436,9 @@ const s = StyleSheet.create({
   primaryBtnText: { color: 'white', fontSize: 15, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
   optionalToggle: { alignItems: 'center', gap: 6, paddingVertical: 4 },
   optionalToggleText: { fontSize: 12, color: '#5e5e72', fontFamily: 'Inter_400Regular' },
+  termsCheckRow: { alignItems: 'center', gap: 10, paddingVertical: 4 },
+  termsCheckText: { fontSize: 13, color: '#5e5e72', fontFamily: 'Inter_400Regular', flex: 1, lineHeight: 20 },
+  termsCheckLink: { color: '#1e1e28', fontFamily: 'Inter_600SemiBold', textDecorationLine: 'underline' },
   terms: { fontSize: 11, color: '#5e5e72', lineHeight: 16 },
   termsLink: { color: '#1e1e28', fontWeight: '600' },
   forgotBtn: { alignItems: 'center', paddingVertical: 4 },
