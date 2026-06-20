@@ -52,6 +52,7 @@ export default function LoginScreen() {
   const { login } = useAuth();
 
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
+  const { setLanguage, language } = useI18n();
 
   const handleSignInSuccess = async (
     accessToken: string,
@@ -68,12 +69,12 @@ export default function LoginScreen() {
   return (
     <LinearGradient colors={['#f4f4fb', '#ededf4'] as const} style={s.root}>
       <View style={[s.langBar, { top: insets.top + 12, flexDirection: R }]}>
-        <TouchableOpacity style={s.langChip} activeOpacity={0.8}>
-          <Text style={s.langText}>AR</Text>
+        <TouchableOpacity onPress={() => setLanguage('ar')} style={[s.langChip, language === 'ar' && s.langChipActive]} activeOpacity={0.8}>
+          <Text style={[s.langText, language === 'ar' && s.langTextActive]}>AR</Text>
         </TouchableOpacity>
         <View style={s.langSep} />
-        <TouchableOpacity style={[s.langChip, s.langChipActive]} activeOpacity={0.8}>
-          <Text style={[s.langText, s.langTextActive]}>EN</Text>
+        <TouchableOpacity onPress={() => setLanguage('en')} style={[s.langChip, (language === 'en' || !language) && s.langChipActive]} activeOpacity={0.8}>
+          <Text style={[s.langText, (language === 'en' || !language) && s.langTextActive]}>EN</Text>
         </TouchableOpacity>
       </View>
 

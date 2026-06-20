@@ -11,7 +11,8 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { I18nProvider } from '@/lib/i18nContext';
+import { I18nProvider, useI18n } from '@/lib/i18nContext';
+import { useQueryClient } from '@tanstack/react-query';
 import { ServiceProvider } from '@/lib/serviceContext';
 import { ServiceControlProvider } from '@/lib/serviceControlContext';
 import { AuthProvider, useAuth } from '@/lib/authContext';
@@ -56,6 +57,19 @@ const PENDING_SCREENS = new Set([
  */
 function PushNotificationsBridge() {
   usePushNotifications();
+  return null;
+}
+
+function LanguageCacheInvalidator() {
+  const { language } = useI18n();
+  const queryClient = useQueryClient();
+  const prevLang = React.useRef(language);
+  useEffect(() => {
+    if (prevLang.current !== null && prevLang.current !== language) {
+      queryClient.invalidateQueries();
+    }
+    prevLang.current = language;
+  }, [language]);
   return null;
 }
 
@@ -191,6 +205,7 @@ export default function RootLayout() {
             <GestureHandlerRootView style={{ flex: 1 }}>
               <KeyboardProvider>
                 <I18nProvider>
+                  <LanguageCacheInvalidator />
                   <ServiceProvider>
                     <SocketProvider>
                       <ServiceControlProvider>
