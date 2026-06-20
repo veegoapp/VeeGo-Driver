@@ -2,7 +2,7 @@
 // Sign In → endpoints.auth.driverLogin({ credential, password })
 // Sign Up → endpoints.auth.driverRegister({ name, email, phone, password, licenseNumber?, nationalId? })
 
-import { Navigation, User, Mail, Phone, Lock, Eye, EyeOff, AlertCircle, ArrowLeft, ArrowRight, CreditCard, CheckSquare, Square } from 'lucide-react-native';
+import { Navigation, User, Mail, Phone, Lock, Eye, EyeOff, AlertCircle, ArrowRight, CheckSquare, Square } from 'lucide-react-native';
 import { router as expoRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState, useEffect } from 'react';
@@ -239,10 +239,7 @@ function SignUpForm({ isRTL, onOtpRequired }: { isRTL: boolean; onOtpRequired: (
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
-  const [licenseNumber, setLicenseNumber] = useState('');
-  const [nationalId, setNationalId] = useState('');
   const [showPass, setShowPass] = useState(false);
-  const [showOptional, setShowOptional] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -269,8 +266,6 @@ function SignUpForm({ isRTL, onOtpRequired }: { isRTL: boolean; onOtpRequired: (
         email: email.trim(),
         phone: phone.trim(),
         password,
-        licenseNumber: licenseNumber.trim() || undefined,
-        nationalId: nationalId.trim() || undefined,
       });
       // Accept terms silently after registration — token arrives after OTP
       // so we store the pending version to accept once we have the token
@@ -320,25 +315,6 @@ function SignUpForm({ isRTL, onOtpRequired }: { isRTL: boolean; onOtpRequired: (
           {showPass ? <EyeOff size={16} color="#5e5e72" /> : <Eye size={16} color="#5e5e72" />}
         </TouchableOpacity>
       </View>
-
-      <TouchableOpacity onPress={() => setShowOptional(v => !v)} style={[s.optionalToggle, { flexDirection: R }]}>
-        <CreditCard size={14} color="#5e5e72" />
-        <Text style={s.optionalToggleText}>{showOptional ? t.hide_optional_docs : t.add_optional_docs}</Text>
-        {isRTL ? <ArrowLeft size={14} color="#5e5e72" /> : <ArrowRight size={14} color="#5e5e72" />}
-      </TouchableOpacity>
-
-      {showOptional && (
-        <>
-          <View style={[s.inputWrap, { flexDirection: R }]}>
-            <View style={s.inputIcon}><CreditCard size={16} color="#5e5e72" /></View>
-            <TextInput style={[s.inputField, { textAlign: TA }]} placeholder={t.license_number} placeholderTextColor="#c3c3cc" value={licenseNumber} onChangeText={setLicenseNumber} autoCapitalize="characters" autoCorrect={false} />
-          </View>
-          <View style={[s.inputWrap, { flexDirection: R }]}>
-            <View style={s.inputIcon}><CreditCard size={16} color="#5e5e72" /></View>
-            <TextInput style={[s.inputField, { textAlign: TA }]} placeholder={t.national_id} placeholderTextColor="#c3c3cc" value={nationalId} onChangeText={setNationalId} autoCapitalize="characters" autoCorrect={false} />
-          </View>
-        </>
-      )}
 
       {/* Terms checkbox */}
       <TouchableOpacity
