@@ -65,6 +65,9 @@ export default function VehicleScreen() {
   // profile enriched fills in make/model when vehicle endpoint doesn't have them.
   const profileVehicle = profile?.vehicle ?? null;
 
+  console.log('[Vehicle] vehicleData:', JSON.stringify(vehicleData));
+  console.log('[Vehicle] profileVehicle:', JSON.stringify(profileVehicle));
+
   const make = vehicleData?.make ?? profileVehicle?.make ?? null;
   const model = vehicleData?.model ?? profileVehicle?.model ?? null;
   const year = vehicleData?.year ?? profileVehicle?.year ?? null;
