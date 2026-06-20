@@ -2157,26 +2157,17 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     // Edge case: no-op if language is already set to the same value
     if (lang === language) return;
 
-    // 1. Apply RTL engine flags immediately so they're in place before the restart
+    // 1. Apply RTL engine flags
     applyRTLEngine(lang);
 
     // 2. Propagate to API client
     setApiLanguage(lang);
 
-    // 3. Update React state (brief optimistic update visible before restart)
+    // 3. Update React state immediately — UI re-renders with new language
     setLanguageState(lang);
 
-    // 4. Persist THEN restart — order matters: the rebooted app reads AsyncStorage
-    //    at boot, so the value must be written before the process is killed.
-    AsyncStorage.setItem(LANG_STORAGE_KEY, lang)
-      .then(() => {
-        triggerAppRestart();
-      })
-      .catch(() => {
-        // If persist fails we still restart so the RTL flags take effect;
-        // on next boot the language will fall back to the previous stored value.
-        triggerAppRestart();
-      });
+    // 4. Persist to AsyncStorage so language is remembered on next boot
+    AsyncStorage.setItem(LANG_STORAGE_KEY, lang).catch(() => {});
   };
 
   const t = makeSafeTranslations(language ?? 'en');
