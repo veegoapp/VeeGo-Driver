@@ -319,21 +319,23 @@ function DocCard({
   return (
     <View style={[styles.card, { backgroundColor: colors.card, borderColor: getBorderColor(status, isCriminalUrgent, colors) }]}>
       <View style={[styles.cardInner, { flexDirection: R }]}>
-        {/* Thumbnail / Placeholder */}
-        <View style={[styles.thumbWrap, { backgroundColor: colors.secondary }]}>
-          {record?.fileUrl ? (
-            <Image source={{ uri: record.fileUrl }} style={styles.thumb} contentFit="cover" />
-          ) : isCriminal ? (
-            <Shield size={28} color={colors.mutedForeground} strokeWidth={1.5} />
-          ) : (
-            <ImageIcon size={28} color={colors.mutedForeground} strokeWidth={1.5} />
-          )}
-          {isUploading && (
-            <View style={styles.uploadingOverlay}>
-              <ActivityIndicator size="small" color="#fff" />
-            </View>
-          )}
-        </View>
+        {/* Thumbnail / Placeholder — hidden for approved docs */}
+        {status !== 'approved' && (
+          <View style={[styles.thumbWrap, { backgroundColor: colors.secondary }]}>
+            {record?.fileUrl && status === 'pending' ? (
+              <Image source={{ uri: record.fileUrl }} style={styles.thumb} contentFit="cover" />
+            ) : isCriminal ? (
+              <Shield size={28} color={colors.mutedForeground} strokeWidth={1.5} />
+            ) : (
+              <ImageIcon size={28} color={colors.mutedForeground} strokeWidth={1.5} />
+            )}
+            {isUploading && (
+              <View style={styles.uploadingOverlay}>
+                <ActivityIndicator size="small" color="#fff" />
+              </View>
+            )}
+          </View>
+        )}
 
         {/* Content */}
         <View style={styles.cardContent}>

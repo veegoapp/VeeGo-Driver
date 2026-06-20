@@ -1,20 +1,38 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { ArrowLeft, Truck } from 'lucide-react-native';
 import React from 'react';
-import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Platform,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
-import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
 import type { DriverProfileEnriched } from '@/lib/api';
 
-type BaseProfile = {
-  name: string;
-  vehicle?: { make: string; model: string; plate: string; year?: number; color?: string } | null;
+type VehicleEndpointData = {
+  id?: number | string;
+  plateLetters?: string | null;
+  plateNumbers?: string | null;
+  plateNumber?: string | null;
+  make?: string | null;
+  model?: string | null;
+  year?: number | string | null;
+  color?: string | null;
+  colorAr?: string | null;
+  type?: string | null;
+  vehicleType?: string | null;
 };
+
+const BORDER_COLOR = 'rgba(0,0,0,0.08)';
 
 export default function VehicleScreen() {
   const colors = useColors();
@@ -22,102 +40,226 @@ export default function VehicleScreen() {
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
   const { t, isRTL } = useI18n();
   const TA = isRTL ? 'right' as const : 'left' as const;
+  const R = isRTL ? 'row-reverse' as const : 'row' as const;
 
-  const { data: enriched, isLoading: enrichedLoading, isError: enrichedError } = useQuery<DriverProfileEnriched>({
+  const {
+    data: vehicleData,
+    isLoading: vehicleLoading,
+    refetch: refetchVehicle,
+    isRefetching,
+  } = useQuery<VehicleEndpointData | null>({
+    queryKey: ['driver', 'vehicle'],
+    queryFn: endpoints.driver.vehicle as () => Promise<VehicleEndpointData | null>,
+    retry: 1,
+  });
+
+  const { data: profile, isLoading: profileLoading } = useQuery<DriverProfileEnriched>({
     queryKey: ['driver', 'profile'],
     queryFn: endpoints.driver.profile,
     retry: 1,
   });
 
-  const { data: base, isLoading: baseLoading } = useQuery<BaseProfile>({
-    queryKey: ['driver'],
-    queryFn: endpoints.driver.me as () => Promise<BaseProfile>,
-    enabled: enrichedError,
-  });
+  const isLoading = vehicleLoading || profileLoading;
 
-  const isLoading = enrichedLoading || (enrichedError && baseLoading);
-  const vehicle = enriched?.vehicle ?? base?.vehicle ?? null;
+  // Merge both sources — vehicle endpoint is authoritative for plate/id,
+  // profile enriched fills in make/model when vehicle endpoint doesn't have them.
+  const profileVehicle = profile?.vehicle ?? null;
 
-  const make = vehicle?.make ?? null;
-  const model = vehicle?.model ?? null;
-  const plate = vehicle?.plate ?? null;
-  const year = (vehicle as { year?: number } | null)?.year ?? null;
-  const color = (vehicle as { color?: string } | null)?.color ?? null;
+  const make = vehicleData?.make ?? profileVehicle?.make ?? null;
+  const model = vehicleData?.model ?? profileVehicle?.model ?? null;
+  const year = vehicleData?.year ?? null;
+  const color = vehicleData?.color ?? null;
+  const colorAr = vehicleData?.colorAr ?? null;
+  const vehicleType = vehicleData?.type ?? vehicleData?.vehicleType ?? null;
 
-  const rows = [
-    { label: t.vehicle_brand, value: make ?? '—' },
-    { label: t.vehicle_model, value: model ?? '—' },
-    { label: t.vehicle_year, value: year ? String(year) : '—' },
-    { label: t.vehicle_color, value: color ?? '—' },
-    { label: t.vehicle_plate, value: plate ?? '—' },
-    { label: t.vehicle_inspection, value: '—' },
-    { label: t.vehicle_insurance, value: '—' },
+  // Plate: prefer combined plateLetters+plateNumbers, fallback to plateNumber, then profile
+  const plate = (() => {
+    if (vehicleData?.plateLetters && vehicleData?.plateNumbers) {
+      return `${vehicleData.plateLetters} ${vehicleData.plateNumbers}`;
+    }
+    if (vehicleData?.plateNumber) return vehicleData.plateNumber;
+    return profileVehicle?.plate ?? null;
+  })();
+
+  const displayColor = isRTL && colorAr ? colorAr : (color ?? null);
+
+  const rows: { label: string; value: string | null }[] = [
+    { label: t.vehicle_brand, value: make },
+    { label: t.vehicle_model, value: model },
+    { label: t.vehicle_year, value: year ? String(year) : null },
+    { label: t.vehicle_color, value: displayColor },
+    { label: t.vehicle_plate, value: plate },
+    ...(vehicleType ? [{ label: t.vehicle_label, value: vehicleType }] : []),
   ];
 
-  if (isLoading) {
-    return (
-      <View style={[styles.container, { backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
-  }
+  const hasNoData = !isLoading && !make && !model && !plate;
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <ScrollView contentContainerStyle={{ paddingTop: topPad + 8, paddingBottom: 40, paddingHorizontal: 20 }} showsVerticalScrollIndicator={false}>
-        <Pressable onPress={() => router.back()} style={[styles.backBtn, { backgroundColor: colors.glass, borderColor: colors.border }]}>
-          <ArrowLeft size={20} color={colors.foreground} strokeWidth={2} />
-        </Pressable>
-        <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.vehicle_label}</Text>
-
-        <View style={[styles.vehicleHero, { borderColor: colors.border }]}>
-          <LinearGradient colors={['rgba(42,58,90,1)', 'rgba(27,31,46,1)']} style={StyleSheet.absoluteFill} />
-          <View style={[styles.vehicleHeroOverlay, { backgroundColor: colors.primary + '1A' }]} />
-          <View style={[styles.vehicleHeroContent, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
-            <View style={[styles.vehicleIcon, { backgroundColor: colors.card }]}>
-              <Truck size={36} color={colors.primary} strokeWidth={2} />
-            </View>
-            <View>
-              <Text style={[styles.vehicleYear, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>{year ?? '—'}</Text>
-              <Text style={[styles.vehicleName, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{make ?? '—'} {model ?? ''}</Text>
-              <Text style={[styles.vehicleColor, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>{color ?? '—'}</Text>
-            </View>
-          </View>
-          <View style={styles.plateWrap}>
-            <View style={[styles.plate, { backgroundColor: '#F7F8FC' }]}>
-              <Text style={[styles.plateText, { color: colors.background, fontFamily: 'Inter_700Bold' }]}>{plate ?? '—'}</Text>
-            </View>
-          </View>
+    <View style={[styles.root, { backgroundColor: colors.background }]}>
+      <ScrollView
+        contentContainerStyle={{
+          paddingTop: topPad + 8,
+          paddingBottom: 40,
+          paddingHorizontal: 20,
+        }}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefetching}
+            onRefresh={refetchVehicle}
+            tintColor={colors.primary}
+          />
+        }
+      >
+        {/* Header */}
+        <View style={[styles.headerRow, { flexDirection: R }]}>
+          <Pressable
+            onPress={() => router.back()}
+            style={[styles.backBtn, { backgroundColor: colors.glass, borderColor: colors.border }]}
+          >
+            <ArrowLeft size={20} color={colors.foreground} strokeWidth={2} />
+          </Pressable>
+          <Text style={[styles.pageTitle, { color: colors.foreground, textAlign: TA, flex: 1 }]}>
+            {t.vehicle_label}
+          </Text>
+          <View style={{ width: 40 }} />
         </View>
 
-        <GlassView style={{ marginTop: 24 }} borderRadius={20}>
-          {rows.map((row, i) => (
-            <View key={row.label} style={[styles.detailRow, i > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}>
-              <Text style={[styles.detailLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{row.label}</Text>
-              <Text style={[styles.detailValue, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{row.value}</Text>
+        {isLoading ? (
+          <View style={styles.center}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        ) : hasNoData ? (
+          <View style={[styles.emptyBox, { backgroundColor: colors.secondary, borderColor: BORDER_COLOR }]}>
+            <Truck size={36} color={colors.mutedForeground} strokeWidth={1.5} />
+            <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+              {t.load_failed}
+            </Text>
+          </View>
+        ) : (
+          <>
+            {/* Hero card */}
+            <View style={[styles.heroCard, { backgroundColor: '#1e1e28' }]}>
+              <View style={styles.heroIconWrap}>
+                <Truck size={40} color="#fff" strokeWidth={1.5} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.heroMake} numberOfLines={1}>
+                  {make ?? '—'}
+                </Text>
+                <Text style={styles.heroModel} numberOfLines={1}>
+                  {model ?? '—'}
+                </Text>
+                {plate && (
+                  <View style={styles.platePill}>
+                    <Text style={styles.plateText}>{plate}</Text>
+                  </View>
+                )}
+              </View>
             </View>
-          ))}
-        </GlassView>
+
+            {/* Details list */}
+            <Text style={[styles.sectionLabel, { color: colors.mutedForeground, textAlign: TA }]}>
+              {t.vehicle_details}
+            </Text>
+            <View style={[styles.card, { borderColor: BORDER_COLOR }]}>
+              {rows.map((row, i) => (
+                <View key={row.label}>
+                  {i > 0 && <View style={[styles.divider, { backgroundColor: BORDER_COLOR }]} />}
+                  <View style={[styles.detailRow, { flexDirection: R }]}>
+                    <Text style={[styles.detailLabel, { color: colors.mutedForeground, textAlign: TA }]}>
+                      {row.label}
+                    </Text>
+                    <Text style={[styles.detailValue, { color: row.value ? colors.foreground : colors.mutedForeground, textAlign: isRTL ? 'left' : 'right' }]}>
+                      {row.value ?? '—'}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </>
+        )}
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  pageTitle: { fontSize: 24, marginTop: 24, marginBottom: 20 },
-  vehicleHero: { borderRadius: 24, padding: 24, borderWidth: 1, overflow: 'hidden', position: 'relative' },
-  vehicleHeroOverlay: { position: 'absolute', inset: 0, borderRadius: 24 },
-  vehicleHeroContent: { alignItems: 'center', gap: 16 },
-  vehicleIcon: { width: 80, height: 80, borderRadius: 20, alignItems: 'center', justifyContent: 'center', elevation: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 12 },
-  vehicleYear: { fontSize: 10, letterSpacing: 2, textTransform: 'uppercase' },
-  vehicleName: { fontSize: 24, marginTop: 2 },
-  vehicleColor: { fontSize: 14, marginTop: 2 },
-  plateWrap: { marginTop: 20 },
-  plate: { alignSelf: 'flex-start', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 },
-  plateText: { fontSize: 20, letterSpacing: 4 },
-  detailRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 },
-  detailLabel: { fontSize: 14 },
-  detailValue: { fontSize: 14 },
+  root: { flex: 1 },
+  headerRow: { alignItems: 'center', gap: 12, marginBottom: 24 },
+  backBtn: {
+    width: 40, height: 40, borderRadius: 20,
+    alignItems: 'center', justifyContent: 'center', borderWidth: 1,
+  },
+  pageTitle: { fontSize: 22, fontFamily: 'Inter_700Bold' },
+  center: { alignItems: 'center', paddingVertical: 60 },
+  emptyBox: {
+    alignItems: 'center', justifyContent: 'center', gap: 12,
+    borderRadius: 20, borderWidth: 1, paddingVertical: 48, marginTop: 8,
+  },
+  emptyText: { fontSize: 14, fontFamily: 'Inter_400Regular' },
+  heroCard: {
+    borderRadius: 20,
+    padding: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    marginBottom: 24,
+  },
+  heroIconWrap: {
+    width: 72, height: 72, borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  heroMake: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.6)',
+    fontFamily: 'Inter_500Medium',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  heroModel: {
+    fontSize: 22,
+    color: '#fff',
+    fontFamily: 'Inter_700Bold',
+    marginTop: 2,
+  },
+  platePill: {
+    marginTop: 10,
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  plateText: {
+    color: '#fff',
+    fontSize: 15,
+    fontFamily: 'Inter_700Bold',
+    letterSpacing: 3,
+  },
+  sectionLabel: {
+    fontSize: 11,
+    fontFamily: 'Inter_500Medium',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 8,
+    paddingHorizontal: 4,
+  },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  detailRow: {
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 8,
+  },
+  detailLabel: { fontSize: 14, fontFamily: 'Inter_400Regular' },
+  detailValue: { fontSize: 14, fontFamily: 'Inter_600SemiBold', flex: 1 },
+  divider: { height: 1, marginHorizontal: 16 },
 });
