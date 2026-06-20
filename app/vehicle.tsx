@@ -1,21 +1,18 @@
 import { router } from 'expo-router';
-import { ArrowLeft, Pencil, Truck } from 'lucide-react-native';
-import React, { useState } from 'react';
+import { ArrowLeft, Truck } from 'lucide-react-native';
+import React from 'react';
 import {
   ActivityIndicator,
-  Alert,
-  Modal,
   Platform,
   Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
@@ -53,39 +50,6 @@ export default function VehicleScreen() {
   const { t, isRTL } = useI18n();
   const TA = isRTL ? 'right' as const : 'left' as const;
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
-  const queryClient = useQueryClient();
-
-  const [editModalVisible, setEditModalVisible] = useState(false);
-  const [inputYear, setInputYear] = useState('');
-  const [inputColor, setInputColor] = useState('');
-
-  const updateMutation = useMutation({
-    mutationFn: (data: { year?: number; color?: string }) =>
-      endpoints.driver.updateVehicle(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['driver', 'vehicle'] });
-      queryClient.invalidateQueries({ queryKey: ['driver', 'profile'] });
-      queryClient.invalidateQueries({ queryKey: ['driver'] });
-      setEditModalVisible(false);
-    },
-    onError: () => {
-      Alert.alert('خطأ', 'فشل حفظ البيانات، حاول تاني.');
-    },
-  });
-
-  const handleSave = () => {
-    const yearNum = inputYear ? parseInt(inputYear, 10) : undefined;
-    if (yearNum && (isNaN(yearNum) || yearNum < 1900 || yearNum > new Date().getFullYear() + 1)) {
-      Alert.alert('خطأ', 'السنة غير صحيحة');
-      return;
-    }
-    const payload: { year?: number; color?: string } = {};
-    if (yearNum) payload.year = yearNum;
-    if (inputColor.trim()) payload.color = inputColor.trim();
-    if (!payload.year && !payload.color) return;
-    updateMutation.mutate(payload);
-  };
-
   const {
     data: vehicleData,
     isLoading: vehicleLoading,
@@ -137,13 +101,6 @@ export default function VehicleScreen() {
   ];
 
   const hasNoData = !isLoading && !make && !model && !plate;
-  const hasMissingInfo = !isLoading && !hasNoData && (!year || !color);
-
-  const openEditModal = () => {
-    setInputYear(year ? String(year) : '');
-    setInputColor(color ?? '');
-    setEditModalVisible(true);
-  };
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
@@ -229,68 +186,9 @@ export default function VehicleScreen() {
               ))}
             </View>
 
-            {/* Banner: prompt driver to complete missing info */}
-            {hasMissingInfo && (
-              <Pressable
-                onPress={openEditModal}
-                style={[styles.missingBanner, { backgroundColor: '#D5B23D22', borderColor: '#D5B23D' }]}
-              >
-                <Pencil size={16} color="#D5B23D" strokeWidth={2} />
-                <Text style={[styles.missingBannerText, { color: '#D5B23D', textAlign: TA }]}>
-                  بيانات العربية ناقصة — اضغط لإكمال السنة واللون
-                </Text>
-              </Pressable>
-            )}
           </>
         )}
       </ScrollView>
-
-      {/* Edit modal */}
-      <Modal visible={editModalVisible} transparent animationType="slide" onRequestClose={() => setEditModalVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalBox, { backgroundColor: colors.background }]}>
-            <Text style={[styles.modalTitle, { color: colors.foreground }]}>تحديث بيانات العربية</Text>
-
-            <Text style={[styles.inputLabel, { color: colors.mutedForeground }]}>سنة الصنع</Text>
-            <TextInput
-              style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.secondary }]}
-              placeholder="مثال: 2020"
-              placeholderTextColor={colors.mutedForeground}
-              keyboardType="number-pad"
-              value={inputYear}
-              onChangeText={setInputYear}
-              maxLength={4}
-            />
-
-            <Text style={[styles.inputLabel, { color: colors.mutedForeground }]}>اللون</Text>
-            <TextInput
-              style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.secondary }]}
-              placeholder="مثال: أبيض"
-              placeholderTextColor={colors.mutedForeground}
-              value={inputColor}
-              onChangeText={setInputColor}
-            />
-
-            <View style={styles.modalBtns}>
-              <Pressable
-                onPress={() => setEditModalVisible(false)}
-                style={[styles.modalBtn, { backgroundColor: colors.secondary, borderColor: colors.border }]}
-              >
-                <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }}>إلغاء</Text>
-              </Pressable>
-              <Pressable
-                onPress={handleSave}
-                disabled={updateMutation.isPending}
-                style={[styles.modalBtn, { backgroundColor: '#2d2d42', flex: 1 }]}
-              >
-                {updateMutation.isPending
-                  ? <ActivityIndicator color="#fff" size="small" />
-                  : <Text style={{ color: '#fff', fontFamily: 'Inter_700Bold' }}>حفظ</Text>}
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -373,30 +271,4 @@ const styles = StyleSheet.create({
   detailLabel: { fontSize: 14, fontFamily: 'Inter_400Regular' },
   detailValue: { fontSize: 14, fontFamily: 'Inter_600SemiBold', flex: 1 },
   divider: { height: 1, marginHorizontal: 16 },
-  missingBanner: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    borderWidth: 1, borderRadius: 12, padding: 14, marginTop: 16,
-  },
-  missingBannerText: { fontSize: 13, fontFamily: 'Inter_500Medium', flex: 1 },
-  modalOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalBox: {
-    borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    padding: 24, gap: 12,
-  },
-  modalTitle: { fontSize: 18, fontFamily: 'Inter_700Bold', marginBottom: 4 },
-  inputLabel: { fontSize: 12, fontFamily: 'Inter_500Medium' },
-  input: {
-    borderWidth: 1, borderRadius: 12,
-    paddingHorizontal: 14, paddingVertical: 12,
-    fontSize: 15, fontFamily: 'Inter_400Regular',
-  },
-  modalBtns: { flexDirection: 'row', gap: 10, marginTop: 8 },
-  modalBtn: {
-    borderRadius: 12, borderWidth: 1,
-    paddingVertical: 14, alignItems: 'center', justifyContent: 'center',
-    paddingHorizontal: 20,
-  },
 });
