@@ -40,7 +40,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
 
       const socket = io(SOCKET_URL, {
         path: '/api/socket.io',
-        auth: { token: t },
+        auth: { token: t ? `Bearer ${t}` : '' },
         transports: ['polling', 'websocket'],
         reconnectionAttempts: 10,
         reconnectionDelay: 1000,
