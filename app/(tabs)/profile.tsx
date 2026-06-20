@@ -26,7 +26,7 @@ type DriverProfile = {
   cancelRate: number;
   level: string;
   referralCode?: string;
-  vehicle?: { make: string; model: string; plate: string };
+  vehicle?: { make: string; model: string; plate: string; year?: number | string | null; color?: string | null };
 };
 
 export default function ProfileScreen() {
@@ -108,7 +108,7 @@ export default function ProfileScreen() {
           <MenuItem
             icon="truck"
             label={t.vehicle_label}
-            sub={driver?.vehicle ? `${driver.vehicle.make} ${driver.vehicle.model} · ${driver.vehicle.plate}` : '—'}
+            sub={driver?.vehicle ? [driver.vehicle.make, driver.vehicle.model, driver.vehicle.year, driver.vehicle.color].filter(Boolean).join(' ') + (driver.vehicle.plate ? ` · ${driver.vehicle.plate}` : '') : '—'}
             onPress={() => router.push('/vehicle')}
             colors={colors}
             isRTL={isRTL}
