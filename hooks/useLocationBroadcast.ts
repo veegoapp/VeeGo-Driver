@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
 import { useSocket } from '@/lib/socketContext';
+import { endpoints } from '@/lib/api';
 
 const BROADCAST_INTERVAL_MS = 5000;
 
@@ -13,12 +14,13 @@ interface Options {
 
 export function useLocationBroadcast({ enabled, tripId }: Options): void {
   const { socket } = useSocket();
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const socketRef = useRef(socket);
   const tripIdRef = useRef(tripId);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const permissionGrantedRef = useRef(false);
 
-  useEffect(() => {
-    tripIdRef.current = tripId;
-  }, [tripId]);
+  useEffect(() => { socketRef.current = socket; }, [socket]);
+  useEffect(() => { tripIdRef.current = tripId; }, [tripId]);
 
   useEffect(() => {
     if (!enabled || Platform.OS === 'web') return;
@@ -26,23 +28,46 @@ export function useLocationBroadcast({ enabled, tripId }: Options): void {
     let cancelled = false;
 
     const emit = async () => {
-      if (!socket?.connected || cancelled) return;
+      if (cancelled) return;
+      if (!permissionGrantedRef.current) return;
+
+      let loc: Location.LocationObject;
       try {
-        const loc = await Location.getCurrentPositionAsync({
+        loc = await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.Balanced,
         });
-        const { latitude, longitude, speed, heading } = loc.coords;
-        // Backend validates: lat ∈ [-90,90], lng ∈ [-180,180]
-        if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) return;
-
-        const payload: Record<string, unknown> = { latitude, longitude };
-        if (speed != null && speed >= 0) payload.speed = Math.round(speed * 3.6); // m/s → km/h
-        if (heading != null && heading >= 0) payload.heading = Math.round(heading);
-        if (tripIdRef.current != null) payload.tripId = tripIdRef.current;
-
-        socket.emit(SOCKET_EVENTS.DRIVER_LOCATION_UPDATE, payload);
       } catch {
-        // best-effort; location or socket temporarily unavailable
+        return;
+      }
+
+      const { latitude, longitude, speed, heading } = loc.coords;
+      if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) return;
+
+      const speedKmh = speed != null && speed >= 0 ? Math.round(speed * 3.6) : undefined;
+      const headingDeg = heading != null && heading >= 0 ? Math.round(heading) : undefined;
+      const tripId = tripIdRef.current ?? undefined;
+
+      // Try socket first (real-time), always fall back to REST
+      const sock = socketRef.current;
+      if (sock?.connected) {
+        const payload: Record<string, unknown> = { latitude, longitude };
+        if (speedKmh !== undefined) payload.speed = speedKmh;
+        if (headingDeg !== undefined) payload.heading = headingDeg;
+        if (tripId != null) payload.tripId = tripId;
+        sock.emit(SOCKET_EVENTS.DRIVER_LOCATION_UPDATE, payload);
+      } else {
+        // Socket not connected — use REST endpoint so admin dashboard always gets updates
+        try {
+          await endpoints.driver.updateLocation({
+            latitude,
+            longitude,
+            ...(speedKmh !== undefined && { speed: speedKmh }),
+            ...(headingDeg !== undefined && { heading: headingDeg }),
+            ...(tripId != null && { tripId }),
+          });
+        } catch {
+          // REST also failed — will retry on next tick
+        }
       }
     };
 
@@ -50,10 +75,11 @@ export function useLocationBroadcast({ enabled, tripId }: Options): void {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted' || cancelled) return;
+        permissionGrantedRef.current = true;
         emit();
         intervalRef.current = setInterval(emit, BROADCAST_INTERVAL_MS);
       } catch {
-        // expo-location unavailable (e.g., Expo Go simulator)
+        // expo-location unavailable
       }
     })();
 
@@ -64,5 +90,5 @@ export function useLocationBroadcast({ enabled, tripId }: Options): void {
         intervalRef.current = null;
       }
     };
-  }, [enabled, socket]);
+  }, [enabled]);
 }
