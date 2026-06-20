@@ -2,7 +2,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { AlertTriangle, Check, ChevronUp, Clock, MessageCircle, Navigation, Phone, Shield, Star } from 'lucide-react-native';
 import React, { useRef, useEffect, useState } from 'react';
-import { Alert, Animated, Image, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Animated, Image, Linking, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { MapBackdrop } from '@/components/MapBackdrop';
@@ -54,6 +54,7 @@ export default function RideScreen() {
   const queryClient = useQueryClient();
   const [phase, setPhase] = useState<Phase>('to_pickup');
   const [rating, setRating] = useState(0);
+  const [ratingComment, setRatingComment] = useState('');
   const [busy, setBusy] = useState(false);
   const [sosBusy, setSosBusy] = useState(false);
   const hasRecovered = useRef(false);
@@ -220,7 +221,7 @@ export default function RideScreen() {
   const handleDone = async () => {
     if (rating > 0) {
       try {
-        await endpoints.rides.rateRider(rideId ?? '', rating);
+        await endpoints.rides.rateRider(rideId ?? '', rating, ratingComment.trim() || undefined);
       } catch {
         // best-effort
       }
@@ -275,6 +276,17 @@ export default function RideScreen() {
                 </Pressable>
               ))}
             </View>
+            {rating > 0 && (
+              <TextInput
+                style={[styles.commentInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.secondary }]}
+                placeholder={t.rating_comment_placeholder ?? 'Add a comment (optional)'}
+                placeholderTextColor={colors.mutedForeground}
+                value={ratingComment}
+                onChangeText={setRatingComment}
+                maxLength={200}
+                multiline
+              />
+            )}
           </GlassView>
 
           <Pressable onPress={handleDone} style={styles.doneBtn}>
@@ -421,4 +433,5 @@ const styles = StyleSheet.create({
   safetyText: { fontSize: 12 },
   sosBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#ef4444', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
   sosBtnText: { fontSize: 12 },
+  commentInput: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, fontFamily: 'Inter_400Regular', marginTop: 12, minHeight: 60, textAlignVertical: 'top' },
 });
