@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { Bookmark, CreditCard, GitBranch, Radio, User } from 'lucide-react-native';
 import React, { useRef, useEffect, useState } from 'react';
-import { Animated, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, I18nManager, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { useReferral } from '@/lib/referralContext';
@@ -30,29 +30,39 @@ const PILL_PX = 8;
 export function ShuttleTabBar({ state, navigation }: TabBarProps) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { t, isRTL } = useI18n();
+  const { t } = useI18n();
   const activeIndex = state.index;
   const [tabWidth, setTabWidth] = useState(0);
   const pillX = useRef(new Animated.Value(0)).current;
+  const initialized = useRef(false);
 
   // Incoming referral badge count — drives the red dot on the Home tab icon
   const { incomingReferralsCount } = useReferral();
 
+  // I18nManager.isRTL is always synchronously correct — it reflects the OS RTL
+  // state set by forceRTL() in the *previous* session, so it's ready on the
+  // very first render before AsyncStorage loads the language preference.
+  const rtl = I18nManager.isRTL;
+
+  const visualIndex = rtl ? SHUTTLE_TAB_NAMES.length - 1 - activeIndex : activeIndex;
+
   useEffect(() => {
     if (tabWidth <= 0) return;
-    // In RTL mode flex reverses the visual order of tabs, so tab at LTR index 0
-    // appears on the far right. The pill uses an absolute `left` offset which is
-    // NOT affected by RTL flex, so we must mirror the index to match visuals.
-    const visualIndex = isRTL
-      ? SHUTTLE_TAB_NAMES.length - 1 - activeIndex
-      : activeIndex;
+    const targetX = visualIndex * tabWidth;
+    if (!initialized.current) {
+      // Jump to correct position on first layout — avoids a one-frame flash
+      // where the pill sits at 0 before the spring animation fires.
+      initialized.current = true;
+      pillX.setValue(targetX);
+      return;
+    }
     Animated.spring(pillX, {
-      toValue: visualIndex * tabWidth,
+      toValue: targetX,
       stiffness: 380,
       damping: 32,
       useNativeDriver: false,
     }).start();
-  }, [activeIndex, tabWidth, isRTL]);
+  }, [activeIndex, tabWidth, visualIndex]);
 
   const bottomPadding = Platform.OS === 'web' ? 34 : insets.bottom;
 

@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { BarChart2, Clock, CreditCard, Home, User } from 'lucide-react-native';
 import React, { useRef, useEffect, useState } from 'react';
-import { Animated, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, I18nManager, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
@@ -20,31 +20,43 @@ const TAB_ITEMS = [
   { name: 'profile', key: 'profile' as const, Icon: User },
 ] as const;
 
+const NUM_TABS = TAB_ITEMS.length;
 const CONTAINER_PX = 12;
 const PILL_PX = 8;
 
 export function BottomTabBar({ state, navigation }: TabBarProps) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { t, isRTL } = useI18n();
+  const { t } = useI18n();
   const activeIndex = state.index;
   const [tabWidth, setTabWidth] = useState(0);
   const pillX = useRef(new Animated.Value(0)).current;
-  const prevIndex = useRef(activeIndex);
+  const initialized = useRef(false);
+
+  // I18nManager.isRTL is always synchronously correct — it reflects the OS RTL
+  // state set by forceRTL() in the *previous* session, so it's ready on the
+  // very first render before AsyncStorage loads the language preference.
+  const rtl = I18nManager.isRTL;
+
+  const visualIndex = rtl ? NUM_TABS - 1 - activeIndex : activeIndex;
 
   useEffect(() => {
     if (tabWidth <= 0) return;
-    const targetX = isRTL
-      ? (TAB_ITEMS.length - 1 - activeIndex) * tabWidth
-      : activeIndex * tabWidth;
+    const targetX = visualIndex * tabWidth;
+    if (!initialized.current) {
+      // Jump to correct position on first layout — avoids a one-frame flash
+      // where the pill sits at 0 before the spring animation fires.
+      initialized.current = true;
+      pillX.setValue(targetX);
+      return;
+    }
     Animated.spring(pillX, {
       toValue: targetX,
       stiffness: 380,
       damping: 32,
       useNativeDriver: false,
     }).start();
-    prevIndex.current = activeIndex;
-  }, [activeIndex, tabWidth]);
+  }, [activeIndex, tabWidth, visualIndex]);
 
   const bottomPadding = Platform.OS === 'web' ? 34 : insets.bottom;
 
@@ -54,7 +66,7 @@ export function BottomTabBar({ state, navigation }: TabBarProps) {
         style={[styles.pill, { backgroundColor: colors.glassStrong, borderColor: colors.border }]}
         onLayout={e => {
           const innerW = e.nativeEvent.layout.width - PILL_PX * 2;
-          setTabWidth(innerW / TAB_ITEMS.length);
+          setTabWidth(innerW / NUM_TABS);
         }}
       >
         {tabWidth > 0 && (
