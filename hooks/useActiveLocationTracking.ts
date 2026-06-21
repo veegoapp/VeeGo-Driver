@@ -7,6 +7,7 @@ import { endpoints, type LocationSnapshot } from '@/lib/api';
 const PENDING_KEY = 'veego_pending_locations';
 const INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 const BATCH_CHUNK = 500;
+const MAX_PENDING = 50;
 
 interface Options {
   enabled: boolean;
@@ -26,6 +27,11 @@ async function readPending(): Promise<LocationSnapshot[]> {
 async function appendPending(snapshot: LocationSnapshot): Promise<void> {
   try {
     const existing = await readPending();
+    if (existing.length >= MAX_PENDING) {
+      // Cap reached — flush before appending (best-effort, fire and forget)
+      syncPending().catch(() => {});
+      return;
+    }
     existing.push(snapshot);
     await AsyncStorage.setItem(PENDING_KEY, JSON.stringify(existing));
   } catch {
@@ -45,12 +51,13 @@ async function syncPending(): Promise<void> {
   const pending = await readPending();
   if (pending.length === 0) return;
 
+  // Purge from storage immediately before upload to minimise retention window
+  await AsyncStorage.removeItem(PENDING_KEY);
+
   for (let i = 0; i < pending.length; i += BATCH_CHUNK) {
     const chunk = pending.slice(i, i + BATCH_CHUNK);
     await endpoints.tracking.sendBatch(chunk);
   }
-
-  await clearPending();
 }
 
 async function captureSnapshot(

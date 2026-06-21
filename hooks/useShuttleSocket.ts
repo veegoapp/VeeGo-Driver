@@ -21,6 +21,7 @@
  */
 
 import { useEffect, useRef } from 'react';
+import { z } from 'zod';
 import { router } from 'expo-router';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
 import { useSocket } from '@/lib/socketContext';
@@ -28,6 +29,26 @@ import {
   useReferral,
   type IncomingReferralPayload,
 } from '@/lib/referralContext';
+
+const BookingCreatedPayloadSchema = z.object({
+  bookingId: z.union([z.number(), z.string()]).optional(),
+  routeId: z.union([z.number(), z.string()]).optional(),
+  routeName: z.string().optional(),
+  timeSlotId: z.union([z.number(), z.string()]).optional(),
+  departureTime: z.string().optional(),
+  weekStart: z.string().optional(),
+  weekEnd: z.string().optional(),
+  status: z.string().optional(),
+}).passthrough();
+
+const IncomingReferralSchema = z.object({
+  referralId: z.string(),
+}).passthrough();
+
+const ReferralCancelledSchema = z.union([
+  z.string(),
+  z.object({ referralId: z.string().optional() }).passthrough(),
+]);
 
 type BookingCreatedPayload = {
   bookingId?: number | string;
@@ -54,18 +75,32 @@ export function useShuttleSocket() {
     if (!socket) return;
 
     // Navigation side-effect only — cache invalidation handled by ShuttleProvider
-    const handleBookingCreated = (_payload: BookingCreatedPayload) => {
+    const handleBookingCreated = (raw: unknown) => {
+      const parsed = BookingCreatedPayloadSchema.safeParse(raw);
+      if (!parsed.success) {
+        console.warn(`[Socket] Invalid ${SOCKET_EVENTS.SHUTTLE_BOOKING_CREATED} payload`, parsed.error.issues);
+        return;
+      }
       router.push('/(shuttle)/bookings' as any);
     };
 
-    const handleIncomingReferral = (payload: IncomingReferralPayload) => {
-      if (!payload?.referralId) return;
-      addRef.current(payload);
+    const handleIncomingReferral = (raw: unknown) => {
+      const parsed = IncomingReferralSchema.safeParse(raw);
+      if (!parsed.success) {
+        console.warn(`[Socket] Invalid ${SOCKET_EVENTS.SHUTTLE_INCOMING_REFERRAL} payload`, parsed.error.issues);
+        return;
+      }
+      addRef.current(parsed.data as IncomingReferralPayload);
     };
 
-    const handleReferralCancelled = (data: { referralId?: string } | string) => {
-      const referralId =
-        typeof data === 'string' ? data : (data?.referralId ?? '');
+    const handleReferralCancelled = (raw: unknown) => {
+      const parsed = ReferralCancelledSchema.safeParse(raw);
+      if (!parsed.success) {
+        console.warn(`[Socket] Invalid ${SOCKET_EVENTS.SHUTTLE_REFERRAL_CANCELLED} payload`, parsed.error.issues);
+        return;
+      }
+      const data = parsed.data;
+      const referralId = typeof data === 'string' ? data : (data?.referralId ?? '');
       if (referralId) dismissRef.current(referralId);
     };
 

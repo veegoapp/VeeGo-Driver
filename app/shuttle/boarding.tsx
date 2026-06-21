@@ -315,7 +315,7 @@ export default function ShuttleBoardingScreen() {
       </ScrollView>
 
       <View style={[styles.bottomAction, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: botPad + 12 }]}>
-        {checkedIn === total ? (
+        {total > 0 && checkedIn === total ? (
           <Pressable onPress={handleDepart} style={styles.departBtn}>
             <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.departBtnGrad}>
               <Check size={20} color={colors.primaryForeground} strokeWidth={2} />

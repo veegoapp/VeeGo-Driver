@@ -13,6 +13,7 @@ import { useServiceGuard } from '@/hooks/useServiceGuard';
 import { useWaitingCharge } from '@/hooks/useWaitingCharge';
 import { useActiveLocationTracking } from '@/hooks/useActiveLocationTracking';
 import { endpoints } from '@/lib/api';
+import { getToken, getUserIdFromToken } from '@/lib/auth';
 import { useI18n } from '@/lib/i18nContext';
 import { useSocket } from '@/lib/socketContext';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
@@ -82,7 +83,18 @@ export default function RideScreen() {
   useEffect(() => {
     if (!rideRaw || hasRecovered.current) return;
     hasRecovered.current = true;
-    const r = rideRaw as RideData & { status?: string };
+    const r = rideRaw as RideData & { status?: string; driverId?: string | number };
+
+    // Defense-in-depth: verify this ride belongs to the authenticated driver
+    getToken().then(token => {
+      const authenticatedDriverId = getUserIdFromToken(token);
+      if (authenticatedDriverId && r.driverId && String(r.driverId) !== String(authenticatedDriverId)) {
+        console.warn('[Security] Ride does not belong to authenticated driver');
+        router.replace('/(tabs)');
+        return;
+      }
+    });
+
     const statusMap: Partial<Record<string, Phase>> = {
       arrived: 'arrived',
       in_trip: 'in_trip',
@@ -171,6 +183,21 @@ export default function RideScreen() {
     }
     setBusy(true);
     try {
+      // Re-fetch status before transition to detect concurrent changes
+      const expectedStatus: Partial<Record<Phase, string>> = {
+        to_pickup: 'accepted',
+        arrived: 'arrived',
+        in_trip: 'in_trip',
+      };
+      const freshRide = await endpoints.rides.getById(rideId ?? '') as { status?: string } | null;
+      const expected = expectedStatus[phase];
+      if (expected && freshRide?.status && freshRide.status !== expected && freshRide.status !== phase) {
+        Alert.alert('Status Changed', 'Ride status has changed. Refreshing...');
+        queryClient.invalidateQueries({ queryKey: ['ride-active', rideId] });
+        setBusy(false);
+        return;
+      }
+
       if (phase === 'to_pickup') await endpoints.rides.arrived(rideId ?? '');
       else if (phase === 'arrived') await endpoints.rides.start(rideId ?? '');
       else if (phase === 'in_trip') {

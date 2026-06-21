@@ -3,6 +3,10 @@ import { Platform } from 'react-native';
 import { router } from 'expo-router';
 import { endpoints } from '@/lib/api';
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const INT_REGEX = /^\d+$/;
+const VALID_TYPES = new Set(['ride_request', 'shuttle_trip', 'shuttle_referral', 'rate_passengers', 'renewal_prompt', 'slot_released', 'suspension', 'fine', 'warning']);
+
 export type PushToken = string | null;
 
 function safeSetNotificationHandler() {
@@ -74,10 +78,16 @@ export function usePushNotifications(onRideRequest?: () => void) {
         (response: { notification: { request: { content: { data: Record<string, unknown> } } } }) => {
           const data = response.notification.request.content.data;
 
+          // Validate notification type before processing
+          const notifType = String(data?.type ?? data?.category ?? '');
+          if (!VALID_TYPES.has(notifType)) return;
+
           // --- On-demand ride request ---
           if (data?.type === 'ride_request') {
             if (data.rideId) {
-              router.push(`/ride/${data.rideId}` as any);
+              const rideId = String(data.rideId);
+              if (!UUID_REGEX.test(rideId) && !INT_REGEX.test(rideId)) return;
+              router.push(`/ride/${rideId}` as any);
             } else if (onRideRequest) {
               onRideRequest();
             }
@@ -144,9 +154,18 @@ export function usePushNotifications(onRideRequest?: () => void) {
             return;
           }
 
-          // --- Offence: account suspended ---
+          // --- Offence: account suspended — verify from server before redirecting ---
           if (data?.type === 'suspension' || data?.category === 'suspension') {
-            router.replace('/suspended');
+            (async () => {
+              try {
+                const me = await endpoints.driver.me() as { isBlocked?: boolean; isSuspended?: boolean } | null;
+                if (me && (me.isBlocked || me.isSuspended)) {
+                  router.replace('/suspended');
+                }
+              } catch {
+                // do nothing — don't redirect based on unverified push data
+              }
+            })();
             return;
           }
 

@@ -9,6 +9,7 @@ import { useSocket } from '@/lib/socketContext';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   AppState,
   Image,
@@ -50,6 +51,10 @@ export default function HomeScreen() {
   const [checkinApprovedVisible, setCheckinApprovedVisible] = useState(false);
   const [checkinRequiredVisible, setCheckinRequiredVisible] = useState(false);
   const [checkinCountdown, setCheckinCountdown] = useState(60);
+  const [checkinBusy, setCheckinBusy] = useState(false);
+  const checkinDeadlineMsRef = useRef<number | null>(null);
+  const statusDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSubmittedStatusRef = useRef<string | null>(null);
   const toastAnim = useRef(new Animated.Value(-80)).current;
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const checkinCountdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -321,35 +326,52 @@ export default function HomeScreen() {
   }, [online, socketConnected]);
 
   // driver:checkin:required countdown — auto-go-offline if driver doesn't respond in 60 s
+  // Uses an absolute deadline so backgrounding the app doesn't stall the timer.
   useEffect(() => {
     if (!checkinRequiredVisible) {
       if (checkinCountdownRef.current) {
         clearInterval(checkinCountdownRef.current);
         checkinCountdownRef.current = null;
       }
+      checkinDeadlineMsRef.current = null;
       return;
     }
 
-    checkinCountdownRef.current = setInterval(() => {
-      setCheckinCountdown(prev => {
-        if (prev <= 1) {
-          // Time's up — take the driver offline
-          endpoints.driver.goOffline().catch(() => {});
-          stopLocationTracking();
-          setOnline(false);
-          setCheckinRequiredVisible(false);
-          showToastRef.current?.('You were taken offline — safety check-in not confirmed.', 'warning');
-          return 60;
+    const CHECKIN_SECONDS = 60;
+    checkinDeadlineMsRef.current = Date.now() + CHECKIN_SECONDS * 1000;
+    setCheckinCountdown(CHECKIN_SECONDS);
+
+    const tick = () => {
+      if (!checkinDeadlineMsRef.current) return;
+      const remaining = Math.max(0, Math.round((checkinDeadlineMsRef.current - Date.now()) / 1000));
+      setCheckinCountdown(remaining);
+      if (remaining <= 0) {
+        if (checkinCountdownRef.current) {
+          clearInterval(checkinCountdownRef.current);
+          checkinCountdownRef.current = null;
         }
-        return prev - 1;
-      });
-    }, 1000);
+        // Time's up — take the driver offline
+        endpoints.driver.goOffline().catch(() => {});
+        stopLocationTracking();
+        setOnline(false);
+        setCheckinRequiredVisible(false);
+        showToastRef.current?.('You were taken offline — safety check-in not confirmed.', 'warning');
+      }
+    };
+
+    checkinCountdownRef.current = setInterval(tick, 1000);
+
+    // Recalculate from deadline when app returns to foreground
+    const appStateSub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') tick();
+    });
 
     return () => {
       if (checkinCountdownRef.current) {
         clearInterval(checkinCountdownRef.current);
         checkinCountdownRef.current = null;
       }
+      appStateSub.remove();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [checkinRequiredVisible]);
@@ -357,10 +379,18 @@ export default function HomeScreen() {
   const handleToggleOnline = async () => {
     if (togglingOnline) return;
     const next = !online;
+    const nextStatus = next ? 'online' : 'offline';
+
+    // Debounce: skip if same status already submitted within 2 s
+    if (nextStatus === lastSubmittedStatusRef.current) return;
+    if (statusDebounceRef.current) clearTimeout(statusDebounceRef.current);
+
     setTogglingOnline(true);
+    statusDebounceRef.current = setTimeout(async () => {
     try {
       // FIX #3: was setStatus(bool) to single endpoint — now two separate endpoints per spec
       await (next ? endpoints.driver.goOnline() : endpoints.driver.goOffline());
+      lastSubmittedStatusRef.current = nextStatus;
       if (next) {
         // Task 1: request permission and start tracking; revert if denied
         const ok = await startLocationTracking();
@@ -380,6 +410,7 @@ export default function HomeScreen() {
     } finally {
       setTogglingOnline(false);
     }
+    }, 2000); // 2 s debounce
   };
 
   const showToast = (msg: string, type: 'warning' | 'success') => {
@@ -513,14 +544,23 @@ export default function HomeScreen() {
             </View>
 
             <Pressable
-              style={styles.checkinReqBtn}
-              onPress={() => {
-                if (checkinCountdownRef.current) {
-                  clearInterval(checkinCountdownRef.current);
-                  checkinCountdownRef.current = null;
+              style={[styles.checkinReqBtn, { opacity: checkinBusy ? 0.6 : 1 }]}
+              disabled={checkinBusy}
+              onPress={async () => {
+                setCheckinBusy(true);
+                try {
+                  await endpoints.driver.checkinAcknowledge();
+                  if (checkinCountdownRef.current) {
+                    clearInterval(checkinCountdownRef.current);
+                    checkinCountdownRef.current = null;
+                  }
+                  setCheckinRequiredVisible(false);
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+                } catch {
+                  Alert.alert('Error', 'Failed to confirm check-in. Please try again.');
+                } finally {
+                  setCheckinBusy(false);
                 }
-                setCheckinRequiredVisible(false);
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
               }}
             >
               <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.checkinReqBtnGrad}>

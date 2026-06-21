@@ -43,6 +43,7 @@ export default function RideChatScreen() {
   useEffect(() => {
     if (!socket || !rideId) return;
     const handleNewMessage = (msg: RideMessage) => {
+      if (String(msg.rideId) !== String(rideId)) return;
       queryClient.setQueryData<{ data: RideMessage[]; total: number }>(
         ['ride-messages', rideId],
         old =>

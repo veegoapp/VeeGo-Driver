@@ -5,10 +5,34 @@ import React, {
   useEffect,
   useState,
 } from 'react';
+import { z } from 'zod';
 import { useAuth } from './authContext';
 import { api } from './api';
 import { useSocket } from './socketContext';
 import { SOCKET_EVENTS } from '../constants/socketEvents';
+
+const ServiceControlSchema = z.object({
+  serviceType: z.string(),
+  isEnabled: z.boolean(),
+  displayMode: z.enum(['live', 'coming_soon', 'unavailable', 'maintenance']),
+  message: z.string().optional(),
+  eta: z.string().optional(),
+}).passthrough();
+
+const ServiceControlEventSchema = z.union([
+  z.array(ServiceControlSchema),
+  ServiceControlSchema,
+]);
+
+const EligibilityRuleSchema = z.object({
+  serviceType: z.string(),
+}).passthrough();
+
+const ServiceSettingsEventSchema = z.union([
+  z.array(EligibilityRuleSchema),
+  z.object({ serviceType: z.string() }).passthrough(),
+  z.record(z.unknown()),
+]);
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -161,7 +185,13 @@ export function ServiceControlProvider({ children }: { children: React.ReactNode
   useEffect(() => {
     if (!socket) return;
 
-    const handleServiceChanged = (payload: unknown) => {
+    const handleServiceChanged = (raw: unknown) => {
+      const parsed = ServiceControlEventSchema.safeParse(raw);
+      if (!parsed.success) {
+        console.warn(`[Socket] Invalid ${SOCKET_EVENTS.SERVICE_CONTROL_CHANGED} payload`, parsed.error.issues);
+        return;
+      }
+      const payload = parsed.data;
       setServices((prev) => {
         if (prev.length === 0) return prev;
 
@@ -182,7 +212,13 @@ export function ServiceControlProvider({ children }: { children: React.ReactNode
       });
     };
 
-    const handleSettingsChanged = (payload: unknown) => {
+    const handleSettingsChanged = (raw: unknown) => {
+      const parsed = ServiceSettingsEventSchema.safeParse(raw);
+      if (!parsed.success) {
+        console.warn(`[Socket] Invalid ${SOCKET_EVENTS.SERVICE_SETTINGS_CHANGED} payload`, parsed.error.issues);
+        return;
+      }
+      const payload = parsed.data;
       if (Array.isArray(payload)) {
         setEligibilityRules(payload as EligibilityRule[]);
       } else if (payload && typeof payload === 'object') {

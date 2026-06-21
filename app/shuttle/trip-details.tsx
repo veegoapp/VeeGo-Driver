@@ -361,6 +361,7 @@ export default function TripDetailsScreen() {
                 refetch();
                 router.push('/shuttle/trip-active' as any);
               } catch {
+                setStartedTripId(null);
                 Alert.alert('', t.start_trip_failed);
               } finally {
                 setStarting(false);

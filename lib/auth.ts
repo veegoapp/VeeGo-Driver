@@ -10,37 +10,25 @@ const REFRESH_TOKEN_KEY = 'refresh_token';
 const canUseSecureStore = Platform.OS !== 'web';
 
 async function setItem(key: string, value: string): Promise<void> {
-  try {
-    if (canUseSecureStore) {
-      await SecureStore.setItemAsync(key, value);
-    } else {
-      await AsyncStorage.setItem(key, value);
-    }
-  } catch {
+  if (canUseSecureStore) {
+    await SecureStore.setItemAsync(key, value);
+  } else {
     await AsyncStorage.setItem(key, value);
   }
 }
 
 async function getItem(key: string): Promise<string | null> {
-  try {
-    if (canUseSecureStore) {
-      return await SecureStore.getItemAsync(key);
-    } else {
-      return await AsyncStorage.getItem(key);
-    }
-  } catch {
+  if (canUseSecureStore) {
+    return await SecureStore.getItemAsync(key);
+  } else {
     return await AsyncStorage.getItem(key);
   }
 }
 
 async function removeItem(key: string): Promise<void> {
-  try {
-    if (canUseSecureStore) {
-      await SecureStore.deleteItemAsync(key);
-    } else {
-      await AsyncStorage.removeItem(key);
-    }
-  } catch {
+  if (canUseSecureStore) {
+    await SecureStore.deleteItemAsync(key);
+  } else {
     await AsyncStorage.removeItem(key);
   }
 }
@@ -59,7 +47,22 @@ export async function deleteToken(): Promise<void> {
 
 export async function isAuthenticated(): Promise<boolean> {
   const token = await getToken();
-  return token !== null && token.length > 0;
+  if (!token || token.length === 0) return false;
+  try {
+    const parts = token.split('.');
+    if (parts.length >= 2) {
+      const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      const padded = base64.padEnd(base64.length + (4 - (base64.length % 4)) % 4, '=');
+      const payload = JSON.parse(atob(padded)) as Record<string, unknown>;
+      if (typeof payload.exp === 'number' && payload.exp <= Math.floor(Date.now() / 1000)) {
+        return false;
+      }
+    }
+  } catch {
+    // malformed JWT — treat as unauthenticated
+    return false;
+  }
+  return true;
 }
 
 export async function saveRefreshToken(token: string): Promise<void> {

@@ -18,7 +18,8 @@ import { ServiceControlProvider } from '@/lib/serviceControlContext';
 import { AuthProvider, useAuth } from '@/lib/authContext';
 import { SocketProvider } from '@/lib/socketContext';
 import { navigateAfterAuth } from '@/lib/postAuthRouter';
-import { setOnAccountSuspended } from '@/lib/api';
+import { setOnAccountSuspended, endpoints } from '@/lib/api';
+import { deleteToken, deleteRefreshToken } from '@/lib/auth';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { ServerStatusBanner } from '@/components/ServerStatusBanner';
 
@@ -101,6 +102,47 @@ function RootLayoutNav() {
         router.replace('/login');
       }
       return;
+    }
+
+    // Validate JWT role and expiry client-side (defense-in-depth — server is authoritative)
+    try {
+      const parts = token.split('.');
+      if (parts.length >= 2) {
+        const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+        const padded = base64.padEnd(base64.length + (4 - (base64.length % 4)) % 4, '=');
+        const payload = JSON.parse(atob(padded)) as Record<string, unknown>;
+
+        // Reject tokens that are not issued to a driver role
+        if (payload.role && payload.role !== 'driver') {
+          queryClient.clear();
+          await deleteToken();
+          await deleteRefreshToken();
+          router.replace('/login');
+          return;
+        }
+
+        // Reject expired tokens (attempt refresh is handled by api.ts on 401)
+        if (typeof payload.exp === 'number' && payload.exp <= Math.floor(Date.now() / 1000)) {
+          queryClient.clear();
+          await deleteToken();
+          await deleteRefreshToken();
+          router.replace('/login');
+          return;
+        }
+      }
+    } catch {
+      // malformed JWT — leave it to the server to reject on next request
+    }
+
+    // Check suspension from server on mount
+    try {
+      const me = await endpoints.driver.me() as { isBlocked?: boolean; isSuspended?: boolean } | null;
+      if (me && (me.isBlocked || me.isSuspended)) {
+        router.replace('/suspended');
+        return;
+      }
+    } catch {
+      // ignore — server will enforce on authenticated requests
     }
 
     // Authenticated user on a registration/pending screen → leave them there.

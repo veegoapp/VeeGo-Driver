@@ -1,3 +1,7 @@
+// TODO FIX-12: Add certificate pinning with react-native-ssl-pinning.
+// Run: npx expo install react-native-ssl-pinning
+// Then replace the fetch() calls in request() with the pinned fetch from that library,
+// configured with the SHA-256 hash of the production API certificate.
 import { getToken, getRefreshToken, saveToken, deleteToken, deleteRefreshToken } from './auth';
 
 // ── Language / Accept-Language ─────────────────────────────────────────────────
@@ -167,7 +171,7 @@ async function request<T>(
 
   // ── DEBUG: log vehicle catalog requests ──────────────────────────────────
   const isVehicleDebug = path.includes('/vehicles/');
-  if (isVehicleDebug) {
+  if (isVehicleDebug && __DEV__) {
     console.log('[API DEBUG]', method, `${API_BASE_URL}${path}`);
     console.log('[API DEBUG] Authorization:', token ? `Bearer ${token.slice(0, 20)}...` : 'MISSING — no token in storage');
   }
@@ -190,7 +194,7 @@ async function request<T>(
   clearTimeout(timeout);
 
   // ── DEBUG: log response ───────────────────────────────────────────────────
-  if (isVehicleDebug) {
+  if (isVehicleDebug && __DEV__) {
     const cloned = response.clone();
     cloned.text().then(t => {
       console.log('[API DEBUG] Status:', response.status, response.statusText);
@@ -423,6 +427,7 @@ export const endpoints = {
         clearTimeout(timeout);
       }
     },
+    checkinAcknowledge: () => api.post('/driver/checkin/acknowledge'),
     ratings: () => api.get('/driver/me/ratings'),
     promotions: () => api.get<DriverPromotion[]>('/driver/promotions'),
   },

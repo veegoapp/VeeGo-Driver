@@ -1,6 +1,40 @@
 import { useEffect, useRef } from 'react';
+import { z } from 'zod';
 import { useSocket } from '@/lib/socketContext';
+import { getToken, getUserIdFromToken } from '@/lib/auth';
 import { SOCKET_EVENTS } from '../constants/socketEvents';
+
+const RideOfferSchema = z.object({
+  id: z.union([z.string(), z.number()]).transform(String),
+  type: z.string().optional(),
+  rider: z.object({ name: z.string(), rating: z.number(), avatar: z.string().optional() }),
+  pickup: z.object({ address: z.string(), distance: z.string().optional(), eta: z.string().optional() }),
+  dropoff: z.object({ address: z.string(), distance: z.string().optional() }),
+  fare: z.number().optional(),
+  payment: z.string().optional(),
+  duration: z.string().optional(),
+}).passthrough();
+
+const OfferExpiredSchema = z.union([
+  z.string(),
+  z.object({ rideId: z.string().optional() }).passthrough(),
+]);
+
+const WaitingChargeSchema = z.object({
+  rideId: z.string(),
+  amount: z.number(),
+  minutes: z.number(),
+  capped: z.boolean().optional(),
+});
+
+const SurgeSchema = z.union([
+  z.array(z.object({
+    id: z.string(), latitude: z.number(), longitude: z.number(),
+    radius: z.number(), multiplier: z.number(),
+  }).passthrough()),
+  z.object({ zones: z.array(z.any()).optional() }).passthrough(),
+  z.object({ latitude: z.number(), longitude: z.number(), radius: z.number(), multiplier: z.number() }).passthrough(),
+]);
 
 export type RideRequest = {
   id: string;
@@ -89,31 +123,47 @@ export function useRideSocket({
   surgeUpdatedRef.current = onSurgeUpdated;
 
   // JOIN the driver room whenever the shared socket connects (or reconnects)
+  // Driver identity is derived from the JWT — not from the API response — to prevent room spoofing.
   useEffect(() => {
-    if (!socket || !driverId) return;
+    if (!socket) return;
 
-    const onConnect = () => {
-      socket.emit(SOCKET_EVENTS.JOIN, `driver:${driverId}`);
+    const joinRoom = async () => {
+      const token = await getToken();
+      const driverIdFromToken = getUserIdFromToken(token);
+      if (!driverIdFromToken) return;
+      socket.emit(SOCKET_EVENTS.JOIN, `driver:${driverIdFromToken}`);
     };
 
-    // If already connected, join immediately
+    const onConnect = () => { joinRoom(); };
+
     if (connected) {
-      socket.emit(SOCKET_EVENTS.JOIN, `driver:${driverId}`);
+      joinRoom();
     }
 
     socket.on('connect', onConnect);
     return () => { socket.off('connect', onConnect); };
-  }, [socket, driverId, connected]);
+  }, [socket, connected]);
 
   // Attach ride-specific event handlers to the shared socket
   useEffect(() => {
     if (!socket) return;
 
-    const handleRideOffer = (ride: RideRequest) => {
-      callbackRef.current(ride);
+    const handleRideOffer = (raw: unknown) => {
+      const parsed = RideOfferSchema.safeParse(raw);
+      if (!parsed.success) {
+        console.warn(`[Socket] Invalid ${SOCKET_EVENTS.RIDE_OFFER} payload`, parsed.error.issues);
+        return;
+      }
+      callbackRef.current(parsed.data as RideRequest);
     };
 
-    const handleOfferExpired = (data: { rideId?: string } | string) => {
+    const handleOfferExpired = (raw: unknown) => {
+      const parsed = OfferExpiredSchema.safeParse(raw);
+      if (!parsed.success) {
+        console.warn(`[Socket] Invalid ${SOCKET_EVENTS.RIDE_OFFER_EXPIRED} payload`, parsed.error.issues);
+        return;
+      }
+      const data = parsed.data;
       const rideId = typeof data === 'string' ? data : (data?.rideId ?? '');
       offerExpiredRef.current?.(rideId);
     };
@@ -122,12 +172,22 @@ export function useRideSocket({
       rideNoLongerAvailableRef.current?.();
     };
 
-    const handleWaitingChargeUpdated = (charge: WaitingCharge) => {
-      waitingChargeUpdatedRef.current?.(charge);
+    const handleWaitingChargeUpdated = (raw: unknown) => {
+      const parsed = WaitingChargeSchema.safeParse(raw);
+      if (!parsed.success) {
+        console.warn(`[Socket] Invalid ${SOCKET_EVENTS.WAITING_CHARGE_UPDATED} payload`, parsed.error.issues);
+        return;
+      }
+      waitingChargeUpdatedRef.current?.(parsed.data);
     };
 
-    const handleWaitingChargeCapped = (charge: WaitingCharge) => {
-      waitingChargeCappedRef.current?.(charge);
+    const handleWaitingChargeCapped = (raw: unknown) => {
+      const parsed = WaitingChargeSchema.safeParse(raw);
+      if (!parsed.success) {
+        console.warn(`[Socket] Invalid ${SOCKET_EVENTS.WAITING_CHARGE_CAPPED} payload`, parsed.error.issues);
+        return;
+      }
+      waitingChargeCappedRef.current?.(parsed.data);
     };
 
     const handleCheckinRequired = () => {
@@ -146,12 +206,18 @@ export function useRideSocket({
       cooldownClearedRef.current?.();
     };
 
-    const handleSurgeUpdated = (data: unknown) => {
+    const handleSurgeUpdated = (raw: unknown) => {
+      const parsed = SurgeSchema.safeParse(raw);
+      if (!parsed.success) {
+        console.warn(`[Socket] Invalid ${SOCKET_EVENTS.SURGE_UPDATED} payload`, parsed.error.issues);
+        return;
+      }
+      const data = parsed.data;
       let zones: SurgeZone[];
       if (Array.isArray(data)) {
         zones = data as SurgeZone[];
       } else if (data && typeof data === 'object' && 'zones' in data) {
-        zones = (data as { zones: SurgeZone[] }).zones ?? [];
+        zones = ((data as { zones?: SurgeZone[] }).zones) ?? [];
       } else if (data && typeof data === 'object' && 'latitude' in data) {
         zones = [data as SurgeZone];
       } else {

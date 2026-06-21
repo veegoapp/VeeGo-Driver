@@ -23,7 +23,7 @@ import { useShuttle } from '@/lib/shuttleContext';
 import { useI18n } from '@/lib/i18nContext';
 import { useSocket } from '@/lib/socketContext';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
-import { endpoints, type ShuttleCompleteResponse } from '@/lib/api';
+import { api, endpoints, type ShuttleCompleteResponse } from '@/lib/api';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 const APPROACH_THRESHOLD_M = 250;
@@ -112,6 +112,7 @@ export default function ShuttleTripActiveScreen() {
   const [focusTarget, setFocusTarget] = useState<{ latitude: number; longitude: number; zoom: number } | null>(null);
   const timeoutProcessingRef = useRef(false);
   const isFinishingRef = useRef(false);
+  const lastStopProcessingRef = useRef(false);
   const [stationTimeoutVisible, setStationTimeoutVisible] = useState(false);
 
   // Map always fills full height — both sheets are absolute overlays
@@ -241,7 +242,7 @@ export default function ShuttleTripActiveScreen() {
   useEffect(() => {
     if (!socket) return;
     const handler = async (data: { tripId?: string }) => {
-      if (data.tripId && data.tripId !== tripId) return;
+      if (!data.tripId || data.tripId !== tripId) return;
       if (timeoutProcessingRef.current) return;
       timeoutProcessingRef.current = true;
       try {
@@ -349,23 +350,19 @@ export default function ShuttleTripActiveScreen() {
             try {
               const loc = effectivePos;
               const mapLink = loc ? `https://maps.google.com/?q=${loc.latitude},${loc.longitude}` : '';
-              const passengerList = passengers.length > 0
-                ? passengers.map(p => `• ${p.name} — ${p.phone}`).join('\n')
-                : '—';
+              // Passenger PII excluded — emergency responders must look up details server-side
               const lines = [
                 '🚨 SOS ALERT 🚨',
-                `Route: ${activeLine?.lineName ?? '—'} | Trip #${tripId ?? '—'}`,
-                `Stop: ${currentStop?.name ?? '—'} (${currentStopIndex + 1}/${stops.length})`,
-                `Passengers:\n${passengerList}`,
+                `Trip #${tripId ?? '—'} | Stop ${currentStopIndex + 1}/${stops.length}`,
                 mapLink ? `📍 Location: ${mapLink}` : '📍 Location unavailable',
               ].join('\n\n');
               const phoneClean = ec.phone.replace(/\D/g, '');
               await Linking.openURL(`whatsapp://send?phone=${phoneClean}&text=${encodeURIComponent(lines)}`);
               if (tripId) {
-                endpoints.rides.sos(String(tripId), {
+                // NOTE: backend must implement POST /shuttle/trips/:tripId/sos
+                api.post(`/shuttle/trips/${tripId}/sos`, {
                   latitude: loc?.latitude ?? 0,
                   longitude: loc?.longitude ?? 0,
-                  notes: `SOS from trip-active: stop ${currentStop?.name}`,
                 }).catch(() => {});
               }
             } catch {
@@ -603,14 +600,38 @@ export default function ShuttleTripActiveScreen() {
             {/* Action button */}
             <View style={{ marginTop: 12 }}>
               {isLastStop ? (
-                <Pressable onPress={handleFinishRoute} style={[styles.primaryBtn, { opacity: isNextLoading ? 0.6 : 1 }]}>
+                <Pressable
+                  disabled={lastStopProcessingRef.current || isNextLoading}
+                  onPress={async () => {
+                    if (lastStopProcessingRef.current) return;
+                    lastStopProcessingRef.current = true;
+                    try {
+                      await handleFinishRoute();
+                    } finally {
+                      lastStopProcessingRef.current = false;
+                    }
+                  }}
+                  style={[styles.primaryBtn, { opacity: (lastStopProcessingRef.current || isNextLoading) ? 0.6 : 1 }]}
+                >
                   <LinearGradient colors={['#16a34a', '#22c55e']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.primaryBtnGrad}>
                     <Check size={18} color="#fff" strokeWidth={2.5} />
                     <Text style={[styles.primaryBtnText, { fontFamily: 'Inter_700Bold' }]}>{t.finish_route}</Text>
                   </LinearGradient>
                 </Pressable>
               ) : (
-                <Pressable onPress={handleNextStop} disabled={isNextLoading} style={[styles.primaryBtn, { opacity: isNextLoading ? 0.6 : 1 }]}>
+                <Pressable
+                  disabled={lastStopProcessingRef.current || isNextLoading}
+                  onPress={async () => {
+                    if (lastStopProcessingRef.current) return;
+                    lastStopProcessingRef.current = true;
+                    try {
+                      await handleNextStop();
+                    } finally {
+                      lastStopProcessingRef.current = false;
+                    }
+                  }}
+                  style={[styles.primaryBtn, { opacity: (lastStopProcessingRef.current || isNextLoading) ? 0.6 : 1 }]}
+                >
                   <LinearGradient colors={['#4f46e5', '#6366f1']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.primaryBtnGrad}>
                     <Navigation2 size={18} color="#fff" strokeWidth={2} />
                     <Text style={[styles.primaryBtnText, { fontFamily: 'Inter_700Bold' }]}>{isNextLoading ? '…' : 'Depart to Next Stop →'}</Text>
