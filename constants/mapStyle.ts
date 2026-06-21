@@ -1,0 +1,30 @@
+// Dark Google Maps style — matches the visual weight of the previous CARTO dark tiles.
+// Generated for the Uber/Careem-style night driving aesthetic.
+// Paste into the Google Maps Styling Wizard to preview: https://mapstyle.withgoogle.com
+export const DARK_MAP_STYLE = [
+  { elementType: 'geometry', stylers: [{ color: '#0f1624' }] },
+  { elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#7a8494' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#0f1624' }] },
+  { featureType: 'administrative', elementType: 'geometry', stylers: [{ color: '#1e2a3a' }] },
+  { featureType: 'administrative.country', elementType: 'labels.text.fill', stylers: [{ color: '#9e9e9e' }] },
+  { featureType: 'administrative.land_parcel', stylers: [{ visibility: 'off' }] },
+  { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#bdbdbd' }] },
+  { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#151f2e' }] },
+  { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#616161' }] },
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#131c26' }] },
+  { featureType: 'poi.park', elementType: 'labels.text.fill', stylers: [{ color: '#4b6358' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#1a2535' }] },
+  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#111927' }] },
+  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#6b7280' }] },
+  { featureType: 'road.arterial', elementType: 'geometry', stylers: [{ color: '#1e293b' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#2d3a4f' }] },
+  { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#1e2a3a' }] },
+  { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#8a9bb0' }] },
+  { featureType: 'road.local', elementType: 'labels.text.fill', stylers: [{ color: '#555e6d' }] },
+  { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#1a2535' }] },
+  { featureType: 'transit.station', elementType: 'labels.text.fill', stylers: [{ color: '#757575' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0a1628' }] },
+  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#3d5166' }] },
+  { featureType: 'water', elementType: 'labels.text.stroke', stylers: [{ color: '#0a1628' }] },
+];
