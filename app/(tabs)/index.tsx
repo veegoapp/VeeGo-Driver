@@ -659,7 +659,7 @@ export default function HomeScreen() {
             ) : (
               <View style={[styles.statsPillInner, { flexDirection: R }]}>
                 {/* FIX #4: parseFloat — backend returns totalEarnings as string */}
-                <StatItem label={t.today} value={`${parseFloat(String(earningsData?.summary?.totalEarnings ?? 0)).toFixed(2)} DT`} highlight colors={colors} isRTL={isRTL} />
+                <StatItem label={t.today} value={`${parseFloat(String(earningsData?.summary?.totalEarnings ?? 0)).toFixed(2)} ${t.egp}`} highlight colors={colors} isRTL={isRTL} />
                 <View style={[styles.divider, { backgroundColor: colors.border }]} />
                 <StatItem label={t.trips} value={String(earningsData?.trips ?? '—')} colors={colors} isRTL={isRTL} />
                 <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -762,7 +762,7 @@ export default function HomeScreen() {
             <View style={[styles.requestFareRow, { flexDirection: R }]}>
               <View>
                 <Text style={[styles.fareAmount, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
-                  {(request.fare ?? 0).toFixed(2)} <Text style={[styles.fareCurrency, { color: colors.mutedForeground }]}>DT</Text>
+                  {(request.fare ?? 0).toFixed(2)} <Text style={[styles.fareCurrency, { color: colors.mutedForeground }]}>{t.egp}</Text>
                 </Text>
                 <Text style={[styles.fareDetails, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>
                   {request.payment} · {request.duration}
