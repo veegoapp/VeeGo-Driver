@@ -51,13 +51,19 @@ export default function PendingApprovalScreen() {
     return () => anim.stop();
   }, [pulseAnim]);
 
+  const stopPolling = useCallback(() => {
+    if (intervalRef.current !== null) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  }, []);
+
   const fetchStatus = useCallback(async () => {
     try {
       const res = await endpoints.driver.onboarding();
       setData(res);
       if (res.onboardingStatus === 'approved') {
-        // Approved — route to dashboard
-        clearInterval(intervalRef.current!);
+        stopPolling();
         router.replace('/(shuttle)/' as any);
       }
     } catch {
@@ -65,7 +71,7 @@ export default function PendingApprovalScreen() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [stopPolling]);
 
   useEffect(() => {
     fetchStatus();
@@ -77,7 +83,7 @@ export default function PendingApprovalScreen() {
   useEffect(() => {
     if (!socket) return;
     const onActivated = () => {
-      clearInterval(intervalRef.current!);
+      stopPolling();
       router.replace('/(shuttle)/' as any);
     };
     const onRejected = () => fetchStatus();
@@ -91,10 +97,10 @@ export default function PendingApprovalScreen() {
       socket.off('driver:account:rejected', onRejected);
       socket.off('driver:changes:requested', onChanges);
     };
-  }, [socket, fetchStatus]);
+  }, [socket, fetchStatus, stopPolling]);
 
   const handleLogout = async () => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
+    stopPolling();
     await logout();
     router.replace('/login');
   };

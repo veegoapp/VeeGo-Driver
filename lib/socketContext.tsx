@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { AppState, type AppStateStatus } from 'react-native';
 import type { Socket } from 'socket.io-client';
 import { useAuth } from './authContext';
 import { getToken } from './auth';
@@ -81,6 +82,21 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       setConnected(false);
     };
   }, [token, authIsLoading]);
+
+  // Reconnect socket when the app returns to the foreground after being
+  // backgrounded or suspended. The OS may have dropped the TCP connection.
+  useEffect(() => {
+    const handleAppStateChange = (nextState: AppStateStatus) => {
+      if (nextState === 'active') {
+        const s = socketRef.current;
+        if (s && !s.connected) {
+          s.connect();
+        }
+      }
+    };
+    const sub = AppState.addEventListener('change', handleAppStateChange);
+    return () => sub.remove();
+  }, []);
 
   const value = useMemo(() => ({ socket: socketInstance, connected }), [socketInstance, connected]);
 

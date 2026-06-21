@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Alert } from 'react-native';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { Alert, AppState, type AppStateStatus } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { endpoints } from './api';
 import { useSocket } from './socketContext';
@@ -384,6 +384,8 @@ export const ShuttleContext = createContext<ShuttleContextType>({
 export function ShuttleProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const { socket } = useSocket();
+  const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+  const [isAppActive, setIsAppActive] = useState(AppState.currentState === 'active');
   const [currentStopIndex, setCurrentStopIndex] = useState(0);
   const [passengers, setPassengers] = useState<BoardingPassenger[]>([]);
   const [tripCancelledBanner, setTripCancelledBanner] = useState<string | null>(null);
@@ -391,6 +393,25 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
   const [startedTripId, setStartedTripId] = useState<string | null>(null);
   // Real-time slot-released toast state
   const [slotReleasedAlert, setSlotReleasedAlert] = useState<SlotReleasedAlert | null>(null);
+
+  // ── AppState: pause polling in background, force-refetch on foreground ───
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (nextState: AppStateStatus) => {
+      const wasActive = appStateRef.current === 'active';
+      const nowActive = nextState === 'active';
+      appStateRef.current = nextState;
+      setIsAppActive(nowActive);
+
+      if (!wasActive && nowActive) {
+        // Returned to foreground — immediately refresh all shuttle state
+        queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
+        queryClient.invalidateQueries({ queryKey: ['shuttle-lines'] });
+        queryClient.invalidateQueries({ queryKey: ['shuttle-driver-trips'] });
+      }
+    });
+    return () => sub.remove();
+  }, [queryClient]);
 
   // ── Queries ──────────────────────────────────────────────────────────────
 
@@ -406,6 +427,7 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
       return raw;
     },
     refetchInterval: 60000,
+    enabled: isAppActive,
   });
 
   const {
@@ -420,6 +442,7 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
       return raw;
     },
     refetchInterval: 20000,
+    enabled: isAppActive,
   });
 
   const refetch = () => {
@@ -485,7 +508,7 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
   } = useQuery({
     queryKey: ['shuttle-trip-stations', activeTripId],
     queryFn: () => endpoints.trips.stations(activeTripId!),
-    enabled: !!activeTripId,
+    enabled: !!activeTripId && isAppActive,
     refetchInterval: 30000,
   });
 
@@ -621,6 +644,14 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
+    // On socket reconnect after an outage, force-refresh all shuttle state
+    // so the driver always sees the latest trip/booking data.
+    const handleReconnect = () => {
+      queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['shuttle-lines'] });
+      queryClient.invalidateQueries({ queryKey: ['shuttle-driver-trips'] });
+    };
+
     socket.on(SOCKET_EVENTS.NOTIFICATION_NEW, handleNotification);
     socket.on(SOCKET_EVENTS.SHUTTLE_BOOKING_CANCELLED, handleBookingCancelled);
     socket.on(SOCKET_EVENTS.SHUTTLE_BOOKING_REASSIGNED, handleBookingCancelled);
@@ -629,6 +660,7 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
     socket.on(SOCKET_EVENTS.SLOT_TAKEN, handleSlotTaken);
     socket.on(SOCKET_EVENTS.SLOT_RELEASED, handleSlotReleased);
     socket.on(SOCKET_EVENTS.SHUTTLE_TRIP_STATUS, handleTripStatus);
+    socket.on('reconnect', handleReconnect);
 
     return () => {
       socket.off(SOCKET_EVENTS.NOTIFICATION_NEW, handleNotification);
@@ -639,6 +671,7 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
       socket.off(SOCKET_EVENTS.SLOT_TAKEN, handleSlotTaken);
       socket.off(SOCKET_EVENTS.SLOT_RELEASED, handleSlotReleased);
       socket.off(SOCKET_EVENTS.SHUTTLE_TRIP_STATUS, handleTripStatus);
+      socket.off('reconnect', handleReconnect);
     };
   }, [socket, queryClient]);
 

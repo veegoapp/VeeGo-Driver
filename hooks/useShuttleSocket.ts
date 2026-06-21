@@ -9,10 +9,15 @@
  * and SocketProvider) via the ShuttleReferralBridge component in _layout.tsx.
  *
  * Events bound here:
- *   shuttle:booking:created   → navigate to bookings screen (booking created for this driver)
- *   shuttle:booking:cancelled → dismiss booking from context + invalidate cache
- *   shuttle:referral:incoming → (legacy) add to referral queue (badge + banner)
- *   shuttle:referral:cancelled → (legacy) remove a withdrawn referral from the queue
+ *   shuttle:booking:created   → navigate to bookings screen (cache invalidation
+ *                               is handled exclusively by ShuttleProvider to avoid
+ *                               duplicate invalidations and wrong cache key bugs)
+ *   shuttle:referral:incoming → add to referral queue (badge + banner)
+ *   shuttle:referral:cancelled → remove a withdrawn referral from the queue
+ *
+ * NOTE: SHUTTLE_BOOKING_CANCELLED is intentionally NOT handled here.
+ *       ShuttleProvider (shuttleContext.tsx) is the single source of truth for
+ *       all booking cache invalidations.
  */
 
 import { useEffect, useRef } from 'react';
@@ -23,7 +28,6 @@ import {
   useReferral,
   type IncomingReferralPayload,
 } from '@/lib/referralContext';
-import { useQueryClient } from '@tanstack/react-query';
 
 type BookingCreatedPayload = {
   bookingId?: number | string;
@@ -39,7 +43,6 @@ type BookingCreatedPayload = {
 export function useShuttleSocket() {
   const { socket } = useSocket();
   const { addIncomingReferral, dismissReferral } = useReferral();
-  const queryClient = useQueryClient();
 
   const addRef = useRef(addIncomingReferral);
   addRef.current = addIncomingReferral;
@@ -47,22 +50,12 @@ export function useShuttleSocket() {
   const dismissRef = useRef(dismissReferral);
   dismissRef.current = dismissReferral;
 
-  const queryClientRef = useRef(queryClient);
-  queryClientRef.current = queryClient;
-
   useEffect(() => {
     if (!socket) return;
 
+    // Navigation side-effect only — cache invalidation handled by ShuttleProvider
     const handleBookingCreated = (_payload: BookingCreatedPayload) => {
-      queryClientRef.current.invalidateQueries({ queryKey: ['shuttle-bookings'] });
       router.push('/(shuttle)/bookings' as any);
-    };
-
-    const handleBookingCancelled = (data: { bookingId?: string | number }) => {
-      queryClientRef.current.invalidateQueries({ queryKey: ['shuttle-bookings'] });
-      if (data?.bookingId) {
-        queryClientRef.current.invalidateQueries({ queryKey: ['shuttle-booking', String(data.bookingId)] });
-      }
     };
 
     const handleIncomingReferral = (payload: IncomingReferralPayload) => {
@@ -77,13 +70,11 @@ export function useShuttleSocket() {
     };
 
     socket.on(SOCKET_EVENTS.SHUTTLE_BOOKING_CREATED, handleBookingCreated);
-    socket.on(SOCKET_EVENTS.SHUTTLE_BOOKING_CANCELLED, handleBookingCancelled);
     socket.on(SOCKET_EVENTS.SHUTTLE_INCOMING_REFERRAL, handleIncomingReferral);
     socket.on(SOCKET_EVENTS.SHUTTLE_REFERRAL_CANCELLED, handleReferralCancelled);
 
     return () => {
       socket.off(SOCKET_EVENTS.SHUTTLE_BOOKING_CREATED, handleBookingCreated);
-      socket.off(SOCKET_EVENTS.SHUTTLE_BOOKING_CANCELLED, handleBookingCancelled);
       socket.off(SOCKET_EVENTS.SHUTTLE_INCOMING_REFERRAL, handleIncomingReferral);
       socket.off(SOCKET_EVENTS.SHUTTLE_REFERRAL_CANCELLED, handleReferralCancelled);
     };
