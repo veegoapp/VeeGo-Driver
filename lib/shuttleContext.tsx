@@ -597,10 +597,14 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    // Also listen for direct shuttle booking events (sent to driver:<userId> room)
-    const handleBookingCancelled = () => {
+    // Backend now sends { bookingId, routeId, reason } — use payload for targeted invalidation
+    const handleBookingCancelled = (data?: { bookingId?: string | number; routeId?: string | number; reason?: string }) => {
       queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['shuttle-lines'] });
+      // Invalidate the specific booking detail cache entry if we have its id
+      if (data?.bookingId != null) {
+        queryClient.invalidateQueries({ queryKey: ['shuttle-booking-detail', String(data.bookingId)] });
+      }
     };
 
     // Trip crossed the minimum-passenger threshold (pending → active)
@@ -644,8 +648,29 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    // On socket reconnect after an outage, force-refresh all shuttle state
-    // so the driver always sees the latest trip/booking data.
+    // Server emits shuttle:state:sync on every connect + reconnect.
+    // We call the snapshot endpoint to get fresh bookings + today's trips in one shot,
+    // then invalidate the relevant query keys so React Query re-renders with fresh data.
+    const handleStateSync = async () => {
+      try {
+        await endpoints.shuttle.stateSnapshot();
+      } catch { /* snapshot is best-effort; polling will recover */ }
+      queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['shuttle-lines'] });
+      queryClient.invalidateQueries({ queryKey: ['shuttle-driver-trips'] });
+    };
+
+    // trip:activated fires when the booking threshold is crossed and the trip
+    // status flips from pending → active. Refresh both bookings and lines so
+    // the trip card shows the updated status immediately.
+    const handleTripActivated = () => {
+      queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['shuttle-lines'] });
+    };
+
+    // On socket reconnect after an outage, force-refresh all shuttle state.
+    // shuttle:state:sync will also fire on reconnect, but handle 'reconnect' as
+    // a belt-and-suspenders fallback in case the server didn't emit it.
     const handleReconnect = () => {
       queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['shuttle-lines'] });
@@ -660,6 +685,8 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
     socket.on(SOCKET_EVENTS.SLOT_TAKEN, handleSlotTaken);
     socket.on(SOCKET_EVENTS.SLOT_RELEASED, handleSlotReleased);
     socket.on(SOCKET_EVENTS.SHUTTLE_TRIP_STATUS, handleTripStatus);
+    socket.on(SOCKET_EVENTS.SHUTTLE_STATE_SYNC, handleStateSync);
+    socket.on(SOCKET_EVENTS.TRIP_ACTIVATED, handleTripActivated);
     socket.on('reconnect', handleReconnect);
 
     return () => {
@@ -671,6 +698,8 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
       socket.off(SOCKET_EVENTS.SLOT_TAKEN, handleSlotTaken);
       socket.off(SOCKET_EVENTS.SLOT_RELEASED, handleSlotReleased);
       socket.off(SOCKET_EVENTS.SHUTTLE_TRIP_STATUS, handleTripStatus);
+      socket.off(SOCKET_EVENTS.SHUTTLE_STATE_SYNC, handleStateSync);
+      socket.off(SOCKET_EVENTS.TRIP_ACTIVATED, handleTripActivated);
       socket.off('reconnect', handleReconnect);
     };
   }, [socket, queryClient]);

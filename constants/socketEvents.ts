@@ -52,6 +52,11 @@ export const SOCKET_EVENTS = {
   SHUTTLE_RENEWAL_CONFIRMED:  "shuttle:renewal:confirmed",
   // Server → Driver: trip threshold crossed (pending → active)
   SHUTTLE_TRIP_STATUS:        "shuttle:trip:status",
+  // Server → Driver: emitted on every connect/reconnect — driver should call
+  // GET /shuttle/driver/state-snapshot to sync bookings + today's trips
+  SHUTTLE_STATE_SYNC:         "shuttle:state:sync",
+  // Server → Trip room: shuttle trip auto-activated (threshold met)
+  TRIP_ACTIVATED:             "trip:activated",
   // Server → Driver: wallet feature toggled by admin
   DRIVER_WALLET_FEATURE:      "driver:wallet:feature:changed",
 

@@ -562,6 +562,13 @@ export const endpoints = {
     // ── Route Bookings ───────────────────────────────────────────────────────
     myBookings: () => api.get('/shuttle/route-bookings'),
     bookingDetail: (id: string) => api.get(`/shuttle/route-bookings/${id}`),
+
+    // POST-RECONNECT STATE SYNC
+    // Called immediately when the server emits shuttle:state:sync on connect/reconnect.
+    // Returns the driver's active bookings + today's trips in a single round-trip so
+    // the driver always sees up-to-date state after any offline period.
+    // Response shape: { bookings: RawDriverBooking[]; trips: BackendTrip[] }
+    stateSnapshot: () => api.get('/shuttle/driver/state-snapshot'),
     createBooking: (data: { routeId: string | number; timeSlotId: string | number; weekStart: string }) =>
       api.post('/shuttle/route-bookings', data),
 
