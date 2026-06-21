@@ -291,7 +291,7 @@ export default function RideScreen() {
             </LinearGradient>
           </Animated.View>
           <Text style={[styles.completedTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.trip_done_title}</Text>
-          <Text style={[styles.fareEarned, { color: colors.primary, fontFamily: 'Inter_700Bold' }]}>+{parseFloat(String(r?.fare ?? 0)).toFixed(2)} DT</Text>
+          <Text style={[styles.fareEarned, { color: colors.primary, fontFamily: 'Inter_700Bold' }]}>+{parseFloat(String(r?.fare ?? 0)).toFixed(2)} {t.egp}</Text>
           <Text style={[styles.fareNote, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{t.added_to_earnings}</Text>
 
           <GlassView style={styles.ratingCard} borderRadius={16}>
@@ -336,7 +336,7 @@ export default function RideScreen() {
                 <View style={styles.riderMeta}>
                   <Star size={12} color={colors.accent} fill={colors.accent} strokeWidth={2} />
                   <Text style={[styles.riderMetaText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-                    {r?.rider.rating != null ? parseFloat(String(r.rider.rating)).toFixed(1) : '—'} · {r?.payment ?? '—'} · {parseFloat(String(r?.fare ?? 0)).toFixed(2)} DT
+                    {r?.rider.rating != null ? parseFloat(String(r.rider.rating)).toFixed(1) : '—'} · {r?.payment ?? '—'} · {parseFloat(String(r?.fare ?? 0)).toFixed(2)} {t.egp}
                   </Text>
                 </View>
               </View>
