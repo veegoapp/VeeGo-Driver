@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import MapView, { Circle, Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { DARK_MAP_STYLE } from '@/constants/mapStyle';
+import { getToken } from '@/lib/auth';
 
 export interface SurgeZone {
   id: string;
@@ -172,20 +173,24 @@ export function MapBackdrop({
   // ── Auto-fetch route for non-nav on-demand rides ─────────────────────────
   useEffect(() => {
     if (navigationMode || !pickup || !dropoff) return;
-    const coordStr = `${pickup.longitude},${pickup.latitude};${dropoff.longitude},${dropoff.latitude}`;
+    const base = process.env.EXPO_PUBLIC_API_URL ?? '';
+    const url =
+      `${base}/directions` +
+      `?origin=${pickup.latitude},${pickup.longitude}` +
+      `&destination=${dropoff.latitude},${dropoff.longitude}`;
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 5000);
-    fetch(
-      `https://router.project-osrm.org/route/v1/driving/${coordStr}?overview=full&geometries=geojson`,
-      { signal: ctrl.signal },
-    )
+    getToken()
+      .then(token =>
+        fetch(url, {
+          signal: ctrl.signal,
+          headers: { Authorization: `Bearer ${token ?? ''}` },
+        }),
+      )
       .then(r => (r.ok ? r.json() : null))
       .then(data => {
-        if (data?.code === 'Ok' && Array.isArray(data.routes?.[0]?.geometry?.coordinates)) {
-          const coords = (data.routes[0].geometry.coordinates as [number, number][]).map(
-            ([lng, lat]) => ({ latitude: lat, longitude: lng }),
-          );
-          setAutoPolyline(coords);
+        if (Array.isArray(data?.polyline) && data.polyline.length >= 2) {
+          setAutoPolyline(data.polyline);
         }
       })
       .catch(() => {})

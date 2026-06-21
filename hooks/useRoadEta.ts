@@ -1,22 +1,23 @@
 import { useEffect, useRef, useState } from 'react';
 import { haversineMeters } from './useDriverLocation';
+import { getToken } from '@/lib/auth';
 
 export type RoadEtaResult = {
   distanceM: number | null;
   etaSeconds: number | null;
-  source: 'osrm' | 'fallback' | null;
+  source: 'api' | 'fallback' | null;
 };
 
-const OSRM_INTERVAL_MS  = 30_000;  // max one OSRM call per 30 s
+const API_INTERVAL_MS   = 30_000;  // max one directions call per 30 s
 const MOVE_THRESHOLD_M  = 80;      // …or when driver moves >80 m from last fetch origin
-const FETCH_TIMEOUT_MS  = 6_000;   // abort stalled OSRM requests after 6 s
+const FETCH_TIMEOUT_MS  = 6_000;   // abort stalled requests after 6 s
 const FALLBACK_SPEED_MPS = 8.33;   // 30 km/h assumed city speed when GPS speed unavailable
 
 /**
- * Returns road-accurate distance and ETA to `target` using OSRM.
+ * Returns road-accurate distance and ETA to `target` via the backend /directions proxy.
  * Throttled — fires at most once per 30 s (or when the driver moves >80 m).
- * Falls back to speed-based estimation when OSRM is unreachable.
- * Ticks the ETA down smoothly every second between OSRM refreshes.
+ * Falls back to speed-based estimation when the API is unreachable.
+ * Ticks the ETA down smoothly every second between refreshes.
  */
 export function useRoadEta(
   driverPos: { latitude: number; longitude: number; speed?: number | null } | null,
@@ -55,7 +56,7 @@ export function useRoadEta(
       ? haversineMeters(driverPos.latitude, driverPos.longitude, prev.fromLat, prev.fromLng)
       : Infinity;
 
-    if (fetching.current || (ms < OSRM_INTERVAL_MS && moved < MOVE_THRESHOLD_M)) return;
+    if (fetching.current || (ms < API_INTERVAL_MS && moved < MOVE_THRESHOLD_M)) return;
 
     fetching.current = true;
     abortCtrl.current?.abort();
@@ -63,24 +64,30 @@ export function useRoadEta(
     abortCtrl.current = ctrl;
     const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
 
+    const base = process.env.EXPO_PUBLIC_API_URL ?? '';
     const url =
-      `https://router.project-osrm.org/route/v1/driving/` +
-      `${driverPos.longitude},${driverPos.latitude};` +
-      `${target.longitude},${target.latitude}?overview=false`;
+      `${base}/directions` +
+      `?origin=${driverPos.latitude},${driverPos.longitude}` +
+      `&destination=${target.latitude},${target.longitude}`;
 
-    fetch(url, { signal: ctrl.signal })
+    getToken()
+      .then(token =>
+        fetch(url, {
+          signal: ctrl.signal,
+          headers: { Authorization: `Bearer ${token ?? ''}` },
+        }),
+      )
       .then(r => (r.ok ? r.json() : Promise.reject(new Error('non-ok'))))
       .then(data => {
-        if (data?.code === 'Ok' && data.routes?.[0]) {
-          const { distance, duration } = data.routes[0] as { distance: number; duration: number };
+        if (typeof data?.distanceM === 'number' && typeof data?.durationS === 'number') {
           anchor.current = {
             at: Date.now(),
             fromLat: driverPos.latitude,
             fromLng: driverPos.longitude,
-            distanceM: distance,
-            durationS: duration,
+            distanceM: data.distanceM,
+            durationS: data.durationS,
           };
-          setDisplay({ distanceM: distance, etaSeconds: Math.round(duration), source: 'osrm' });
+          setDisplay({ distanceM: data.distanceM, etaSeconds: Math.round(data.durationS), source: 'api' });
         }
       })
       .catch(() => {

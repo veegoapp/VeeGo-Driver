@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { getToken } from '@/lib/auth';
 
 type Coord = { latitude: number; longitude: number };
 
@@ -10,7 +11,7 @@ export type RoadPolylineResult = {
 const TIMEOUT_MS = 8_000;
 
 /**
- * Fetches road-snapped geometry from OSRM for the given waypoints.
+ * Fetches road-snapped geometry from the backend /directions proxy.
  * Returns null until the request completes; callers should use the
  * raw station coords as a straight-line fallback in the meantime.
  *
@@ -45,18 +46,31 @@ export function useRoadPolyline(
 
     setResult({ coords: null, loading: true });
 
-    const coordStr = waypoints.map(p => `${p.longitude},${p.latitude}`).join(';');
-    const url = `https://router.project-osrm.org/route/v1/driving/${coordStr}?overview=full&geometries=geojson`;
+    const origin      = waypoints[0];
+    const destination = waypoints[waypoints.length - 1];
+    const intermediates = waypoints.slice(1, -1);
+    const waypointParam = intermediates.length > 0
+      ? `&waypoints=${intermediates.map(p => `${p.latitude},${p.longitude}`).join('|')}`
+      : '';
+    const base = process.env.EXPO_PUBLIC_API_URL ?? '';
+    const url =
+      `${base}/directions` +
+      `?origin=${origin.latitude},${origin.longitude}` +
+      `&destination=${destination.latitude},${destination.longitude}` +
+      waypointParam;
     const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
 
-    fetch(url, { signal: ctrl.signal })
+    getToken()
+      .then(token =>
+        fetch(url, {
+          signal: ctrl.signal,
+          headers: { Authorization: `Bearer ${token ?? ''}` },
+        }),
+      )
       .then(r => (r.ok ? r.json() : Promise.reject(new Error('non-ok'))))
       .then(data => {
-        if (data?.code === 'Ok' && Array.isArray(data.routes?.[0]?.geometry?.coordinates)) {
-          const coords: Coord[] = (data.routes[0].geometry.coordinates as [number, number][]).map(
-            ([lng, lat]) => ({ latitude: lat, longitude: lng }),
-          );
-          setResult({ coords, loading: false });
+        if (Array.isArray(data?.polyline) && (data.polyline as Coord[]).length >= 2) {
+          setResult({ coords: data.polyline as Coord[], loading: false });
         } else {
           setResult({ coords: null, loading: false });
         }
