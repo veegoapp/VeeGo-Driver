@@ -16,7 +16,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ServiceProvider } from '@/lib/serviceContext';
 import { ServiceControlProvider } from '@/lib/serviceControlContext';
 import { AuthProvider, useAuth } from '@/lib/authContext';
-import { SocketProvider } from '@/lib/socketContext';
+import { SocketProvider, useSocket } from '@/lib/socketContext';
+import { ReferralProvider, useReferral } from '@/lib/referralContext';
 import { navigateAfterAuth } from '@/lib/postAuthRouter';
 import { setOnAccountSuspended, endpoints } from '@/lib/api';
 import { deleteToken, deleteRefreshToken } from '@/lib/auth';
@@ -58,6 +59,32 @@ const PENDING_SCREENS = new Set([
  */
 function PushNotificationsBridge() {
   usePushNotifications();
+  return null;
+}
+
+function ReferralSocketBridge() {
+  const { socket } = useSocket();
+  const { addIncomingReferral } = useReferral();
+  useEffect(() => {
+    if (!socket) return;
+    const handleReferral = (data: any) => {
+      addIncomingReferral({
+        referralId: String(data.referralId ?? data.id ?? ''),
+        bookingId: String(data.bookingId ?? ''),
+        routeName: data.routeName ?? '',
+        departureTime: data.departureTime ?? '',
+        fromStation: data.fromStation ?? '',
+        toStation: data.toStation ?? '',
+        passengerCount: data.passengerCount,
+        totalSeats: data.totalSeats,
+        lineNumber: data.lineNumber,
+        vehicleType: data.vehicleType,
+        weekStart: data.weekStart,
+      });
+    };
+    socket.on('shuttle:referral:incoming', handleReferral);
+    return () => { socket.off('shuttle:referral:incoming', handleReferral); };
+  }, [socket, addIncomingReferral]);
   return null;
 }
 
@@ -161,6 +188,7 @@ function RootLayoutNav() {
   return (
     <>
       <PushNotificationsBridge />
+      <ReferralSocketBridge />
       <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
         <Stack.Screen name="language-select" />
         <Stack.Screen name="index" />
@@ -176,6 +204,7 @@ function RootLayoutNav() {
         <Stack.Screen name="messages" />
         <Stack.Screen name="personal-info" options={{ animation: 'slide_from_right', gestureEnabled: true }} />
         <Stack.Screen name="bonus-targets" options={{ animation: 'slide_from_right', gestureEnabled: true }} />
+        <Stack.Screen name="settings" options={{ animation: 'slide_from_right', gestureEnabled: true }} />
         <Stack.Screen name="shuttle/profile-info" options={{ animation: 'slide_from_right', gestureEnabled: true }} />
         <Stack.Screen name="shuttle/trip-active" />
         <Stack.Screen name="shuttle/boarding" />
@@ -249,11 +278,13 @@ export default function RootLayout() {
                 <I18nProvider>
                   <LanguageCacheInvalidator />
                   <ServiceProvider>
-                    <SocketProvider>
-                      <ServiceControlProvider>
-                        <RootLayoutNav />
-                      </ServiceControlProvider>
-                    </SocketProvider>
+                    <ReferralProvider>
+                      <SocketProvider>
+                        <ServiceControlProvider>
+                          <RootLayoutNav />
+                        </ServiceControlProvider>
+                      </SocketProvider>
+                    </ReferralProvider>
                   </ServiceProvider>
                 </I18nProvider>
               </KeyboardProvider>

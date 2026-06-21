@@ -88,9 +88,14 @@ export default function WalletScreen() {
       Alert.alert(t.invalid_amount_title, t.invalid_amount_msg);
       return;
     }
+    const selectedMethod = payoutMethods.find(m => m.isDefault) ?? payoutMethods[0] ?? null;
+    if (!selectedMethod) {
+      Alert.alert(t.error, (t as any).no_payout_methods ?? 'Please add a payout method first.');
+      return;
+    }
     setIsPayingOut(true);
     try {
-      await endpoints.wallet.payout(amount);
+      await endpoints.wallet.payout(amount, selectedMethod.id);
       await queryClient.invalidateQueries({ queryKey: ['wallet-balance'] });
       await queryClient.invalidateQueries({ queryKey: ['wallet-transactions'] });
       setPayoutVisible(false);
