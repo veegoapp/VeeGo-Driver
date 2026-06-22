@@ -41,6 +41,14 @@
           "color": "#2d2d42",
           "defaultChannel": "ride-requests"
         }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow VeeGo Driver to use your location while you're online.",
+          "isIosBackgroundLocationEnabled": true,
+          "isAndroidBackgroundLocationEnabled": true
+        }
       ]
     ],
     "experiments": {

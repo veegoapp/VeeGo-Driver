@@ -1,3 +1,6 @@
+// Register background location task before any React rendering
+import '@/lib/backgroundLocationTask';
+
 import { useFonts } from 'expo-font';
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -142,8 +145,8 @@ function RootLayoutNav() {
         // Reject tokens that are not issued to a driver role
         if (payload.role && payload.role !== 'driver') {
           queryClient.clear();
-          await deleteToken();
-          await deleteRefreshToken();
+          deleteToken();
+          deleteRefreshToken();
           router.replace('/login');
           return;
         }
@@ -151,8 +154,8 @@ function RootLayoutNav() {
         // Reject expired tokens (attempt refresh is handled by api.ts on 401)
         if (typeof payload.exp === 'number' && payload.exp <= Math.floor(Date.now() / 1000)) {
           queryClient.clear();
-          await deleteToken();
-          await deleteRefreshToken();
+          deleteToken();
+          deleteRefreshToken();
           router.replace('/login');
           return;
         }
@@ -162,15 +165,11 @@ function RootLayoutNav() {
     }
 
     // Check suspension from server on mount
-    try {
-      const me = await endpoints.driver.me() as { isBlocked?: boolean; isSuspended?: boolean } | null;
+    endpoints.driver.me().then((me: any) => {
       if (me && (me.isBlocked || me.isSuspended)) {
         router.replace('/suspended');
-        return;
       }
-    } catch {
-      // ignore — server will enforce on authenticated requests
-    }
+    }).catch(() => {});
 
     // Authenticated user on a registration/pending screen → leave them there.
     if (inPendingZone) return;

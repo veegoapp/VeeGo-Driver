@@ -2,6 +2,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location'; // Task 1: GPS tracking
+import * as TaskManager from 'expo-task-manager';
+import { DRIVER_LOCATION_TASK } from '@/lib/backgroundLocationTask';
 import { AlertCircle, Bell, Check, CheckCircle, Settings, ShieldCheck, Star, TrendingUp, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -260,54 +262,76 @@ export default function HomeScreen() {
     }
   }, [token]);
 
-  // Task 1: start GPS tracking — returns false if permission denied
+  // Task 1: start GPS tracking using background location task — returns false if permission denied
   const startLocationTracking = async (): Promise<boolean> => {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') {
+    const { status: fgStatus } = await Location.requestForegroundPermissionsAsync();
+    if (fgStatus !== 'granted') {
       setLocationError('Location permission is required to receive rides. Please enable it in Settings.');
       return false;
     }
     setLocationError(null);
-    // Send initial fix immediately, then every 10 s
-    const sendLocation = async () => {
-      try {
-        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-        await endpoints.driver.updateLocation({
-          latitude: loc.coords.latitude,
-          longitude: loc.coords.longitude,
-          speed: loc.coords.speed ?? undefined,
-          heading: loc.coords.heading ?? undefined,
+    // Request background permission (soft — don't block on denial)
+    await Location.requestBackgroundPermissionsAsync().catch(() => {});
+    try {
+      const isRegistered = await TaskManager.isTaskRegisteredAsync(DRIVER_LOCATION_TASK);
+      if (!isRegistered) {
+        await Location.startLocationUpdatesAsync(DRIVER_LOCATION_TASK, {
+          accuracy: Location.Accuracy.Balanced,
+          timeInterval: 10000,
+          distanceInterval: 50,
+          foregroundService: {
+            notificationTitle: 'VeeGo Driver',
+            notificationBody: "You're online — receiving ride requests.",
+            notificationColor: '#2d2d42',
+          },
+          pausesUpdatesAutomatically: false,
+          activityType: Location.ActivityType.AutomotiveNavigation,
+          showsBackgroundLocationIndicator: true,
         });
-      } catch {
-        // best-effort — don't stop tracking on a single network failure
       }
-    };
-    sendLocation();
-    locationIntervalRef.current = setInterval(sendLocation, 10000);
+    } catch {
+      // Expo Go / task manager unavailable — fall back to interval-based tracking
+      const sendLocation = async () => {
+        try {
+          const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          await endpoints.driver.updateLocation({
+            latitude: loc.coords.latitude,
+            longitude: loc.coords.longitude,
+            speed: loc.coords.speed ?? undefined,
+            heading: loc.coords.heading ?? undefined,
+          });
+        } catch {
+          // best-effort
+        }
+      };
+      sendLocation();
+      locationIntervalRef.current = setInterval(sendLocation, 10000);
+    }
     return true;
   };
 
   // Task 1: stop GPS tracking
   const stopLocationTracking = () => {
+    // Stop background location task
+    TaskManager.isTaskRegisteredAsync(DRIVER_LOCATION_TASK)
+      .then((registered) => {
+        if (registered) Location.stopLocationUpdatesAsync(DRIVER_LOCATION_TASK).catch(() => {});
+      })
+      .catch(() => {});
+    // Clear any Expo Go fallback interval
     if (locationIntervalRef.current) {
       clearInterval(locationIntervalRef.current);
       locationIntervalRef.current = null;
     }
   };
 
-  // Task 1: pause/resume tracking when app backgrounds
+  // Task 1: background location task handles continuity — track AppState for checkin countdown only
   useEffect(() => {
-    const sub = AppState.addEventListener('change', nextState => {
-      if (appStateRef.current === 'active' && nextState.match(/inactive|background/)) {
-        stopLocationTracking();
-      } else if (appStateRef.current.match(/inactive|background/) && nextState === 'active' && online) {
-        startLocationTracking();
-      }
+    const sub = AppState.addEventListener('change', (nextState) => {
       appStateRef.current = nextState;
     });
     return () => sub.remove();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [online]);
+  }, []);
 
   // Task 1: clean up on unmount
   useEffect(() => () => {
