@@ -1,5 +1,6 @@
 
 import { Navigation, ArrowRight, ArrowLeft } from 'lucide-react-native';
+import { router } from 'expo-router';
 import React, { useRef } from 'react';
 import {
   Animated,
@@ -32,9 +33,12 @@ export default function LanguageSelectScreen() {
 
   const handleSelect = (lang: Language) => {
     setLanguage(lang);
-    // setLanguage triggers an app restart (expo-updates/DevSettings) so no
-    // navigation call is needed here — it would fire on the dying navigator
-    // and produce a "not handled by any navigator" warning.
+    // Use requestAnimationFrame so the RTL layout engine update from
+    // I18nManager.forceRTL() settles before we navigate, preventing the
+    // "not handled by any navigator" warning on the first render cycle.
+    requestAnimationFrame(() => {
+      router.replace('/');
+    });
   };
 
   const topPad = insets.top;
