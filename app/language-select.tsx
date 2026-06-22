@@ -33,12 +33,14 @@ export default function LanguageSelectScreen() {
 
   const handleSelect = (lang: Language) => {
     setLanguage(lang);
-    // Use requestAnimationFrame so the RTL layout engine update from
-    // I18nManager.forceRTL() settles before we navigate, preventing the
-    // "not handled by any navigator" warning on the first render cycle.
-    requestAnimationFrame(() => {
+    // On Android, I18nManager.forceRTL() can trigger an instant activity
+    // restart which kills the navigator before any navigation call lands.
+    // Using a 500 ms timer means:
+    //   - If the activity restarts, the timer dies with it (no warning).
+    //   - If no restart happens (e.g. same RTL direction), we navigate normally.
+    setTimeout(() => {
       router.replace('/');
-    });
+    }, 500);
   };
 
   const topPad = insets.top;
