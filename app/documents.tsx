@@ -59,7 +59,7 @@ const SECTIONS: { sectionKey: 'identity' | 'vehicle' | 'other'; types: string[] 
 export default function DocumentsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const topPad = Platform.OS === 'web' ? 67 : insets.top;
+  const topPad = insets.top;
   const { t, isRTL } = useI18n();
   const queryClient = useQueryClient();
 

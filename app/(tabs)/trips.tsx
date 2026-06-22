@@ -47,7 +47,7 @@ export default function TripsScreen() {
   const [page, setPage] = useState(1);
   const [allTrips, setAllTrips] = useState<Trip[]>([]);
   const PAGE_LIMIT = 20;
-  const topPad = Platform.OS === 'web' ? 67 : insets.top;
+  const topPad = insets.top;
   const queryClient = useQueryClient();
 
   // Cancel modal state

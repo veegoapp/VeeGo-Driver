@@ -263,7 +263,7 @@ const MAX_PAGES = 25; // cap at 500 trips
 export default function HistoryExportScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const topPad = Platform.OS === 'web' ? 67 : insets.top;
+  const topPad = insets.top;
   const { t, isRTL, language } = useI18n();
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
   const TA = isRTL ? 'right' as const : 'left' as const;
@@ -311,29 +311,19 @@ export default function HistoryExportScreen() {
 
       const html = buildHtml(filtered, selectedPreset, String(selectedLabel), isRTL, t);
 
-      if (Platform.OS === 'web') {
-        const win = window.open('', '_blank');
-        if (win) {
-          win.document.write(html);
-          win.document.close();
-          win.focus();
-          setTimeout(() => win.print(), 500);
-        }
+      const { uri } = await Print.printToFileAsync({ html, base64: false });
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'application/pdf',
+          dialogTitle: `VeeGo Earnings — ${selectedLabel}`,
+          UTI: 'com.adobe.pdf',
+        });
       } else {
-        const { uri } = await Print.printToFileAsync({ html, base64: false });
-        const canShare = await Sharing.isAvailableAsync();
-        if (canShare) {
-          await Sharing.shareAsync(uri, {
-            mimeType: 'application/pdf',
-            dialogTitle: `VeeGo Earnings — ${selectedLabel}`,
-            UTI: 'com.adobe.pdf',
-          });
-        } else {
-          Alert.alert(
-            t.export_pdf_ready,
-            t.export_saved_to.replace('{uri}', uri),
-          );
-        }
+        Alert.alert(
+          t.export_pdf_ready,
+          t.export_saved_to.replace('{uri}', uri),
+        );
       }
     } catch (err) {
       Alert.alert(t.export_error, t.export_failed);

@@ -55,7 +55,7 @@ function etaLabel(seconds: number | null): string {
 export default function ShuttleTripActiveScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const topPad = Platform.OS === 'web' ? 67 : insets.top;
+  const topPad = insets.top;
   const { t, isRTL } = useI18n();
   const { socket } = useSocket();
   const shuttleCtx = useShuttle();

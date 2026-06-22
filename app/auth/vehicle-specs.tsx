@@ -188,8 +188,8 @@ function SearchableDropdown({
 export default function VehicleSpecsScreen() {
   const insets = useSafeAreaInsets();
   const { isRTL, t } = useI18n();
-  const topPad = Platform.OS === 'web' ? 67 : insets.top;
-  const botPad = Platform.OS === 'web' ? 34 : insets.bottom;
+  const topPad = insets.top;
+  const botPad = insets.bottom;
 
   const [selectedBrand, setSelectedBrand] = useState<ApiBrand | null>(null);
   const [selectedModel, setSelectedModel] = useState<{ id: number; name: string } | null>(null);

@@ -22,9 +22,6 @@
     "android": {
       "backgroundColor": "#1B1F2E"
     },
-    "web": {
-      "favicon": "./assets/images/icon.png"
-    },
     "plugins": [
       [
         "expo-router",

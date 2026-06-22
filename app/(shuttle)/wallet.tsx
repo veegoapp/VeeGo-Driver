@@ -86,7 +86,7 @@ function MethodIcon({ icon, color }: { icon?: string; color: string }) {
 export default function ShuttleWalletScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const topPad = Platform.OS === 'web' ? 67 : insets.top;
+  const topPad = insets.top;
   const { t, isRTL, language } = useI18n();
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
   const TA = isRTL ? 'right' as const : 'left' as const;

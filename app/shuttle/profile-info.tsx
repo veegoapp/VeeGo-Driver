@@ -41,7 +41,7 @@ export default function ShuttleProfileInfoScreen() {
   const colors = useColors();
   const { t, isRTL } = useI18n();
   const insets = useSafeAreaInsets();
-  const topPad = Platform.OS === 'web' ? 67 : insets.top;
+  const topPad = insets.top;
   const queryClient = useQueryClient();
 
   const TA = isRTL ? 'right' as const : 'left' as const;

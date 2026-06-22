@@ -70,7 +70,7 @@ type BaseProfile = {
 export default function ShuttleProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const topPad = Platform.OS === 'web' ? 67 : insets.top;
+  const topPad = insets.top;
   const { t, isRTL, language, setLanguage } = useI18n();
   const { logout } = useAuth();
   const { isDarkMode, setIsDarkMode } = useService();

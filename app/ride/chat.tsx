@@ -77,8 +77,8 @@ export default function RideChatScreen() {
     }
   };
 
-  const topPad = Platform.OS === 'web' ? 67 : insets.top + 8;
-  const botPad = Platform.OS === 'web' ? 16 : insets.bottom + 8;
+  const topPad = insets.top + 8;
+  const botPad = insets.bottom + 8;
 
   return (
     <KeyboardAvoidingView

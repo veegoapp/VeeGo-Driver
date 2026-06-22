@@ -45,7 +45,7 @@ export default function HomeScreen() {
   const [request, setRequest] = useState<RideRequest | null>(null);
   const [surgeZones, setSurgeZones] = useState<SurgeZone[]>([]);
   const [countdown, setCountdown] = useState(12);
-  const topPad = Platform.OS === 'web' ? 67 : insets.top;
+  const topPad = insets.top;
 
   // Socket event UI state
   const [toastMsg, setToastMsg] = useState<string | null>(null);

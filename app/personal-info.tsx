@@ -37,7 +37,7 @@ export default function PersonalInfoScreen() {
   const colors = useColors();
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
-  const topPad = Platform.OS === 'web' ? 67 : insets.top;
+  const topPad = insets.top;
   const queryClient = useQueryClient();
 
   const [editing, setEditing] = useState(false);

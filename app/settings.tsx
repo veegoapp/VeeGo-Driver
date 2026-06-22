@@ -48,7 +48,7 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const { t, isRTL } = useI18n();
   const router = useRouter();
-  const topPad = Platform.OS === 'web' ? 67 : insets.top;
+  const topPad = insets.top;
 
   const label = (key: string) => (t as any)[key] ?? FALLBACKS[key] ?? key;
 

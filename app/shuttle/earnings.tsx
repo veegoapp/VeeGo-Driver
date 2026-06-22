@@ -62,7 +62,7 @@ function formatDateTime(iso: string): string {
 export default function EarningsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const topPad = Platform.OS === 'web' ? 67 : insets.top;
+  const topPad = insets.top;
   const { t, isRTL } = useI18n();
 
   const [range, setRange] = useState<Range>('today');

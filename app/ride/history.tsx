@@ -28,7 +28,7 @@ export default function RideHistoryScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { isRTL } = useI18n();
-  const topPad = Platform.OS === 'web' ? 67 : insets.top;
+  const topPad = insets.top;
 
   const TA = isRTL ? 'right' as const : 'left' as const;
   const R  = isRTL ? 'row-reverse' as const : 'row' as const;

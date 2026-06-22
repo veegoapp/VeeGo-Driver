@@ -47,7 +47,7 @@ function buildBreakdown(ratings: RatingEntry[]): BreakdownItem[] {
 export default function RatingsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const topPad = Platform.OS === 'web' ? 67 : insets.top;
+  const topPad = insets.top;
   const { isRTL } = useI18n();
   const TA = isRTL ? 'right' as const : 'left' as const;
 

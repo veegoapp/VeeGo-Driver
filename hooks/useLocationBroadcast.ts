@@ -1,7 +1,6 @@
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import { useEffect, useRef } from 'react';
-import { Platform } from 'react-native';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
 import { useSocket } from '@/lib/socketContext';
 import { endpoints } from '@/lib/api';
@@ -27,7 +26,7 @@ export function useLocationBroadcast({ enabled, tripId }: Options): void {
   useEffect(() => { tripIdRef.current = tripId; }, [tripId]);
 
   useEffect(() => {
-    if (!enabled || Platform.OS === 'web') return;
+    if (!enabled) return;
 
     let cancelled = false;
 

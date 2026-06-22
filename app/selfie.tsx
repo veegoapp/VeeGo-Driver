@@ -21,8 +21,8 @@ import { endpoints } from '@/lib/api';
 
 export default function SelfieScreen() {
   const insets = useSafeAreaInsets();
-  const topPad = Platform.OS === 'web' ? 67 : insets.top;
-  const botPad = Platform.OS === 'web' ? 34 : insets.bottom;
+  const topPad = insets.top;
+  const botPad = insets.bottom;
   const { serviceType } = useService();
   const { t } = useI18n();
   const [photo, setPhoto] = useState<string | null>(null);

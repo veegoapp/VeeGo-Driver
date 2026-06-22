@@ -32,7 +32,7 @@ const TAB_BAR_HEIGHT = 96;
 export default function ShuttleHomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const topPad = Platform.OS === 'web' ? 67 : insets.top;
+  const topPad = insets.top;
   const { t, isRTL } = useI18n();
   const TA = isRTL ? 'right' as const : 'left' as const;
   const [online, setOnline] = useState(false);

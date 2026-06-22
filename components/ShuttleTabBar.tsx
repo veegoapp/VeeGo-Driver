@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { Bookmark, CreditCard, GitBranch, Radio, User } from 'lucide-react-native';
 import React, { useRef, useEffect, useState } from 'react';
-import { Animated, I18nManager, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, I18nManager, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { useReferral } from '@/lib/referralContext';
@@ -64,7 +64,7 @@ export function ShuttleTabBar({ state, navigation }: TabBarProps) {
     }).start();
   }, [activeIndex, tabWidth, visualIndex]);
 
-  const bottomPadding = Platform.OS === 'web' ? 34 : insets.bottom;
+  const bottomPadding = insets.bottom;
 
   return (
     <View style={[styles.container, { paddingBottom: bottomPadding + 12 }]} pointerEvents="box-none">

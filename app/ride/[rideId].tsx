@@ -48,7 +48,7 @@ export default function RideScreen() {
     completed: { label: t.phase_completed_label, cta: t.phase_done_btn, next: 'completed' },
   };
   const insets = useSafeAreaInsets();
-  const topPad = Platform.OS === 'web' ? 67 : insets.top;
+  const topPad = insets.top;
   const { isBlocked, status: serviceStatus } = useServiceGuard('CAR');
   const { rideId } = useLocalSearchParams<{ rideId: string }>();
   const { socket } = useSocket();

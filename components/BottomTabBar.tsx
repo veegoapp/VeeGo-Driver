@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { BarChart2, Clock, CreditCard, Home, User } from 'lucide-react-native';
 import React, { useRef, useEffect, useState } from 'react';
-import { Animated, I18nManager, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, I18nManager, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
@@ -58,7 +58,7 @@ export function BottomTabBar({ state, navigation }: TabBarProps) {
     }).start();
   }, [activeIndex, tabWidth, visualIndex]);
 
-  const bottomPadding = Platform.OS === 'web' ? 34 : insets.bottom;
+  const bottomPadding = insets.bottom;
 
   return (
     <View style={[styles.container, { paddingBottom: bottomPadding + 12 }]} pointerEvents="box-none">

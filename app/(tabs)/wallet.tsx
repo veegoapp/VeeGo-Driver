@@ -20,7 +20,7 @@ export default function WalletScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { t, isRTL } = useI18n();
-  const topPad = Platform.OS === 'web' ? 67 : insets.top;
+  const topPad = insets.top;
   const queryClient = useQueryClient();
 
   const R = isRTL ? 'row-reverse' as const : 'row' as const;

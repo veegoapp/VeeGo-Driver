@@ -37,7 +37,7 @@ type DriverProfile = {
 export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const topPad = Platform.OS === 'web' ? 67 : insets.top;
+  const topPad = insets.top;
   const { isDarkMode, setIsDarkMode } = useService();
   const { t, isRTL } = useI18n();
   const { logout } = useAuth();

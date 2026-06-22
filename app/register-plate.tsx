@@ -19,8 +19,8 @@ import { endpoints, ApiError } from '@/lib/api';
 
 export default function RegisterPlateScreen() {
   const insets = useSafeAreaInsets();
-  const topPad = Platform.OS === 'web' ? 67 : insets.top;
-  const botPad = Platform.OS === 'web' ? 34 : insets.bottom;
+  const topPad = insets.top;
+  const botPad = insets.bottom;
   const { t, isRTL } = useI18n();
   const TA = isRTL ? 'right' as const : 'left' as const;
 

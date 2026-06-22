@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { Platform } from 'react-native';
 import { router } from 'expo-router';
 import { endpoints } from '@/lib/api';
 
@@ -10,7 +9,6 @@ const VALID_TYPES = new Set(['ride_request', 'shuttle_trip', 'shuttle_referral',
 export type PushToken = string | null;
 
 function safeSetNotificationHandler() {
-  if (Platform.OS === 'web') return;
   // expo-notifications logs its own console.error on Android inside Expo Go SDK 53
   // ("remote notifications removed from Expo Go"). Suppress only that specific
   // message so the overlay doesn't appear; restore console.error immediately after.
@@ -48,8 +46,6 @@ export function usePushNotifications(onRideRequest?: () => void) {
   const responseListener = useRef<{ remove: () => void } | null>(null);
 
   useEffect(() => {
-    if (Platform.OS === 'web') return;
-
     let cancelled = false;
 
     registerForPushNotifications().then(t => {
@@ -197,7 +193,6 @@ export function usePushNotifications(onRideRequest?: () => void) {
 }
 
 async function registerForPushNotifications(): Promise<string | undefined> {
-  if (Platform.OS === 'web') return undefined;
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const Notifications = require('expo-notifications');

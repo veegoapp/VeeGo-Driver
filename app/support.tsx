@@ -21,7 +21,7 @@ export default function SupportScreen() {
     t.support_topic_safety,
     t.support_topic_app,
   ];
-  const topPad = Platform.OS === 'web' ? 67 : insets.top;
+  const topPad = insets.top;
 
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
   const TA = isRTL ? 'right' as const : 'left' as const;

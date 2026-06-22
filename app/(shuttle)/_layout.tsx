@@ -21,7 +21,7 @@ function SlotReleasedToast() {
   const { slotReleasedAlert, dismissSlotReleasedAlert } = useShuttle();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const topPad = Platform.OS === 'web' ? 67 : insets.top;
+  const topPad = insets.top;
   const { t } = useI18n();
 
   const translateY = useRef(new Animated.Value(-120)).current;

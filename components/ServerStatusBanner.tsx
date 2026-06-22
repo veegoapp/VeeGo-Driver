@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Platform, StyleSheet, Text, View } from 'react-native';
+import { Animated, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WifiOff, Wifi } from 'lucide-react-native';
 import { API_BASE_URL } from '@/lib/api';
@@ -11,7 +11,7 @@ type BannerState = 'hidden' | 'offline' | 'reconnected';
 
 export function ServerStatusBanner() {
   const insets = useSafeAreaInsets();
-  const topPad = Platform.OS === 'web' ? 0 : insets.top;
+  const topPad = insets.top;
 
   const [banner, setBanner] = useState<BannerState>('hidden');
   const wasOfflineRef = useRef(false);

@@ -21,7 +21,7 @@ type Notification = {
 export default function MessagesScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const topPad = Platform.OS === 'web' ? 67 : insets.top;
+  const topPad = insets.top;
   const { t } = useI18n();
   const queryClient = useQueryClient();
 

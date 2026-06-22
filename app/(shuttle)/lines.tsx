@@ -96,7 +96,7 @@ function formatWeekSubLabel(weekStart: string, index: number): string {
 export default function ShuttleLinesScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const topPad = Platform.OS === 'web' ? 67 : insets.top;
+  const topPad = insets.top;
   const { t, isRTL } = useI18n();
   const TA = isRTL ? 'right' as const : 'left' as const;
   const headerAnim = useRef(new Animated.Value(0)).current;
