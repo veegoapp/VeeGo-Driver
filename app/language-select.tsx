@@ -1,6 +1,5 @@
 
 import { Navigation, ArrowRight, ArrowLeft } from 'lucide-react-native';
-import { router } from 'expo-router';
 import React, { useRef } from 'react';
 import {
   Animated,
@@ -33,7 +32,9 @@ export default function LanguageSelectScreen() {
 
   const handleSelect = (lang: Language) => {
     setLanguage(lang);
-    router.replace('/');
+    // setLanguage triggers an app restart (expo-updates/DevSettings) so no
+    // navigation call is needed here — it would fire on the dying navigator
+    // and produce a "not handled by any navigator" warning.
   };
 
   const topPad = insets.top;
