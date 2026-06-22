@@ -466,7 +466,6 @@ export default function ShuttleHomeScreen() {
         )}
 
         {/* Incoming Referral Banner — shown when a colleague has sent a trip-referral request */}
-        {/* TODO: Backend Integration - Connect to production Socket.io server and bind real event listeners */}
         {incomingReferralsCount > 0 && (() => {
           const first = pendingReferrals[0];
           return (
@@ -478,9 +477,12 @@ export default function ShuttleHomeScreen() {
                     referralId: first.referralId,
                     bookingId: first.bookingId,
                     routeName: first.routeName,
+                    routeNameAr: first.routeNameAr ?? '',
                     departureTime: first.departureTime,
                     fromStation: first.fromStation,
                     toStation: first.toStation,
+                    fromStationAr: first.fromStationAr ?? '',
+                    toStationAr: first.toStationAr ?? '',
                     passengerCount: first.passengerCount ?? '',
                     totalSeats: first.totalSeats ?? '',
                     lineNumber: first.lineNumber ?? '',

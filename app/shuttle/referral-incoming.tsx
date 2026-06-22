@@ -1,15 +1,13 @@
 /**
  * ReferralIncomingScreen
  *
- * This screen is shown to the SECOND DRIVER when they receive a trip referral
- * push notification from a colleague (Driver 1).
+ * Shown to the SECOND DRIVER when they receive a trip referral from a colleague.
+ * Triggered by:
+ *   1. Push notification deep-link (app backgrounded/closed) — payload mapped in usePushNotifications.
+ *   2. Socket event "shuttle:referral:incoming" (app active) — handled by ReferralSocketBridge in _layout.tsx,
+ *      which calls addIncomingReferral() → home screen shows the orange banner → navigates here.
  *
- * TODO: Backend Integration - This screen should be triggered by:
- *   1. A push notification deep-link when the app is backgrounded/closed.
- *   2. A real-time socket event (e.g., "referral:incoming") when the app is active.
- *      Listen on socket in useRideSocket or a dedicated hook and navigate here.
- *
- * Route params are populated either from the push notification payload or the socket event data.
+ * Route params come from the push payload or socket payload.
  */
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';

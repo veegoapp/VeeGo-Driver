@@ -514,43 +514,6 @@ export const endpoints = {
   },
 
   shuttle: {
-    // ── Routes ──────────────────────────────────────────────────────────────
-    //
-    // TODO: Backend Integration — Localized route & station names
-    //
-    // All shuttle line and station responses contain user-visible text that must
-    // be localized. The global request() function already injects the
-    // Accept-Language header on every call (see top of file). The backend should:
-    //
-    //   1. Read the Accept-Language header ('ar' | 'en') on each request.
-    //   2. Return the resolved locale string in the primary field (Option A), OR
-    //      return both locales and let the client pick (Option B — shown below).
-    //
-    // SHUTTLE LINE RESPONSE SHAPE (Option B — dual-field, fallback-safe):
-    //   {
-    //     id:           string | number,
-    //     name:         string,          ← resolved by header (Option A)
-    //     name_en?:     string,          ← English fallback  (Option B)
-    //     name_ar?:     string,          ← Arabic  fallback  (Option B)
-    //     description?: string,
-    //     description_en?: string,
-    //     description_ar?: string,
-    //     origin:       string,
-    //     destination:  string,
-    //     stations: Array<{
-    //       id:       string | number,
-    //       name:     string,            ← resolved by header (Option A)
-    //       name_en?: string,            ← fallback (Option B)
-    //       name_ar?: string,            ← fallback (Option B)
-    //       address?: string,
-    //       order:    number,
-    //     }>,
-    //   }
-    //
-    // CLIENT RENDERING PATTERN (Option B dual-field):
-    //   const lineName    = line.name_ar    ?? line.name_en    ?? line.name    ?? '';
-    //   const stationName = station.name_ar ?? station.name_en ?? station.name ?? '';
-    //   (swap name_ar / name_en based on active locale from useI18n())
     lines: () => api.get('/shuttle/lines'),
     line: (lineId: string) => api.get(`/shuttle/lines/${lineId}`),
 

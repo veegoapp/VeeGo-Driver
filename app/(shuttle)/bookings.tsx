@@ -30,8 +30,6 @@ type DriverTrip = {
   date?: string;
   boardedPassengers?: number;
   totalPassengers?: number;
-  // TODO: Backend Integration - earnedAmount (driver net after fees) & revenueAmount (gross)
-  // Backend should return both fields for the completed trip stats cards.
   earnings?: number | string;
   revenueAmount?: number | string;
   status?: string;
@@ -808,9 +806,6 @@ function BookingDetailSheet({
   const { t, isRTL } = useI18n();
   const locale = isRTL ? 'ar-EG' : 'en-GB';
 
-  // TODO: Backend Integration - GET /shuttle/route-bookings/:id/detail
-  // Returns live passenger count + threshold status for this week block.
-  // See api.ts bookingDetail() for the full contract and socket event docs.
   const { data: detailRaw, refetch: refetchDetail } = useQuery<BookingDetail>({
     queryKey: ['shuttle-booking-detail', booking.id],
     queryFn: () => endpoints.shuttle.bookingDetail(booking.id) as Promise<BookingDetail>,
@@ -820,23 +815,25 @@ function BookingDetailSheet({
     retry: false,
   });
 
-  // TODO: Backend Integration - Socket live passenger count sync
-  // When backend emits `booking:passenger_updated` to the booking room:
-  //   payload: { bookingId: string, bookedSeats: number, thresholdMet: boolean }
-  // Subscribe on mount, update query cache directly for zero-latency UI update.
   useEffect(() => {
     if (!socket) return;
 
-    const handleSlotTaken = () => {
-      // Proxy: any slot change on this route may affect passenger count
-      refetchDetail();
+    const handlePassengerUpdated = (data: { bookingId: string; bookedSeats: number; thresholdMet: boolean }) => {
+      if (String(data.bookingId) !== String(booking.id)) return;
+      queryClient.setQueryData<BookingDetail>(['shuttle-booking-detail', booking.id], (prev) =>
+        prev ? { ...prev, bookedSeats: data.bookedSeats, thresholdMet: data.thresholdMet } : prev
+      );
     };
 
+    const handleSlotTaken = () => { refetchDetail(); };
+
+    socket.on(SOCKET_EVENTS.BOOKING_PASSENGER_UPDATED, handlePassengerUpdated);
     socket.on(SOCKET_EVENTS.SLOT_TAKEN, handleSlotTaken);
     return () => {
+      socket.off(SOCKET_EVENTS.BOOKING_PASSENGER_UPDATED, handlePassengerUpdated);
       socket.off(SOCKET_EVENTS.SLOT_TAKEN, handleSlotTaken);
     };
-  }, [socket, refetchDetail]);
+  }, [socket, booking.id, refetchDetail, queryClient]);
 
   const detail = detailRaw ?? null;
 
@@ -951,7 +948,6 @@ function BookingDetailSheet({
             </Text>
           </View>
         ) : (
-          // TODO: Backend Integration - shown when bookingDetail endpoint is not yet available
           <View
             style={[
               styles.thresholdBadge,
@@ -1092,8 +1088,6 @@ function BookingDetailSheet({
           </View>
         )}
 
-        {/* TODO: Backend Integration - When backend returns booking detail with
-            penalty info or special flags, surface them here as additional info rows */}
       </ScrollView>
     </View>
   );

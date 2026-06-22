@@ -104,7 +104,6 @@ export default function ReferralRequestScreen() {
                 {t.referral_pending_msg}
               </Text>
               <Text style={[{ fontSize: 13, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: 'center', lineHeight: 20 }]}>
-                {/* TODO: Backend Integration - Subscribe to referral:accepted / referral:declined socket events to update this state */}
                 {t.referral_notification_sub}
               </Text>
               <Pressable
