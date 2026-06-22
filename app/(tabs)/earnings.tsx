@@ -20,8 +20,7 @@ import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints, type DriverPromotion } from '@/lib/api';
 
-type WeekDay = { day: string; amount: string | number };
-// FIX #5: updated to match spec response shape
+type WeekDay = { week_start: string; trip_count: number; total_earned: number; paid?: number; pending?: number; confirmed?: number };
 type EarningsSummary = {
   driverId: string;
   summary: {
@@ -64,15 +63,13 @@ export default function EarningsScreen() {
   });
   const promotions: DriverPromotion[] = (promotionsRaw ?? []) as DriverPromotion[];
 
-  // FIX #5: spec returns { weeklyBreakdown[] }, not a direct array
   const weekEarnings = ((weeklyRaw as { weeklyBreakdown?: WeekDay[] } | undefined)?.weeklyBreakdown ?? []);
   const summary = summaryRaw as EarningsSummary | undefined;
   const driverData = driverRaw as DriverData | undefined;
-  // FIX #4: parseFloat — backend returns amount as string
-  const WEEK_TOTAL = weekEarnings.reduce((s, d) => s + parseFloat(String(d.amount)), 0);
-  const MAX = weekEarnings.length ? Math.max(...weekEarnings.map(d => parseFloat(String(d.amount)))) : 1;
+  const WEEK_TOTAL = weekEarnings.reduce((s, d) => s + (d.total_earned ?? 0), 0);
+  const MAX = weekEarnings.length ? Math.max(...weekEarnings.map(d => d.total_earned ?? 0)) : 1;
 
-  const barAnims = useRef(Array.from({ length: 7 }, () => new Animated.Value(0))).current;
+  const barAnims = useRef(Array.from({ length: 12 }, () => new Animated.Value(0))).current;
   const heroAnim = useRef(new Animated.Value(0)).current;
 
   const isLoading = weeklyLoading || summaryLoading;
@@ -83,7 +80,7 @@ export default function EarningsScreen() {
     Animated.parallel([
       Animated.spring(heroAnim, { toValue: 1, useNativeDriver: true, stiffness: 200, damping: 20 }),
       Animated.stagger(50, weekEarnings.map((d, i) =>
-        Animated.spring(barAnims[i], { toValue: parseFloat(String(d.amount)) / MAX, useNativeDriver: false, stiffness: 200 })
+        Animated.spring(barAnims[i], { toValue: (d.total_earned ?? 0) / MAX, useNativeDriver: false, stiffness: 200 })
       )),
     ]).start();
   }, [weekEarnings.length]);
@@ -136,12 +133,12 @@ export default function EarningsScreen() {
 
               <View style={[styles.barChart, { flexDirection: R }]}>
                 {weekEarnings.map((d, i) => (
-                  <View key={d.day} style={styles.barWrapper}>
+                  <View key={d.week_start ?? String(i)} style={styles.barWrapper}>
                     <Animated.View style={[styles.bar, {
                       backgroundColor: colors.primaryForeground + 'D9',
                       height: barAnims[i].interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
                     }]} />
-                    <Text style={[styles.barDay, { color: colors.primaryForeground + 'CC', fontFamily: 'Inter_700Bold' }]}>{d.day}</Text>
+                    <Text style={[styles.barDay, { color: colors.primaryForeground + 'CC', fontFamily: 'Inter_700Bold' }]}>{(d.week_start ?? '').slice(5)}</Text>
                   </View>
                 ))}
               </View>
@@ -149,11 +146,9 @@ export default function EarningsScreen() {
           </LinearGradient>
         </Animated.View>
 
-        {/* FIX #5: spec returns summary.{ totalEarnings, totalPaid, totalPending, totalConfirmed } */}
         <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.today} · {summary?.recentEarnings?.length ?? 0} {t.trips}</Text>
         <GlassView style={styles.summaryCard} borderRadius={20}>
           <View style={styles.summaryInner}>
-            {/* FIX #4: parseFloat — all summary amounts come as strings from DB */}
             <EarningsRow icon="dollar-sign" label="Confirmed" value={`${parseFloat(String(summary?.summary?.totalConfirmed ?? 0)).toFixed(2)} ${t.egp}`} colors={colors} isRTL={isRTL} />
             <EarningsRow icon="credit-card" label="Pending" value={`${parseFloat(String(summary?.summary?.totalPending ?? 0)).toFixed(2)} ${t.egp}`} colors={colors} isRTL={isRTL} />
             <EarningsRow icon="star" label="Paid Out" value={`${parseFloat(String(summary?.summary?.totalPaid ?? 0)).toFixed(2)} ${t.egp}`} accent colors={colors} isRTL={isRTL} />
