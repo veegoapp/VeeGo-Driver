@@ -1,26 +1,15 @@
-/**
- * ReferralContext
- *
- * Holds the queue of incoming trip-referral requests received via WebSocket.
- * Consumed by:
- *   - ShuttleTabBar     → badge count on the Home tab icon
- *   - ShuttleHomeScreen → orange banner CTA
- *   - ReferralIncoming  → auto-clears its own entry on mount
- *
- * TODO: Backend Integration - Connect to production Socket.io server and bind real event listeners
- * The payload shape (IncomingReferralPayload) must match what the backend emits on
- * the "shuttle:referral:incoming" event.
- */
-
 import React, { createContext, useCallback, useContext, useState } from 'react';
 
 export type IncomingReferralPayload = {
   referralId: string;
   bookingId: string;
   routeName: string;
+  routeNameAr?: string;
   departureTime: string;
   fromStation: string;
   toStation: string;
+  fromStationAr?: string;
+  toStationAr?: string;
   passengerCount?: string;
   totalSeats?: string;
   lineNumber?: string;

@@ -26,6 +26,7 @@ type Params = {
   // Full booking snapshot passed by the home screen so this screen renders
   // correctly even when ShuttleProvider is not in scope (different route group).
   routeName?: string;
+  routeNameAr?: string;
   departureTime?: string;
   weekStart?: string;
   weekEnd?: string;
@@ -50,6 +51,7 @@ export default function TripDetailsScreen() {
   const {
     bookingId, routeId,
     routeName: paramRouteName,
+    routeNameAr: paramRouteNameAr,
     departureTime: paramDepartureTime,
     weekStart: paramWeekStart,
     weekEnd: paramWeekEnd,
@@ -101,19 +103,22 @@ export default function TripDetailsScreen() {
   }, []);
 
   const isStartEnabled = useMemo(() => {
+    if (tripDetailData?.tripDatetime) {
+      const dept = new Date(tripDetailData.tripDatetime);
+      const diff = (dept.getTime() - Date.now()) / 60000;
+      return diff >= 0 && diff <= 30;
+    }
+    // Fallback to time-only check while tripDetail is loading
     const time = effectiveBooking?.departureTime;
     if (!time) return false;
-    // TODO: Backend Integration - Replace with full ISO datetime from backend for date-accurate 30-min check
     const match = time.match(/(\d{1,2}):(\d{2})/);
     if (!match) return false;
     const h = parseInt(match[1], 10);
     const m = parseInt(match[2], 10);
     const now = new Date();
-    const nowMins = now.getHours() * 60 + now.getMinutes();
-    const deptMins = h * 60 + m;
-    const diff = deptMins - nowMins;
+    const diff = (h * 60 + m) - (now.getHours() * 60 + now.getMinutes());
     return diff >= 0 && diff <= 30;
-  }, [effectiveBooking?.departureTime]);
+  }, [tripDetailData?.tripDatetime, effectiveBooking?.departureTime]);
 
   const handleCancelPress = () => {
     router.push({
@@ -169,7 +174,9 @@ export default function TripDetailsScreen() {
     );
   }
 
-  const routeName = tripDetailData?.routeName ?? effectiveBooking?.routeName ?? line?.name ?? '—';
+  const routeNameEn = tripDetailData?.routeName ?? effectiveBooking?.routeName ?? line?.name ?? '—';
+  const routeNameAr = tripDetailData?.routeNameAr ?? (effectiveBooking as any)?.routeNameAr ?? paramRouteNameAr;
+  const routeName = (isRTL && routeNameAr) ? routeNameAr : routeNameEn;
   const from = line?.from ?? '—';
   const to = line?.to ?? '—';
   const departureTime = effectiveBooking?.departureTime ?? line?.departure ?? '—';
@@ -205,11 +212,9 @@ export default function TripDetailsScreen() {
         {/* Route name */}
         <View style={{ marginTop: 24 }}>
           <Text style={[styles.routeName, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
-            {/* TODO: Use translated backend fields (routeNameAr, fromAr, toAr) here */}
             {routeName}
           </Text>
           <Text style={[styles.routeSubtitle, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>
-            {/* TODO: Use translated backend fields (routeNameAr, fromAr, toAr) here */}
             {from} → {to}
           </Text>
         </View>
@@ -304,7 +309,6 @@ export default function TripDetailsScreen() {
                 </View>
                 <View style={{ flex: 1, paddingVertical: 12 }}>
                   <Text style={[{ fontSize: 14, color: colors.foreground, fontFamily: 'Inter_600SemiBold', textAlign: TA }]}>
-                    {/* TODO: Use translated backend fields (routeNameAr, fromAr, toAr) here */}
                     {st.name}
                   </Text>
                   {st.eta ? (

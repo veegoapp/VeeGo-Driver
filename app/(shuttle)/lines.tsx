@@ -37,9 +37,6 @@ type BackendSlot = {
   isBooked: boolean;
   // isTaken   — ANY other driver has claimed this slot for this week block
   isTaken: boolean;
-  // TODO: Backend Integration — include driver's display name when isTaken = true
-  // Backend should return: takenByDriverName: string | null
-  // Use a masked format for privacy, e.g. "Ahmed M." (first name + last initial)
   takenByDriverName?: string | null;
 };
 

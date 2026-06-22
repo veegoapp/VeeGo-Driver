@@ -21,6 +21,7 @@ import { endpoints } from '@/lib/api';
 type Params = {
   bookingId: string;
   routeName: string;
+  routeNameAr?: string;
   departureTime: string;
   fromStation: string;
   toStation: string;
@@ -33,15 +34,19 @@ export default function ReferralRequestScreen() {
   const { t, isRTL } = useI18n();
   const TA = isRTL ? 'right' as const : 'left' as const;
 
-  const { bookingId, routeName, departureTime, fromStation, toStation } =
+  const { bookingId, routeName: routeNameRaw, routeNameAr, departureTime, fromStation, toStation } =
     useLocalSearchParams<Params>();
+  const routeName = (isRTL && routeNameAr) ? routeNameAr : (routeNameRaw ?? '—');
 
   const [driverCode, setDriverCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
+  const DRIVER_CODE_REGEX = /^VGO-[0-9A-Z]{1,4}$/;
+  const isValidCode = DRIVER_CODE_REGEX.test(driverCode.trim());
+
   const handleSubmit = async () => {
-    if (!driverCode.trim()) {
+    if (!driverCode.trim() || !isValidCode) {
       Alert.alert('', t.referral_code_placeholder);
       return;
     }
@@ -50,7 +55,6 @@ export default function ReferralRequestScreen() {
       await endpoints.shuttle.referTrip(bookingId!, driverCode.trim());
       setSubmitted(true);
     } catch {
-      // TODO: Backend Integration - Surface specific error codes (driver not found, already booked, etc.)
       Alert.alert('', t.referral_send_failed);
     } finally {
       setLoading(false);
@@ -83,8 +87,7 @@ export default function ReferralRequestScreen() {
           {/* Trip summary */}
           <GlassView style={[styles.tripSummary, { marginTop: 24 }]} borderRadius={16}>
             <Text style={[{ fontSize: 15, color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
-              {/* TODO: Use translated backend fields (routeNameAr, fromAr, toAr) here */}
-              {routeName ?? '—'}
+              {routeName}
             </Text>
             <Text style={[{ fontSize: 13, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', marginTop: 4, textAlign: TA }]}>
               {departureTime ?? '—'} · {fromStation ?? '—'} → {toStation ?? '—'}
@@ -118,18 +121,18 @@ export default function ReferralRequestScreen() {
                 {t.referral_code_label}
               </Text>
               <Text style={[{ fontSize: 13, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA, marginTop: 4, marginBottom: 12 }]}>
-                {/* TODO: Backend Integration - Driver code format to be confirmed from backend (e.g., VGO-XXXX) */}
                 {t.driver_code_hint}
               </Text>
               <GlassView style={[styles.inputWrap, { borderColor: colors.border }]} borderRadius={14}>
                 <TextInput
                   value={driverCode}
                   onChangeText={setDriverCode}
-                  placeholder={t.referral_code_placeholder}
+                  placeholder="VGO-XXXX"
                   placeholderTextColor={colors.mutedForeground}
                   style={[styles.input, { color: colors.foreground, fontFamily: 'Inter_600SemiBold', textAlign: TA }]}
                   autoCapitalize="characters"
                   autoCorrect={false}
+                  maxLength={8}
                   returnKeyType="send"
                   onSubmitEditing={handleSubmit}
                 />
@@ -137,11 +140,11 @@ export default function ReferralRequestScreen() {
 
               <Pressable
                 onPress={handleSubmit}
-                disabled={loading || !driverCode.trim()}
+                disabled={loading || !isValidCode}
                 style={({ pressed }) => [
                   styles.submitBtn,
                   {
-                    backgroundColor: driverCode.trim() ? '#1e1e28' : colors.secondary,
+                    backgroundColor: isValidCode ? '#1e1e28' : colors.secondary,
                     opacity: pressed ? 0.88 : 1,
                   },
                 ]}
@@ -150,10 +153,10 @@ export default function ReferralRequestScreen() {
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
                   <>
-                    <Send size={16} color={driverCode.trim() ? '#fff' : colors.mutedForeground} strokeWidth={2} />
+                    <Send size={16} color={isValidCode ? '#fff' : colors.mutedForeground} strokeWidth={2} />
                     <Text style={[
                       styles.submitBtnText,
-                      { color: driverCode.trim() ? '#fff' : colors.mutedForeground, fontFamily: 'Inter_700Bold' },
+                      { color: isValidCode ? '#fff' : colors.mutedForeground, fontFamily: 'Inter_700Bold' },
                     ]}>
                       {t.referral_submit}
                     </Text>

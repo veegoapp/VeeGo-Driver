@@ -362,6 +362,7 @@ export default function BookingsScreen() {
                           bookingId: String(b.id),
                           routeId: String(b.routeId),
                           routeName: b.routeName,
+                          routeNameAr: b.routeNameAr ?? '',
                           departureTime: b.departureTime,
                           weekStart: b.weekStart ?? '',
                           weekEnd: b.weekEnd ?? '',
@@ -859,6 +860,7 @@ function BookingDetailSheet({
         params: {
           bookingId: booking.id,
           routeName: booking.routeName,
+          routeNameAr: booking.routeNameAr ?? '',
           departureTime: booking.departureTime,
         },
       } as any);
@@ -875,6 +877,7 @@ function BookingDetailSheet({
         params: {
           bookingId: booking.id,
           routeName: booking.routeName,
+          routeNameAr: booking.routeNameAr ?? '',
           departureTime: booking.departureTime,
           fromStation: booking.fromStation ?? '',
           toStation: booking.toStation ?? '',

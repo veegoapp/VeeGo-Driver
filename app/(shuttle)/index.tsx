@@ -24,6 +24,7 @@ import { endpoints } from '@/lib/api';
 import { useShuttle, type ShuttleBooking, type ShuttleLine } from '@/lib/shuttleContext';
 import { useReferral } from '@/lib/referralContext';
 import { useSocket } from '@/lib/socketContext';
+import { useServiceControl } from '@/lib/serviceControlContext';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
 
 const TAB_BAR_HEIGHT = 96;
@@ -47,6 +48,7 @@ export default function ShuttleHomeScreen() {
   const cardAnim = useRef(new Animated.Value(0)).current;
 
   const { socket } = useSocket();
+  const { currency } = useServiceControl();
 
   // Broadcast GPS location every 5 s while the driver is online
   useLocationBroadcast({ enabled: online, tripId: activeLine?.tripId ?? null });
@@ -363,8 +365,7 @@ export default function ShuttleHomeScreen() {
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
           <StatItem label={t.routes} value={String(allLines.length)} colors={colors} />
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          {/* TODO: Backend Integration - Currency symbol (جنيه / EGP) should come from tenant config */}
-          <StatItem label={t.net_earnings} value={`${todayEarnings} ${t.egp}`} highlight colors={colors} />
+          <StatItem label={t.net_earnings} value={`${todayEarnings} ${isRTL ? currency.symbolAr : currency.symbol}`} highlight colors={colors} />
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
           <StatItem label={t.active} value={String(allLines.filter(l => l.status === 'in-progress').length)} colors={colors} />
         </GlassView>
@@ -543,6 +544,7 @@ export default function ShuttleHomeScreen() {
                         // Pass full booking snapshot so trip-details can render
                         // even when ShuttleProvider is not in scope for that route group.
                         routeName: booking.routeName,
+                        routeNameAr: booking.routeNameAr ?? '',
                         departureTime: booking.departureTime,
                         weekStart: booking.weekStart,
                         weekEnd: booking.weekEnd ?? '',

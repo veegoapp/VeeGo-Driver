@@ -93,9 +93,18 @@ const CONFIG_BLOCKED: ServiceStatus = {
 
 // ── Context ───────────────────────────────────────────────────────────────
 
+export interface CurrencyConfig {
+  code: string;
+  symbol: string;
+  symbolAr: string;
+}
+
+const DEFAULT_CURRENCY: CurrencyConfig = { code: 'EGP', symbol: 'EGP', symbolAr: 'ج.م' };
+
 type ServiceControlContextValue = {
   services: ServiceControl[];
   eligibilityRules: EligibilityRule[];
+  currency: CurrencyConfig;
   isLoading: boolean;
   error: string | null;
   getServiceStatus: (serviceType: string, driver?: DriverSnapshot | null) => ServiceStatus;
@@ -105,6 +114,7 @@ type ServiceControlContextValue = {
 const ServiceControlContext = createContext<ServiceControlContextValue>({
   services: [],
   eligibilityRules: [],
+  currency: DEFAULT_CURRENCY,
   isLoading: true,
   error: null,
   getServiceStatus: () => LOADING_BLOCKED,
@@ -142,11 +152,27 @@ function extractServiceList(data: unknown): ServiceControl[] {
 
 // ── Provider ──────────────────────────────────────────────────────────────
 
+function extractCurrency(data: unknown): CurrencyConfig {
+  if (data && typeof data === 'object') {
+    const obj = data as Record<string, unknown>;
+    const c = obj['currency'] as Record<string, unknown> | undefined;
+    if (c && typeof c.symbol === 'string') {
+      return {
+        code: typeof c.code === 'string' ? c.code : DEFAULT_CURRENCY.code,
+        symbol: c.symbol,
+        symbolAr: typeof c.symbolAr === 'string' ? c.symbolAr : c.symbol,
+      };
+    }
+  }
+  return DEFAULT_CURRENCY;
+}
+
 export function ServiceControlProvider({ children }: { children: React.ReactNode }) {
   const { token, isLoading: authIsLoading } = useAuth();
   const { socket } = useSocket();
   const [services, setServices] = useState<ServiceControl[]>([]);
   const [eligibilityRules, setEligibilityRules] = useState<EligibilityRule[]>([]);
+  const [currency, setCurrency] = useState<CurrencyConfig>(DEFAULT_CURRENCY);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -168,8 +194,8 @@ export function ServiceControlProvider({ children }: { children: React.ReactNode
 
     api.get<unknown>('/services/control')
       .then((data) => {
-        const list = extractServiceList(data);
-        setServices(list);
+        setServices(extractServiceList(data));
+        setCurrency(extractCurrency(data));
       })
       .catch(() => {
         setError('Could not load service configuration.');
@@ -256,8 +282,8 @@ export function ServiceControlProvider({ children }: { children: React.ReactNode
     if (authIsLoading || !token) return;
     try {
       const data = await api.get<unknown>('/services/control');
-      const list = extractServiceList(data);
-      setServices(list);
+      setServices(extractServiceList(data));
+      setCurrency(extractCurrency(data));
       setError(null);
     } catch {
       setError('Could not load service configuration.');
@@ -320,7 +346,7 @@ export function ServiceControlProvider({ children }: { children: React.ReactNode
 
   return (
     <ServiceControlContext.Provider
-      value={{ services, eligibilityRules, isLoading, error, getServiceStatus, refresh }}
+      value={{ services, eligibilityRules, currency, isLoading, error, getServiceStatus, refresh }}
     >
       {children}
     </ServiceControlContext.Provider>

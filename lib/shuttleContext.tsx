@@ -31,6 +31,7 @@ export type ShuttleBooking = {
   id: string;
   routeId: string | number;
   routeName: string;
+  routeNameAr?: string;
   timeSlotId: string | number;
   departureTime: string;
   weekStart: string;
@@ -225,8 +226,9 @@ type RawDriverBooking = {
   renewalDeadline?: string;
   nextWeekBookingId?: string | null;
   routeName?: string;
+  routeNameAr?: string;
   departureTime?: string;
-  route?: { id?: string | number; name?: string; fromLocation?: string; from?: string; toLocation?: string; to?: string };
+  route?: { id?: string | number; name?: string; nameAr?: string; fromLocation?: string; from?: string; toLocation?: string; to?: string };
   timeSlot?: { id?: string | number; departureTime?: string };
 };
 
@@ -235,6 +237,7 @@ function normalizeBooking(b: RawDriverBooking): ShuttleBooking {
     id: String(b.id),
     routeId: b.routeId ?? b.route?.id ?? 0,
     routeName: b.routeName ?? b.route?.name ?? '—',
+    routeNameAr: b.routeNameAr ?? b.route?.nameAr,
     timeSlotId: b.timeSlotId ?? b.timeSlot?.id ?? 0,
     departureTime: b.departureTime ?? b.timeSlot?.departureTime ?? '—',
     weekStart: b.weekStart ?? '',

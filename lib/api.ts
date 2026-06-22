@@ -707,7 +707,7 @@ export const endpoints = {
       ),
 
     cancelPreview: (bookingId: string) =>
-      api.get<{ penaltyAmount: number; minutesUntilDeparture: number }>(
+      api.get<{ penaltyAmount: number; minutesUntilDeparture: number; departureDatetime?: string }>(
         `/shuttle/route-bookings/${bookingId}/cancel-preview`
       ),
 
@@ -716,12 +716,16 @@ export const endpoints = {
         bookingId: number;
         tripDatetime: string;
         routeName: string;
+        routeNameAr?: string;
         bookedSeats: number;
         totalSeats: number;
         stations: Array<{ id: number; name: string; order: number; eta: string }>;
       }>(`/shuttle/route-bookings/${bookingId}/trip-detail`),
 
     myReferralCode: () => api.get<{ code: string }>('/driver/me/referral-code'),
+
+    cancellationReasons: () =>
+      api.get<Array<{ key: string; label: string; labelAr?: string }>>('/shuttle/cancellation-reasons'),
   },
 
   notifications: {

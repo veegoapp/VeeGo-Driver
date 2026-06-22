@@ -22,17 +22,9 @@ import { useShuttle } from '@/lib/shuttleContext';
 type Params = {
   bookingId: string;
   routeName: string;
+  routeNameAr?: string;
   departureTime: string;
 };
-
-// TODO: Backend Integration - cancellation reasons list to be confirmed/localised from backend
-const CANCEL_REASONS = [
-  { key: 'emergency', labelKey: 'cancel_reason_emergency' as const },
-  { key: 'vehicle',   labelKey: 'cancel_reason_vehicle'    as const },
-  { key: 'illness',   labelKey: 'cancel_reason_illness'    as const },
-  { key: 'traffic',   labelKey: 'cancel_reason_traffic'    as const },
-  { key: 'other',     labelKey: 'cancel_reason_other'      as const },
-];
 
 export default function DirectCancelScreen() {
   const colors = useColors();
@@ -44,7 +36,8 @@ export default function DirectCancelScreen() {
   const queryClient = useQueryClient();
 
   const { refetch } = useShuttle();
-  const { bookingId, routeName, departureTime } = useLocalSearchParams<Params>();
+  const { bookingId, routeName, routeNameAr, departureTime } = useLocalSearchParams<Params>();
+  const displayRouteName = (isRTL && routeNameAr) ? routeNameAr : (routeName ?? '—');
 
   const [selectedReason, setSelectedReason] = useState<string | null>(null);
   const [cancelled, setCancelled] = useState(false);
@@ -58,6 +51,12 @@ export default function DirectCancelScreen() {
     queryFn: () => endpoints.shuttle.cancelPreview(bookingId!),
     enabled: !!bookingId,
     retry: 1,
+  });
+
+  const { data: cancelReasons = [] } = useQuery({
+    queryKey: ['cancellation-reasons'],
+    queryFn: endpoints.shuttle.cancellationReasons,
+    staleTime: Infinity,
   });
 
   const cancelMutation = useMutation({
@@ -189,8 +188,7 @@ export default function DirectCancelScreen() {
         {/* Trip summary */}
         <GlassView style={[styles.tripSummary, { marginTop: 16 }]} borderRadius={16}>
           <Text style={[{ fontSize: 15, color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
-            {/* TODO: Use translated backend fields (routeNameAr, fromAr, toAr) here */}
-            {routeName ?? '—'}
+            {displayRouteName}
           </Text>
           <Text style={[{ fontSize: 13, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', marginTop: 4, textAlign: TA }]}>
             {departureTime ?? '—'}
@@ -206,9 +204,10 @@ export default function DirectCancelScreen() {
         </Text>
 
         <GlassView style={{ overflow: 'hidden' }} borderRadius={16}>
-          {CANCEL_REASONS.map((reason, idx) => {
+          {cancelReasons.map((reason, idx) => {
             const isSelected = selectedReason === reason.key;
-            const isLast = idx === CANCEL_REASONS.length - 1;
+            const isLast = idx === cancelReasons.length - 1;
+            const label = (isRTL && reason.labelAr) ? reason.labelAr : reason.label;
             return (
               <Pressable
                 key={reason.key}
@@ -220,12 +219,11 @@ export default function DirectCancelScreen() {
                   { backgroundColor: pressed ? colors.secondary + '66' : isSelected ? '#1e1e2808' : 'transparent' },
                 ]}
               >
-                {/* Radio button */}
                 <View style={[styles.radio, { borderColor: isSelected ? '#1e1e28' : colors.border }]}>
                   {isSelected && <View style={[styles.radioDot, { backgroundColor: '#1e1e28' }]} />}
                 </View>
                 <Text style={[styles.reasonText, { color: colors.foreground, fontFamily: isSelected ? 'Inter_700Bold' : 'Inter_400Regular', textAlign: TA, flex: 1 }]}>
-                  {t[reason.labelKey]}
+                  {label}
                 </Text>
               </Pressable>
             );

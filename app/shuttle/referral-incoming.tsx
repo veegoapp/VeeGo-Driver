@@ -37,9 +37,12 @@ type Params = {
   referralId: string;
   bookingId: string;
   routeName: string;
+  routeNameAr?: string;
   departureTime: string;
   fromStation: string;
   toStation: string;
+  fromStationAr?: string;
+  toStationAr?: string;
   passengerCount?: string;
   totalSeats?: string;
   lineNumber?: string;
@@ -58,16 +61,23 @@ export default function ReferralIncomingScreen() {
   const {
     referralId,
     bookingId,
-    routeName,
+    routeName: routeNameRaw,
+    routeNameAr,
     departureTime,
-    fromStation,
-    toStation,
+    fromStation: fromStationRaw,
+    toStation: toStationRaw,
+    fromStationAr,
+    toStationAr,
     passengerCount,
     totalSeats,
     lineNumber,
     vehicleType,
     weekStart,
   } = useLocalSearchParams<Params>();
+
+  const routeName = (isRTL && routeNameAr) ? routeNameAr : (routeNameRaw ?? '—');
+  const fromStation = (isRTL && fromStationAr) ? fromStationAr : (fromStationRaw ?? '—');
+  const toStation = (isRTL && toStationAr) ? toStationAr : (toStationRaw ?? '—');
 
   const [accepting, setAccepting] = useState(false);
   const [declining, setDeclining] = useState(false);
@@ -181,11 +191,10 @@ export default function ReferralIncomingScreen() {
         {/* Route name */}
         <View style={{ marginTop: 24 }}>
           <Text style={[{ fontSize: 22, color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
-            {/* TODO: Use translated backend fields (routeNameAr, fromAr, toAr) here */}
-            {routeName ?? '—'}
+            {routeName}
           </Text>
           <Text style={[{ fontSize: 14, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', marginTop: 4, textAlign: TA }]}>
-            {fromStation ?? '—'} → {toStation ?? '—'}
+            {fromStation} → {toStation}
           </Text>
         </View>
 
