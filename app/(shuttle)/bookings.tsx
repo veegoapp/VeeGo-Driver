@@ -738,9 +738,8 @@ function CompletedTripCard({
   colors: ReturnType<typeof useColors>;
 }) {
   const { t } = useI18n();
-  // TODO: Backend Integration - Surface revenueAmount (gross) vs earnings (net after fees)
-  // When backend returns both fields, show them side by side in the card.
   const netEarnings = formatCurrency(trip.earnings, t.egp);
+  const grossRevenue = trip.revenueAmount != null ? formatCurrency(trip.revenueAmount, t.egp) : null;
   const passengersLabel =
     trip.boardedPassengers != null && trip.totalPassengers != null
       ? `${trip.boardedPassengers} / ${trip.totalPassengers} ${t.pax_one}`
@@ -779,6 +778,11 @@ function CompletedTripCard({
         <Text style={[styles.earningsText, { color: '#16a34a' }]}>
           {netEarnings}
         </Text>
+        {grossRevenue && (
+          <Text style={[styles.metaText, { color: colors.mutedForeground }]}>
+            {t.gross_revenue} {grossRevenue}
+          </Text>
+        )}
         <View style={[styles.completedBadge, { backgroundColor: '#22c55e18' }]}>
           <CheckCircle size={9} color="#16a34a" strokeWidth={2.5} />
           <Text style={[styles.completedBadgeText, { color: '#16a34a' }]}>{t.completed_label}</Text>
@@ -808,13 +812,10 @@ function BookingDetailSheet({
   // See api.ts bookingDetail() for the full contract and socket event docs.
   const { data: detailRaw, refetch: refetchDetail } = useQuery<BookingDetail>({
     queryKey: ['shuttle-booking-detail', booking.id],
-    // TODO: Backend Integration - remove `enabled: false` once GET /shuttle/route-bookings/:id/detail
-    // is live. The component degrades gracefully (no passenger card shown) until then.
     queryFn: () => endpoints.shuttle.bookingDetail(booking.id) as Promise<BookingDetail>,
     staleTime: 15_000,
     // No interval polling — live passenger count is pushed via SLOT_TAKEN / SLOT_RELEASED
     // socket events (handled in the useEffect below). Manual refresh via the ↺ icon.
-    enabled: false,
     retry: false,
   });
 
@@ -875,9 +876,8 @@ function BookingDetailSheet({
           bookingId: booking.id,
           routeName: booking.routeName,
           departureTime: booking.departureTime,
-          // TODO: Backend Integration - pass fromStation / toStation from booking detail
-          fromStation: '',
-          toStation: '',
+          fromStation: booking.fromStation ?? '',
+          toStation: booking.toStation ?? '',
         },
       } as any);
     }, 300);
