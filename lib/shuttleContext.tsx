@@ -212,6 +212,8 @@ type RawDriverBooking = {
   weekEnd?: string;
   fromStation?: string;
   toStation?: string;
+  fromLocation?: string;
+  toLocation?: string;
   trip?: {
     thresholdMet?: boolean;
     bookedSeats?: number;
@@ -237,8 +239,8 @@ function normalizeBooking(b: RawDriverBooking): ShuttleBooking {
     departureTime: b.departureTime ?? b.timeSlot?.departureTime ?? '—',
     weekStart: b.weekStart ?? '',
     weekEnd: b.weekEnd,
-    fromStation: b.fromStation ?? b.route?.fromLocation ?? b.route?.from,
-    toStation: b.toStation ?? b.route?.toLocation ?? b.route?.to,
+    fromStation: b.fromStation ?? b.fromLocation ?? b.route?.fromLocation ?? b.route?.from,
+    toStation: b.toStation ?? b.toLocation ?? b.route?.toLocation ?? b.route?.to,
     status: b.status ?? '',
     renewalDeadline: b.renewalDeadline,
     nextWeekBookingId: b.nextWeekBookingId,
