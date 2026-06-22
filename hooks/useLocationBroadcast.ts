@@ -1,9 +1,11 @@
 import * as Location from 'expo-location';
+import * as TaskManager from 'expo-task-manager';
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
 import { useSocket } from '@/lib/socketContext';
 import { endpoints } from '@/lib/api';
+import { DRIVER_LOCATION_TASK } from '@/lib/backgroundLocationTask';
 
 const BROADCAST_INTERVAL_MS = 5000;
 
@@ -18,6 +20,8 @@ export function useLocationBroadcast({ enabled, tripId }: Options): void {
   const tripIdRef = useRef(tripId);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const permissionGrantedRef = useRef(false);
+  // Cached after the first async check so emit() doesn't re-query every 5 s.
+  const bgTaskRegisteredRef = useRef(false);
 
   useEffect(() => { socketRef.current = socket; }, [socket]);
   useEffect(() => { tripIdRef.current = tripId; }, [tripId]);
@@ -45,7 +49,7 @@ export function useLocationBroadcast({ enabled, tripId }: Options): void {
 
       const speedKmh = speed != null && speed >= 0 ? Math.round(speed * 3.6) : undefined;
       const headingDeg = heading != null && heading >= 0 ? Math.round(heading) : undefined;
-      const tripId = tripIdRef.current ?? undefined;
+      const currentTripId = tripIdRef.current ?? undefined;
 
       // Try socket first (real-time), always fall back to REST
       const sock = socketRef.current;
@@ -53,17 +57,21 @@ export function useLocationBroadcast({ enabled, tripId }: Options): void {
         const payload: Record<string, unknown> = { latitude, longitude };
         if (speedKmh !== undefined) payload.speed = speedKmh;
         if (headingDeg !== undefined) payload.heading = headingDeg;
-        if (tripId != null) payload.tripId = tripId;
+        if (currentTripId != null) payload.tripId = currentTripId;
         sock.emit(SOCKET_EVENTS.DRIVER_LOCATION_UPDATE, payload);
       } else {
-        // Socket not connected — use REST endpoint so admin dashboard always gets updates
+        // Socket not connected.
+        // When the OS-level background task is registered it already sends REST
+        // updates via endpoints.driver.updateLocation — skip the duplicate call
+        // unless we carry a tripId that the background task doesn't include.
+        if (bgTaskRegisteredRef.current && currentTripId == null) return;
         try {
           await endpoints.driver.updateLocation({
             latitude,
             longitude,
             ...(speedKmh !== undefined && { speed: speedKmh }),
             ...(headingDeg !== undefined && { heading: headingDeg }),
-            ...(tripId != null && { tripId }),
+            ...(currentTripId != null && { tripId: currentTripId }),
           });
         } catch {
           // REST also failed — will retry on next tick
@@ -76,6 +84,20 @@ export function useLocationBroadcast({ enabled, tripId }: Options): void {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted' || cancelled) return;
         permissionGrantedRef.current = true;
+
+        // Detect whether the OS-level background task is already running.
+        // In a native build startLocationTracking() registers DRIVER_LOCATION_TASK
+        // which handles REST updates at 10 s / 50 m intervals. The setInterval
+        // below is still needed for Socket.IO real-time delivery, but the REST
+        // fallback inside emit() is suppressed to avoid double-posting.
+        // In Expo Go, TaskManager is unavailable — bgTaskRegisteredRef stays false
+        // and the REST fallback remains active as the sole update mechanism.
+        try {
+          bgTaskRegisteredRef.current = await TaskManager.isTaskRegisteredAsync(DRIVER_LOCATION_TASK);
+        } catch {
+          // Expo Go — task manager not available
+        }
+
         emit();
         intervalRef.current = setInterval(emit, BROADCAST_INTERVAL_MS);
       } catch {
