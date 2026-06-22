@@ -64,12 +64,15 @@ export const SOCKET_EVENTS = {
   SLOT_TAKEN:                 "slot_taken",
   SLOT_RELEASED:              "slot_released",
 
-  // TODO: Backend Integration - Connect to production Socket.io server and bind real event listeners
   // Server → Driver 2: a colleague (Driver 1) has submitted a trip-referral request
   // Payload: IncomingReferralPayload (see lib/referralContext.tsx)
   SHUTTLE_INCOMING_REFERRAL:  "shuttle:referral:incoming",
   // Server → Driver 2: Driver 1 has cancelled or withdrawn the referral request before Driver 2 responded
   SHUTTLE_REFERRAL_CANCELLED: "shuttle:referral:cancelled",
+  // Server → Driver 1: Driver 2 accepted the referral request
+  REFERRAL_ACCEPTED:          "referral:accepted",
+  // Server → Driver 1: Driver 2 declined the referral request
+  REFERRAL_DECLINED:          "referral:declined",
 
   // Server → Trip room (all passengers + admin): station lifecycle events — NEW
   SHUTTLE_STATION_ARRIVED:    "shuttle:station:arrived",

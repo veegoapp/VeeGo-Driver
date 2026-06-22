@@ -47,6 +47,7 @@ export type ShuttleBooking = {
     minRequired: number;
     totalSeats: number | null;
     shuttleStatus: 'open' | 'pending' | 'active';
+    tripDatetimes?: string[];
   } | null;
 };
 
@@ -221,6 +222,7 @@ type RawDriverBooking = {
     minRequired?: number;
     totalSeats?: number | null;
     shuttleStatus?: 'open' | 'pending' | 'active';
+    tripDatetimes?: string[];
   } | null;
   status?: string;
   renewalDeadline?: string;
@@ -253,6 +255,7 @@ function normalizeBooking(b: RawDriverBooking): ShuttleBooking {
       minRequired: b.trip.minRequired ?? 0,
       totalSeats: b.trip.totalSeats ?? null,
       shuttleStatus: b.trip.shuttleStatus ?? 'open',
+      tripDatetimes: b.trip.tripDatetimes,
     } : null,
   };
 }

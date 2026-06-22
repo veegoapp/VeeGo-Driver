@@ -631,23 +631,19 @@ function UpcomingTripCard({
       <GlassView style={[styles.upcomingCard, { alignItems: 'flex-start' }]} borderRadius={16}>
         <View style={[styles.upcomingAccent, { backgroundColor: '#1e1e28', alignSelf: 'stretch', height: undefined }]} />
         <View style={{ flex: 1, gap: 6 }}>
-          {/* Route name — TODO: Use translated backend fields (routeNameAr, fromAr, toAr) here */}
           <Text style={[styles.upcomingRouteName, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]} numberOfLines={1}>
-            {booking.routeName}
+            {(isRTL && booking.routeNameAr) ? booking.routeNameAr : booking.routeName}
           </Text>
-          {/* From → To */}
-          {line && (
+          {(booking.fromStation || booking.toStation || line) && (
             <Text style={[{ fontSize: 12, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]} numberOfLines={1}>
-              {/* TODO: Use translated backend fields (routeNameAr, fromAr, toAr) here */}
-              {line.from} → {line.to}
+              {booking.fromStation ?? line?.from} → {booking.toStation ?? line?.to}
             </Text>
           )}
           {/* Date & Exact Time */}
           <View style={[styles.upcomingMeta, { flexDirection: R }]}>
             <Calendar size={12} color={colors.mutedForeground} strokeWidth={2} />
             <Text style={[styles.upcomingMetaText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-              {/* TODO: Backend Integration - Use trip.date (exact trip date) not just weekStart */}
-              {booking.weekStart}
+              {booking.trip?.tripDatetimes?.[0]?.split('T')[0] ?? booking.weekStart}
             </Text>
             <Text style={[styles.upcomingMetaDot, { color: colors.border }]}>·</Text>
             <Clock size={12} color={colors.mutedForeground} strokeWidth={2} />

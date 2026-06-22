@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { ChevronLeft, Send } from 'lucide-react-native';
-import React, { useState } from 'react';
+import { Check, ChevronLeft, Send, X } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -17,6 +17,8 @@ import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
+import { useSocket } from '@/lib/socketContext';
+import { SOCKET_EVENTS } from '@/constants/socketEvents';
 
 type Params = {
   bookingId: string;
@@ -38,9 +40,12 @@ export default function ReferralRequestScreen() {
     useLocalSearchParams<Params>();
   const routeName = (isRTL && routeNameAr) ? routeNameAr : (routeNameRaw ?? '—');
 
+  const { socket } = useSocket();
   const [driverCode, setDriverCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [pendingReferralId, setPendingReferralId] = useState('');
+  const [referralResult, setReferralResult] = useState<'accepted' | 'declined' | null>(null);
 
   const DRIVER_CODE_REGEX = /^VGO-[0-9A-Z]{1,4}$/;
   const isValidCode = DRIVER_CODE_REGEX.test(driverCode.trim());
@@ -52,7 +57,8 @@ export default function ReferralRequestScreen() {
     }
     setLoading(true);
     try {
-      await endpoints.shuttle.referTrip(bookingId!, driverCode.trim());
+      const result = await endpoints.shuttle.referTrip(bookingId!, driverCode.trim());
+      if (result?.referralId) setPendingReferralId(String(result.referralId));
       setSubmitted(true);
     } catch {
       Alert.alert('', t.referral_send_failed);
@@ -60,6 +66,29 @@ export default function ReferralRequestScreen() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!socket || !submitted) return;
+
+    const handleAccepted = (data: { referralId?: number | string; bookingId?: number | string }) => {
+      const matchById = pendingReferralId && String(data.referralId) === pendingReferralId;
+      const matchByBooking = !pendingReferralId && String(data.bookingId) === String(bookingId);
+      if (matchById || matchByBooking) setReferralResult('accepted');
+    };
+
+    const handleDeclined = (data: { referralId?: number | string }) => {
+      if (!pendingReferralId || String(data.referralId) === pendingReferralId) {
+        setReferralResult('declined');
+      }
+    };
+
+    socket.on(SOCKET_EVENTS.REFERRAL_ACCEPTED, handleAccepted);
+    socket.on(SOCKET_EVENTS.REFERRAL_DECLINED, handleDeclined);
+    return () => {
+      socket.off(SOCKET_EVENTS.REFERRAL_ACCEPTED, handleAccepted);
+      socket.off(SOCKET_EVENTS.REFERRAL_DECLINED, handleDeclined);
+    };
+  }, [socket, submitted, pendingReferralId, bookingId]);
 
   return (
     <KeyboardAvoidingView
@@ -94,7 +123,43 @@ export default function ReferralRequestScreen() {
             </Text>
           </GlassView>
 
-          {submitted ? (
+          {referralResult === 'accepted' ? (
+            <View style={styles.pendingWrap}>
+              <View style={[styles.pendingIcon, { backgroundColor: '#dcfce7' }]}>
+                <Check size={36} color="#16a34a" strokeWidth={2.5} />
+              </View>
+              <Text style={[styles.pendingTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
+                {t.referral_accepted_title}
+              </Text>
+              <Text style={[{ fontSize: 13, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: 'center', lineHeight: 20 }]}>
+                {t.referral_request_accepted_sub}
+              </Text>
+              <Pressable
+                onPress={() => router.replace('/(shuttle)/' as any)}
+                style={[styles.doneBtn, { backgroundColor: '#16a34a' }]}
+              >
+                <Text style={[styles.doneBtnText, { fontFamily: 'Inter_700Bold' }]}>{t.return_home}</Text>
+              </Pressable>
+            </View>
+          ) : referralResult === 'declined' ? (
+            <View style={styles.pendingWrap}>
+              <View style={[styles.pendingIcon, { backgroundColor: '#FEF2F2' }]}>
+                <X size={36} color="#DC2626" strokeWidth={2.5} />
+              </View>
+              <Text style={[styles.pendingTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
+                {t.referral_declined_title}
+              </Text>
+              <Text style={[{ fontSize: 13, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: 'center', lineHeight: 20 }]}>
+                {t.referral_request_declined_sub}
+              </Text>
+              <Pressable
+                onPress={() => router.replace('/(shuttle)/' as any)}
+                style={[styles.doneBtn, { backgroundColor: '#1e1e28' }]}
+              >
+                <Text style={[styles.doneBtnText, { fontFamily: 'Inter_700Bold' }]}>{t.return_home}</Text>
+              </Pressable>
+            </View>
+          ) : submitted ? (
             /* Pending state */
             <View style={styles.pendingWrap}>
               <View style={[styles.pendingIcon, { backgroundColor: '#1e1e2810' }]}>

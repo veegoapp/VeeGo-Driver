@@ -17,121 +17,20 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
+import { useQuery } from '@tanstack/react-query';
 
-// ── Static placeholder data (replace with API calls once backend is ready) ────
+// ── API-driven vehicle data types ──────────────────────────────────────────────
 
-type Brand = { id: string; name: string };
-type VehicleModel = { id: string; name: string; brandId: string };
-type ColorOption = { id: string; label: string; hex: string };
+type ApiBrand = { id: number; name: string; models: { id: number; name: string }[] };
+type ApiColor = { id: number; name: string; nameAr?: string };
 
-const BRANDS: Brand[] = [
-  { id: '1',  name: 'Toyota' },
-  { id: '2',  name: 'Hyundai' },
-  { id: '3',  name: 'Kia' },
-  { id: '4',  name: 'Nissan' },
-  { id: '5',  name: 'Honda' },
-  { id: '6',  name: 'Chevrolet' },
-  { id: '7',  name: 'Mitsubishi' },
-  { id: '8',  name: 'Suzuki' },
-  { id: '9',  name: 'BMW' },
-  { id: '10', name: 'Mercedes-Benz' },
-  { id: '11', name: 'Volkswagen' },
-  { id: '12', name: 'Ford' },
-  { id: '13', name: 'Peugeot' },
-  { id: '14', name: 'Renault' },
-  { id: '15', name: 'Skoda' },
-  { id: '16', name: 'Opel' },
-  { id: '17', name: 'Lada' },
-  { id: '18', name: 'Fiat' },
-  { id: '19', name: 'Jeep' },
-  { id: '20', name: 'Subaru' },
-];
-
-const ALL_MODELS: VehicleModel[] = [
-  { id: '101', brandId: '1',  name: 'Camry' },
-  { id: '102', brandId: '1',  name: 'Corolla' },
-  { id: '103', brandId: '1',  name: 'Yaris' },
-  { id: '104', brandId: '1',  name: 'Land Cruiser' },
-  { id: '105', brandId: '1',  name: 'Hilux' },
-  { id: '106', brandId: '1',  name: 'RAV4' },
-  { id: '107', brandId: '1',  name: 'Fortuner' },
-  { id: '108', brandId: '2',  name: 'Elantra' },
-  { id: '109', brandId: '2',  name: 'Tucson' },
-  { id: '110', brandId: '2',  name: 'Accent' },
-  { id: '111', brandId: '2',  name: 'i10' },
-  { id: '112', brandId: '2',  name: 'Sonata' },
-  { id: '113', brandId: '2',  name: 'Santa Fe' },
-  { id: '114', brandId: '3',  name: 'Sportage' },
-  { id: '115', brandId: '3',  name: 'Cerato' },
-  { id: '116', brandId: '3',  name: 'Picanto' },
-  { id: '117', brandId: '3',  name: 'Rio' },
-  { id: '118', brandId: '3',  name: 'Sorento' },
-  { id: '119', brandId: '4',  name: 'Sunny' },
-  { id: '120', brandId: '4',  name: 'Sentra' },
-  { id: '121', brandId: '4',  name: 'Altima' },
-  { id: '122', brandId: '4',  name: 'Maxima' },
-  { id: '123', brandId: '4',  name: 'Pathfinder' },
-  { id: '124', brandId: '4',  name: 'X-Trail' },
-  { id: '125', brandId: '5',  name: 'Civic' },
-  { id: '126', brandId: '5',  name: 'Accord' },
-  { id: '127', brandId: '5',  name: 'City' },
-  { id: '128', brandId: '5',  name: 'CR-V' },
-  { id: '129', brandId: '6',  name: 'Optra' },
-  { id: '130', brandId: '6',  name: 'Aveo' },
-  { id: '131', brandId: '6',  name: 'Captiva' },
-  { id: '132', brandId: '7',  name: 'Lancer' },
-  { id: '133', brandId: '7',  name: 'Outlander' },
-  { id: '134', brandId: '7',  name: 'Galant' },
-  { id: '135', brandId: '8',  name: 'Swift' },
-  { id: '136', brandId: '8',  name: 'Alto' },
-  { id: '137', brandId: '8',  name: 'Vitara' },
-  { id: '138', brandId: '9',  name: '316i' },
-  { id: '139', brandId: '9',  name: '320i' },
-  { id: '140', brandId: '9',  name: 'X3' },
-  { id: '141', brandId: '10', name: 'C-Class' },
-  { id: '142', brandId: '10', name: 'E-Class' },
-  { id: '143', brandId: '10', name: 'GLE' },
-  { id: '144', brandId: '11', name: 'Passat' },
-  { id: '145', brandId: '11', name: 'Golf' },
-  { id: '146', brandId: '11', name: 'Jetta' },
-  { id: '147', brandId: '12', name: 'Focus' },
-  { id: '148', brandId: '12', name: 'Escape' },
-  { id: '149', brandId: '13', name: '208' },
-  { id: '150', brandId: '13', name: '301' },
-  { id: '151', brandId: '13', name: '3008' },
-  { id: '152', brandId: '14', name: 'Symbol' },
-  { id: '153', brandId: '14', name: 'Logan' },
-  { id: '154', brandId: '14', name: 'Duster' },
-  { id: '155', brandId: '15', name: 'Octavia' },
-  { id: '156', brandId: '15', name: 'Fabia' },
-  { id: '157', brandId: '16', name: 'Astra' },
-  { id: '158', brandId: '16', name: 'Corsa' },
-  { id: '159', brandId: '17', name: 'Vesta' },
-  { id: '160', brandId: '17', name: 'Granta' },
-  { id: '161', brandId: '18', name: 'Palio' },
-  { id: '162', brandId: '18', name: 'Tipo' },
-  { id: '163', brandId: '19', name: 'Wrangler' },
-  { id: '164', brandId: '19', name: 'Grand Cherokee' },
-  { id: '165', brandId: '20', name: 'Outback' },
-  { id: '166', brandId: '20', name: 'Forester' },
-];
-
-const COLORS: ColorOption[] = [
-  { id: 'white',   label: 'White',    hex: '#FFFFFF' },
-  { id: 'black',   label: 'Black',    hex: '#1e1e28' },
-  { id: 'silver',  label: 'Silver',   hex: '#C0C0C0' },
-  { id: 'gray',    label: 'Gray',     hex: '#808080' },
-  { id: 'red',     label: 'Red',      hex: '#E53935' },
-  { id: 'blue',    label: 'Blue',     hex: '#1565C0' },
-  { id: 'green',   label: 'Green',    hex: '#388E3C' },
-  { id: 'beige',   label: 'Beige',    hex: '#D4B896' },
-  { id: 'brown',   label: 'Brown',    hex: '#795548' },
-  { id: 'gold',    label: 'Gold',     hex: '#FFC107' },
-  { id: 'orange',  label: 'Orange',   hex: '#F57C00' },
-  { id: 'maroon',  label: 'Maroon',   hex: '#880E4F' },
-  { id: 'navy',    label: 'Navy',     hex: '#0D1B4B' },
-  { id: 'pearl',   label: 'Pearl',    hex: '#F5F0E8' },
-];
+const COLOR_HEX_MAP: Record<string, string> = {
+  white: '#FFFFFF', black: '#1e1e28', silver: '#C0C0C0', gray: '#808080',
+  red: '#E53935', blue: '#1565C0', green: '#388E3C', beige: '#D4B896',
+  brown: '#795548', gold: '#FFC107', orange: '#F57C00', maroon: '#880E4F',
+  navy: '#0D1B4B', pearl: '#F5F0E8',
+};
+const getColorHex = (name: string) => COLOR_HEX_MAP[name.toLowerCase()] ?? '#9E9E9E';
 
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS: string[] = Array.from({ length: CURRENT_YEAR - 1989 }, (_, i) =>
@@ -292,50 +191,41 @@ export default function VehicleSpecsScreen() {
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
   const botPad = Platform.OS === 'web' ? 34 : insets.bottom;
 
-  const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
-  const [selectedModel, setSelectedModel] = useState<VehicleModel | null>(null);
+  const [selectedBrand, setSelectedBrand] = useState<ApiBrand | null>(null);
+  const [selectedModel, setSelectedModel] = useState<{ id: number; name: string } | null>(null);
   const [selectedYear, setSelectedYear]   = useState<string | null>(null);
-  const [selectedColor, setSelectedColor] = useState<ColorOption | null>(null);
+  const [selectedColor, setSelectedColor] = useState<ApiColor | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const { data: metaData } = useQuery({
+    queryKey: ['vehicles-meta'],
+    queryFn: endpoints.vehicles.meta,
+    staleTime: Infinity,
+  });
+
   const brandItems: DropdownItem[] = useMemo(
-    () => BRANDS.map((b) => ({ id: b.id, label: b.name })),
-    [],
+    () => (metaData?.brands ?? []).map((b) => ({ id: String(b.id), label: b.name })),
+    [metaData?.brands],
   );
 
-  const modelItems: DropdownItem[] = useMemo(() => {
-    if (!selectedBrand) return [];
-    return ALL_MODELS
-      .filter((m) => m.brandId === selectedBrand.id)
-      .map((m) => ({ id: m.id, label: m.name }));
-  }, [selectedBrand]);
+  const modelItems: DropdownItem[] = useMemo(
+    () => (selectedBrand?.models ?? []).map((m) => ({ id: String(m.id), label: m.name })),
+    [selectedBrand],
+  );
 
   const yearItems: DropdownItem[] = useMemo(
     () => YEARS.map((y) => ({ id: y, label: y })),
     [],
   );
 
-  const COLOR_LABELS: Record<string, string> = {
-    white: t.color_white,
-    black: t.color_black,
-    silver: t.color_silver,
-    gray: t.color_gray,
-    red: t.color_red,
-    blue: t.color_blue,
-    green: t.color_green,
-    beige: t.color_beige,
-    brown: t.color_brown,
-    gold: t.color_gold,
-    orange: t.color_orange,
-    maroon: t.color_maroon,
-    navy: t.color_navy,
-    pearl: t.color_pearl,
-  };
-
   const colorItems: DropdownItem[] = useMemo(
-    () => COLORS.map((c) => ({ id: c.id, label: COLOR_LABELS[c.id] ?? c.label, colorHex: c.hex })),
-    [COLOR_LABELS],
+    () => (metaData?.colors ?? []).map((c) => ({
+      id: String(c.id),
+      label: isRTL ? (c.nameAr ?? c.name) : c.name,
+      colorHex: getColorHex(c.name),
+    })),
+    [metaData?.colors, isRTL],
   );
 
   const canContinue =
@@ -349,8 +239,9 @@ export default function VehicleSpecsScreen() {
       await endpoints.registration.setVehicleDetails({
         brandId:  selectedBrand!.id,
         modelId:  selectedModel!.id,
-        year:     selectedYear!,
-        color:    selectedColor!.id,
+        year:     parseInt(selectedYear!, 10),
+        color:    selectedColor!.name,
+        colorId:  selectedColor!.id,
       });
     } catch {
       // Non-blocking: proceed even if the endpoint isn't live yet
@@ -398,7 +289,7 @@ export default function VehicleSpecsScreen() {
               items={brandItems}
               isRTL={isRTL}
               onSelect={(item) => {
-                const brand = BRANDS.find((b) => b.id === item.id) ?? null;
+                const brand = metaData?.brands.find((b) => String(b.id) === item.id) ?? null;
                 setSelectedBrand(brand);
                 setSelectedModel(null);
               }}
@@ -417,7 +308,7 @@ export default function VehicleSpecsScreen() {
               disabled={!selectedBrand}
               isRTL={isRTL}
               onSelect={(item) => {
-                const model = ALL_MODELS.find((m) => m.id === item.id) ?? null;
+                const model = selectedBrand?.models.find((m) => String(m.id) === item.id) ?? null;
                 setSelectedModel(model);
               }}
             />
@@ -444,11 +335,11 @@ export default function VehicleSpecsScreen() {
             </Text>
             <SearchableDropdown
               placeholder={t.color_label}
-              value={selectedColor ? COLOR_LABELS[selectedColor.id] ?? selectedColor.label : null}
+              value={selectedColor ? (isRTL ? (selectedColor.nameAr ?? selectedColor.name) : selectedColor.name) : null}
               items={colorItems}
               isRTL={isRTL}
               onSelect={(item) => {
-                const color = COLORS.find((c) => c.id === item.id) ?? null;
+                const color = metaData?.colors.find((c) => String(c.id) === item.id) ?? null;
                 setSelectedColor(color);
               }}
             />
@@ -459,9 +350,12 @@ export default function VehicleSpecsScreen() {
         {selectedBrand && selectedModel && selectedYear && selectedColor && (
           <View style={s.summaryCard}>
             <View style={[s.summaryRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
-              <View style={[s.colorDot, { backgroundColor: selectedColor.hex, borderWidth: selectedColor.id === 'white' ? 1 : 0, borderColor: '#e5e5ea' }]} />
+              {(() => {
+                const hex = getColorHex(selectedColor.name);
+                return <View style={[s.colorDot, { backgroundColor: hex, borderWidth: hex === '#FFFFFF' ? 1 : 0, borderColor: '#e5e5ea' }]} />;
+              })()}
               <Text style={s.summaryText} numberOfLines={2}>
-                {COLOR_LABELS[selectedColor.id] ?? selectedColor.label} {selectedBrand.name} {selectedModel.name} — {selectedYear}
+                {isRTL ? (selectedColor.nameAr ?? selectedColor.name) : selectedColor.name} {selectedBrand.name} {selectedModel.name} — {selectedYear}
               </Text>
             </View>
           </View>

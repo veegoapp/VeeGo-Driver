@@ -130,7 +130,7 @@ export function usePushNotifications(onRideRequest?: () => void) {
           }
 
           // --- Shuttle weekly renewal prompt (Wednesday 7:00 AM Cairo) ---
-          // TODO: Backend Integration — sent by the Wednesday 7:00 AM cron job.
+          // Sent by the Wednesday 7:00 AM cron job.
           // Payload from backend:
           //   { type: "renewal_prompt", bookingId, routeId, routeName, slotId, weekStart, deadline }
           // The driver is taken to their Bookings tab where the renewal banner
@@ -143,8 +143,8 @@ export function usePushNotifications(onRideRequest?: () => void) {
           }
 
           // --- Slot released broadcast (Wednesday 17:00 Cairo grace period expired) ---
-          // TODO: Backend Integration — sent to ALL drivers when a held slot is
-          // released (driver declined or 10-hour deadline passed).
+          // Sent to ALL drivers when a held slot is released
+          // (driver declined or 10-hour deadline passed).
           // Payload from backend:
           //   { type: "slot_released", routeId, routeName, slotId, weekStart }
           // Deep-links directly into the Lines screen so the driver can immediately

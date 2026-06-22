@@ -619,6 +619,8 @@ const en = {
   decline_trip_failed: 'Failed to decline the trip. Please try again.',
   referral_send_failed: 'Failed to send request. Check the code and try again.',
   referral_notification_sub: 'You will be notified once the driver responds.',
+  referral_request_accepted_sub: 'The other driver accepted your trip referral.',
+  referral_request_declined_sub: 'The other driver declined your referral request. You can try referring to another driver.',
   driver_code_hint: "Enter the replacement driver's code to send a transfer request.",
   // ── Trip active screen ────────────────────────────────────────────────────────
   trip_active_exit_title: 'Trip in Progress!',
@@ -1654,6 +1656,8 @@ const ar: typeof en = {
   decline_trip_failed: 'فشل رفض الرحلة. يرجى المحاولة مجدداً.',
   referral_send_failed: 'فشل إرسال الطلب. تأكد من الكود وحاول مجدداً.',
   referral_notification_sub: 'سيتم إشعارك بمجرد رد السائق على الطلب.',
+  referral_request_accepted_sub: 'قبل السائق الآخر طلب التحويل الخاص بك.',
+  referral_request_declined_sub: 'رفض السائق الآخر طلب التحويل. يمكنك المحاولة مع سائق آخر.',
   driver_code_hint: 'أدخل الكود الخاص بالسائق البديل لإرسال طلب تحويل الرحلة إليه.',
   // ── Trip active screen ────────────────────────────────────────────────────────
   trip_active_exit_title: 'رحلة جارية حالياً!',

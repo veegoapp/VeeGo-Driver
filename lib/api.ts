@@ -6,32 +6,7 @@ import { getToken, getRefreshToken, saveToken, deleteToken, deleteRefreshToken }
 
 // ── Language / Accept-Language ─────────────────────────────────────────────────
 // Updated by lib/i18nContext whenever the driver switches language.
-// Every outgoing request reads this and injects the header so the backend can
-// return localized strings (route names, station titles, trip details, etc.)
-// without the client needing to perform any post-processing.
-//
-// TODO: Backend Integration — Accept-Language contract
-//   All entity responses that contain user-visible text should honour the
-//   Accept-Language request header and return the matching locale.
-//
-//   LOCALIZED FIELD CONVENTIONS (choose one pattern and apply it consistently):
-//
-//   Option A — Header-driven single field (preferred):
-//     The server returns the already-resolved string in the primary field name.
-//     e.g. GET /shuttle/lines  →  { name: "خط القاهرة" }  (when lang = 'ar')
-//
-//   Option B — Dual-field envelope (fallback-safe):
-//     The server always returns both locales; the client picks the right one.
-//     e.g. { name_en: "Cairo Line", name_ar: "خط القاهرة" }
-//     Client rendering pattern:  station.name_ar ?? station.name_en ?? station.name
-//
-//   Affected endpoints:
-//     GET  /shuttle/lines          → line.name, line.description
-//     GET  /shuttle/lines/:id      → same + stations[].name
-//     GET  /shuttle/timeslots/:id  → timeslot.label
-//     GET  /driver/trips           → trip.routeName, trip.origin, trip.destination
-//     GET  /driver/trips/:id       → same + stations[].name, stations[].address
-//     GET  /services/control       → service.message, service.eta
+// Injected into every outgoing request so the backend returns localized text.
 let _acceptLanguage = 'en';
 
 /**
@@ -542,7 +517,6 @@ export const endpoints = {
 
     // ── bookWeek ────────────────────────────────────────────────────────────
     // ── WEDNESDAY RETENTION CRON (7:00 AM EET / Cairo = UTC+2) ─────────────
-    // TODO: Backend Integration — implement the weekly renewal cron job
     //
     //   TRIGGER:  Every Wednesday at 05:00 UTC (= 07:00 Cairo / EET, UTC+2)
     //   TARGET:   All drivers with an active ShuttleRouteBooking whose weekEnd
@@ -568,7 +542,6 @@ export const endpoints = {
     //     to the bookings tab where the renewal banner is shown.
     //
     // ── 10-HOUR GRACE PERIOD (Deadline: Wednesday 17:00 Cairo) ──────────────
-    // TODO: Backend Integration — implement grace period enforcement
     //
     //   CONFIRM path (driver taps "Confirm Renewal"):
     //     POST /shuttle/route-bookings/:id/confirm-renewal (already exists)
@@ -650,7 +623,7 @@ export const endpoints = {
       api.get<TripRevenueSummary>(`/driver/trips/${tripId}/revenue-summary`),
 
     referTrip: (bookingId: string, driverCode: string) =>
-      api.post(`/shuttle/route-bookings/${bookingId}/refer`, { driverCode }),
+      api.post<{ referralId?: number }>(`/shuttle/route-bookings/${bookingId}/refer`, { driverCode }),
 
     acceptReferral: (referralId: string) =>
       api.post(`/shuttle/referrals/${referralId}/accept`),
@@ -759,9 +732,12 @@ export const endpoints = {
         `/vehicles/brands/${brandId}/models`
       ),
 
-    // GET /vehicles/meta  (alternative: fetch brands + models in a single request)
-    // Returns { brands: Brand[], models: Model[] } to populate both dropdowns in one call.
-    meta: () => api.get<{ brands: { id: string; name: string }[]; models: { id: string; name: string; brandId: string }[] }>('/vehicles/meta'),
+    // GET /vehicles/meta — single call to populate all vehicle dropdowns
+    // Returns brands with nested models, plus color options.
+    meta: () => api.get<{
+      brands: { id: number; name: string; models: { id: number; name: string }[] }[];
+      colors: { id: number; name: string; nameAr?: string }[];
+    }>('/vehicles/meta'),
 
     // GET /vehicles/models/:id/years
     // Returns available model years wrapped in a data array.
