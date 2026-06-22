@@ -74,8 +74,6 @@ export default function BonusTargetsScreen() {
 
   const [refreshing, setRefreshing] = useState(false);
 
-  // TODO: Backend Integration — GET /driver/bonus-targets
-  // Full contract documented in lib/api.ts → endpoints.bonusTargets.list
   const {
     data: raw,
     isLoading,

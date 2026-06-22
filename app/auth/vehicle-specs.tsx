@@ -346,7 +346,6 @@ export default function VehicleSpecsScreen() {
     setError(null);
     setLoading(true);
     try {
-      // TODO: Backend Integration — POST /driver/register/vehicle-details
       await endpoints.registration.setVehicleDetails({
         brandId:  selectedBrand!.id,
         modelId:  selectedModel!.id,

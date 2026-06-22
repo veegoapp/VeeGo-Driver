@@ -213,10 +213,6 @@ async function registerForPushNotifications(): Promise<string | undefined> {
     if (finalStatus !== 'granted') return undefined;
 
     // Retrieve the Expo push token bound to this device + app.
-    // TODO: Backend Integration - Save Expo Push Token
-    // Forward this token to your backend immediately after retrieval:
-    //   POST /driver/push-token  { token: tokenData.data }
-    // The backend uses it to call Expo's push API when the driver is backgrounded.
     const tokenData = await Notifications.getExpoPushTokenAsync();
     return tokenData.data as string;
   } catch {

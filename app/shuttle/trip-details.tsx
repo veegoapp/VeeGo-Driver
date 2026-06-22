@@ -219,8 +219,7 @@ export default function TripDetailsScreen() {
           <View style={[styles.statusBadge, { backgroundColor: '#1e1e2812', borderColor: '#1e1e2825' }]}>
             <View style={[styles.statusDot, { backgroundColor: '#1e1e28' }]} />
             <Text style={[styles.statusText, { color: '#2d2d42', fontFamily: 'Inter_700Bold' }]}>
-              {/* TODO: Backend Integration - Fetch real trip status from backend (confirmed, pending, etc.) */}
-              {effectiveBooking?.status === 'active' ? t.active : t.status_booked}
+                {effectiveBooking?.status === 'active' ? t.active : t.status_booked}
             </Text>
           </View>
         </View>
@@ -251,7 +250,6 @@ export default function TripDetailsScreen() {
               {t.passengers_label_count}
             </Text>
             <Text style={[styles.infoCardValue, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-              {/* TODO: Backend Integration - Real-time passenger count for this specific trip instance */}
               {bookedSeats} / {totalSeats}
             </Text>
           </GlassView>
@@ -268,7 +266,6 @@ export default function TripDetailsScreen() {
                 {t.vehicle_line_label}
               </Text>
               <Text style={[{ fontSize: 16, color: colors.foreground, fontFamily: 'Inter_700Bold', marginTop: 3, textAlign: TA }]}>
-                {/* TODO: Backend Integration - Use vehicle model, plate number, and assigned line from backend */}
                 {vehicleType} · {lineNumber}
               </Text>
             </View>
@@ -312,7 +309,6 @@ export default function TripDetailsScreen() {
                   </Text>
                   {st.eta ? (
                     <Text style={[{ fontSize: 12, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', marginTop: 2, textAlign: TA }]}>
-                      {/* TODO: Backend Integration - Use real ETA per station from backend */}
                       {st.eta}
                     </Text>
                   ) : null}
@@ -337,7 +333,6 @@ export default function TripDetailsScreen() {
           <GlassView style={{ marginTop: 12, padding: 24, alignItems: 'center', gap: 10 }} borderRadius={16}>
             <MapPin size={24} color={colors.mutedForeground} strokeWidth={2} />
             <Text style={[{ fontSize: 13, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: 'center' }]}>
-              {/* TODO: Backend Integration - Station list will be loaded from the route stations endpoint */}
               {from} → {to}
             </Text>
           </GlassView>

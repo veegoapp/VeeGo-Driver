@@ -24,8 +24,6 @@ const TAB_BAR_HEIGHT = 96;
 
 type MainTab = 'upcoming' | 'completed';
 
-// TODO: Backend Integration - GET /shuttle/driver/my-trips response shape
-// Expected: { trips: DriverTrip[]; total: number }
 type DriverTrip = {
   id: string;
   routeName?: string;
@@ -39,8 +37,6 @@ type DriverTrip = {
   status?: string;
 };
 
-// TODO: Backend Integration - GET /shuttle/route-bookings/:id/detail response shape
-// See api.ts bookingDetail() for the full contract.
 type BookingDetail = {
   id: string;
   bookedSeats: number;
@@ -157,10 +153,6 @@ export default function BookingsScreen() {
 
   // ── Queries ────────────────────────────────────────────────────────────────
 
-  // TODO: Backend Integration - GET /shuttle/driver/my-trips
-  // Parses both backend-translated route/station strings (routeNameAr, fromAr, toAr)
-  // and segregated temporal data (completedAt, earnedAmount, revenueAmount).
-  // Must support pagination via page/limit query params.
   const { data: driverTripsRaw, isLoading: tripsLoading } = useQuery({
     queryKey: ['shuttle-driver-trips', tripPage],
     queryFn: () => endpoints.shuttle.driverTrips(tripPage, TRIP_LIMIT),

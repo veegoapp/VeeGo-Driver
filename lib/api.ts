@@ -578,53 +578,6 @@ export const endpoints = {
       api.post('/shuttle/route-bookings', data),
 
     // ── bookWeek ────────────────────────────────────────────────────────────
-    // TODO: Backend Integration — implement POST /shuttle/lines/:id/book-week
-    //
-    // PURPOSE:
-    //   Atomically reserves a timeslot across all 5 working days (Sun–Thu) of a
-    //   given work week for a single driver. Even though the passenger-facing
-    //   backend stores individual DailySchedule rows (so passengers can book 1–5
-    //   days), the driver booking must cover the entire block simultaneously to
-    //   prevent partial-week conflicts and race conditions.
-    //
-    // ROUTE:   POST /shuttle/lines/:routeId/book-week
-    //
-    // PAYLOAD:
-    //   {
-    //     slotId:          number   — ID of the BackendSlot (timeslot template)
-    //     startSundayDate: string   — "YYYY-MM-DD", always a Sunday (from server)
-    //     endThursdayDate: string   — "YYYY-MM-DD", always a Thursday (from server)
-    //     daysArray:       string[] — always ["sunday","monday","tuesday","wednesday","thursday"]
-    //                                 Explicit array so the backend can map the
-    //                                 driver's ID across every DailySchedule row
-    //                                 in one transaction.
-    //   }
-    //
-    // SUCCESS RESPONSE (200 / 201):
-    //   {
-    //     bookingId:   string   — newly created ShuttleRouteBooking ID
-    //     weekStart:   string   — "YYYY-MM-DD" (echoed back)
-    //     weekEnd:     string   — "YYYY-MM-DD" (echoed back)
-    //     departure:   string   — "HH:MM"
-    //     renewalDeadline: string — ISO8601 — next Wednesday 17:00 Cairo time;
-    //                               the deadline by which the driver must confirm
-    //                               or reject renewal before the slot is released.
-    //   }
-    //
-    // ERROR RESPONSES:
-    //   409 Conflict  — slotId is already taken for this week block (race condition).
-    //                   Frontend shows "Slot Taken" alert and re-fetches available weeks.
-    //   400 Bad Request — invalid slotId, wrong week dates, or route not found.
-    //   403 Forbidden   — driver is suspended or has exceeded active-booking limits.
-    //
-    // BACKEND IMPLEMENTATION NOTES:
-    //   1. Wrap all DailySchedule upserts in a single DB transaction.
-    //   2. Use a SELECT FOR UPDATE lock on the slot row to prevent race conditions.
-    //   3. After committing, emit the socket event `slot_taken` to ALL connected
-    //      drivers so their open booking sheets update in real-time:
-    //        socket.to('drivers').emit('slot_taken', { routeId, slotId, weekStart, takenByDriverName })
-    //   4. Schedule the Wednesday 7:00 AM Cairo renewal cron (see below).
-    //
     // ── WEDNESDAY RETENTION CRON (7:00 AM EET / Cairo = UTC+2) ─────────────
     // TODO: Backend Integration — implement the weekly renewal cron job
     //
@@ -699,42 +652,15 @@ export const endpoints = {
     cancelBooking: (id: string) => api.del(`/shuttle/route-bookings/${id}`),
     confirmRenewal: (id: string) => api.post(`/shuttle/route-bookings/${id}/confirm-renewal`),
 
-    // TODO: Backend Integration - POST /shuttle/route-bookings/:id/decline-renewal
-    // Driver proactively opts out of renewal before the Wednesday 17:00 Cairo deadline.
-    // Backend should:
-    //   1. Set renewalStatus = 'declined' on the booking record.
-    //   2. Release the slot for the upcoming week (isTaken = false for next week block).
-    //   3. Broadcast `slot_released` to all connected drivers via socket.
-    //   4. Send a push notification to all waiting drivers: "خط [routeName] متاح للحجز الآن!"
-    // Returns: { success: true }
     declineRenewal: (id: string) => api.post(`/shuttle/route-bookings/${id}/decline-renewal`),
 
-    // TODO: Backend Integration - GET /shuttle/route-bookings/:id/detail
-    // Returns live booking state including current passenger count and threshold status.
-    // Expected response shape:
-    //   {
-    //     id:                    string,
-    //     bookedSeats:           number,   — current confirmed passenger count for this week block
-    //     totalSeats:            number,   — bus capacity (14 = HiAce, 28 = Mini Bus)
-    //     minRequiredPassengers: number,   — minimum threshold for trip activation (set per route)
-    //     thresholdMet:          boolean,  — true once bookedSeats >= minRequiredPassengers
-    //   }
-    // Used by BookingDetailSheet for live passenger counter + threshold badge.
-    // Socket channel: listen for `booking:passenger_updated` event (scoped to booking room)
-    //   payload: { bookingId: string, bookedSeats: number, thresholdMet: boolean }
     bookingLiveDetail: (id: string) =>
       api.get(`/shuttle/route-bookings/${id}/detail`),
 
     // ── Active Trip Management ───────────────────────────────────────────────
-    // TODO: Backend Integration - POST /shuttle/route-bookings/:id/start
-    // Marks the weekly booking as active, creates the trip instance on the backend.
-    // Returns: { tripId: string, earnedAmount?: number, walletBalance?: number }
     start: (bookingId: string) =>
       api.post(`/shuttle/route-bookings/${bookingId}/start`),
 
-    // TODO: Backend Integration - POST /shuttle/lines/:id/complete
-    // Marks the active trip as completed.
-    // Returns: { earnedAmount: number, walletBalance: number }
     complete: (lineId: string) => api.post(`/shuttle/lines/${lineId}/complete`),
     passengers: (tripId: string) => api.get(`/shuttle/trips/${tripId}/passengers`),
     // PATCH /driver/bookings/:id/board — marks passenger as boarded
@@ -744,9 +670,6 @@ export const endpoints = {
     driverTrips: (page = 1, limit = 10) =>
       api.get(`/shuttle/driver/my-trips?page=${page}&limit=${limit}`),
 
-    // TODO: Backend Integration - GET /shuttle/driver/my-trips — fetches paginated list of past completed trips
-    // Expected response: { trips: Array<{ id, routeName, completedAt, earnedAmount }> }
-    // or: { data: { trips: [...] } }
     history: (page = 1, limit = 20) =>
       api.get(`/shuttle/driver/my-trips?page=${page}&limit=${limit}`),
 
@@ -763,18 +686,12 @@ export const endpoints = {
     revenueSummary: (tripId: string) =>
       api.get<TripRevenueSummary>(`/driver/trips/${tripId}/revenue-summary`),
 
-    // TODO: Backend Integration - POST /shuttle/route-bookings/:id/refer
-    // Body: { driverCode: string } — submits a trip referral to another driver by their unique code
     referTrip: (bookingId: string, driverCode: string) =>
       api.post(`/shuttle/route-bookings/${bookingId}/refer`, { driverCode }),
 
-    // TODO: Backend Integration - POST /shuttle/referrals/:id/accept
-    // Second driver accepts the incoming referral; backend shifts trip ownership and notifies Driver 1
     acceptReferral: (referralId: string) =>
       api.post(`/shuttle/referrals/${referralId}/accept`),
 
-    // TODO: Backend Integration - POST /shuttle/referrals/:id/decline
-    // Second driver declines; backend notifies Driver 1 of the rejection
     declineReferral: (referralId: string) =>
       api.post(`/shuttle/referrals/${referralId}/decline`),
 
@@ -804,7 +721,6 @@ export const endpoints = {
         stations: Array<{ id: number; name: string; order: number; eta: string }>;
       }>(`/shuttle/route-bookings/${bookingId}/trip-detail`),
 
-    // TODO: Backend Integration - GET /driver/me/referral-code — fetches this driver's unique referral code
     myReferralCode: () => api.get<{ code: string }>('/driver/me/referral-code'),
   },
 
@@ -822,7 +738,6 @@ export const endpoints = {
     submitTicket: (data: unknown) => api.post('/support/tickets', data),
   },
 
-  // TODO: Backend Integration — Registration setup endpoints (initial account flow)
   registration: {
     // POST /driver/register/service-type
     // Persists the driver's chosen service type on the backend so the server is aware
@@ -860,7 +775,6 @@ export const endpoints = {
     }) => api.post<{ vehicleId: string }>('/driver/register/vehicle-details', data),
   },
 
-  // TODO: Backend Integration — Vehicle metadata endpoints
   vehicles: {
     // GET /vehicles/brands?serviceType=
     // Returns brands filtered by the driver's service type.
@@ -925,73 +839,9 @@ export const endpoints = {
   },
 
   bonusTargets: {
-    // TODO: Backend Integration — GET /driver/bonus-targets
-    //
-    // Returns the full list of bonus milestone records for the authenticated driver.
-    //
-    // EXPECTED RESPONSE — array at root OR nested under `data` / `bonusTargets`:
-    //   Array<{
-    //     id:           string,
-    //     title:        string,             — human-readable milestone name
-    //     description?: string,             — optional supporting detail
-    //     targetType:   string,             — e.g. "trips", "distance", "earnings"
-    //     targetValue:  number,             — threshold required to earn the bonus
-    //     progress:     number,             — driver's current progress toward targetValue
-    //     bonusAmount:  number,             — payout in EGP when milestone is reached
-    //     completed:    boolean,            — true once progress >= targetValue
-    //     completedAt?: string,             — ISO8601 date the milestone was completed
-    //     startsAt?:    string,             — ISO8601 activation date
-    //     endsAt?:      string,             — ISO8601 expiry date (null = no expiry)
-    //     vehicleType?: string,             — optional vehicle-type filter
-    //     isActive:     boolean,            — false if expired or suspended
-    //     paidOut?:     boolean,            — true once the bonus has been disbursed
-    //   }>
-    //
-    // SUMMARY DERIVATION (no separate endpoint required):
-    //   earned  = sum of bonusAmount where completed === true  && (paidOut === true || paidOut is absent)
-    //   pending = sum of bonusAmount where completed === false && isActive === true
-    //
-    // ERROR RESPONSES:
-    //   401 — token expired (auto-refreshed by request())
-    //   404 — driver has no targets configured yet → return [] gracefully
-    //   503 — service unavailable → screen degrades to empty placeholder
     list: () => api.get<BonusTarget[]>('/driver/bonus-targets'),
   },
 
-  // TODO: Backend Integration — Financial Analytics endpoint
-  //
-  // GET /driver/financial-analytics?range=today|week|month
-  //
-  // PURPOSE:
-  //   Returns the driver's cash-based financial summary for the requested
-  //   time window, powering the Earnings screen dashboard.
-  //
-  // QUERY PARAMS:
-  //   range — required — one of: 'today' | 'week' | 'month'
-  //
-  // EXPECTED RESPONSE (200):
-  //   {
-  //     totalCash:    number,   — sum of all cashReceived in the range (EGP)
-  //     appCommission:number,   — sum of all platform split-fees in the range (EGP)
-  //     netProfit:    number,   — totalCash - appCommission (server-computed)
-  //     transactions: Array<{
-  //       id:           string,
-  //       date:         string,  — ISO8601 timestamp of completed trip
-  //       cashReceived: number,  — cash the driver collected from passengers (EGP)
-  //       appCommission:number,  — platform commission deducted from that run (EGP)
-  //       routeName?:   string,  — optional human-readable route label
-  //     }>,
-  //   }
-  //
-  // ERROR RESPONSES:
-  //   400 — invalid or missing range param
-  //   401 — token expired (auto-refreshed by request())
-  //   404 — driver has no completed trips yet → return { totalCash:0, appCommission:0, netProfit:0, transactions:[] }
-  //   503 — service unavailable → screen degrades to error state with retry button
-  //
-  // SECURITY NOTE:
-  //   Only return data for the authenticated driver (derived from JWT sub claim).
-  //   Never accept a driverId in the query string.
   financialAnalytics: {
     summary: (range: 'today' | 'week' | 'month') =>
       api.get<FinancialAnalytics>(`/driver/financial-analytics?range=${range}`),

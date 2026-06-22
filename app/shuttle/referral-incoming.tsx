@@ -83,10 +83,6 @@ export default function ReferralIncomingScreen() {
   const handleAccept = async () => {
     setAccepting(true);
     try {
-      // TODO: Backend Integration - POST /shuttle/referrals/:id/accept
-      // Backend should: transfer trip ownership, add to Driver 2's upcoming list,
-      // send push notification to Driver 1 confirming acceptance,
-      // and invalidate shuttle-my-bookings query on Driver 1's side.
       await endpoints.shuttle.acceptReferral(referralId!);
       setResolved('accepted');
     } catch {
@@ -99,9 +95,6 @@ export default function ReferralIncomingScreen() {
   const handleDecline = async () => {
     setDeclining(true);
     try {
-      // TODO: Backend Integration - POST /shuttle/referrals/:id/decline
-      // Backend should: close the referral request and send push notification to Driver 1
-      // notifying them that Driver 2 has declined the handoff.
       await endpoints.shuttle.declineReferral(referralId!);
       setResolved('declined');
     } catch {
@@ -121,7 +114,6 @@ export default function ReferralIncomingScreen() {
           {t.referral_accepted_title}
         </Text>
         <Text style={[styles.resolvedSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-          {/* TODO: Backend Integration - The trip will now appear in your upcoming trips list */}
           {t.referral_accepted_sub}
         </Text>
         <Pressable
@@ -144,7 +136,6 @@ export default function ReferralIncomingScreen() {
           {t.referral_declined_title}
         </Text>
         <Text style={[styles.resolvedSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-          {/* TODO: Backend Integration - Driver 1 will be notified of the decline */}
           {t.referral_declined_sub}
         </Text>
         <Pressable
@@ -206,7 +197,6 @@ export default function ReferralIncomingScreen() {
               {t.date}
             </Text>
             <Text style={[styles.infoCardValue, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-              {/* TODO: Backend Integration - Use exact trip date from backend payload */}
               {weekStart ?? '—'}
             </Text>
           </GlassView>
@@ -225,7 +215,6 @@ export default function ReferralIncomingScreen() {
               {t.passengers_label_count}
             </Text>
             <Text style={[styles.infoCardValue, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-              {/* TODO: Backend Integration - Use passenger count from referral payload */}
               {passengerCount ?? '—'} / {totalSeats ?? '—'}
             </Text>
           </GlassView>
@@ -243,7 +232,6 @@ export default function ReferralIncomingScreen() {
                   {t.vehicle_line_label}
                 </Text>
                 <Text style={[{ fontSize: 15, color: colors.foreground, fontFamily: 'Inter_700Bold', marginTop: 3, textAlign: TA }]}>
-                  {/* TODO: Backend Integration - Use vehicle model/plate from referral payload */}
                   {vehicleType ?? '—'} · {lineNumber ?? '—'}
                 </Text>
               </View>

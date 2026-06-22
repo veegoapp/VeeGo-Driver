@@ -47,8 +47,6 @@ export default function ReferralRequestScreen() {
     }
     setLoading(true);
     try {
-      // TODO: Backend Integration - POST /shuttle/route-bookings/:id/refer
-      // Body: { driverCode } — submits referral request; backend will send push notification to the target driver
       await endpoints.shuttle.referTrip(bookingId!, driverCode.trim());
       setSubmitted(true);
     } catch {

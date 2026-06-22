@@ -6,8 +6,6 @@
  * route params so the driver sees their earnings before returning to the
  * Shuttle Home tab.
  *
- * TODO: Backend Integration - Payload supplied by endpoints.shuttle.complete()
- * Expected response shape: { earnedAmount: number, walletBalance: number }
  */
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
