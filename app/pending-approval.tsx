@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/lib/authContext';
 import { useSocket } from '@/lib/socketContext';
 import { endpoints } from '@/lib/api';
+import { navigateToHome } from '@/lib/postAuthRouter';
 
 type OnboardingStatus = 'pending' | 'pending_review' | 'approved' | 'rejected';
 
@@ -64,7 +65,7 @@ export default function PendingApprovalScreen() {
       setData(res);
       if (res.onboardingStatus === 'approved') {
         stopPolling();
-        router.replace('/(shuttle)/home' as any);
+        navigateToHome(res.serviceType);
       }
     } catch {
       // silent
@@ -84,7 +85,10 @@ export default function PendingApprovalScreen() {
     if (!socket) return;
     const onActivated = () => {
       stopPolling();
-      router.replace('/(shuttle)/home' as any);
+      // Re-fetch to get the latest serviceType, then route to the correct home
+      endpoints.driver.onboarding()
+        .then((res) => navigateToHome(res.serviceType))
+        .catch(() => navigateToHome(data?.serviceType));
     };
     const onRejected = () => fetchStatus();
     const onChanges = () => fetchStatus();
@@ -97,7 +101,7 @@ export default function PendingApprovalScreen() {
       socket.off('driver:account:rejected', onRejected);
       socket.off('driver:changes:requested', onChanges);
     };
-  }, [socket, fetchStatus, stopPolling]);
+  }, [socket, fetchStatus, stopPolling, data]);
 
   const handleLogout = async () => {
     stopPolling();
