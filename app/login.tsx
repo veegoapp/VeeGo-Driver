@@ -118,7 +118,7 @@ export default function LoginScreen() {
             </View>
 
             {tab === 'signin' ? (
-              <SignInForm isRTL={isRTL} onSuccess={(at, rt, status, serviceType) => handleSignInSuccess(at, rt, status, serviceType)} onOtpRequired={handleOtpRequired} />
+              <SignInForm isRTL={isRTL} onSuccess={(at, rt, status, serviceType) => handleSignInSuccess(at, rt, status, serviceType)} />
             ) : (
               <SignUpForm isRTL={isRTL} onOtpRequired={handleOtpRequired} />
             )}
@@ -134,10 +134,9 @@ export default function LoginScreen() {
   );
 }
 
-function SignInForm({ isRTL, onSuccess, onOtpRequired }: {
+function SignInForm({ isRTL, onSuccess }: {
   isRTL: boolean;
   onSuccess: (at: string, rt: string, status: 'pending' | 'approved', serviceType: string | null) => void;
-  onOtpRequired: (phone: string, maskedPhone?: string) => void;
 }) {
   const { t } = useI18n();
   const [credential, setCredential] = useState('');
@@ -155,21 +154,9 @@ function SignInForm({ isRTL, onSuccess, onOtpRequired }: {
     setLoading(true);
     try {
       const result = await endpoints.auth.driverLogin(credential.trim(), password);
-      if ('requiresOtp' in result && result.requiresOtp) {
-        onOtpRequired(result.phone, result.maskedPhone);
-        return;
-      }
       const r = result as { accessToken: string; refreshToken: string; status: 'pending' | 'approved'; serviceType: string | null };
       onSuccess(r.accessToken, r.refreshToken, r.status, r.serviceType);
     } catch (err) {
-      // 403 requiresOtp — backend may throw instead of returning
-      if (err instanceof ApiError && err.status === 403) {
-        const body = err.body as { requiresOtp?: boolean; phone?: string } | null;
-        if (body?.requiresOtp && body?.phone) {
-          onOtpRequired(body.phone);
-          return;
-        }
-      }
       setError(getErrorMessage(err, t));
     } finally {
       setLoading(false);
