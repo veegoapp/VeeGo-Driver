@@ -61,7 +61,11 @@ export default function EarningsScreen() {
     queryFn: () => endpoints.driver.promotions(),
     retry: false,
   });
-  const promotions: DriverPromotion[] = (promotionsRaw ?? []) as DriverPromotion[];
+  const promotions: DriverPromotion[] = Array.isArray(promotionsRaw)
+    ? promotionsRaw as DriverPromotion[]
+    : Array.isArray((promotionsRaw as any)?.data)
+      ? (promotionsRaw as any).data as DriverPromotion[]
+      : [];
 
   const weekEarnings = ((weeklyRaw as { weeklyBreakdown?: WeekDay[] } | undefined)?.weeklyBreakdown ?? []);
   const summary = summaryRaw as EarningsSummary | undefined;

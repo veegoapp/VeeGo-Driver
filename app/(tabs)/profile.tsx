@@ -91,14 +91,20 @@ export default function ProfileScreen() {
     queryFn: endpoints.driver.me as () => Promise<DriverProfile>,
   });
 
-  const { data: documentsRaw } = useQuery<{ type: string; fileUrl?: string; url?: string }[]>({
+  const { data: documentsRaw } = useQuery({
     queryKey: ['driver-documents'],
-    queryFn: endpoints.driver.documents as () => Promise<{ type: string; fileUrl?: string; url?: string }[]>,
+    queryFn: endpoints.driver.documents,
     staleTime: 5 * 60 * 1000,
   });
 
-  const profilePhotoUrl = documentsRaw?.find(d => d.type === 'profile_photo')?.fileUrl
-    ?? documentsRaw?.find(d => d.type === 'profile_photo')?.url
+  const documentsArray: { type: string; fileUrl?: string; url?: string }[] = Array.isArray(documentsRaw)
+    ? documentsRaw
+    : Array.isArray((documentsRaw as any)?.data)
+      ? (documentsRaw as any).data
+      : [];
+
+  const profilePhotoUrl = documentsArray.find(d => d.type === 'profile_photo')?.fileUrl
+    ?? documentsArray.find(d => d.type === 'profile_photo')?.url
     ?? null;
 
   const driver = driverRaw;
