@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '@/lib/i18nContext';
 import { useService } from '@/lib/serviceContext';
 import { endpoints, ApiError } from '@/lib/api';
+import { signupStore } from '@/lib/signupStore';
 
 type ServiceOption = {
   key: string;       // value sent to backend: 'car'|'shuttle'|'scooter'|'delivery'
@@ -113,25 +114,12 @@ export default function RegisterServiceTypeScreen() {
     setError(null);
   };
 
-  const handleContinue = async () => {
-    if (!selected || submitting) return;
-    setSubmitting(true);
-    setError(null);
-    try {
-      await endpoints.registration.setServiceType(selected.key);
-      // Update local service context so the app shows the correct interface
-      setServiceType(selected.appType as any);
-      router.push('/register-vehicle');
-    } catch (err) {
-      let msg = 'Could not save your selection. Please try again.';
-      if (err instanceof ApiError) {
-        const body = err.body as { error?: string; displayMode?: string } | null;
-        if (body?.error) msg = body.error;
-      }
-      setError(msg);
-    } finally {
-      setSubmitting(false);
-    }
+  const handleContinue = () => {
+    if (!selected) return;
+    // Save locally — no API call until register-complete at the very end
+    signupStore.setServiceType(selected.key);
+    setServiceType(selected.appType as any);
+    router.push('/register-vehicle');
   };
 
   return (

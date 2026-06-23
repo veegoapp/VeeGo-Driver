@@ -67,9 +67,7 @@ export function navigateToHome(
 }
 
 export async function navigateAfterAuth(token: string | null): Promise<void> {
-  // Defer navigation by one frame to allow expo-router's navigator tree to
-  // fully initialize before dispatching a REPLACE into a route group.
-  // Without this, '/(shuttle)' resolves to {name:'index'} which is a no-op.
+  // Defer by one frame so expo-router's navigator tree is fully initialized.
   await new Promise<void>((resolve) => setTimeout(resolve, 50));
 
   const userId = getUserIdFromToken(token);
@@ -81,25 +79,25 @@ export async function navigateAfterAuth(token: string | null): Promise<void> {
       serviceType: string | null;
     }>('/driver/me/onboarding');
 
-    const step = onboarding?.registrationStep;
-
-    // Approved drivers must be routed based on their service type
-    if (step === 'approved') {
-      navigateToHome(onboarding?.serviceType, userId);
+    // Case 3: approved → route to the correct home based on service type
+    if (onboarding?.registrationStep === 'approved') {
+      navigateToHome(onboarding.serviceType, userId);
       return;
     }
 
-    const route = step ? STEP_ROUTES[step] : null;
-
-    if (route) {
-      router.replace(route as any);
+    // Case 2: pending_review or rejected → pending approval page
+    router.replace('/pending-approval');
+  } catch (err: any) {
+    if (err?.status === 404) {
+      // No driver profile — user started sign-up but never completed it.
+      // Clear the token so login screen is shown fresh.
+      const { deleteToken, deleteRefreshToken } = await import('@/lib/auth');
+      await deleteToken();
+      await deleteRefreshToken();
+      router.replace('/login');
     } else {
-      // Unknown step — fall back based on service type if available
-      navigateToHome(onboarding?.serviceType, userId);
+      // Network/server error — stay on login
+      router.replace('/login');
     }
-  } catch {
-    // On API error we cannot determine service type from backend — navigate
-    // to the route that matches what storage has (do not guess a service type).
-    router.replace('/(shuttle)/home' as any);
   }
 }
