@@ -67,8 +67,8 @@ export default function VerifyOtpScreen() {
       }).catch(() => {});
 
       await login(result.accessToken, result.refreshToken);
-      console.log('[OTP] ✅ login() done → navigating to /register-service-type');
-      router.replace('/register-service-type' as any);
+      console.log('[OTP] ✅ login() done → calling navigateAfterOtp');
+      await navigateAfterOtp(result.accessToken);
     } catch (err) {
       console.log('[OTP] ❌ verifyOtp error:', err);
       if (err instanceof ApiError) {
