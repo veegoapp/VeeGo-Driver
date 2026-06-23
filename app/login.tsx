@@ -154,8 +154,7 @@ function SignInForm({ isRTL, onSuccess }: {
     setLoading(true);
     try {
       const result = await endpoints.auth.driverLogin(credential.trim(), password);
-      const r = result as { accessToken: string; refreshToken: string; status: 'pending' | 'approved'; serviceType: string | null };
-      onSuccess(r.accessToken, r.refreshToken, r.status, r.serviceType);
+      onSuccess(result.accessToken, result.refreshToken, result.status, result.serviceType);
     } catch (err) {
       setError(getErrorMessage(err, t));
     } finally {
