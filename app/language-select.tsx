@@ -33,21 +33,20 @@ export default function LanguageSelectScreen() {
   }, []);
 
   const handleSelect = (lang: Language) => {
-    // On Android, changing the RTL direction via I18nManager.forceRTL() causes
-    // an immediate activity restart that tears down the navigator tree.
-    // If that restart is going to happen, we must NOT call router.replace —
-    // the fresh app launch after restart will read the persisted language from
-    // AsyncStorage and land on the correct screen automatically.
-    // Only navigate manually when no restart will occur (same RTL direction, or iOS).
+    // On Android, changing the RTL direction via I18nManager.forceRTL() triggers
+    // an immediate activity restart that destroys the navigator tree before any
+    // navigation call can execute. Skip the navigate call in that case — the app
+    // will relaunch fresh, read the persisted language from AsyncStorage, and
+    // land on the splash screen automatically.
+    // Navigate to /login directly (not /) to avoid the index→language-select
+    // redirect chain which can fail when the navigator is in a transitional state.
     const androidRtlRestart =
       Platform.OS === 'android' && I18nManager.isRTL !== (lang === 'ar');
 
     setLanguage(lang);
 
     if (!androidRtlRestart) {
-      setTimeout(() => {
-        router.replace('/');
-      }, 200);
+      router.replace('/login');
     }
   };
 

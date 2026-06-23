@@ -90,7 +90,7 @@ export function ServiceBlockedScreen({ status, serviceName }: Props) {
 
         <Pressable
           style={({ pressed }) => [s.backBtn, pressed && { opacity: 0.75 }]}
-          onPress={() => router.replace('/')}
+          onPress={() => router.replace('/login')}
         >
           <ArrowLeft size={16} color="#1e1e28" />
           <Text style={s.backBtnText}>Go Back</Text>

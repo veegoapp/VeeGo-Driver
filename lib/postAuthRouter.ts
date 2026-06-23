@@ -21,26 +21,21 @@ const STEP_ROUTES: Record<RegistrationStep, string> = {
 };
 
 export async function navigateAfterAuth(_token: string | null): Promise<void> {
-  setTimeout(async () => {
-    requestAnimationFrame(async () => {
-      try {
-        const onboarding = await api.get<{
-          registrationStep: RegistrationStep;
-          onboardingStatus: string;
-        }>('/driver/me/onboarding');
+  try {
+    const onboarding = await api.get<{
+      registrationStep: RegistrationStep;
+      onboardingStatus: string;
+    }>('/driver/me/onboarding');
 
-        const step = onboarding?.registrationStep;
-        const route = step ? STEP_ROUTES[step] : null;
+    const step = onboarding?.registrationStep;
+    const route = step ? STEP_ROUTES[step] : null;
 
-        if (route) {
-          router.replace(route as any);
-        } else {
-          // Unknown step — fallback to dashboard
-          router.replace('/(shuttle)/' as any);
-        }
-      } catch {
-        router.replace('/(shuttle)/' as any);
-      }
-    });
-  }, 50);
+    if (route) {
+      router.replace(route as any);
+    } else {
+      router.replace('/(shuttle)/' as any);
+    }
+  } catch {
+    router.replace('/(shuttle)/' as any);
+  }
 }
