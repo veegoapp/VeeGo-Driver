@@ -67,6 +67,13 @@ export function navigateToHome(
 }
 
 export async function navigateAfterAuth(token: string | null): Promise<void> {
+  // Mock token — skip backend and go straight to home
+  if (token === 'mock-access-token-dev') {
+    await new Promise<void>((resolve) => setTimeout(resolve, 50));
+    navigateToHome('car');
+    return;
+  }
+
   // Defer by one frame so expo-router's navigator tree is fully initialized.
   await new Promise<void>((resolve) => setTimeout(resolve, 50));
 
