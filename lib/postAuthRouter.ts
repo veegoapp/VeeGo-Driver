@@ -123,9 +123,10 @@ export async function navigateAfterOtp(token: string): Promise<void> {
       registrationStep: RegistrationStep;
       onboardingStatus: string;
       serviceType: string | null;
+      totalUploaded?: number;
     }>('/driver/me/onboarding');
 
-    console.log('[navigateAfterOtp] registrationStep:', onboarding?.registrationStep);
+    console.log('[navigateAfterOtp] registrationStep:', onboarding?.registrationStep, '| totalUploaded:', onboarding?.totalUploaded);
 
     if (onboarding?.registrationStep === 'approved') {
       navigateToHome(onboarding.serviceType, userId);
@@ -133,21 +134,23 @@ export async function navigateAfterOtp(token: string): Promise<void> {
     }
 
     const step = onboarding?.registrationStep as RegistrationStep | undefined;
+
+    // If backend says pending_review but no documents uploaded yet, the driver record
+    // was created before the user completed registration — restart from service type.
+    if (step === 'pending_review' && (onboarding?.totalUploaded ?? 0) === 0) {
+      console.log('[navigateAfterOtp] pending_review with 0 docs → /register-service-type');
+      router.replace('/register-service-type' as any);
+      return;
+    }
+
     if (step && step in STEP_ROUTES) {
       router.replace(STEP_ROUTES[step] as any);
     } else {
-      // Unknown step — start from beginning
       router.replace('/register-service-type' as any);
     }
   } catch (err: any) {
-    if (err?.status === 404) {
-      // No driver record yet — brand new user, start registration
-      console.log('[navigateAfterOtp] No driver record yet → /register-service-type');
-      router.replace('/register-service-type' as any);
-    } else {
-      // Network error — still start from service type
-      console.log('[navigateAfterOtp] Error:', err, '→ /register-service-type');
-      router.replace('/register-service-type' as any);
-    }
+    // No driver record (404) or network error — start from beginning
+    console.log('[navigateAfterOtp] Error/404:', err?.status, '→ /register-service-type');
+    router.replace('/register-service-type' as any);
   }
 }
