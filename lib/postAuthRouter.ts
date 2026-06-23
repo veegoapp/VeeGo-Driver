@@ -21,6 +21,11 @@ const STEP_ROUTES: Record<RegistrationStep, string> = {
 };
 
 export async function navigateAfterAuth(_token: string | null): Promise<void> {
+  // Defer navigation by one frame to allow expo-router's navigator tree to
+  // fully initialize before dispatching a REPLACE into a route group.
+  // Without this, '/(shuttle)' resolves to {name:'index'} which is a no-op.
+  await new Promise<void>((resolve) => setTimeout(resolve, 50));
+
   try {
     const onboarding = await api.get<{
       registrationStep: RegistrationStep;
