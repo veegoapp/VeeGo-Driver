@@ -17,12 +17,10 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '@/lib/authContext';
+import { endpoints, ApiError } from '@/lib/api';
 
 const OTP_LENGTH = 6;
 const RESEND_COOLDOWN = 60;
-const MOCK_OTP = '000000';
-const MOCK_ACCESS_TOKEN = 'mock-access-token-dev';
-const MOCK_REFRESH_TOKEN = 'mock-refresh-token-dev';
 
 export default function VerifyOtpScreen() {
   const insets = useSafeAreaInsets();
@@ -53,47 +51,41 @@ export default function VerifyOtpScreen() {
     if (otp.length !== OTP_LENGTH || loading) return;
     setError(null);
     setLoading(true);
-    console.log('[OTP] ▶ Verifying OTP:', otp, '| phone:', phone);
+    console.log('[OTP] ▶ Calling verifyOtp | phone:', phone, '| otp:', otp);
     try {
-      console.log('[OTP] Simulating 600ms delay (mock mode) ...');
-      await new Promise(r => setTimeout(r, 600));
-      if (otp !== MOCK_OTP) {
-        console.log('[OTP] ❌ Wrong OTP entered:', otp, '| expected:', MOCK_OTP);
-        setError('Invalid or expired OTP. Please try again.');
-        setOtp('');
-        inputRef.current?.focus();
-        return;
-      }
-      console.log('[OTP] ✅ OTP correct, checking driver_terms_pending_version in AsyncStorage ...');
+      const result = await endpoints.auth.verifyOtp(phone, otp);
+      console.log('[OTP] ✅ verifyOtp response:', JSON.stringify(result));
+
+      // Accept any pending terms now that we have a real token
       AsyncStorage.getItem('driver_terms_pending_version').then(async (pendingVersion) => {
-        console.log('[OTP] driver_terms_pending_version =', pendingVersion);
-        if (!pendingVersion) {
-          console.log('[OTP] No pending terms version found, skipping terms acceptance.');
-          return;
-        }
+        if (!pendingVersion) return;
         try {
           await AsyncStorage.setItem('driver_terms_accepted_version', pendingVersion);
           await AsyncStorage.removeItem('driver_terms_pending_version');
-          console.log('[OTP] Terms accepted and pending version cleared.');
-        } catch (e) {
-          console.log('[OTP] Error saving terms acceptance:', e);
-        }
-      }).catch((e) => {
-        console.log('[OTP] AsyncStorage error checking terms:', e);
-      });
-      console.log('[OTP] → Calling login() with mock tokens ...');
-      console.log('[OTP]   accessToken:', MOCK_ACCESS_TOKEN, '| refreshToken:', MOCK_REFRESH_TOKEN);
-      await login(MOCK_ACCESS_TOKEN, MOCK_REFRESH_TOKEN);
-      console.log('[OTP] ✅ login() completed → navigating to /register-service-type');
+        } catch { /* ignore */ }
+      }).catch(() => {});
+
+      await login(result.accessToken, result.refreshToken);
+      console.log('[OTP] ✅ login() done → navigating to /register-service-type');
       router.replace('/register-service-type' as any);
-    } catch (e) {
-      console.log('[OTP] ❌ Exception during OTP verify:', e);
-      setError('Something went wrong. Please try again.');
+    } catch (err) {
+      console.log('[OTP] ❌ verifyOtp error:', err);
+      if (err instanceof ApiError) {
+        console.log('[OTP] status:', err.status, '| body:', JSON.stringify(err.body));
+        if (err.status === 400 || err.status === 401) {
+          setError('Invalid or expired OTP. Please try again.');
+        } else if (err.status === 429) {
+          setError('Too many attempts. Please wait and try again.');
+        } else {
+          setError('Something went wrong. Please try again.');
+        }
+      } else {
+        setError('Could not connect. Check your internet and try again.');
+      }
       setOtp('');
       inputRef.current?.focus();
     } finally {
       setLoading(false);
-      console.log('[OTP] ■ handleVerify finished (loading=false)');
     }
   };
 
@@ -101,9 +93,15 @@ export default function VerifyOtpScreen() {
     if (countdown > 0 || resending) return;
     setResending(true);
     setError(null);
-    await new Promise(r => setTimeout(r, 500));
-    setCountdown(RESEND_COOLDOWN);
-    setResending(false);
+    try {
+      await endpoints.auth.sendOtp(phone);
+      setCountdown(RESEND_COOLDOWN);
+    } catch (err) {
+      console.log('[OTP] resend error:', err);
+      setError('Failed to resend code. Please try again.');
+    } finally {
+      setResending(false);
+    }
   };
 
   const maskedPhone = maskedPhoneParam || phone || '';
@@ -189,7 +187,6 @@ export default function VerifyOtpScreen() {
           </View>
 
           <Text style={s.hint}>Didn't receive the SMS? Check that your phone number is correct and try resending.</Text>
-          <Text style={[s.hint, { color: '#3D52D5', marginTop: -8 }]}>🛠 Dev mode: use code <Text style={{ fontWeight: '700' }}>000000</Text></Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </LinearGradient>
