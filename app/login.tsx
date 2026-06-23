@@ -153,10 +153,27 @@ function SignInForm({ isRTL, onSuccess, onOtpRequired }: {
     if (!credential.trim() || !password) return;
     setError(null);
     setLoading(true);
-    // Mock: skip backend login, go straight to OTP
-    await new Promise(r => setTimeout(r, 600));
-    setLoading(false);
-    onOtpRequired(credential.trim(), credential.trim());
+    try {
+      const result = await endpoints.auth.driverLogin(credential.trim(), password);
+      if ('requiresOtp' in result && result.requiresOtp) {
+        onOtpRequired(result.phone, result.maskedPhone);
+        return;
+      }
+      const r = result as { accessToken: string; refreshToken: string; status: 'pending' | 'approved'; serviceType: string | null };
+      onSuccess(r.accessToken, r.refreshToken, r.status, r.serviceType);
+    } catch (err) {
+      // 403 requiresOtp — backend may throw instead of returning
+      if (err instanceof ApiError && err.status === 403) {
+        const body = err.body as { requiresOtp?: boolean; phone?: string } | null;
+        if (body?.requiresOtp && body?.phone) {
+          onOtpRequired(body.phone);
+          return;
+        }
+      }
+      setError(getErrorMessage(err, t));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -242,8 +259,7 @@ function SignUpForm({ isRTL, onOtpRequired }: { isRTL: boolean; onOtpRequired: (
   const TA = isRTL ? 'right' as const : 'left' as const;
 
   useEffect(() => {
-    // Mock: skip backend terms fetch
-    setTermsData({ id: 1, version: 1, contentEn: 'Terms and conditions apply.', contentAr: 'تطبق الشروط والأحكام.', updatedAt: new Date().toISOString() });
+    endpoints.terms.fetchDriver().then(setTermsData).catch(() => {/* fail silently */});
   }, []);
 
   const canSubmit = name.trim().length > 1 && email.trim().length > 3 && phone.trim().length > 7 && password.length >= 8 && termsChecked;
@@ -252,10 +268,25 @@ function SignUpForm({ isRTL, onOtpRequired }: { isRTL: boolean; onOtpRequired: (
     if (!canSubmit) return;
     setError(null);
     setLoading(true);
-    // Mock: skip backend registration, go straight to OTP
-    await new Promise(r => setTimeout(r, 600));
-    setLoading(false);
-    onOtpRequired(phone.trim(), phone.trim());
+    try {
+      const result = await endpoints.auth.driverRegister({
+        name: name.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+        password,
+      });
+      // Accept terms silently after registration — token arrives after OTP
+      // so we store the pending version to accept once we have the token
+      if (termsData) {
+        try { await AsyncStorage.setItem('driver_terms_pending_version', String(termsData.version)); } catch { /* ignore */ }
+      }
+      // Phase 2: register returns requiresOtp, not tokens
+      onOtpRequired(result.phone, result.maskedPhone);
+    } catch (err) {
+      setError(getErrorMessage(err, t));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleTermsAcceptFromModal = () => {

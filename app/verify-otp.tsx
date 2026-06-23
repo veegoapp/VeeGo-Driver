@@ -69,7 +69,6 @@ export default function VerifyOtpScreen() {
         } catch { /* fail silently */ }
       }).catch(() => {});
       await login(MOCK_ACCESS_TOKEN, MOCK_REFRESH_TOKEN);
-      router.replace('/(tabs)/home' as any);
     } catch {
       setError('Something went wrong. Please try again.');
       setOtp('');
