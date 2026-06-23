@@ -56,9 +56,7 @@ export function useServiceGuard(explicitType?: ServiceType): {
       wasBlockedRef.current = true;
       // Show the blocked UI briefly, then redirect away from this service.
       redirectTimerRef.current = setTimeout(() => {
-        requestAnimationFrame(() => {
-          router.replace('/');
-        });
+        router.replace('/');
       }, 2800);
     }
 

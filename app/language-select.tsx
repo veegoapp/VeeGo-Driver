@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import React, { useRef } from 'react';
 import {
   Animated,
+  I18nManager,
   Platform,
   Pressable,
   StyleSheet,
@@ -32,15 +33,22 @@ export default function LanguageSelectScreen() {
   }, []);
 
   const handleSelect = (lang: Language) => {
+    // On Android, changing the RTL direction via I18nManager.forceRTL() causes
+    // an immediate activity restart that tears down the navigator tree.
+    // If that restart is going to happen, we must NOT call router.replace —
+    // the fresh app launch after restart will read the persisted language from
+    // AsyncStorage and land on the correct screen automatically.
+    // Only navigate manually when no restart will occur (same RTL direction, or iOS).
+    const androidRtlRestart =
+      Platform.OS === 'android' && I18nManager.isRTL !== (lang === 'ar');
+
     setLanguage(lang);
-    // On Android, I18nManager.forceRTL() can trigger an instant activity
-    // restart which kills the navigator before any navigation call lands.
-    // Using a 500 ms timer means:
-    //   - If the activity restarts, the timer dies with it (no warning).
-    //   - If no restart happens (e.g. same RTL direction), we navigate normally.
-    setTimeout(() => {
-      router.replace('/');
-    }, 500);
+
+    if (!androidRtlRestart) {
+      setTimeout(() => {
+        router.replace('/');
+      }, 200);
+    }
   };
 
   const topPad = insets.top;
