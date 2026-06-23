@@ -123,6 +123,10 @@ function RootLayoutNav() {
 
   useEffect(() => {
     if (isLoading) return;
+    // Guard: navigator tree not yet mounted — segments is empty on the very
+    // first render cycle. Firing router.replace here causes the
+    // "REPLACE action was not handled by any navigator" error.
+    if (segments.length === 0) return;
 
     const currentScreen = segments[0] as string | undefined;
     const inPreAuthZone = !currentScreen || PRE_AUTH_SCREENS.has(currentScreen);
@@ -135,7 +139,9 @@ function RootLayoutNav() {
       // right after registration.
       if (!inPreAuthZone && !isOtpFlow) {
         queryClient.clear();
-        router.replace('/login');
+        // Defer to next tick so the navigator tree is fully mounted before
+        // the REPLACE action is dispatched, preventing UnhandledAction errors.
+        setTimeout(() => router.replace('/login'), 0);
       }
       return;
     }
@@ -151,7 +157,7 @@ function RootLayoutNav() {
           queryClient.clear();
           deleteToken();
           deleteRefreshToken();
-          router.replace('/login');
+          setTimeout(() => router.replace('/login'), 0);
           return;
         }
 
@@ -159,7 +165,7 @@ function RootLayoutNav() {
           queryClient.clear();
           deleteToken();
           deleteRefreshToken();
-          router.replace('/login');
+          setTimeout(() => router.replace('/login'), 0);
           return;
         }
       }
@@ -225,6 +231,14 @@ function RootLayoutNav() {
         <Stack.Screen name="pending-approval" />
         <Stack.Screen name="forgot-password" />
         <Stack.Screen name="auth/vehicle-specs" />
+        <Stack.Screen name="shuttle/history-detail" />
+        <Stack.Screen name="shuttle/referral-request" />
+        <Stack.Screen name="shuttle/direct-cancel" />
+        <Stack.Screen name="shuttle/trip-cancel" />
+        <Stack.Screen name="shuttle/history-export" />
+        <Stack.Screen name="ride/chat" />
+        <Stack.Screen name="ride/history" />
+        <Stack.Screen name="trips/[tripId]" />
         <Stack.Screen name="+not-found" />
       </Stack>
     </>
