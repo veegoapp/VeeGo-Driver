@@ -144,21 +144,7 @@ export default function RegisterDocumentsScreen() {
     setSubmitting(true);
     try {
       const data = signupStore.getAll();
-      if (!data.serviceType || !data.vehicle || !data.plateLetters || !data.plateNumbers) {
-        Alert.alert('Error', 'Missing registration data. Please start from the beginning.');
-        return;
-      }
       await endpoints.registration.complete({
-        serviceType: data.serviceType as any,
-        vehicle: {
-          brandId: data.vehicle.brandId,
-          modelId: data.vehicle.modelId,
-          year: data.vehicle.year,
-          color: data.vehicle.color,
-          colorId: data.vehicle.colorId,
-        },
-        plateLetters: data.plateLetters,
-        plateNumbers: data.plateNumbers,
         documents: data.documents,
       });
       signupStore.reset();

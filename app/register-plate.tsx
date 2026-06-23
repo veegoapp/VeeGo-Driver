@@ -16,7 +16,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints, ApiError } from '@/lib/api';
-import { signupStore } from '@/lib/signupStore';
 
 export default function RegisterPlateScreen() {
   const insets = useSafeAreaInsets();
@@ -36,11 +35,27 @@ export default function RegisterPlateScreen() {
 
   const preview = letters.trim().toUpperCase() + (numbers.trim() ? ' ' + numbers.trim() : '');
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!canContinue) return;
-    // Save locally — no API call until register-complete at the very end
-    signupStore.setPlate(letters.trim().toUpperCase(), numbers.trim());
-    router.push('/register-documents');
+    setSubmitting(true);
+    setError(null);
+    try {
+      await endpoints.registration.setPlateNumber(
+        letters.trim().toUpperCase(),
+        numbers.trim(),
+      );
+      router.push('/register-documents');
+    } catch (err) {
+      console.log('[register-plate] error:', err);
+      if (err instanceof ApiError) {
+        const body = err.body as { error?: string } | null;
+        setError(body?.error ?? 'Failed to save plate number. Please try again.');
+      } else {
+        setError('Could not connect. Check your internet and try again.');
+      }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (

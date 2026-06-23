@@ -683,15 +683,26 @@ export const endpoints = {
   },
 
   registration: {
-    // POST /driver/auth/register-complete
-    // Atomic final step of sign-up: submits service type, vehicle, plate, and
-    // all document URLs to the backend in one request. Creates the driver profile
-    // and sets onboardingStatus = pending_review.
+    // Step 3: POST /driver/register/service-type
+    setServiceType: (serviceType: 'car' | 'shuttle' | 'scooter' | 'delivery') =>
+      api.post<{ ok: true }>('/driver/register/service-type', { serviceType }),
+
+    // Step 4: POST /driver/register/vehicle-details
+    setVehicleDetails: (data: {
+      brandId: number;
+      modelId: number;
+      year: number;
+      color: string;
+      colorId: number;
+    }) => api.post<{ ok: true }>('/driver/register/vehicle-details', data),
+
+    // Step 5: POST /driver/register/plate-number
+    setPlateNumber: (plateLetters: string, plateNumbers: string) =>
+      api.post<{ ok: true }>('/driver/register/plate-number', { plateLetters, plateNumbers }),
+
+    // Step 6: POST /driver/auth/register-complete — documents only
+    // Vehicle + service-type already saved in previous steps.
     complete: (data: {
-      serviceType: 'car' | 'shuttle' | 'scooter' | 'delivery';
-      vehicle: { brandId: number; modelId: number; year: number; color: string; colorId: number };
-      plateLetters: string;
-      plateNumbers: string;
       documents: { type: string; fileUrl: string; mimeType: string }[];
     }) => api.post<{ ok: true }>('/driver/auth/register-complete', data),
   },

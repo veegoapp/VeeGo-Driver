@@ -1,7 +1,6 @@
 import { ArrowLeft, ArrowRight, ChevronDown, RefreshCw, X, Info } from 'lucide-react-native';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
-import { ApiError } from '@/lib/api';
 import { getFallbackBrands, FALLBACK_COLORS, getFallbackModels, getFallbackYears } from '@/constants/vehicleCatalog';
 import {
   ActivityIndicator,
@@ -19,8 +18,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '@/lib/i18nContext';
 import { useService } from '@/lib/serviceContext';
-import { endpoints } from '@/lib/api';
-import { signupStore } from '@/lib/signupStore';
+import { endpoints, ApiError } from '@/lib/api';
 
 // ─── Types matching backend catalog ──────────────────────────────────────────
 
@@ -244,19 +242,29 @@ export default function RegisterVehicleScreen() {
 
   const canContinue = !!selectedBrand && !!selectedModel && !!selectedYear && !!selectedColor && !submitting;
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!canContinue) return;
-    // Save locally — no API call until register-complete at the very end
-    signupStore.setVehicle({
-      brandId: selectedBrand!.id,
-      brandName: selectedBrand!.name,
-      modelId: selectedModel!.id,
-      modelName: selectedModel!.name,
-      year: selectedYear!.year,
-      color: selectedColor!.nameEn,
-      colorId: selectedColor!.id,
-    });
-    router.push('/register-plate');
+    setSubmitting(true);
+    try {
+      await endpoints.registration.setVehicleDetails({
+        brandId: selectedBrand!.id,
+        modelId: selectedModel!.id,
+        year: selectedYear!.year,
+        color: selectedColor!.nameEn,
+        colorId: selectedColor!.id,
+      });
+      router.push('/register-plate');
+    } catch (err) {
+      console.log('[register-vehicle] error:', err);
+      let msg = 'Failed to save vehicle details. Please try again.';
+      if (err instanceof ApiError) {
+        const body = err.body as { error?: string } | null;
+        if (body?.error) msg = body.error;
+      }
+      Alert.alert('Error', msg);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // ── Picker data ─────────────────────────────────────────────────────────────
