@@ -17,10 +17,12 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '@/lib/authContext';
-import { endpoints, ApiError } from '@/lib/api';
 
 const OTP_LENGTH = 6;
 const RESEND_COOLDOWN = 60;
+const MOCK_OTP = '000000';
+const MOCK_ACCESS_TOKEN = 'mock-access-token-dev';
+const MOCK_REFRESH_TOKEN = 'mock-refresh-token-dev';
 
 export default function VerifyOtpScreen() {
   const insets = useSafeAreaInsets();
@@ -52,28 +54,23 @@ export default function VerifyOtpScreen() {
     setError(null);
     setLoading(true);
     try {
-      const result = await endpoints.auth.verifyOtp(phone ?? '', otp);
-      // Accept terms silently if the driver agreed during signup.
-      // Fire-and-forget — _layout.tsx navigates automatically when token is set.
+      await new Promise(r => setTimeout(r, 600));
+      if (otp !== MOCK_OTP) {
+        setError('Invalid or expired OTP. Please try again.');
+        setOtp('');
+        inputRef.current?.focus();
+        return;
+      }
       AsyncStorage.getItem('driver_terms_pending_version').then(async (pendingVersion) => {
         if (!pendingVersion) return;
         try {
-          await endpoints.terms.accept(Number(pendingVersion));
           await AsyncStorage.setItem('driver_terms_accepted_version', pendingVersion);
           await AsyncStorage.removeItem('driver_terms_pending_version');
         } catch { /* fail silently */ }
       }).catch(() => {});
-      // login() saves both tokens to AsyncStorage then updates React state.
-      // _layout.tsx detects the token change and calls navigateAfterAuth automatically.
-      await login(result.accessToken, result.refreshToken);
-    } catch (err) {
-      let msg = 'Something went wrong. Please try again.';
-      if (err instanceof ApiError) {
-        const body = err.body as { error?: string } | null;
-        if (body?.error) msg = body.error;
-        else if (err.status === 400) msg = 'Invalid or expired OTP. Please try again.';
-      }
-      setError(msg);
+      await login(MOCK_ACCESS_TOKEN, MOCK_REFRESH_TOKEN);
+    } catch {
+      setError('Something went wrong. Please try again.');
       setOtp('');
       inputRef.current?.focus();
     } finally {
@@ -85,19 +82,9 @@ export default function VerifyOtpScreen() {
     if (countdown > 0 || resending) return;
     setResending(true);
     setError(null);
-    try {
-      await endpoints.auth.sendOtp(phone ?? '');
-      setCountdown(RESEND_COOLDOWN);
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 429) {
-        const body = err.body as { retryAfter?: number } | null;
-        setCountdown(body?.retryAfter ?? RESEND_COOLDOWN);
-      } else {
-        setError('Could not resend OTP. Please try again.');
-      }
-    } finally {
-      setResending(false);
-    }
+    await new Promise(r => setTimeout(r, 500));
+    setCountdown(RESEND_COOLDOWN);
+    setResending(false);
   };
 
   const maskedPhone = maskedPhoneParam || phone || '';
@@ -183,6 +170,7 @@ export default function VerifyOtpScreen() {
           </View>
 
           <Text style={s.hint}>Didn't receive the SMS? Check that your phone number is correct and try resending.</Text>
+          <Text style={[s.hint, { color: '#3D52D5', marginTop: -8 }]}>🛠 Dev mode: use code <Text style={{ fontWeight: '700' }}>000000</Text></Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </LinearGradient>
