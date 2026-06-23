@@ -23,6 +23,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '@/lib/i18nContext';
 import { useAuth } from '@/lib/authContext';
 import { endpoints, ApiError } from '@/lib/api';
+import { navigateToHome } from '@/lib/postAuthRouter';
 import { TermsModal } from '@/components/TermsModal';
 
 const TERMS_VERSION_KEY = 'driver_terms_accepted_version';
@@ -56,11 +57,16 @@ export default function LoginScreen() {
   const handleSignInSuccess = async (
     accessToken: string,
     refreshToken: string,
+    status: 'pending' | 'approved',
+    serviceType: string | null,
   ) => {
     await login(accessToken, refreshToken);
-    // Navigation is handled by the auth guard in _layout.tsx which watches
-    // the token state and calls navigateAfterAuth automatically. Calling it
-    // here too would invoke it twice simultaneously causing a race condition.
+    // Navigate directly based on login response — no extra API call needed.
+    if (status === 'approved') {
+      navigateToHome(serviceType);
+    } else {
+      expoRouter.replace('/pending-approval');
+    }
   };
 
   const handleOtpRequired = (phone: string, maskedPhone?: string) => {
@@ -112,7 +118,7 @@ export default function LoginScreen() {
             </View>
 
             {tab === 'signin' ? (
-              <SignInForm isRTL={isRTL} onSuccess={(at, rt) => handleSignInSuccess(at, rt)} onOtpRequired={handleOtpRequired} />
+              <SignInForm isRTL={isRTL} onSuccess={(at, rt, status, serviceType) => handleSignInSuccess(at, rt, status, serviceType)} onOtpRequired={handleOtpRequired} />
             ) : (
               <SignUpForm isRTL={isRTL} onOtpRequired={handleOtpRequired} />
             )}
@@ -130,7 +136,7 @@ export default function LoginScreen() {
 
 function SignInForm({ isRTL, onSuccess, onOtpRequired }: {
   isRTL: boolean;
-  onSuccess: (at: string, rt: string) => void;
+  onSuccess: (at: string, rt: string, status: 'pending' | 'approved', serviceType: string | null) => void;
   onOtpRequired: (phone: string, maskedPhone?: string) => void;
 }) {
   const { t } = useI18n();
@@ -153,8 +159,8 @@ function SignInForm({ isRTL, onSuccess, onOtpRequired }: {
         onOtpRequired(result.phone, result.maskedPhone);
         return;
       }
-      const r = result as { accessToken: string; refreshToken: string };
-      onSuccess(r.accessToken, r.refreshToken);
+      const r = result as { accessToken: string; refreshToken: string; status: 'pending' | 'approved'; serviceType: string | null };
+      onSuccess(r.accessToken, r.refreshToken, r.status, r.serviceType);
     } catch (err) {
       // 403 requiresOtp — backend may throw instead of returning
       if (err instanceof ApiError && err.status === 403) {

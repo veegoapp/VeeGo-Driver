@@ -282,7 +282,7 @@ export const endpoints = {
     logout: () => request<void>('POST', '/driver/auth/logout'),
     driverLogin: (credential: string, password: string) =>
       request<
-        | { accessToken: string; refreshToken: string; user: Record<string, unknown>; driver: Record<string, unknown> }
+        | { accessToken: string; refreshToken: string; status: 'pending' | 'approved'; serviceType: string | null }
         | { requiresOtp: true; phone: string; maskedPhone: string; retryAfter?: number }
       >('POST', '/driver/auth/login', { credential, password }),
     driverRegister: (data: { name: string; email: string; phone: string; password: string; licenseNumber?: string; nationalId?: string }) =>
