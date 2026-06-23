@@ -17,7 +17,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '@/lib/authContext';
-import { navigateAfterAuth } from '@/lib/postAuthRouter';
 
 const OTP_LENGTH = 6;
 const RESEND_COOLDOWN = 60;
@@ -85,9 +84,8 @@ export default function VerifyOtpScreen() {
       console.log('[OTP] → Calling login() with mock tokens ...');
       console.log('[OTP]   accessToken:', MOCK_ACCESS_TOKEN, '| refreshToken:', MOCK_REFRESH_TOKEN);
       await login(MOCK_ACCESS_TOKEN, MOCK_REFRESH_TOKEN);
-      console.log('[OTP] ✅ login() completed, calling navigateAfterAuth() ...');
-      await navigateAfterAuth(MOCK_ACCESS_TOKEN);
-      console.log('[OTP] ✅ navigateAfterAuth() done.');
+      console.log('[OTP] ✅ login() completed → navigating to /register-service-type');
+      router.replace('/register-service-type' as any);
     } catch (e) {
       console.log('[OTP] ❌ Exception during OTP verify:', e);
       setError('Something went wrong. Please try again.');
