@@ -70,8 +70,10 @@ export function ServiceProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // Priority 2: device-level fallback (covers null userId or missing entry)
-      if (!resolvedService) {
+      // Priority 2: device-level fallback (covers null userId only).
+      // When userId is known but has no stored preference, default to SHUTTLE
+      // so that a new account is never assigned another user's service type.
+      if (!resolvedService && !userId) {
         resolvedService = migrate(deviceService);
         if (deviceService === 'MOTOR') {
           AsyncStorage.setItem(DEVICE_SERVICE_KEY, 'SCOOTER').catch(() => {});

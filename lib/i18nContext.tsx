@@ -2218,7 +2218,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     AsyncStorage.setItem(LANG_STORAGE_KEY, lang).catch(() => {});
 
     if (switchTimerRef.current) clearTimeout(switchTimerRef.current);
-    switchTimerRef.current = setTimeout(() => setIsSwitchingLanguage(false), 2000);
+    switchTimerRef.current = setTimeout(() => setIsSwitchingLanguage(false), 1400);
   };
 
   const t = makeSafeTranslations(language ?? 'en');

@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { Award, ChevronRight, Copy, LogOut, Moon, Star, Sun } from 'lucide-react-native';
 import { FeatherIcon } from '@/lib/iconMap';
 import React, { useState, useCallback } from 'react';
-import { ActivityIndicator, Alert, Image, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
@@ -13,6 +13,7 @@ import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useService } from '@/lib/serviceContext';
 import { useI18n } from '@/lib/i18nContext';
+import type { Language } from '@/lib/i18nContext';
 import { useAuth } from '@/lib/authContext';
 import { endpoints } from '@/lib/api';
 import { TermsModal } from '@/components/TermsModal';
@@ -20,6 +21,11 @@ import { TAB_BAR_HEIGHT } from './home';
 
 const TERMS_VERSION_KEY = 'driver_terms_accepted_version';
 type TermsData = { id: number; version: number; contentAr: string; contentEn: string; updatedAt: string };
+
+const LANGUAGES: { label: string; value: Language }[] = [
+  { label: 'English', value: 'en' },
+  { label: 'العربية', value: 'ar' },
+];
 
 type DriverProfile = {
   id: string;
@@ -39,7 +45,7 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const topPad = insets.top;
   const { isDarkMode, setIsDarkMode } = useService();
-  const { t, isRTL } = useI18n();
+  const { t, isRTL, language, setLanguage } = useI18n();
   const { logout } = useAuth();
   const [codeCopied, setCodeCopied] = useState(false);
   const [termsModalVisible, setTermsModalVisible] = useState(false);
@@ -48,7 +54,6 @@ export default function ProfileScreen() {
   const [termsAcceptLoading, setTermsAcceptLoading] = useState(false);
   const [acceptedVersion, setAcceptedVersion] = useState<number | null>(null);
 
-  // Load locally stored accepted version once
   React.useEffect(() => {
     AsyncStorage.getItem(TERMS_VERSION_KEY).then(v => {
       if (v) setAcceptedVersion(Number(v));
@@ -186,6 +191,37 @@ export default function ProfileScreen() {
           <MenuItem icon="help-circle" label={t.help_support} onPress={() => router.push('/support')} colors={colors} isRTL={isRTL} />
           <MenuItem icon="message-square" label={t.messages_label} onPress={() => router.push('/messages')} colors={colors} isRTL={isRTL} />
           <MenuItem icon="file-text" label={t.terms_menu_label} onPress={handleOpenTerms} colors={colors} isRTL={isRTL} sub={termsLoading ? '...' : undefined} />
+
+          {/* Language inline toggle */}
+          <View style={[styles.menuItem, { flexDirection: R, borderTopWidth: 1, borderTopColor: colors.border }]}>
+            <View style={[styles.menuIcon, { backgroundColor: colors.secondary + 'B3' }]}>
+              <Text style={{ fontSize: 18 }}>🌐</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.menuLabel, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.language}</Text>
+              <View style={[styles.langRow, { flexDirection: R }]}>
+                {LANGUAGES.map(({ label, value }) => (
+                  <Pressable
+                    key={value}
+                    onPress={() => setLanguage(value)}
+                    style={[
+                      styles.langChip,
+                      {
+                        backgroundColor: language === value ? colors.primary : colors.secondary + 'B3',
+                        borderColor: language === value ? colors.primary : colors.border,
+                      },
+                    ]}
+                  >
+                    <Text style={[styles.langChipText, { color: language === value ? '#fff' : colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>
+                      {label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          </View>
+
+          {/* Dark mode toggle */}
           <View style={[styles.menuItem, { flexDirection: R, borderTopWidth: 1, borderTopColor: colors.border, borderBottomWidth: 0 }]}>
             <View style={[styles.menuIcon, { backgroundColor: colors.secondary + 'B3' }]}>
               {isDarkMode
@@ -289,6 +325,9 @@ const styles = StyleSheet.create({
   menuIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   menuLabel: { fontSize: 14 },
   menuSub: { fontSize: 12, marginTop: 2 },
+  langRow: { gap: 8, marginTop: 8, flexWrap: 'wrap' },
+  langChip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1 },
+  langChipText: { fontSize: 13 },
   signOutBtn: { alignItems: 'center', gap: 12, padding: 16 },
   signOutText: { fontSize: 14 },
   version: { fontSize: 12, textAlign: 'center', marginTop: 16 },
