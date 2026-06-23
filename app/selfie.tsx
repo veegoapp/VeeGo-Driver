@@ -111,7 +111,7 @@ export default function SelfieScreen() {
         await endpoints.driver.uploadDocument(formData);
         setConfirmed(true);
         setTimeout(() => {
-          router.replace(serviceType === 'SHUTTLE' ? '/(shuttle)' as any : '/(tabs)');
+          router.replace(serviceType === 'SHUTTLE' ? '/(shuttle)/index' as any : '/(tabs)/index');
         }, 1200);
       }
     } catch {

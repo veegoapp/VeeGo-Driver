@@ -90,7 +90,7 @@ export default function RideScreen() {
       const authenticatedDriverId = getUserIdFromToken(token);
       if (authenticatedDriverId && r.driverId && String(r.driverId) !== String(authenticatedDriverId)) {
         console.warn('[Security] Ride does not belong to authenticated driver');
-        router.replace('/(tabs)');
+        router.replace('/(tabs)/index');
         return;
       }
     });
@@ -114,7 +114,7 @@ export default function RideScreen() {
       Alert.alert(
         t.ride_cancelled_title,
         t.ride_cancelled_msg,
-        [{ text: t.ok, onPress: () => router.replace('/(tabs)') }],
+        [{ text: t.ok, onPress: () => router.replace('/(tabs)/index') }],
       );
     };
     socket.on(SOCKET_EVENTS.RIDE_CANCELLED, handleCancelled);
@@ -178,7 +178,7 @@ export default function RideScreen() {
 
   const handleNext = async () => {
     if (phase === 'completed') {
-      router.replace('/(tabs)');
+      router.replace('/(tabs)/index');
       return;
     }
     setBusy(true);
@@ -253,7 +253,7 @@ export default function RideScreen() {
         // best-effort
       }
     }
-    router.replace('/(tabs)');
+    router.replace('/(tabs)/index');
   };
 
   return (
