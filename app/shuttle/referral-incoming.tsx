@@ -125,7 +125,7 @@ export default function ReferralIncomingScreen() {
           {t.referral_accepted_sub}
         </Text>
         <Pressable
-          onPress={() => router.replace('/(shuttle)/index' as any)}
+          onPress={() => router.replace('/(shuttle)/home' as any)}
           style={[styles.resolvedBtn, { backgroundColor: '#16a34a' }]}
         >
           <Text style={[styles.resolvedBtnText, { fontFamily: 'Inter_700Bold' }]}>{t.return_home}</Text>
@@ -147,7 +147,7 @@ export default function ReferralIncomingScreen() {
           {t.referral_declined_sub}
         </Text>
         <Pressable
-          onPress={() => router.replace('/(shuttle)/index' as any)}
+          onPress={() => router.replace('/(shuttle)/home' as any)}
           style={[styles.resolvedBtn, { backgroundColor: '#1e1e28' }]}
         >
           <Text style={[styles.resolvedBtnText, { fontFamily: 'Inter_700Bold' }]}>{t.return_home}</Text>

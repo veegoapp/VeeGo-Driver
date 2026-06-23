@@ -135,7 +135,7 @@ export default function ReferralRequestScreen() {
                 {t.referral_request_accepted_sub}
               </Text>
               <Pressable
-                onPress={() => router.replace('/(shuttle)/index' as any)}
+                onPress={() => router.replace('/(shuttle)/home' as any)}
                 style={[styles.doneBtn, { backgroundColor: '#16a34a' }]}
               >
                 <Text style={[styles.doneBtnText, { fontFamily: 'Inter_700Bold' }]}>{t.return_home}</Text>
@@ -153,7 +153,7 @@ export default function ReferralRequestScreen() {
                 {t.referral_request_declined_sub}
               </Text>
               <Pressable
-                onPress={() => router.replace('/(shuttle)/index' as any)}
+                onPress={() => router.replace('/(shuttle)/home' as any)}
                 style={[styles.doneBtn, { backgroundColor: '#1e1e28' }]}
               >
                 <Text style={[styles.doneBtnText, { fontFamily: 'Inter_700Bold' }]}>{t.return_home}</Text>
@@ -172,7 +172,7 @@ export default function ReferralRequestScreen() {
                 {t.referral_notification_sub}
               </Text>
               <Pressable
-                onPress={() => router.replace('/(shuttle)/index' as any)}
+                onPress={() => router.replace('/(shuttle)/home' as any)}
                 style={[styles.doneBtn, { backgroundColor: '#1e1e28' }]}
               >
                 <Text style={[styles.doneBtnText, { fontFamily: 'Inter_700Bold' }]}>{t.return_home}</Text>

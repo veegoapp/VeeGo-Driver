@@ -248,7 +248,7 @@ export default function VehicleSpecsScreen() {
     } finally {
       setLoading(false);
     }
-    router.replace('/(tabs)/index');
+    router.replace('/(tabs)/home');
   };
 
   return (

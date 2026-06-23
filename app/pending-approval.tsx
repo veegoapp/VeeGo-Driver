@@ -64,7 +64,7 @@ export default function PendingApprovalScreen() {
       setData(res);
       if (res.onboardingStatus === 'approved') {
         stopPolling();
-        router.replace('/(shuttle)/index' as any);
+        router.replace('/(shuttle)/home' as any);
       }
     } catch {
       // silent
@@ -84,7 +84,7 @@ export default function PendingApprovalScreen() {
     if (!socket) return;
     const onActivated = () => {
       stopPolling();
-      router.replace('/(shuttle)/index' as any);
+      router.replace('/(shuttle)/home' as any);
     };
     const onRejected = () => fetchStatus();
     const onChanges = () => fetchStatus();

@@ -16,7 +16,7 @@ const STEP_ROUTES: Record<RegistrationStep, string> = {
   plate_number:   '/register-plate',
   documents:      '/register-documents',
   pending_review: '/pending-approval',
-  approved:       '/(shuttle)/index',
+  approved:       '/(shuttle)/home',
   rejected:       '/pending-approval',
 };
 
@@ -38,9 +38,9 @@ export async function navigateAfterAuth(_token: string | null): Promise<void> {
     if (route) {
       router.replace(route as any);
     } else {
-      router.replace('/(shuttle)/index' as any);
+      router.replace('/(shuttle)/home' as any);
     }
   } catch {
-    router.replace('/(shuttle)/index' as any);
+    router.replace('/(shuttle)/home' as any);
   }
 }

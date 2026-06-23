@@ -118,7 +118,7 @@ function ShuttleLayoutContent() {
           tabBar={(props) => <ShuttleTabBar {...(props as any)} />}
           screenOptions={{ headerShown: false }}
         >
-          <Tabs.Screen name="index" options={{ title: 'Home' }} />
+          <Tabs.Screen name="home" options={{ title: 'Home' }} />
           <Tabs.Screen name="lines" options={{ title: 'Lines' }} />
           <Tabs.Screen name="bookings" options={{ title: 'Bookings' }} />
           <Tabs.Screen name="wallet" options={{ title: 'Wallet' }} />

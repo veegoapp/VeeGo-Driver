@@ -29,7 +29,7 @@ function TabLayoutContent() {
       tabBar={(props) => <BottomTabBar {...(props as any)} />}
       screenOptions={{ headerShown: false }}
     >
-      <Tabs.Screen name="index" options={{ title: 'Drive' }} />
+      <Tabs.Screen name="home" options={{ title: 'Drive' }} />
       <Tabs.Screen name="earnings" options={{ title: 'Earnings' }} />
       <Tabs.Screen name="trips" options={{ title: 'Trips' }} />
       <Tabs.Screen name="wallet" options={{ title: 'Wallet' }} />
