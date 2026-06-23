@@ -53,28 +53,46 @@ export default function VerifyOtpScreen() {
     if (otp.length !== OTP_LENGTH || loading) return;
     setError(null);
     setLoading(true);
+    console.log('[OTP] ▶ Verifying OTP:', otp, '| phone:', phone);
     try {
+      console.log('[OTP] Simulating 600ms delay (mock mode) ...');
       await new Promise(r => setTimeout(r, 600));
       if (otp !== MOCK_OTP) {
+        console.log('[OTP] ❌ Wrong OTP entered:', otp, '| expected:', MOCK_OTP);
         setError('Invalid or expired OTP. Please try again.');
         setOtp('');
         inputRef.current?.focus();
         return;
       }
+      console.log('[OTP] ✅ OTP correct, checking driver_terms_pending_version in AsyncStorage ...');
       AsyncStorage.getItem('driver_terms_pending_version').then(async (pendingVersion) => {
-        if (!pendingVersion) return;
+        console.log('[OTP] driver_terms_pending_version =', pendingVersion);
+        if (!pendingVersion) {
+          console.log('[OTP] No pending terms version found, skipping terms acceptance.');
+          return;
+        }
         try {
           await AsyncStorage.setItem('driver_terms_accepted_version', pendingVersion);
           await AsyncStorage.removeItem('driver_terms_pending_version');
-        } catch { /* fail silently */ }
-      }).catch(() => {});
+          console.log('[OTP] Terms accepted and pending version cleared.');
+        } catch (e) {
+          console.log('[OTP] Error saving terms acceptance:', e);
+        }
+      }).catch((e) => {
+        console.log('[OTP] AsyncStorage error checking terms:', e);
+      });
+      console.log('[OTP] → Calling login() with mock tokens ...');
+      console.log('[OTP]   accessToken:', MOCK_ACCESS_TOKEN, '| refreshToken:', MOCK_REFRESH_TOKEN);
       await login(MOCK_ACCESS_TOKEN, MOCK_REFRESH_TOKEN);
-    } catch {
+      console.log('[OTP] ✅ login() completed, navigator should redirect now.');
+    } catch (e) {
+      console.log('[OTP] ❌ Exception during OTP verify:', e);
       setError('Something went wrong. Please try again.');
       setOtp('');
       inputRef.current?.focus();
     } finally {
       setLoading(false);
+      console.log('[OTP] ■ handleVerify finished (loading=false)');
     }
   };
 
