@@ -18,7 +18,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '@/lib/i18nContext';
-import { endpoints } from '@/lib/api';
+import { endpoints, ApiError } from '@/lib/api';
+import { signupStore } from '@/lib/signupStore';
 
 type DocSlot = {
   id: string;
@@ -126,8 +127,8 @@ export default function RegisterDocumentsScreen() {
       } as unknown as Blob);
       const { fileUrl } = await endpoints.driver.uploadFile(formData);
 
-      // Step 2: register the URL with the backend
-      await endpoints.driver.registerDocument(slot.backendType, fileUrl, 'image/jpeg');
+      // Step 2: store the URL locally — will be submitted in register-complete
+      signupStore.addDocument({ type: slot.backendType, fileUrl, mimeType: 'image/jpeg' });
 
       setUploaded(prev => ({ ...prev, [slot.id]: true }));
     } catch (err) {
@@ -141,7 +142,37 @@ export default function RegisterDocumentsScreen() {
   const handleSubmit = async () => {
     if (!allDone || submitting) return;
     setSubmitting(true);
-    router.replace('/pending-approval');
+    try {
+      const data = signupStore.getAll();
+      if (!data.serviceType || !data.vehicle || !data.plateLetters || !data.plateNumbers) {
+        Alert.alert('Error', 'Missing registration data. Please start from the beginning.');
+        return;
+      }
+      await endpoints.registration.complete({
+        serviceType: data.serviceType as any,
+        vehicle: {
+          brandId: data.vehicle.brandId,
+          modelId: data.vehicle.modelId,
+          year: data.vehicle.year,
+          color: data.vehicle.color,
+          colorId: data.vehicle.colorId,
+        },
+        plateLetters: data.plateLetters,
+        plateNumbers: data.plateNumbers,
+        documents: data.documents,
+      });
+      signupStore.reset();
+      router.replace('/pending-approval');
+    } catch (err) {
+      let msg = 'Failed to submit registration. Please try again.';
+      if (err instanceof ApiError) {
+        const body = err.body as { error?: string } | null;
+        if (body?.error) msg = body.error;
+      }
+      Alert.alert('Error', msg);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (cameraBlocked) {

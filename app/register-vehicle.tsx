@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '@/lib/i18nContext';
 import { useService } from '@/lib/serviceContext';
 import { endpoints } from '@/lib/api';
+import { signupStore } from '@/lib/signupStore';
 
 // ─── Types matching backend catalog ──────────────────────────────────────────
 
@@ -243,23 +244,19 @@ export default function RegisterVehicleScreen() {
 
   const canContinue = !!selectedBrand && !!selectedModel && !!selectedYear && !!selectedColor && !submitting;
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (!canContinue) return;
-    setSubmitting(true);
-    try {
-      await endpoints.registration.setVehicleDetails({
-        brandId: selectedBrand!.id,
-        modelId: selectedModel!.id,
-        year: selectedYear!.year,
-        color: selectedColor!.nameEn,
-        colorId: selectedColor!.id,
-      });
-      router.push('/register-plate');
-    } catch {
-      Alert.alert(t.error, t.reg_vehicle_err_save);
-    } finally {
-      setSubmitting(false);
-    }
+    // Save locally — no API call until register-complete at the very end
+    signupStore.setVehicle({
+      brandId: selectedBrand!.id,
+      brandName: selectedBrand!.name,
+      modelId: selectedModel!.id,
+      modelName: selectedModel!.name,
+      year: selectedYear!.year,
+      color: selectedColor!.nameEn,
+      colorId: selectedColor!.id,
+    });
+    router.push('/register-plate');
   };
 
   // ── Picker data ─────────────────────────────────────────────────────────────

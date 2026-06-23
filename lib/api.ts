@@ -679,40 +679,17 @@ export const endpoints = {
   },
 
   registration: {
-    // POST /driver/register/service-type
-    // Persists the driver's chosen service type on the backend so the server is aware
-    // of it independently of the local AsyncStorage cache.
-    //
-    // PAYLOAD:  { serviceType: 'car' | 'scooter' | 'delivery' | 'shuttle' }
-    // SUCCESS RESPONSE (200 | 201):  { serviceType: string }
-    // ERROR RESPONSES:
-    //   400 — invalid serviceType value
-    //   401 — token expired
-    setServiceType: (serviceType: string) =>
-      api.post<{ serviceType: string }>('/driver/register/service-type', { serviceType }),
-    plateNumber: (plateLetters: string, plateNumbers: string) =>
-      api.post<{ vehicleId: string; plateNumber: string; plateLetters: string; plateNumbers: string }>(
-        '/driver/register/plate-number', { plateLetters, plateNumbers }
-      ),
-
-    // POST /driver/register/vehicle-details
-    // Stores brand, model, year, and color chosen in the vehicle-specs setup step.
-    // The backend should upsert the vehicle record associated with this driver.
-    //
-    // PAYLOAD:  { brandId: string, modelId: string, year: string, color: string }
-    // SUCCESS RESPONSE (200 | 201):
-    //   { vehicleId: string, brandId: string, modelId: string, year: string, color: string }
-    // ERROR RESPONSES:
-    //   400 — missing or invalid fields
-    //   401 — token expired
-    //   404 — brandId or modelId not found in /vehicles/meta
-    setVehicleDetails: (data: {
-      brandId: number;
-      modelId: number;
-      year: number;
-      color: string;
-      colorId: number;
-    }) => api.post<{ vehicleId: string }>('/driver/register/vehicle-details', data),
+    // POST /driver/auth/register-complete
+    // Atomic final step of sign-up: submits service type, vehicle, plate, and
+    // all document URLs to the backend in one request. Creates the driver profile
+    // and sets onboardingStatus = pending_review.
+    complete: (data: {
+      serviceType: 'car' | 'shuttle' | 'scooter' | 'delivery';
+      vehicle: { brandId: number; modelId: number; year: number; color: string; colorId: number };
+      plateLetters: string;
+      plateNumbers: string;
+      documents: { type: string; fileUrl: string; mimeType: string }[];
+    }) => api.post<{ ok: true }>('/driver/auth/register-complete', data),
   },
 
   vehicles: {
