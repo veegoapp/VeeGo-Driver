@@ -23,7 +23,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '@/lib/i18nContext';
 import { useAuth } from '@/lib/authContext';
 import { endpoints, ApiError } from '@/lib/api';
-import { navigateAfterAuth } from '@/lib/postAuthRouter';
 import { TermsModal } from '@/components/TermsModal';
 
 const TERMS_VERSION_KEY = 'driver_terms_accepted_version';
@@ -59,7 +58,9 @@ export default function LoginScreen() {
     refreshToken: string,
   ) => {
     await login(accessToken, refreshToken);
-    await navigateAfterAuth(accessToken);
+    // Navigation is handled by the auth guard in _layout.tsx which watches
+    // the token state and calls navigateAfterAuth automatically. Calling it
+    // here too would invoke it twice simultaneously causing a race condition.
   };
 
   const handleOtpRequired = (phone: string, maskedPhone?: string) => {
