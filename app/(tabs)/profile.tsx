@@ -16,7 +16,7 @@ import { useI18n } from '@/lib/i18nContext';
 import { useAuth } from '@/lib/authContext';
 import { endpoints } from '@/lib/api';
 import { TermsModal } from '@/components/TermsModal';
-import { TAB_BAR_HEIGHT } from '.';
+import { TAB_BAR_HEIGHT } from './home';
 
 const TERMS_VERSION_KEY = 'driver_terms_accepted_version';
 type TermsData = { id: number; version: number; contentAr: string; contentEn: string; updatedAt: string };
