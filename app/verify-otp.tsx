@@ -111,7 +111,7 @@ export default function VerifyOtpScreen() {
         >
           {/* Header */}
           <View style={s.topRow}>
-            <TouchableOpacity style={s.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
+            <TouchableOpacity style={s.backBtn} onPress={() => router.replace('/login')} activeOpacity={0.7}>
               <ArrowLeft size={18} color="#1e1e28" strokeWidth={2} />
             </TouchableOpacity>
             <View style={s.logoRow}>
