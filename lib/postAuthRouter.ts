@@ -126,23 +126,12 @@ export async function navigateAfterOtp(token: string): Promise<void> {
       totalUploaded?: number;
     }>('/driver/me/onboarding');
 
-    console.log('[navigateAfterOtp] registrationStep:', onboarding?.registrationStep, '| totalUploaded:', onboarding?.totalUploaded);
-
     if (onboarding?.registrationStep === 'approved') {
       navigateToHome(onboarding.serviceType, userId);
       return;
     }
 
     const step = onboarding?.registrationStep as RegistrationStep | undefined;
-
-    // If backend says pending_review but no documents uploaded yet, the driver record
-    // was created before the user completed registration — restart from service type.
-    if (step === 'pending_review' && (onboarding?.totalUploaded ?? 0) === 0) {
-      console.log('[navigateAfterOtp] pending_review with 0 docs → /register-service-type');
-      router.replace('/register-service-type' as any);
-      return;
-    }
-
     if (step && step in STEP_ROUTES) {
       router.replace(STEP_ROUTES[step] as any);
     } else {
