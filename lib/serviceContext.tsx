@@ -3,6 +3,7 @@ import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from './authContext';
 import { getUserIdFromToken } from './auth';
+import { onServiceTypeFromBackend } from './serviceTypeBridge';
 
 export type ServiceType = 'CAR' | 'SCOOTER' | 'DELIVERY' | 'SHUTTLE';
 
@@ -36,7 +37,7 @@ export function ServiceProvider({ children }: { children: React.ReactNode }) {
   const [loaded, setLoaded] = useState(false);
 
   // Re-load whenever the logged-in user changes (login / logout / account switch).
-  // On logout userId becomes null → service type resets to default.
+  // On logout userId becomes null → service type resets to initial state.
   // On a new login userId changes → the new user's stored choice is loaded.
   useEffect(() => {
     setLoaded(false);
@@ -44,21 +45,18 @@ export function ServiceProvider({ children }: { children: React.ReactNode }) {
 
     Promise.all([
       AsyncStorage.getItem('veego_theme'),
-      // Read per-user map (when userId available) AND device fallback in parallel
       userId ? AsyncStorage.getItem(SERVICE_MAP_KEY) : Promise.resolve(null),
       AsyncStorage.getItem(DEVICE_SERVICE_KEY),
     ]).then(([storedTheme, mapJson, deviceService]) => {
       if (storedTheme !== null) setIsDarkModeState(storedTheme === 'dark');
 
       // One-time migration: 'MOTOR' was renamed to 'SCOOTER' in the app.
-      // Any value read from storage is migrated before use and written back
-      // so subsequent reads are already correct.
       const migrate = (v: string | null | undefined): ServiceType | null => {
         if (!v) return null;
         return (v === 'MOTOR' ? 'SCOOTER' : v) as ServiceType;
       };
 
-      // Priority 1: per-user map entry
+      // Priority 1: per-user map entry (most reliable — set by backend on login)
       let resolvedService: ServiceType | null = null;
       if (userId && mapJson) {
         const map = JSON.parse(mapJson) as Record<string, string>;
@@ -70,9 +68,10 @@ export function ServiceProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // Priority 2: device-level fallback (covers null userId only).
-      // When userId is known but has no stored preference, default to SHUTTLE
-      // so that a new account is never assigned another user's service type.
+      // Priority 2: device-level fallback only when userId is unknown (e.g. JWT
+      // has no parseable id claim). Never use another user's stored type as a
+      // guess — the backend bridge event (onServiceTypeFromBackend) will fire
+      // shortly after login with the authoritative value.
       if (!resolvedService && !userId) {
         resolvedService = migrate(deviceService);
         if (deviceService === 'MOTOR') {
@@ -83,9 +82,31 @@ export function ServiceProvider({ children }: { children: React.ReactNode }) {
       if (resolvedService) {
         setServiceTypeState(resolvedService);
       }
+      // If no stored preference exists for this user, leave as-is — the bridge
+      // event from navigateToHome will update the state once the backend responds.
 
       setLoaded(true);
     }).catch(() => setLoaded(true));
+  }, [userId]);
+
+  // Subscribe to the backend bridge so navigateToHome can push the authoritative
+  // service type directly into this context without a storage race condition.
+  useEffect(() => {
+    const unsub = onServiceTypeFromBackend((backendType) => {
+      setServiceTypeState(backendType);
+      // Also persist to per-user map for next cold start
+      AsyncStorage.setItem(DEVICE_SERVICE_KEY, backendType).catch(() => {});
+      if (userId) {
+        AsyncStorage.getItem(SERVICE_MAP_KEY)
+          .then(json => {
+            const map: Record<string, ServiceType> = json ? JSON.parse(json) : {};
+            map[userId] = backendType;
+            return AsyncStorage.setItem(SERVICE_MAP_KEY, JSON.stringify(map));
+          })
+          .catch(() => {});
+      }
+    });
+    return unsub;
   }, [userId]);
 
   // Write service type to BOTH storage locations:

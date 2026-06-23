@@ -6,3 +6,4 @@
 - [Backend contract v2 alignment](backend-contract-v2.md) — FINAL contract changes: driver/status PATCH, boardBooking path, stations endpoint with passengers, trip start/complete via trips endpoints not shuttle
 - [Map-first trip experience](map-first-trip.md) — 3-phase trip-active screen (en_route/approaching/at_stop); MapBackdrop extended with stationStatuses+approachCircle+focusTarget; useDriverLocation hook for GPS
 - [ShuttleProvider missing](shuttle-provider-missing.md) — ShuttleProvider was never mounted; all useShuttle() calls returned empty defaults
+- [Service type bridge pattern](service-type-bridge.md) — serviceTypeBridge.ts event emitter solves AsyncStorage race on account switch; backend is sole source of truth via navigateToHome → emitServiceTypeFromBackend

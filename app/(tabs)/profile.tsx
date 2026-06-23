@@ -12,7 +12,7 @@ import * as Clipboard from 'expo-clipboard';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useService } from '@/lib/serviceContext';
-import { useI18n } from '@/lib/i18nContext';
+import { useI18n, LanguageSwitchOverlay } from '@/lib/i18nContext';
 import type { Language } from '@/lib/i18nContext';
 import { useAuth } from '@/lib/authContext';
 import { endpoints } from '@/lib/api';
@@ -45,7 +45,7 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const topPad = insets.top;
   const { isDarkMode, setIsDarkMode } = useService();
-  const { t, isRTL, language, setLanguage } = useI18n();
+  const { t, isRTL, language, setLanguage, isSwitchingLanguage } = useI18n();
   const { logout } = useAuth();
   const [codeCopied, setCodeCopied] = useState(false);
   const [termsModalVisible, setTermsModalVisible] = useState(false);
@@ -265,6 +265,7 @@ export default function ProfileScreen() {
           onClose={() => setTermsModalVisible(false)}
         />
       )}
+      {isSwitchingLanguage && <LanguageSwitchOverlay />}
     </View>
   );
 }

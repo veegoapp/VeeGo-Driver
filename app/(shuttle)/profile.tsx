@@ -39,7 +39,7 @@ import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { useColors } from '@/hooks/useColors';
-import { useI18n } from '@/lib/i18nContext';
+import { useI18n, LanguageSwitchOverlay } from '@/lib/i18nContext';
 import type { Language } from '@/lib/i18nContext';
 import { useAuth } from '@/lib/authContext';
 import { useService } from '@/lib/serviceContext';
@@ -71,7 +71,7 @@ export default function ShuttleProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const topPad = insets.top;
-  const { t, isRTL, language, setLanguage } = useI18n();
+  const { t, isRTL, language, setLanguage, isSwitchingLanguage } = useI18n();
   const { logout } = useAuth();
   const { isDarkMode, setIsDarkMode } = useService();
 
@@ -580,6 +580,7 @@ export default function ShuttleProfileScreen() {
           </Pressable>
         </View>
       </Modal>
+      {isSwitchingLanguage && <LanguageSwitchOverlay />}
     </View>
   );
 }

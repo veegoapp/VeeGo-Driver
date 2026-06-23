@@ -2227,12 +2227,11 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   return (
     <I18nContext.Provider value={{ language, isLanguageLoading, isSwitchingLanguage, setLanguage, t, isRTL }}>
       {children}
-      {isSwitchingLanguage && <LanguageSwitchOverlay />}
     </I18nContext.Provider>
   );
 }
 
-function LanguageSwitchOverlay() {
+export function LanguageSwitchOverlay() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.88)).current;
   const spinAnim = useRef(new Animated.Value(0)).current;
