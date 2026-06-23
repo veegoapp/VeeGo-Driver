@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '@/lib/authContext';
 import { endpoints, ApiError } from '@/lib/api';
+import { navigateAfterOtp } from '@/lib/postAuthRouter';
 
 const OTP_LENGTH = 6;
 const RESEND_COOLDOWN = 60;

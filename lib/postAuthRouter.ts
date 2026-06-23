@@ -66,6 +66,10 @@ export function navigateToHome(
   }
 }
 
+/**
+ * Called after sign-in (existing driver).
+ * Routes based on registrationStep from /driver/me/onboarding.
+ */
 export async function navigateAfterAuth(token: string | null): Promise<void> {
   // Defer by one frame so expo-router's navigator tree is fully initialized.
   await new Promise<void>((resolve) => setTimeout(resolve, 50));
@@ -79,14 +83,17 @@ export async function navigateAfterAuth(token: string | null): Promise<void> {
       serviceType: string | null;
     }>('/driver/me/onboarding');
 
-    // Case 3: approved → route to the correct home based on service type
     if (onboarding?.registrationStep === 'approved') {
       navigateToHome(onboarding.serviceType, userId);
       return;
     }
 
-    // Case 2: pending_review or rejected → pending approval page
-    router.replace('/pending-approval');
+    const step = onboarding?.registrationStep as RegistrationStep | undefined;
+    if (step && step in STEP_ROUTES) {
+      router.replace(STEP_ROUTES[step] as any);
+    } else {
+      router.replace('/pending-approval');
+    }
   } catch (err: any) {
     if (err?.status === 404) {
       // No driver profile — user started sign-up but never completed it.
@@ -96,8 +103,51 @@ export async function navigateAfterAuth(token: string | null): Promise<void> {
       await deleteRefreshToken();
       router.replace('/login');
     } else {
-      // Network/server error — stay on login
       router.replace('/login');
+    }
+  }
+}
+
+/**
+ * Called after OTP verification (new sign-up flow).
+ * Routes based on registrationStep. If driver record doesn't exist yet (404),
+ * goes to the first registration step instead of login.
+ */
+export async function navigateAfterOtp(token: string): Promise<void> {
+  await new Promise<void>((resolve) => setTimeout(resolve, 50));
+
+  const userId = getUserIdFromToken(token);
+
+  try {
+    const onboarding = await api.get<{
+      registrationStep: RegistrationStep;
+      onboardingStatus: string;
+      serviceType: string | null;
+    }>('/driver/me/onboarding');
+
+    console.log('[navigateAfterOtp] registrationStep:', onboarding?.registrationStep);
+
+    if (onboarding?.registrationStep === 'approved') {
+      navigateToHome(onboarding.serviceType, userId);
+      return;
+    }
+
+    const step = onboarding?.registrationStep as RegistrationStep | undefined;
+    if (step && step in STEP_ROUTES) {
+      router.replace(STEP_ROUTES[step] as any);
+    } else {
+      // Unknown step — start from beginning
+      router.replace('/register-service-type' as any);
+    }
+  } catch (err: any) {
+    if (err?.status === 404) {
+      // No driver record yet — brand new user, start registration
+      console.log('[navigateAfterOtp] No driver record yet → /register-service-type');
+      router.replace('/register-service-type' as any);
+    } else {
+      // Network error — still start from service type
+      console.log('[navigateAfterOtp] Error:', err, '→ /register-service-type');
+      router.replace('/register-service-type' as any);
     }
   }
 }
