@@ -377,7 +377,7 @@ export default function ShuttleHomeScreen() {
               <View style={styles.activeCardHeader}>
                 <View style={styles.livePill}>
                   <View style={[styles.liveDot, { backgroundColor: '#1e1e28' }]} />
-                  <Text style={[styles.liveText, { color: '#1e1e28', fontFamily: 'Inter_700Bold' }]}>LIVE</Text>
+                  <Text style={[styles.liveText, { color: '#1e1e28', fontFamily: 'Inter_700Bold' }]}>{t.live}</Text>
                 </View>
                 <Text style={[styles.lineNumber, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>
                   {activeLine.lineNumber}
@@ -400,7 +400,7 @@ export default function ShuttleHomeScreen() {
                 <View style={[styles.seatBadge, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
                   <Users size={12} color={colors.mutedForeground} strokeWidth={2} />
                   <Text style={[styles.seatBadgeText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-                    {activeLine.bookedSeats} of {activeLine.totalSeats}
+                    {activeLine.bookedSeats} {t.home_of} {activeLine.totalSeats}
                   </Text>
                 </View>
               </View>
@@ -425,7 +425,7 @@ export default function ShuttleHomeScreen() {
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.stopBoxLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>{t.active.toUpperCase()}</Text>
                     <Text style={[styles.stopBoxName, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]} numberOfLines={1}>{currentStop?.name ?? '—'}</Text>
-                    <Text style={[styles.stopBoxMeta, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{currentStop ? `${currentStop.boarded}/${currentStop.expected} boarded` : '—'}</Text>
+                    <Text style={[styles.stopBoxMeta, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{currentStop ? `${currentStop.boarded}/${currentStop.expected} ${t.home_boarded}` : '—'}</Text>
                   </View>
                 </View>
                 <View style={[styles.stopArrow, { backgroundColor: colors.secondary }]}>
@@ -436,7 +436,7 @@ export default function ShuttleHomeScreen() {
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.stopBoxLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>{t.next_departure.toUpperCase()}</Text>
                     <Text style={[styles.stopBoxName, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]} numberOfLines={1}>{nextStop?.name ?? '—'}</Text>
-                    <Text style={[styles.stopBoxMeta, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{nextStop ? `ETA ${nextStop.eta}` : '—'}</Text>
+                    <Text style={[styles.stopBoxMeta, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{nextStop ? `${t.home_eta} ${nextStop.eta}` : '—'}</Text>
                   </View>
                 </View>
               </View>
