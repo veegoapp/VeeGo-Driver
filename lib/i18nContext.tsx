@@ -1008,6 +1008,8 @@ const en = {
   ok: 'OK',
   wallet_load_err: 'Failed to load wallet. Please try again.',
   payout_failed_msg: 'Payout failed. Please try again.',
+  field_is_required: 'is required',
+  payout_submitted_msg: 'payout submitted',
   // ── Profile screen additions ──────────────────────────────────────────────────
   driver_code_label: 'Driver Code',
   driver_code_copied: 'Code copied to clipboard!',
@@ -2086,6 +2088,8 @@ const ar: typeof en = {
   ok: 'حسناً',
   wallet_load_err: 'تعذر تحميل المحفظة. يرجى المحاولة مرة أخرى',
   payout_failed_msg: 'فشل السحب. يرجى المحاولة مرة أخرى',
+  field_is_required: 'مطلوب',
+  payout_submitted_msg: 'تم إرسال طلب السحب',
   // ── Profile screen additions ──────────────────────────────────────────────────
   driver_code_label: 'كود السائق',
   driver_code_copied: 'تم نسخ الكود!',

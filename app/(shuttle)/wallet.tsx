@@ -231,7 +231,7 @@ export default function ShuttleWalletScreen() {
     if (method.requiresAccountDetails && method.accountFields) {
       for (const f of method.accountFields) {
         if (f.required && !details[f.key]?.trim()) {
-          Alert.alert(t.required_field_title, `${isRTL ? f.labelAr : f.label} is required.`);
+          Alert.alert(t.required_field_title, `${isRTL ? f.labelAr : f.label} ${t.field_is_required}`);
           return;
         }
       }
@@ -247,7 +247,7 @@ export default function ShuttleWalletScreen() {
       await queryClient.invalidateQueries({ queryKey: ['wallet-balance'] });
       await queryClient.invalidateQueries({ queryKey: ['wallet-transactions'] });
       setPayoutVisible(false);
-      Alert.alert('✓', res?.message ?? `${amount.toFixed(2)} ${t.egp} payout submitted.`);
+      Alert.alert('✓', res?.message ?? `${amount.toFixed(2)} ${t.egp} ${t.payout_submitted_msg}`);
     } catch {
       Alert.alert(t.error, t.payout_failed_msg);
     } finally {
