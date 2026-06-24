@@ -13,7 +13,7 @@ type TabBarProps = {
 };
 
 const TAB_ITEMS = [
-  { name: 'index', key: 'drive' as const, Icon: Home },
+  { name: 'home', key: 'drive' as const, Icon: Home },
   { name: 'earnings', key: 'earnings' as const, Icon: BarChart2 },
   { name: 'trips', key: 'trips' as const, Icon: Clock },
   { name: 'wallet', key: 'wallet' as const, Icon: CreditCard },
