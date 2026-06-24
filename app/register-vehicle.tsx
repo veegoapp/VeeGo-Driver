@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, ChevronDown, RefreshCw, X, Info } from 'lucide-react-native';
+import { ArrowLeft, ArrowRight, ChevronDown, RefreshCw, X, Info, Search } from 'lucide-react-native';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { getFallbackBrands, FALLBACK_COLORS, getFallbackModels, getFallbackYears } from '@/constants/vehicleCatalog';
@@ -12,6 +12,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -102,6 +103,7 @@ export default function RegisterVehicleScreen() {
   const [emptyYears, setEmptyYears] = useState(false);
 
   const [activePicker, setActivePicker] = useState<PickerType>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   // ── Fetchers ────────────────────────────────────────────────────────────────
@@ -269,13 +271,13 @@ export default function RegisterVehicleScreen() {
 
   // ── Picker data ─────────────────────────────────────────────────────────────
 
-  type PickerItem = { key: string; label: string; sub?: string; hexCode?: string | null };
+  type PickerItem = { key: string; label: string; labelAr?: string | null; sub?: string; hexCode?: string | null };
 
   const pickerItems: PickerItem[] =
     activePicker === 'brand'
-      ? brands.map(b => ({ key: String(b.id), label: b.name }))
+      ? brands.map(b => ({ key: String(b.id), label: b.name, labelAr: b.nameAr }))
       : activePicker === 'model'
-      ? models.map(m => ({ key: String(m.id), label: m.name }))
+      ? models.map(m => ({ key: String(m.id), label: m.name, labelAr: m.nameAr }))
       : activePicker === 'year'
       ? years.map(y => ({
           key: String(y.year),
@@ -285,6 +287,21 @@ export default function RegisterVehicleScreen() {
       : activePicker === 'color'
       ? colors.map(c => ({ key: String(c.id), label: c.nameEn, hexCode: c.hexCode }))
       : [];
+
+  const showSearch = activePicker === 'brand' || activePicker === 'model';
+  const filteredItems = showSearch && searchQuery.trim()
+    ? pickerItems.filter(item => {
+        const q = searchQuery.trim().toLowerCase();
+        const matchEn = item.label.toLowerCase().includes(q);
+        const matchAr = item.labelAr ? item.labelAr.includes(searchQuery.trim()) : false;
+        return matchEn || matchAr;
+      })
+    : pickerItems;
+
+  const openPicker = (type: PickerType) => {
+    setSearchQuery('');
+    setActivePicker(type);
+  };
 
   const pickerLoading =
     activePicker === 'brand' ? loadingBrands
@@ -349,12 +366,12 @@ export default function RegisterVehicleScreen() {
           <DropdownField
             label={t.vehicle_brand}
             placeholder={t.select_brand}
-            value={selectedBrand?.name ?? null}
+            value={selectedBrand ? (isRTL && selectedBrand.nameAr ? selectedBrand.nameAr : selectedBrand.name) : null}
             loading={loadingBrands}
             error={errorBrands}
             errorLabel={t.load_failed}
             errorDetail={errorBrandsDetail}
-            onPress={() => setActivePicker('brand')}
+            onPress={() => openPicker('brand')}
             onRetry={fetchBrands}
             isRTL={isRTL}
           />
@@ -363,11 +380,11 @@ export default function RegisterVehicleScreen() {
           <DropdownField
             label={t.vehicle_model}
             placeholder={t.select_model}
-            value={selectedModel?.name ?? null}
+            value={selectedModel ? (isRTL && selectedModel.nameAr ? selectedModel.nameAr : selectedModel.name) : null}
             loading={loadingModels}
             error={false}
             errorLabel={t.load_failed}
-            onPress={() => selectedBrand ? setActivePicker('model') : undefined}
+            onPress={() => selectedBrand ? openPicker('model') : undefined}
             disabled={!selectedBrand}
             isRTL={isRTL}
           />
@@ -445,22 +462,40 @@ export default function RegisterVehicleScreen() {
             </Pressable>
           </View>
 
+          {showSearch && (
+            <View style={s.searchWrap}>
+              <Search size={16} color="#9e9ea8" strokeWidth={2} style={s.searchIcon} />
+              <TextInput
+                style={[s.searchInput, { textAlign: isRTL ? 'right' : 'left' }]}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder={isRTL ? 'ابحث...' : 'Search...'}
+                placeholderTextColor="#c3c3cc"
+                autoCorrect={false}
+                autoCapitalize="none"
+                clearButtonMode="while-editing"
+              />
+            </View>
+          )}
+
           {pickerLoading ? (
             <View style={s.sheetLoader}>
               <ActivityIndicator size="large" color="#1e1e28" />
             </View>
-          ) : pickerItems.length === 0 ? (
+          ) : filteredItems.length === 0 ? (
             <View style={s.sheetLoader}>
               <Text style={s.sheetEmpty}>
-                {activePicker === 'year' ? t.reg_year_no_eligible : t.reg_no_options}
+                {searchQuery ? (isRTL ? 'لا توجد نتائج' : 'No results') : activePicker === 'year' ? t.reg_year_no_eligible : t.reg_no_options}
               </Text>
             </View>
           ) : (
             <FlatList
-              data={pickerItems}
+              data={filteredItems}
               keyExtractor={item => item.key}
+              keyboardShouldPersistTaps="handled"
               renderItem={({ item }) => {
                 const selected = isItemSelected(item);
+                const displayLabel = isRTL && item.labelAr ? item.labelAr : item.label;
                 return (
                   <Pressable
                     style={({ pressed }) => [s.sheetItem, selected && s.sheetItemSelected, pressed && { opacity: 0.7 }]}
@@ -470,7 +505,7 @@ export default function RegisterVehicleScreen() {
                       {item.hexCode !== undefined && (
                         <View style={[s.colorSwatch, { backgroundColor: item.hexCode ?? '#ccc' }]} />
                       )}
-                      <Text style={[s.sheetItemText, selected && s.sheetItemTextSelected]}>{item.label}</Text>
+                      <Text style={[s.sheetItemText, selected && s.sheetItemTextSelected]}>{displayLabel}</Text>
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                       {item.sub && (
@@ -616,6 +651,14 @@ const s = StyleSheet.create({
     shadowColor: '#1e1e28', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.08, shadowRadius: 16, elevation: 12,
   },
   sheetHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: '#e5e5ea', alignSelf: 'center', marginBottom: 12 },
+  searchWrap: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    marginHorizontal: 24, marginBottom: 8,
+    backgroundColor: '#f5f5f8', borderRadius: 14, paddingHorizontal: 14, height: 44,
+    borderWidth: 1, borderColor: '#e5e5ea',
+  },
+  searchIcon: { flexShrink: 0 },
+  searchInput: { flex: 1, fontSize: 14, color: '#1e1e28', fontFamily: 'Inter_400Regular' },
   sheetHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 24, paddingBottom: 12,
