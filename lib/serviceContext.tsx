@@ -33,7 +33,7 @@ export function ServiceProvider({ children }: { children: React.ReactNode }) {
   const userId = getUserIdFromToken(token);
 
   const [serviceType, setServiceTypeState] = useState<ServiceType>('SHUTTLE');
-  const [isDarkMode, setIsDarkModeState] = useState<boolean>(systemScheme === 'dark');
+  const [isDarkMode, setIsDarkModeState] = useState<boolean>(false);
   const [loaded, setLoaded] = useState(false);
 
   // Re-load whenever the logged-in user changes (login / logout / account switch).
@@ -48,7 +48,7 @@ export function ServiceProvider({ children }: { children: React.ReactNode }) {
       userId ? AsyncStorage.getItem(SERVICE_MAP_KEY) : Promise.resolve(null),
       AsyncStorage.getItem(DEVICE_SERVICE_KEY),
     ]).then(([storedTheme, mapJson, deviceService]) => {
-      if (storedTheme !== null) setIsDarkModeState(storedTheme === 'dark');
+      if (storedTheme === 'dark') AsyncStorage.setItem('veego_theme', 'light').catch(() => {});
 
       // One-time migration: 'MOTOR' was renamed to 'SCOOTER' in the app.
       const migrate = (v: string | null | undefined): ServiceType | null => {
