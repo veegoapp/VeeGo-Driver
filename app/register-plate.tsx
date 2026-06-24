@@ -93,12 +93,12 @@ export default function RegisterPlateScreen() {
                   style={[s.input, { textAlign: 'center', letterSpacing: 6, fontSize: 18, fontWeight: '700' }]}
                   value={letters}
                   onChangeText={v => {
-                    setLetters(v.replace(/[^a-zA-Z؀-ۿ]/g, '').slice(0, 3));
+                    setLetters(v.replace(/[^؀-ۿ]/g, '').slice(0, 3));
                     setError(null);
                   }}
-                  placeholder="ABC"
+                  placeholder="أبج"
                   placeholderTextColor="#c3c3cc"
-                  autoCapitalize="characters"
+                  autoCapitalize="none"
                   autoCorrect={false}
                   maxLength={3}
                 />
