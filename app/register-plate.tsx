@@ -29,7 +29,7 @@ export default function RegisterPlateScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const lettersOk = letters.trim().length === 3;
+  const lettersOk = /^[؀-ۿ]{3}$/.test(letters.trim());
   const numbersOk = /^\d{1,4}$/.test(numbers.trim());
   const canContinue = lettersOk && numbersOk && !submitting;
 
