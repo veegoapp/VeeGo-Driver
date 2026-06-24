@@ -147,7 +147,7 @@ export default function ShuttleProfileScreen() {
   const handleSelectPhoto = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission required', 'Please allow photo access to continue.');
+      Alert.alert(t.camera_required, t.camera_required_sub);
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
