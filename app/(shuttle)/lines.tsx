@@ -291,7 +291,7 @@ export default function ShuttleLinesScreen() {
             {t.shuttle_routes}
           </Text>
           <Text style={[styles.pageSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>
-            Choose a route and pick your weekly schedule
+            {t.lines_sub}
           </Text>
         </Animated.View>
 
@@ -300,7 +300,7 @@ export default function ShuttleLinesScreen() {
           <Search size={16} color={colors.mutedForeground} strokeWidth={2} />
           <TextInput
             style={[styles.searchInput, { color: colors.foreground, fontFamily: 'Inter_400Regular' }]}
-            placeholder="Search by name or route…"
+            placeholder={t.lines_search_placeholder}
             placeholderTextColor={colors.mutedForeground + '99'}
             value={search}
             onChangeText={setSearch}
@@ -318,19 +318,19 @@ export default function ShuttleLinesScreen() {
           <View style={[styles.chip, { backgroundColor: '#1e1e2820', borderColor: '#1e1e2833' }]}>
             <GitBranch size={12} color="#2d2d42" strokeWidth={2} />
             <Text style={[styles.chipText, { color: '#2d2d42', fontFamily: 'Inter_700Bold' }]}>
-              {routes.length} routes
+              {t.lines_chip_routes.replace('{n}', String(routes.length))}
             </Text>
           </View>
           <View style={[styles.chip, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
             <Users size={12} color={colors.mutedForeground} strokeWidth={2} />
             <Text style={[styles.chipText, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>
-              {myBookings.length} booked
+              {t.lines_chip_booked.replace('{n}', String(myBookings.length))}
             </Text>
           </View>
           <View style={[styles.chip, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
             <CheckCircle size={12} color={colors.primary} strokeWidth={2} />
             <Text style={[styles.chipText, { color: colors.primary, fontFamily: 'Inter_700Bold' }]}>
-              {myBookings.filter(b => b.status === 'completed').length} done
+              {t.lines_chip_done.replace('{n}', String(myBookings.filter(b => b.status === 'completed').length))}
             </Text>
           </View>
         </View>
@@ -344,7 +344,7 @@ export default function ShuttleLinesScreen() {
         {!!contextError && !contextLoading && (
           <View style={{ alignItems: 'center', marginTop: 48 }}>
             <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 14 }}>
-              Failed to load routes. Pull down to retry.
+              {t.lines_load_failed}
             </Text>
           </View>
         )}
@@ -353,10 +353,10 @@ export default function ShuttleLinesScreen() {
           <View style={{ alignItems: 'center', marginTop: 60, gap: 8 }}>
             <Text style={{ fontSize: 32 }}>🔍</Text>
             <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: 16 }}>
-              No routes found
+              {t.lines_no_routes}
             </Text>
             <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13 }}>
-              Try a different search term
+              {t.lines_no_routes_sub}
             </Text>
           </View>
         )}
@@ -364,7 +364,7 @@ export default function ShuttleLinesScreen() {
         {!contextLoading && !contextError && filteredRoutes.length > 0 && (
           <>
             <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
-              Available Routes
+              {t.lines_available_routes}
             </Text>
             <View style={{ gap: 10 }}>
               {filteredRoutes.map((route, idx) => (
@@ -424,7 +424,7 @@ export default function ShuttleLinesScreen() {
             >
               {/* Stations */}
               <Text style={[styles.sheetSection, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-                Stations
+                {t.stations}
               </Text>
               {stationsLoading ? (
                 <View style={{ alignItems: 'center', paddingVertical: 20 }}>
@@ -432,7 +432,7 @@ export default function ShuttleLinesScreen() {
                 </View>
               ) : stations.length === 0 ? (
                 <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13, paddingBottom: 12 }}>
-                  No station data available
+                  {t.lines_no_station}
                 </Text>
               ) : (
                 stations.map((st, idx) => (
@@ -452,7 +452,7 @@ export default function ShuttleLinesScreen() {
                         {st.name}
                       </Text>
                       <Text style={[styles.stationTime, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-                        Stop {st.order}
+                        {t.lines_stop_n.replace('{n}', String(st.order))}
                       </Text>
                     </View>
                   </View>
@@ -461,7 +461,7 @@ export default function ShuttleLinesScreen() {
 
               {/* Week picker — weeks come from the server, not generated locally */}
               <Text style={[styles.sheetSection, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-                Select Work Week
+                {t.lines_select_week}
               </Text>
 
               {weeksLoading ? (
@@ -470,11 +470,11 @@ export default function ShuttleLinesScreen() {
                 </View>
               ) : weeksError ? (
                 <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13, paddingBottom: 12 }}>
-                  Could not load available weeks. Pull down to retry.
+                  {t.lines_weeks_load_failed}
                 </Text>
               ) : serverWeeks.length === 0 ? (
                 <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13, paddingBottom: 12 }}>
-                  No weeks scheduled yet for this route. Check back soon.
+                  {t.lines_no_weeks}
                 </Text>
               ) : (
                 <ScrollView
@@ -521,11 +521,11 @@ export default function ShuttleLinesScreen() {
               {selectedWeek && (
                 <>
                   <Text style={[styles.sheetSection, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-                    Departure Time
+                    {t.departure_time_label}
                   </Text>
                   {currentSlots.length === 0 ? (
                     <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13, paddingBottom: 12 }}>
-                      No time slots available for this week
+                      {t.lines_no_slots}
                     </Text>
                   ) : (
                     <View style={styles.timesGrid}>
@@ -553,7 +553,7 @@ export default function ShuttleLinesScreen() {
                             </Text>
                             {bookedByMe && (
                               <Text style={[styles.timeChipTaken, { color: '#16a34a', fontFamily: 'Inter_700Bold' }]}>
-                                Yours
+                                {t.lines_yours}
                               </Text>
                             )}
                             {takenByOther && !bookedByMe && (
@@ -563,7 +563,7 @@ export default function ShuttleLinesScreen() {
                             )}
                             {!isDisabled && slot.availableSeats !== null && slot.availableSeats !== undefined && (
                               <Text style={[styles.timeChipTaken, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-                                {slot.availableSeats} seats
+                                {t.lines_seats_n.replace('{n}', String(slot.availableSeats))}
                               </Text>
                             )}
                           </Pressable>
@@ -594,10 +594,10 @@ export default function ShuttleLinesScreen() {
                 ) : (
                   <Text style={[styles.bookBtnText, { fontFamily: 'Inter_700Bold' }]}>
                     {selectedWeek && selectedSlot
-                      ? `Confirm — ${formatWeekLabel(selectedWeek.weekStart, selectedWeek.weekEnd)}  ·  ${selectedSlot.departureTime}`
+                      ? t.lines_confirm_btn.replace('{week}', formatWeekLabel(selectedWeek.weekStart, selectedWeek.weekEnd)).replace('{time}', selectedSlot.departureTime)
                       : !selectedWeek
-                      ? 'Pick a work week first'
-                      : 'Pick a departure time'}
+                      ? t.lines_pick_week
+                      : t.lines_pick_time}
                   </Text>
                 )}
               </LinearGradient>
@@ -618,14 +618,14 @@ export default function ShuttleLinesScreen() {
             <View style={[styles.dialogHeader, { backgroundColor: colors.primary }]}>
               <Calendar size={18} color="#fff" strokeWidth={2} />
               <Text style={[styles.dialogHeaderTitle, { color: '#fff', fontFamily: 'Inter_700Bold' }]}>
-                Confirm 5-Day Booking
+                {t.lines_confirm_title}
               </Text>
             </View>
             <View style={styles.dialogBody}>
               <View style={styles.dialogInfoRow}>
                 <MapPin size={14} color={colors.primary} strokeWidth={2} />
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.dialogInfoLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>Route</Text>
+                  <Text style={[styles.dialogInfoLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{t.lines_dialog_route}</Text>
                   <Text style={[styles.dialogInfoValue, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{bookingRoute?.name}</Text>
                 </View>
               </View>
@@ -633,7 +633,7 @@ export default function ShuttleLinesScreen() {
               <View style={styles.dialogInfoRow}>
                 <GitBranch size={14} color={colors.primary} strokeWidth={2} />
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.dialogInfoLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>Direction</Text>
+                  <Text style={[styles.dialogInfoLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{t.lines_dialog_direction}</Text>
                   <Text style={[styles.dialogInfoValue, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
                     {bookingRoute?.from} → {bookingRoute?.to}
                   </Text>
@@ -643,7 +643,7 @@ export default function ShuttleLinesScreen() {
               <View style={styles.dialogInfoRow}>
                 <Calendar size={14} color={colors.primary} strokeWidth={2} />
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.dialogInfoLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>Week  ·  Sun – Thu</Text>
+                  <Text style={[styles.dialogInfoLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{t.lines_dialog_week}</Text>
                   <Text style={[styles.dialogInfoValue, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
                     {selectedWeek ? formatWeekLabel(selectedWeek.weekStart, selectedWeek.weekEnd) : '—'}
                   </Text>
@@ -653,7 +653,7 @@ export default function ShuttleLinesScreen() {
               <View style={styles.dialogInfoRow}>
                 <Clock size={14} color={colors.primary} strokeWidth={2} />
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.dialogInfoLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>Departure</Text>
+                  <Text style={[styles.dialogInfoLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{t.lines_dialog_departure}</Text>
                   <Text style={[styles.dialogInfoValue, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{selectedSlot?.departureTime}</Text>
                 </View>
               </View>
@@ -663,15 +663,15 @@ export default function ShuttleLinesScreen() {
                   <View style={styles.dialogInfoRow}>
                     <Users size={14} color={colors.primary} strokeWidth={2} />
                     <View style={{ flex: 1 }}>
-                      <Text style={[styles.dialogInfoLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>Stops</Text>
-                      <Text style={[styles.dialogInfoValue, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{bookingRoute.stationCount} stops</Text>
+                      <Text style={[styles.dialogInfoLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{t.lines_dialog_stops}</Text>
+                      <Text style={[styles.dialogInfoValue, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.lines_dialog_stops_n.replace('{n}', String(bookingRoute.stationCount))}</Text>
                     </View>
                   </View>
                 </>
               )}
               <View style={[styles.dialogNote, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
                 <Text style={[{ fontSize: 12, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', lineHeight: 18, textAlign: 'center' }]}>
-                  This commits you to the full 5-day work week.{'\n'}Other drivers will see this slot as reserved.
+                  {t.lines_dialog_note}
                 </Text>
               </View>
             </View>
@@ -680,7 +680,7 @@ export default function ShuttleLinesScreen() {
                 onPress={() => setShowConfirmDialog(false)}
                 style={({ pressed }) => [styles.dialogBtnSecondary, { backgroundColor: pressed ? colors.secondary : '#fff', borderColor: colors.border }]}
               >
-                <Text style={[styles.dialogBtnLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>CANCEL</Text>
+                <Text style={[styles.dialogBtnLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>{t.cancel.toUpperCase()}</Text>
               </Pressable>
               <Pressable
                 onPress={handleConfirmBooking}
@@ -688,7 +688,7 @@ export default function ShuttleLinesScreen() {
               >
                 {bookMutation.isPending
                   ? <ActivityIndicator color="#fff" size="small" />
-                  : <Text style={[styles.dialogBtnLabel, { color: '#fff', fontFamily: 'Inter_700Bold' }]}>CONFIRM WEEK</Text>
+                  : <Text style={[styles.dialogBtnLabel, { color: '#fff', fontFamily: 'Inter_700Bold' }]}>{t.lines_confirm_week}</Text>
                 }
               </Pressable>
             </View>
@@ -710,15 +710,15 @@ export default function ShuttleLinesScreen() {
             </View>
             <View style={styles.dialogBody}>
               <Text style={[styles.dialogSuccessTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-                Week Committed!
+                {t.lines_week_committed}
               </Text>
               <Text style={[styles.dialogSuccessBody, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-                Your 5-day slot (Sun – Thu) is confirmed. It will appear in your upcoming bookings.
+                {t.lines_success_body}
               </Text>
               <View style={[styles.dialogNoteRow, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
                 <Clock size={13} color={colors.mutedForeground} strokeWidth={2} />
                 <Text style={[{ fontSize: 12, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', flex: 1 }]}>
-                  Renewal prompt on Wednesday at 7:00 AM.
+                  {t.lines_renewal_note}
                 </Text>
               </View>
             </View>
@@ -727,7 +727,7 @@ export default function ShuttleLinesScreen() {
                 onPress={() => setShowSuccessDialog(false)}
                 style={({ pressed }) => [styles.dialogBtnPrimary, { flex: 1, backgroundColor: pressed ? '#2d2d42' : colors.primary }]}
               >
-                <Text style={[styles.dialogBtnLabel, { color: '#fff', fontFamily: 'Inter_700Bold' }]}>GOT IT</Text>
+                <Text style={[styles.dialogBtnLabel, { color: '#fff', fontFamily: 'Inter_700Bold' }]}>{t.lines_got_it}</Text>
               </Pressable>
             </View>
           </View>
@@ -836,7 +836,7 @@ function RouteCard({
               <View style={styles.lineStat}>
                 <Clock size={12} color={colors.mutedForeground} strokeWidth={2} />
                 <Text style={[styles.lineStatText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-                  {availableSlots}/{totalSlots} slots free
+                  {t.lines_slots_free.replace('{available}', String(availableSlots)).replace('{total}', String(totalSlots))}
                 </Text>
               </View>
             )}
