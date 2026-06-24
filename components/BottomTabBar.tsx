@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { BarChart2, Clock, CreditCard, Home, User } from 'lucide-react-native';
 import React, { useRef, useEffect, useState } from 'react';
-import { Animated, I18nManager, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
@@ -27,55 +27,74 @@ const PILL_PX = 8;
 export function BottomTabBar({ state, navigation }: TabBarProps) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { t } = useI18n();
-  const activeIndex = state.index;
-  const [tabWidth, setTabWidth] = useState(0);
+  const { t, language } = useI18n();
+
   const pillX = useRef(new Animated.Value(0)).current;
-  const initialized = useRef(false);
+  const pillW = useRef(new Animated.Value(0)).current;
+  const [pillReady, setPillReady] = useState(false);
 
-  // I18nManager.isRTL is always synchronously correct — it reflects the OS RTL
-  // state set by forceRTL() in the *previous* session, so it's ready on the
-  // very first render before AsyncStorage loads the language preference.
-  const rtl = I18nManager.isRTL;
+  const tabWidths = useRef<number[]>([]);
+  const tabOffsets = useRef<number[]>([]);
+  const layoutGen = useRef(0);
+  const tabMeasureGen = useRef<number[]>([]);
+  const labelOpacity = useRef(new Animated.Value(1)).current;
 
-  const visualIndex = rtl ? NUM_TABS - 1 - activeIndex : activeIndex;
+  const animatePill = (index: number) => {
+    const tx = tabOffsets.current[index];
+    const tw = tabWidths.current[index];
+    if (tx === undefined || !(tw > 0)) return;
+    Animated.parallel([
+      Animated.spring(pillX, { toValue: tx, stiffness: 380, damping: 32, useNativeDriver: false }),
+      Animated.spring(pillW, { toValue: tw, stiffness: 380, damping: 32, useNativeDriver: false }),
+    ]).start();
+  };
 
+  // Language change: bump generation and fade labels
   useEffect(() => {
-    if (tabWidth <= 0) return;
-    const targetX = visualIndex * tabWidth;
-    if (!initialized.current) {
-      // Jump to correct position on first layout — avoids a one-frame flash
-      // where the pill sits at 0 before the spring animation fires.
-      initialized.current = true;
-      pillX.setValue(targetX);
-      return;
+    layoutGen.current += 1;
+    Animated.sequence([
+      Animated.timing(labelOpacity, { toValue: 0, duration: 100, useNativeDriver: true }),
+      Animated.timing(labelOpacity, { toValue: 1, duration: 180, useNativeDriver: true }),
+    ]).start();
+  }, [language]);
+
+  // Active tab change: animate pill
+  useEffect(() => {
+    if (!pillReady) return;
+    animatePill(state.index);
+  }, [state.index, pillReady]);
+
+  const handleLayout = (i: number, x: number, w: number) => {
+    tabWidths.current[i] = w;
+    tabOffsets.current[i] = x;
+    tabMeasureGen.current[i] = layoutGen.current;
+
+    const currentGen = layoutGen.current;
+    const allFresh = TAB_ITEMS.every((_, idx) => tabMeasureGen.current[idx] === currentGen);
+    if (!allFresh) return;
+
+    const tx = tabOffsets.current[state.index];
+    const tw = tabWidths.current[state.index];
+    if (tx === undefined || !(tw > 0)) return;
+
+    if (!pillReady) {
+      pillX.setValue(tx);
+      pillW.setValue(tw);
+      setPillReady(true);
+    } else {
+      animatePill(state.index);
     }
-    Animated.spring(pillX, {
-      toValue: targetX,
-      stiffness: 380,
-      damping: 32,
-      useNativeDriver: false,
-    }).start();
-  }, [activeIndex, tabWidth, visualIndex]);
+  };
 
   const bottomPadding = insets.bottom;
 
   return (
     <View style={[styles.container, { paddingBottom: bottomPadding + 12 }]} pointerEvents="box-none">
-      <View
-        style={[styles.pill, { backgroundColor: colors.glassStrong, borderColor: colors.border }]}
-        onLayout={e => {
-          const innerW = e.nativeEvent.layout.width - PILL_PX * 2;
-          setTabWidth(innerW / NUM_TABS);
-        }}
-      >
-        {tabWidth > 0 && (
+      <View style={[styles.pill, { backgroundColor: colors.glassStrong, borderColor: colors.border }]}>
+
+        {pillReady && (
           <Animated.View
-            style={[styles.activePill, {
-              width: tabWidth,
-              transform: [{ translateX: pillX }],
-              left: PILL_PX,
-            }]}
+            style={[styles.activePill, { width: pillW, transform: [{ translateX: pillX }] }]}
             pointerEvents="none"
           >
             <LinearGradient
@@ -108,20 +127,28 @@ export function BottomTabBar({ state, navigation }: TabBarProps) {
               style={styles.tabItem}
               onPress={onPress}
               testID={`tab-${item.name}`}
+              onLayout={e => {
+                const { x, width } = e.nativeEvent.layout;
+                handleLayout(index, x, width);
+              }}
             >
-              <item.Icon
-                size={20}
-                color={isActive ? colors.primaryForeground : colors.mutedForeground}
-                strokeWidth={2}
-              />
-              <Text
-                style={[
-                  styles.tabLabel,
-                  { color: isActive ? colors.primaryForeground : colors.mutedForeground, fontFamily: 'Inter_600SemiBold' },
-                ]}
+              <Animated.View
+                style={{ alignItems: 'center', justifyContent: 'center', gap: 2, opacity: labelOpacity }}
               >
-                {t[item.key]}
-              </Text>
+                <item.Icon
+                  size={20}
+                  color={isActive ? colors.primaryForeground : colors.mutedForeground}
+                  strokeWidth={2}
+                />
+                <Text
+                  style={[
+                    styles.tabLabel,
+                    { color: isActive ? colors.primaryForeground : colors.mutedForeground, fontFamily: 'Inter_600SemiBold' },
+                  ]}
+                >
+                  {t[item.key]}
+                </Text>
+              </Animated.View>
             </Pressable>
           );
         })}
@@ -155,6 +182,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: PILL_PX,
     bottom: PILL_PX,
+    left: 0,
     borderRadius: 16,
     overflow: 'hidden',
   },
@@ -166,7 +194,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 8,
-    gap: 2,
   },
   tabLabel: {
     fontSize: 10,
