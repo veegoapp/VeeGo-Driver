@@ -23,7 +23,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '@/lib/i18nContext';
 import { useAuth } from '@/lib/authContext';
 import { endpoints, ApiError } from '@/lib/api';
-import { navigateToHome } from '@/lib/postAuthRouter';
 import { TermsModal } from '@/components/TermsModal';
 
 const TERMS_VERSION_KEY = 'driver_terms_accepted_version';
@@ -57,16 +56,11 @@ export default function LoginScreen() {
   const handleSignInSuccess = async (
     accessToken: string,
     refreshToken: string,
-    status: 'pending' | 'approved',
-    serviceType: string | null,
+    _status: 'pending' | 'approved',
+    _serviceType: string | null,
   ) => {
     await login(accessToken, refreshToken);
-    // Navigate directly based on login response — no extra API call needed.
-    if (status === 'approved') {
-      navigateToHome(serviceType);
-    } else {
-      expoRouter.replace('/pending-approval');
-    }
+    // _layout.tsx watches the token and calls navigateAfterAuth — no need to navigate here.
   };
 
   const handleOtpRequired = (phone: string, maskedPhone?: string) => {
