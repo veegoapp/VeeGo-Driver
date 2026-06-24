@@ -132,7 +132,6 @@ export default function RegisterPlateScreen() {
                   maxLength={1}
                   textAlign="center"
                 />
-                <Text style={s.letterOptional}>{t.reg_plate_optional ?? 'اختياري'}</Text>
               </View>
 
               {/* Box 2 */}
