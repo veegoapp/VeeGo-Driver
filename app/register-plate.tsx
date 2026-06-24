@@ -1,9 +1,8 @@
 import { ArrowLeft, ArrowRight, AlertCircle } from 'lucide-react-native';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -17,36 +16,63 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints, ApiError } from '@/lib/api';
 
+const ARABIC_RE = /^[؀-ۿ]$/;
+
 export default function RegisterPlateScreen() {
   const insets = useSafeAreaInsets();
-  const topPad = insets.top;
-  const botPad = insets.bottom;
   const { t, isRTL } = useI18n();
   const TA = isRTL ? 'right' as const : 'left' as const;
 
-  const [letters, setLetters] = useState('');
+  // 3 separate letter boxes (box 3 is optional)
+  const [l1, setL1] = useState('');
+  const [l2, setL2] = useState('');
+  const [l3, setL3] = useState('');
   const [numbers, setNumbers] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const lettersOk = /^[؀-ۿ]{3}$/.test(letters.trim());
-  const numbersOk = /^\d{1,4}$/.test(numbers.trim());
+  const ref1 = useRef<TextInput>(null);
+  const ref2 = useRef<TextInput>(null);
+  const ref3 = useRef<TextInput>(null);
+  const refNum = useRef<TextInput>(null);
+
+  const letters = (l1 + l2 + l3).trim();
+  const lettersOk = /^[؀-ۿ]{2,3}$/.test(letters);
+  const numbersOk = /^\d{3,4}$/.test(numbers.trim());
   const canContinue = lettersOk && numbersOk && !submitting;
 
-  const preview = letters.trim().toUpperCase() + (numbers.trim() ? ' ' + numbers.trim() : '');
+  const preview = letters + (numbers.trim() ? ' ' + numbers.trim() : '');
+
+  const handleLetterChange = (
+    val: string,
+    setter: (v: string) => void,
+    nextRef: React.RefObject<TextInput | null> | null,
+  ) => {
+    const ch = val.replace(/[^؀-ۿ]/g, '').slice(-1);
+    setter(ch);
+    setError(null);
+    if (ch && nextRef?.current) nextRef.current.focus();
+  };
+
+  const handleLetterBackspace = (
+    val: string,
+    current: string,
+    setter: (v: string) => void,
+    prevRef: React.RefObject<TextInput | null> | null,
+  ) => {
+    if (val === '' && current === '' && prevRef?.current) {
+      prevRef.current.focus();
+    }
+  };
 
   const handleSubmit = async () => {
     if (!canContinue) return;
     setSubmitting(true);
     setError(null);
     try {
-      await endpoints.registration.setPlateNumber(
-        letters.trim().toUpperCase(),
-        numbers.trim(),
-      );
+      await endpoints.registration.setPlateNumber(letters, numbers.trim());
       router.push('/register-documents');
     } catch (err) {
-      console.log('[register-plate] error:', err);
       if (err instanceof ApiError) {
         const body = err.body as { error?: string } | null;
         setError(body?.error ?? 'Failed to save plate number. Please try again.');
@@ -62,7 +88,7 @@ export default function RegisterPlateScreen() {
     <View style={[s.root, { backgroundColor: '#fafafd' }]}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView
-          contentContainerStyle={{ paddingTop: topPad + 16, paddingBottom: botPad + 120, paddingHorizontal: 24 }}
+          contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 120, paddingHorizontal: 24 }}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
@@ -84,48 +110,87 @@ export default function RegisterPlateScreen() {
             </View>
           </View>
 
-          <View style={s.fieldsRow}>
-            {/* Letters */}
-            <View style={[s.fieldWrap, { flex: 1 }]}>
-              <Text style={[s.fieldLabel, { textAlign: TA }]}>{t.reg_plate_letters_label}</Text>
-              <View style={s.inputRow}>
+          {/* Letter boxes */}
+          <View style={s.sectionWrap}>
+            <Text style={[s.fieldLabel, { textAlign: TA }]}>{t.reg_plate_letters_label}</Text>
+            <Text style={[s.fieldHint, { textAlign: TA, marginBottom: 10 }]}>{t.reg_plate_letters_hint}</Text>
+            <View style={s.letterBoxRow}>
+              {/* Box 3 — optional, rightmost in Arabic plates */}
+              <View style={[s.letterBox, l3 ? s.letterBoxFilled : null]}>
                 <TextInput
-                  style={[s.input, { textAlign: 'center', letterSpacing: 6, fontSize: 18, fontWeight: '700' }]}
-                  value={letters}
-                  onChangeText={v => {
-                    setLetters(v.replace(/[^؀-ۿ]/g, '').slice(0, 3));
-                    setError(null);
+                  ref={ref3}
+                  style={s.letterInput}
+                  value={l3}
+                  onChangeText={v => handleLetterChange(v, setL3, refNum)}
+                  onKeyPress={({ nativeEvent }) => {
+                    if (nativeEvent.key === 'Backspace') handleLetterBackspace(l3, l3, setL3, ref2);
                   }}
-                  placeholder="أبج"
+                  placeholder="؟"
                   placeholderTextColor="#c3c3cc"
-                  autoCapitalize="none"
                   autoCorrect={false}
-                  maxLength={3}
+                  autoCapitalize="none"
+                  maxLength={1}
+                  textAlign="center"
                 />
+                <Text style={s.letterOptional}>{t.reg_plate_optional ?? 'اختياري'}</Text>
               </View>
-              <Text style={s.fieldHint}>{t.reg_plate_letters_hint}</Text>
-            </View>
 
-            <View style={s.fieldSep} />
-
-            {/* Numbers */}
-            <View style={[s.fieldWrap, { flex: 1 }]}>
-              <Text style={[s.fieldLabel, { textAlign: TA }]}>{t.reg_plate_numbers_label}</Text>
-              <View style={s.inputRow}>
+              {/* Box 2 */}
+              <View style={[s.letterBox, l2 ? s.letterBoxFilled : null]}>
                 <TextInput
-                  style={[s.input, { textAlign: 'center', letterSpacing: 4, fontSize: 18, fontWeight: '700' }]}
-                  value={numbers}
-                  onChangeText={v => {
-                    setNumbers(v.replace(/\D/g, '').slice(0, 4));
-                    setError(null);
+                  ref={ref2}
+                  style={s.letterInput}
+                  value={l2}
+                  onChangeText={v => handleLetterChange(v, setL2, ref3)}
+                  onKeyPress={({ nativeEvent }) => {
+                    if (nativeEvent.key === 'Backspace') handleLetterBackspace(l2, l2, setL2, ref1);
                   }}
-                  placeholder="1234"
+                  placeholder="؟"
                   placeholderTextColor="#c3c3cc"
-                  keyboardType="number-pad"
-                  maxLength={4}
+                  autoCorrect={false}
+                  autoCapitalize="none"
+                  maxLength={1}
+                  textAlign="center"
                 />
               </View>
-              <Text style={s.fieldHint}>{t.reg_plate_numbers_hint}</Text>
+
+              {/* Box 1 — first letter */}
+              <View style={[s.letterBox, l1 ? s.letterBoxFilled : null]}>
+                <TextInput
+                  ref={ref1}
+                  style={s.letterInput}
+                  value={l1}
+                  onChangeText={v => handleLetterChange(v, setL1, ref2)}
+                  placeholder="؟"
+                  placeholderTextColor="#c3c3cc"
+                  autoCorrect={false}
+                  autoCapitalize="none"
+                  autoFocus
+                  maxLength={1}
+                  textAlign="center"
+                />
+              </View>
+            </View>
+          </View>
+
+          {/* Numbers field */}
+          <View style={s.sectionWrap}>
+            <Text style={[s.fieldLabel, { textAlign: TA }]}>{t.reg_plate_numbers_label}</Text>
+            <Text style={[s.fieldHint, { textAlign: TA, marginBottom: 10 }]}>{t.reg_plate_numbers_hint}</Text>
+            <View style={s.inputRow}>
+              <TextInput
+                ref={refNum}
+                style={[s.input, { textAlign: 'center', letterSpacing: 4, fontSize: 22, fontWeight: '700' }]}
+                value={numbers}
+                onChangeText={v => {
+                  setNumbers(v.replace(/\D/g, '').slice(0, 4));
+                  setError(null);
+                }}
+                placeholder="1234"
+                placeholderTextColor="#c3c3cc"
+                keyboardType="number-pad"
+                maxLength={4}
+              />
             </View>
           </View>
 
@@ -142,7 +207,7 @@ export default function RegisterPlateScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <View style={[s.footer, { paddingBottom: botPad + 24 }]}>
+      <View style={[s.footer, { paddingBottom: insets.bottom + 24 }]}>
         <TouchableOpacity
           style={[s.continueBtn, !canContinue && s.continueBtnDisabled]}
           onPress={handleSubmit}
@@ -182,28 +247,30 @@ const s = StyleSheet.create({
     borderWidth: 2, borderColor: '#1e1e28',
     shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 4,
   },
-  plateBadge: {
-    backgroundColor: '#1e1e28', borderRadius: 8,
-    paddingHorizontal: 8, paddingVertical: 4,
-  },
+  plateBadge: { backgroundColor: '#1e1e28', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
   plateBadgeText: { fontSize: 11, fontWeight: '700', color: 'white', letterSpacing: 1 },
   plateText: { fontSize: 24, fontWeight: '700', color: '#1e1e28', letterSpacing: 4, fontFamily: 'Inter_700Bold', minWidth: 120, textAlign: 'center' },
-  fieldsRow: { flexDirection: 'row', gap: 0, marginBottom: 16, alignItems: 'flex-start' },
-  fieldSep: { width: 12 },
-  fieldWrap: { gap: 6 },
-  fieldLabel: { fontSize: 12, fontWeight: '600', color: '#1e1e28', letterSpacing: 0.3, fontFamily: 'Inter_600SemiBold' },
+  sectionWrap: { marginBottom: 24 },
+  fieldLabel: { fontSize: 12, fontWeight: '600', color: '#1e1e28', letterSpacing: 0.3, fontFamily: 'Inter_600SemiBold', marginBottom: 2 },
+  fieldHint: { fontSize: 11, color: '#9e9ea8', fontFamily: 'Inter_400Regular' },
+  letterBoxRow: { flexDirection: 'row', gap: 10, justifyContent: 'flex-end' },
+  letterBox: {
+    width: 72, height: 72, borderRadius: 18, backgroundColor: 'white',
+    borderWidth: 1.5, borderColor: '#e5e5ea', alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
+  },
+  letterBoxFilled: { borderColor: '#1e1e28', borderWidth: 2 },
+  letterInput: { fontSize: 26, fontWeight: '700', color: '#1e1e28', fontFamily: 'Inter_700Bold', width: '100%', textAlign: 'center' },
+  letterOptional: { fontSize: 9, color: '#9e9ea8', fontFamily: 'Inter_400Regular', marginTop: 2 },
   inputRow: {
-    backgroundColor: 'white', borderRadius: 18, height: 56, paddingHorizontal: 12,
+    backgroundColor: 'white', borderRadius: 18, height: 64, paddingHorizontal: 12,
     borderWidth: 1, borderColor: '#e5e5ea', justifyContent: 'center',
     shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
   },
   input: { fontSize: 16, color: '#1e1e28', fontFamily: 'Inter_700Bold' },
-  fieldHint: { fontSize: 11, color: '#9e9ea8', fontFamily: 'Inter_400Regular' },
   errorRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 4, marginBottom: 8 },
   errorText: { fontSize: 12, color: '#e53935', fontFamily: 'Inter_400Regular', flex: 1 },
-  noteBox: {
-    backgroundColor: '#f2f2f5', borderRadius: 14, padding: 14, marginTop: 8,
-  },
+  noteBox: { backgroundColor: '#f2f2f5', borderRadius: 14, padding: 14, marginTop: 8 },
   noteText: { fontSize: 12, color: '#5e5e72', lineHeight: 18, fontFamily: 'Inter_400Regular' },
   footer: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
