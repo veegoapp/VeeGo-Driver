@@ -70,7 +70,7 @@ export default function SupportScreen() {
         </GlassView>
 
         <View style={[styles.contactGrid, { flexDirection: R }]}>
-          <Pressable onPress={() => Alert.alert('Coming soon')} style={({ pressed }) => [{ flex: 1, transform: [{ scale: pressed ? 0.98 : 1 }] }]}>
+          <Pressable onPress={() => Alert.alert(t.coming_soon_badge)} style={({ pressed }) => [{ flex: 1, transform: [{ scale: pressed ? 0.98 : 1 }] }]}>
             <GlassView style={styles.contactCard} borderRadius={20}>
               <View style={[styles.contactIcon, { backgroundColor: colors.primary + '26' }]}>
                 <MessageCircle size={20} color={colors.primary} strokeWidth={2} />

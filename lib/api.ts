@@ -857,7 +857,9 @@ export interface DriverPromotion {
 export interface BonusTarget {
   id: string;
   title: string;
+  nameAr?: string | null;
   description?: string;
+  descriptionAr?: string | null;
   targetType: string;
   targetValue: number;
   progress: number;

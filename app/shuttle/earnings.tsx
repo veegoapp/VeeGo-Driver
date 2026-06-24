@@ -21,18 +21,6 @@ import type { FinancialAnalytics } from '@/lib/api';
 // ─── Timeframe filter options ─────────────────────────────────────────────────
 type Range = 'today' | 'week' | 'month';
 
-interface FilterOption {
-  key: Range;
-  labelAr: string;
-  labelEn: string;
-}
-
-const FILTERS: FilterOption[] = [
-  { key: 'today', labelAr: 'اليوم', labelEn: 'Today' },
-  { key: 'week',  labelAr: 'هذا الأسبوع', labelEn: 'This Week' },
-  { key: 'month', labelAr: 'هذا الشهر', labelEn: 'This Month' },
-];
-
 // ─── Currency formatter ───────────────────────────────────────────────────────
 function formatCurrency(amount: number, egpLabel: string): string {
   const formatted = Math.abs(amount).toLocaleString('en-EG', {
@@ -144,7 +132,11 @@ export default function EarningsScreen() {
       >
         {/* ── Timeframe filters ───────────────────────────────────────── */}
         <View style={[styles.filterRow, { flexDirection: flex }]}>
-          {FILTERS.map(f => {
+          {([
+            { key: 'today' as Range, label: t.today },
+            { key: 'week'  as Range, label: t.this_week },
+            { key: 'month' as Range, label: t.this_month },
+          ]).map(f => {
             const active = f.key === range;
             return (
               <Pressable
@@ -161,7 +153,7 @@ export default function EarningsScreen() {
                   styles.filterLabel,
                   { color: active ? '#fff' : colors.mutedForeground },
                 ]}>
-                  {isRTL ? f.labelAr : f.labelEn}
+                  {f.label}
                 </Text>
               </Pressable>
             );

@@ -13,7 +13,9 @@ import { endpoints } from '@/lib/api';
 type Notification = {
   id: string;
   title: string;
+  titleAr?: string | null;
   body: string;
+  bodyAr?: string | null;
   time: string;
   read: boolean;
 };
@@ -22,7 +24,7 @@ export default function MessagesScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const topPad = insets.top;
-  const { t } = useI18n();
+  const { t, isRTL } = useI18n();
   const queryClient = useQueryClient();
 
   const { data: rawNotifications, isLoading, isError } = useQuery({
@@ -152,7 +154,7 @@ export default function MessagesScreen() {
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <View style={styles.msgHeader}>
                       <Text style={[styles.msgFrom, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]} numberOfLines={1}>
-                        {n.title}
+                        {isRTL && n.titleAr ? n.titleAr : n.title}
                       </Text>
                       <Text style={[styles.msgTime, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>
                         {n.time}
@@ -162,7 +164,7 @@ export default function MessagesScreen() {
                       style={[styles.msgPreview, { color: n.read ? colors.mutedForeground : colors.foreground, fontFamily: 'Inter_400Regular' }]}
                       numberOfLines={2}
                     >
-                      {n.body}
+                      {isRTL && n.bodyAr ? n.bodyAr : n.body}
                     </Text>
                   </View>
                   {!n.read && <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} />}

@@ -295,14 +295,14 @@ export default function BonusTargetsScreen() {
                             style={[styles.milestoneTitle, { color: colors.foreground, textAlign: TA }]}
                             numberOfLines={2}
                           >
-                            {target.title}
+                            {isRTL && target.nameAr ? target.nameAr : target.title}
                           </Text>
-                          {!!target.description && (
+                          {!!(isRTL && target.descriptionAr ? target.descriptionAr : target.description) && (
                             <Text
                               style={[styles.milestoneDesc, { color: colors.mutedForeground, textAlign: TA }]}
                               numberOfLines={2}
                             >
-                              {target.description}
+                              {isRTL && target.descriptionAr ? target.descriptionAr : target.description}
                             </Text>
                           )}
                         </View>
