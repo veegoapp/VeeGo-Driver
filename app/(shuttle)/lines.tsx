@@ -753,6 +753,7 @@ function RouteCard({
   colors: ReturnType<typeof useColors>;
 }) {
   const anim = useRef(new Animated.Value(0)).current;
+  const { t } = useI18n();
 
   useEffect(() => {
     Animated.spring(anim, {
@@ -778,17 +779,17 @@ function RouteCard({
 
   // Status badge is purely informational — it does not control interactivity
   const badge = hasActiveBooking
-    ? { text: 'Booked ✓', bg: '#22c55e20', color: '#16a34a' }
+    ? { text: `${t.status_booked} ✓`, bg: '#22c55e20', color: '#16a34a' }
     : availableSlots === 0 && totalSlots > 0
-    ? { text: 'Full', bg: colors.secondary, color: colors.mutedForeground }
-    : { text: 'Available', bg: '#3D52D520', color: '#3D52D5' };
+    ? { text: t.status_full, bg: colors.secondary, color: colors.mutedForeground }
+    : { text: t.available, bg: '#3D52D520', color: '#3D52D5' };
 
   // CTA label changes based on context but the card is ALWAYS tappable
   const ctaLabel = hasActiveBooking
-    ? 'View slots →'
+    ? t.cta_view_slots
     : availableSlots === 0 && totalSlots > 0
-    ? 'View weeks →'
-    : 'Tap to book →';
+    ? t.cta_view_weeks
+    : t.cta_tap_to_book;
 
   return (
     <Animated.View style={{
