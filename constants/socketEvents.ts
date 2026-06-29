@@ -9,6 +9,9 @@ export const SOCKET_EVENTS = {
   /* unused — reserved for future */
   RIDE_NEW_REQUEST:         "ride:new_request",
   RIDE_OFFER_EXPIRED:       "ride:offer_expired",
+  RIDE_STATUS_UPDATE:       "ride:status_update",
+  RIDE_TIMEOUT:             "ride:timeout",
+  RIDE_DEVIATION_WARNING:   "ride:deviation:warning",
 
   // Server → Driver: waiting charge
   WAITING_CHARGE_STARTED:   "ride:waiting:charge:started",
@@ -25,6 +28,9 @@ export const SOCKET_EVENTS = {
 
   // Server → Driver: shuttle station timeout (Fix 3)
   SHUTTLE_STATION_TIMEOUT:  "shuttle:station:timeout",
+
+  // Server → Driver: force disconnect
+  FORCE_DISCONNECT:         "force:disconnect",
 
   // Server → Driver: cooldown
   DRIVER_COOLDOWN_CLEARED:  "driver:cooldown:cleared",
@@ -59,6 +65,17 @@ export const SOCKET_EVENTS = {
   TRIP_ACTIVATED:             "trip:activated",
   // Server → Driver: wallet feature toggled by admin
   DRIVER_WALLET_FEATURE:      "driver:wallet:feature:changed",
+
+  // Server → Driver: payment methods changed by admin
+  PAYMENT_METHODS_CHANGED:    "payment:methods:changed",
+
+  // Server → Driver: admin cancels a shuttle booking
+  ADMIN_SHUTTLE_BOOKING_CANCELLED: "admin:shuttle_booking_cancelled",
+
+  // Server → Driver: account status events
+  DRIVER_ACCOUNT_ACTIVATED:   "driver:account:activated",
+  DRIVER_ACCOUNT_REJECTED:    "driver:account:rejected",
+  DRIVER_CHANGES_REQUESTED:   "driver:changes:requested",
 
   // Server → All Drivers: real-time slot availability (broadcast to "drivers" room)
   SLOT_TAKEN:                 "slot_taken",
@@ -100,6 +117,9 @@ export const SOCKET_EVENTS = {
 
   // Client → Server
   JOIN:                     "join",
+  JOIN_TRIP:                "join:trip",
+  LEAVE_TRIP:               "leave:trip",
+  DRIVER_HEARTBEAT:         "driver:heartbeat",
   /* unused — reserved for future */
   DRIVER_STATUS_ONLINE:     "driver:status:online",
   /* unused — reserved for future */
@@ -107,6 +127,7 @@ export const SOCKET_EVENTS = {
   /* unused — reserved for future */
   DRIVER_STATUS_BUSY:       "driver:status:busy",
   DRIVER_LOCATION_UPDATE:   "driver:location:update",
+  DRIVER_RIDE_LOCATION:     "driver:ride:location",
   /* unused — reserved for future */
   DRIVER_TRIP_START:        "driver:trip:start",
   /* unused — reserved for future */
