@@ -75,6 +75,26 @@ export interface DriverProfileEnriched {
   }>;
 }
 
+// Driver-invites-driver referral program (GET /driver/referral-code).
+// Distinct from the shuttle "route handoff" driverCode feature (VGO- prefix,
+// endpoints.shuttle.referTrip/acceptReferral) — that is an unrelated backend system.
+export interface DriverReferralInfo {
+  code: string;
+  config: {
+    enabled: boolean;
+    serviceType: 'ride' | 'scooter' | 'delivery' | 'shuttle';
+    requiredTrips: number;
+    rewardCommissionRate: number;
+    rewardTripsCount: number;
+  };
+  stats: {
+    total: number;
+    completed: number;
+    pending: number;
+    discountedTripsRemaining: number;
+  };
+}
+
 // Fix 8: callback invoked when server returns 403 account_suspended
 type SuspendedCallback = () => void;
 let _onAccountSuspended: SuspendedCallback | null = null;
@@ -409,6 +429,10 @@ export const endpoints = {
     checkinAcknowledge: () => api.post('/driver/checkin/acknowledge'),
     ratings: () => api.get('/driver/me/ratings'),
     promotions: () => api.get<DriverPromotion[]>('/driver/promotions'),
+
+    // Driver-invites-driver referral program — code + config + live stats.
+    // Call as soon as the driver has a JWT (works mid-signup too).
+    referralProgram: () => api.get<DriverReferralInfo>('/driver/referral-code'),
   },
 
   pushTokens: {
@@ -734,10 +758,12 @@ export const endpoints = {
     setPlateNumber: (plateLetters: string, plateNumbers: string) =>
       api.post<{ ok: true }>('/driver/register/plate-number', { plateLetters, plateNumbers }),
 
-    // Step 6: POST /driver/auth/register-complete — documents only
-    // Vehicle + service-type already saved in previous steps.
+    // Step 6: POST /driver/auth/register-complete — documents + optional referral code.
+    // Vehicle + service-type already saved in previous steps. referralCode is fire-and-forget
+    // server-side: an invalid/unknown/self code is silently ignored, never blocks signup.
     complete: (data: {
       documents: { type: string; fileUrl: string; mimeType: string }[];
+      referralCode?: string;
     }) => api.post<{ ok: true }>('/driver/auth/register-complete', data),
   },
 

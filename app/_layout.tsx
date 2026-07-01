@@ -209,6 +209,7 @@ function RootLayoutNav() {
         <Stack.Screen name="messages" />
         <Stack.Screen name="personal-info" />
         <Stack.Screen name="bonus-targets" />
+        <Stack.Screen name="driver-referral" />
         <Stack.Screen name="settings" />
         <Stack.Screen name="shuttle/profile-info" />
         <Stack.Screen name="shuttle/trip-active" />

@@ -96,6 +96,12 @@ export default function ProfileScreen() {
     queryFn: endpoints.driver.me as () => Promise<DriverProfile>,
   });
 
+  const { data: driverReferralInfo } = useQuery({
+    queryKey: ['driver-referral-info'],
+    queryFn: endpoints.driver.referralProgram,
+    retry: 1,
+  });
+
   const { data: documentsRaw } = useQuery({
     queryKey: ['driver-documents'],
     queryFn: endpoints.driver.documents,
@@ -183,6 +189,9 @@ export default function ProfileScreen() {
           />
           <MenuItem icon="file-text" label={t.documents_label} onPress={() => router.push('/documents')} colors={colors} isRTL={isRTL} />
           <MenuItem icon="target" label={t.bonus_targets} onPress={() => router.push('/bonus-targets')} colors={colors} isRTL={isRTL} />
+          {driverReferralInfo?.config.enabled && (
+            <MenuItem icon="gift" label={t.driver_referral_menu_label} onPress={() => router.push('/driver-referral')} colors={colors} isRTL={isRTL} />
+          )}
           <MenuItem icon="clock" label={t.ride_history_label} sub={t.ride_history_sub} onPress={() => router.push('/ride/history' as any)} colors={colors} isRTL={isRTL} />
           <MenuItem icon="shield" label={t.safety_toolkit} sub={t.safety_sub} onPress={() => router.push('/safety')} colors={colors} isRTL={isRTL} last />
         </GlassView>

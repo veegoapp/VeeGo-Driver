@@ -8,6 +8,7 @@ import {
   ChevronRight,
   Clock,
   Copy,
+  Gift,
   GitBranch,
   HelpCircle,
   Inbox,
@@ -108,6 +109,12 @@ export default function ShuttleProfileScreen() {
   });
 
   const isLoading = enrichedLoading || (enrichedError && baseLoading);
+
+  const { data: driverReferralInfo } = useQuery({
+    queryKey: ['driver-referral-info'],
+    queryFn: endpoints.driver.referralProgram,
+    retry: 1,
+  });
 
   // Merge: prefer enriched, degrade to base
   const id = enriched?.id ?? base?.id ?? null;
@@ -388,6 +395,23 @@ export default function ShuttleProfileScreen() {
             last
           />
         </View>
+
+        {/* Invite a Driver — driver-invites-driver referral program (separate from the route-handoff code above) */}
+        {driverReferralInfo?.config.enabled && (
+          <>
+            <SectionHeader label={t.driver_referral_menu_label} colors={colors} isRTL={isRTL} />
+            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <MenuRow
+                icon={<Gift size={18} color={colors.foreground} strokeWidth={2} />}
+                label={t.driver_referral_menu_label}
+                onPress={() => router.push('/driver-referral')}
+                colors={colors}
+                isRTL={isRTL}
+                last
+              />
+            </View>
+          </>
+        )}
 
         {/* Communication & Settings */}
         <SectionHeader label={t.communication_settings} colors={colors} isRTL={isRTL} />

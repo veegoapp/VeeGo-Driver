@@ -14,10 +14,12 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useQuery } from '@tanstack/react-query';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints, ApiError } from '@/lib/api';
 import { signupStore } from '@/lib/signupStore';
@@ -91,6 +93,18 @@ export default function RegisterDocumentsScreen() {
   const [failed, setFailed] = useState<Record<string, boolean>>({});
   const [submitting, setSubmitting] = useState(false);
   const [cameraBlocked, setCameraBlocked] = useState(false);
+  const [referralCode, setReferralCode] = useState('');
+
+  // Driver-invites-driver referral program — the driver already has a JWT at this
+  // signup step, so this is safe to call here. Hidden entirely if config.enabled is false.
+  const { data: referralInfo } = useQuery({
+    queryKey: ['driver-referral-info'],
+    queryFn: endpoints.driver.referralProgram,
+    retry: 1,
+  });
+  const referralEnabled = !!referralInfo?.config.enabled;
+  const trimmedReferralCode = referralCode.trim();
+  const referralCodeLooksOff = trimmedReferralCode.length > 0 && !trimmedReferralCode.toUpperCase().startsWith('VGD-');
 
   const allDone = MANDATORY_IDS.every(id => uploaded[id]);
   const doneCount = MANDATORY_IDS.filter(id => uploaded[id]).length;
@@ -149,6 +163,7 @@ export default function RegisterDocumentsScreen() {
       const data = signupStore.getAll();
       await endpoints.registration.complete({
         documents: data.documents,
+        ...(trimmedReferralCode ? { referralCode: trimmedReferralCode } : {}),
       });
       signupStore.reset();
       router.replace('/pending-approval');
@@ -304,6 +319,25 @@ export default function RegisterDocumentsScreen() {
             </Text>
           </View>
         )}
+
+        {referralEnabled && (
+          <View style={s.referralSection}>
+            <Text style={s.referralLabel}>{t.signup_referral_label}</Text>
+            <TextInput
+              value={referralCode}
+              onChangeText={setReferralCode}
+              placeholder={t.signup_referral_placeholder}
+              placeholderTextColor="#9c9ca8"
+              style={s.referralInput}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              maxLength={16}
+            />
+            {referralCodeLooksOff && (
+              <Text style={s.referralHint}>{t.signup_referral_format_hint}</Text>
+            )}
+          </View>
+        )}
       </ScrollView>
 
       <View style={[s.footer, { paddingBottom: botPad + 20 }]}>
@@ -411,6 +445,14 @@ const s = StyleSheet.create({
     backgroundColor: '#f2f2f5', borderRadius: 14, padding: 14, marginTop: 16,
   },
   noteText: { flex: 1, fontSize: 12, color: '#5e5e72', lineHeight: 18, fontFamily: 'Inter_400Regular' },
+  referralSection: { marginTop: 20 },
+  referralLabel: { fontSize: 13, fontWeight: '600', color: '#1e1e28', fontFamily: 'Inter_600SemiBold', marginBottom: 8 },
+  referralInput: {
+    height: 52, borderRadius: 14, paddingHorizontal: 16,
+    backgroundColor: 'white', borderWidth: 1.5, borderColor: '#e5e5ea',
+    fontSize: 15, fontFamily: 'Inter_600SemiBold', color: '#1e1e28',
+  },
+  referralHint: { fontSize: 11, color: '#c2410c', marginTop: 6, fontFamily: 'Inter_400Regular' },
   footer: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
     paddingHorizontal: 24, paddingTop: 16,
