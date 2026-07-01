@@ -22,6 +22,7 @@ import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
 import type { DriverProfileEnriched } from '@/lib/api';
+import { compressImage } from '@/lib/imageCompression';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -121,16 +122,15 @@ export default function DocumentsScreen() {
   const uploadDoc = async (docType: string, asset: ImagePicker.ImagePickerAsset) => {
     setUploading(prev => ({ ...prev, [docType]: true }));
     try {
-      const ext = asset.uri.split('.').pop()?.toLowerCase() ?? 'jpg';
-      const mimeType = ext === 'png' ? 'image/png' : 'image/jpeg';
+      const compressed = await compressImage(asset.uri, docType);
       const formData = new FormData();
       formData.append('file', {
-        uri: asset.uri,
-        name: `${docType}.${ext}`,
-        type: mimeType,
+        uri: compressed.uri,
+        name: compressed.fileName,
+        type: compressed.mimeType,
       } as unknown as Blob);
       const { fileUrl } = await endpoints.driver.uploadFile(formData);
-      await endpoints.driver.registerDocument(docType, fileUrl, mimeType);
+      await endpoints.driver.registerDocument(docType, fileUrl, compressed.mimeType);
       await queryClient.invalidateQueries({ queryKey: ['documents'] });
       showToast(t.doc_upload_success, true);
     } catch {

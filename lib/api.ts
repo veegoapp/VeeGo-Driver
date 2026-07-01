@@ -681,7 +681,39 @@ export const endpoints = {
   },
 
   support: {
-    submitTicket: (data: unknown) => api.post('/support/tickets', data),
+    submitTicket: (data: {
+      subject: string;
+      message: string;
+      type: 'driver';
+      priority: 'low' | 'medium' | 'high';
+      category: 'payment' | 'safety' | 'quality' | 'refund' | 'lost_found' | 'other';
+      driverId: string | number;
+    }) => api.post<{ id: number | string }>('/support/tickets', data),
+
+    // POST /support/tickets/:id/attachments — multipart, field "file", one image per call.
+    uploadAttachment: async (ticketId: string | number, formData: FormData): Promise<{
+      id: number; ticketId: number; messageId: number; uploadedBy: number; fileUrl: string; createdAt: string;
+    }> => {
+      const token = await getToken();
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+      try {
+        const response = await fetch(`${API_BASE_URL}/support/tickets/${ticketId}/attachments`, {
+          method: 'POST',
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+          body: formData,
+          signal: controller.signal,
+        });
+        if (!response.ok) {
+          let body: unknown = null;
+          try { body = await response.json(); } catch { body = await response.text(); }
+          throw new ApiError(response.status, response.statusText, body);
+        }
+        return await response.json();
+      } finally {
+        clearTimeout(timeout);
+      }
+    },
   },
 
   registration: {

@@ -45,6 +45,7 @@ import { useAuth } from '@/lib/authContext';
 import { useService } from '@/lib/serviceContext';
 import { endpoints } from '@/lib/api';
 import type { DriverProfileEnriched } from '@/lib/api';
+import { compressImage } from '@/lib/imageCompression';
 
 const TAB_BAR_HEIGHT = 96;
 const CARD_RADIUS = 16;
@@ -173,15 +174,13 @@ export default function ShuttleProfileScreen() {
 
     setAvatarSubmitting(true);
     try {
+      const compressed = await compressImage(selectedImageUri, 'avatar');
       const formData = new FormData();
       formData.append('changeReason', avatarReason.trim());
-      const fileName = selectedImageUri.split('/').pop() ?? 'avatar.jpg';
-      const ext = fileName.split('.').pop()?.toLowerCase() ?? 'jpg';
-      const mimeType = ext === 'png' ? 'image/png' : 'image/jpeg';
       formData.append('newAvatarImage', {
-        uri: selectedImageUri,
-        name: fileName,
-        type: mimeType,
+        uri: compressed.uri,
+        name: compressed.fileName,
+        type: compressed.mimeType,
       } as unknown as Blob);
 
       await endpoints.driver.requestAvatarChange(formData);

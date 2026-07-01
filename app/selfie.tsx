@@ -18,6 +18,7 @@ import Svg, { Ellipse, Path } from 'react-native-svg';
 import { useService } from '@/lib/serviceContext';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
+import { compressImage } from '@/lib/imageCompression';
 
 export default function SelfieScreen() {
   const insets = useSafeAreaInsets();
@@ -90,8 +91,9 @@ export default function SelfieScreen() {
     }
     setIsUploading(true);
     try {
+      const compressed = await compressImage(photo, 'selfie');
       const formData = new FormData();
-      formData.append('file', { uri: photo, type: 'image/jpeg', name: 'selfie.jpg' } as unknown as Blob);
+      formData.append('file', { uri: compressed.uri, type: compressed.mimeType, name: compressed.fileName } as unknown as Blob);
       formData.append('type', 'selfie');
 
       if (shuttleCheckinMode && params.tripId) {

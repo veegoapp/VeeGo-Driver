@@ -7,6 +7,7 @@ import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Linking,
   Platform,
@@ -20,6 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints, ApiError } from '@/lib/api';
 import { signupStore } from '@/lib/signupStore';
+import { compressImage } from '@/lib/imageCompression';
 
 type DocSlot = {
   id: string;
@@ -118,12 +120,13 @@ export default function RegisterDocumentsScreen() {
     setUploaded(prev => ({ ...prev, [slot.id]: false }));
 
     try {
-      // Step 1: upload file to storage → get hosted URL
+      // Step 1: compress on-device, then upload to storage → get hosted URL
+      const compressed = await compressImage(asset.uri, slot.backendType);
       const formData = new FormData();
       formData.append('file', {
-        uri: asset.uri,
-        type: 'image/jpeg',
-        name: `${slot.backendType}.jpg`,
+        uri: compressed.uri,
+        type: compressed.mimeType,
+        name: compressed.fileName,
       } as unknown as Blob);
       const { fileUrl } = await endpoints.driver.uploadFile(formData);
 
