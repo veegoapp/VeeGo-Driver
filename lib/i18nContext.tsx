@@ -929,7 +929,9 @@ const en = {
   trip_done_title: 'Trip completed!',
   added_to_earnings: "Added to today's earnings",
   rate_rider_label: 'Rate {name}',
-  back_to_driving: 'Back to driving',
+  rating_comment_placeholder: 'Add a comment (optional)',
+  skip_btn: 'Skip',
+  submit_rating_btn: 'Submit',
   safety_toolkit_trip: 'Safety toolkit · Trip recorded',
   // ── Selfie screen ─────────────────────────────────────────────────────────────
   retry_camera_btn: "I've granted permission — try again",
@@ -2010,7 +2012,9 @@ const ar: typeof en = {
   trip_done_title: 'اكتملت الرحلة!',
   added_to_earnings: 'أُضيف لأرباح اليوم',
   rate_rider_label: 'قيّم {name}',
-  back_to_driving: 'العودة للقيادة',
+  rating_comment_placeholder: 'أضف تعليقاً (اختياري)',
+  skip_btn: 'تخطي',
+  submit_rating_btn: 'إرسال',
   safety_toolkit_trip: 'أدوات السلامة · الرحلة مسجلة',
   // ── Selfie screen ─────────────────────────────────────────────────────────────
   retry_camera_btn: 'منحت الإذن — حاول مرة أخرى',

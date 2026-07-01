@@ -92,7 +92,7 @@ export default function RatePassengersScreen() {
           prev.map(x => x.id === p.id ? { ...x, rated: true } : x)
         );
       } catch (err) {
-        if (err instanceof ApiError && err.status === 400) {
+        if (err instanceof ApiError && (err.status === 400 || err.status === 409)) {
           // Already rated — skip silently
           setPassengers(prev =>
             prev.map(x => x.id === p.id ? { ...x, rated: true } : x)

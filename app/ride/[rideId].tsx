@@ -2,7 +2,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { AlertTriangle, Check, ChevronUp, Clock, MessageCircle, Navigation, Phone, Shield, Star } from 'lucide-react-native';
 import React, { useRef, useEffect, useState } from 'react';
-import { Alert, Animated, Image, Linking, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Animated, Image, Linking, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { MapBackdrop } from '@/components/MapBackdrop';
@@ -56,6 +56,7 @@ export default function RideScreen() {
   const [phase, setPhase] = useState<Phase>('to_pickup');
   const [rating, setRating] = useState(0);
   const [ratingComment, setRatingComment] = useState('');
+  const [ratingSubmitting, setRatingSubmitting] = useState(false);
   const [busy, setBusy] = useState(false);
   const [sosBusy, setSosBusy] = useState(false);
   const hasRecovered = useRef(false);
@@ -245,14 +246,21 @@ export default function RideScreen() {
     }
   };
 
-  const handleDone = async () => {
-    if (rating > 0) {
-      try {
-        await endpoints.rides.rateRider(rideId ?? '', rating, ratingComment.trim() || undefined);
-      } catch {
-        // best-effort
-      }
+  const handleSubmitRating = async () => {
+    if (rating === 0 || ratingSubmitting) return;
+    setRatingSubmitting(true);
+    try {
+      await endpoints.rides.ratePassenger(rideId ?? '', rating, ratingComment.trim() || undefined);
+    } catch {
+      // Best-effort: already-rated (409), not-your-ride (403), or not-completed (422)
+      // all just mean the rating didn't go through — don't block the driver from returning home.
+    } finally {
+      setRatingSubmitting(false);
     }
+    router.replace('/(tabs)/home');
+  };
+
+  const handleSkipRating = () => {
     router.replace('/(tabs)/home');
   };
 
@@ -295,7 +303,10 @@ export default function RideScreen() {
           <Text style={[styles.fareNote, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{t.added_to_earnings}</Text>
 
           <GlassView style={styles.ratingCard} borderRadius={16}>
-            <Text style={[styles.ratingCardLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>{t.rate_rider_label.replace('{name}', r?.rider.name ?? '—')}</Text>
+            <View style={styles.ratingCardHeader}>
+              <Image source={{ uri: r?.rider.avatar || undefined }} style={styles.ratingAvatar} />
+              <Text style={[styles.ratingCardLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>{t.rate_rider_label.replace('{name}', r?.rider.name ?? '—')}</Text>
+            </View>
             <View style={styles.starsRow}>
               {[1, 2, 3, 4, 5].map(n => (
                 <Pressable key={n} onPress={() => setRating(n)}>
@@ -306,21 +317,34 @@ export default function RideScreen() {
             {rating > 0 && (
               <TextInput
                 style={[styles.commentInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.secondary }]}
-                placeholder={t.rating_comment_placeholder ?? 'Add a comment (optional)'}
+                placeholder={t.rating_comment_placeholder}
                 placeholderTextColor={colors.mutedForeground}
                 value={ratingComment}
                 onChangeText={setRatingComment}
-                maxLength={200}
+                maxLength={500}
                 multiline
               />
             )}
           </GlassView>
 
-          <Pressable onPress={handleDone} style={styles.doneBtn}>
-            <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.doneBtnGrad}>
-              <Text style={[styles.doneBtnText, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>{t.back_to_driving}</Text>
-            </LinearGradient>
-          </Pressable>
+          <View style={styles.ratingActionsRow}>
+            <Pressable onPress={handleSkipRating} disabled={ratingSubmitting} style={[styles.skipBtn, { borderColor: colors.border }]}>
+              <Text style={[styles.skipBtnText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.skip_btn}</Text>
+            </Pressable>
+            <Pressable
+              onPress={handleSubmitRating}
+              disabled={rating === 0 || ratingSubmitting}
+              style={[styles.doneBtn, { opacity: rating === 0 || ratingSubmitting ? 0.5 : 1 }]}
+            >
+              <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.doneBtnGrad}>
+                {ratingSubmitting ? (
+                  <ActivityIndicator color={colors.primaryForeground} />
+                ) : (
+                  <Text style={[styles.doneBtnText, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>{t.submit_rating_btn}</Text>
+                )}
+              </LinearGradient>
+            </Pressable>
+          </View>
         </Animated.View>
       )}
 
@@ -429,9 +453,14 @@ const styles = StyleSheet.create({
   fareEarned: { fontSize: 48, lineHeight: 52 },
   fareNote: { fontSize: 14, marginTop: 8 },
   ratingCard: { padding: 16, marginTop: 24, width: '100%' },
-  ratingCardLabel: { fontSize: 10, letterSpacing: 2, textTransform: 'uppercase' },
+  ratingCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  ratingAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#e5e5ea' },
+  ratingCardLabel: { fontSize: 10, letterSpacing: 2, textTransform: 'uppercase', flexShrink: 1 },
   starsRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 },
-  doneBtn: { marginTop: 24, width: '100%', borderRadius: 16, overflow: 'hidden' },
+  ratingActionsRow: { flexDirection: 'row', gap: 12, marginTop: 24, width: '100%' },
+  skipBtn: { flex: 1, height: 56, borderRadius: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  skipBtnText: { fontSize: 16 },
+  doneBtn: { flex: 1, borderRadius: 16, overflow: 'hidden' },
   doneBtnGrad: { height: 56, alignItems: 'center', justifyContent: 'center' },
   doneBtnText: { fontSize: 16 },
   sheet: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 12, paddingBottom: 12, zIndex: 30 },

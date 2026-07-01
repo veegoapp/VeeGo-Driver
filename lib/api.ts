@@ -425,8 +425,10 @@ export const endpoints = {
     start: (rideId: string) => api.patch(`/driver/rides/${rideId}/start`),
     complete: (rideId: string) => api.patch(`/driver/rides/${rideId}/complete`),
     active: () => api.get('/driver/rides/active'),
-    rateRider: (rideId: string, rating: number, comment?: string) =>
-      api.post(`/driver/rides/${rideId}/rate-rider`, { rating, ...(comment ? { comment } : {}) }),
+    ratePassenger: (rideId: string, stars: number, comment?: string) =>
+      api.post<{ ok: boolean; rideId: number; stars: number; id: number }>(
+        `/driver/rides/${rideId}/rate-passenger`, { stars, ...(comment ? { comment } : {}) }
+      ),
     messages: (rideId: string) =>
       api.get<{ data: RideMessage[]; total: number }>(`/rides/${rideId}/messages`),
     sendMessage: (rideId: string, text: string) =>
