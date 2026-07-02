@@ -4,18 +4,15 @@ import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location'; // Task 1: GPS tracking
 import * as TaskManager from 'expo-task-manager';
 import { DRIVER_LOCATION_TASK } from '@/lib/backgroundLocationTask';
-import { AlertCircle, Bell, Check, CheckCircle, Settings, ShieldCheck, Star, TrendingUp, X } from 'lucide-react-native';
+import { AlertCircle, Bell, Check, CheckCircle, Settings, Star, TrendingUp, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSocket } from '@/lib/socketContext';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
 import {
   ActivityIndicator,
-  Alert,
   Animated,
-  AppState,
   Image,
-  Modal,
   Platform,
   Pressable,
   StyleSheet,
@@ -30,6 +27,7 @@ import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useRideSocket, type RideRequest } from '@/hooks/useRideSocket';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
+import { computeDeadlineMinutes, type CheckinRequiredPayload } from '@/lib/checkinDeadline';
 
 export const TAB_BAR_HEIGHT = 96;
 const OFFER_TIMEOUT_MS = 12000;
@@ -50,16 +48,13 @@ export default function HomeScreen() {
   // Socket event UI state
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [toastType, setToastType] = useState<'warning' | 'success'>('warning');
-  const [checkinApprovedVisible, setCheckinApprovedVisible] = useState(false);
-  const [checkinRequiredVisible, setCheckinRequiredVisible] = useState(false);
-  const [checkinCountdown, setCheckinCountdown] = useState(60);
-  const [checkinBusy, setCheckinBusy] = useState(false);
-  const checkinDeadlineMsRef = useRef<number | null>(null);
   const statusDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSubmittedStatusRef = useRef<string | null>(null);
   const toastAnim = useRef(new Animated.Value(-80)).current;
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const checkinCountdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Guards against double-navigating to /selfie when both the live socket event
+  // and the GET /driver/checkin/status poll fire for the same pending check-in.
+  const checkinPromptedRef = useRef(false);
 
   const [unreadCount, setUnreadCount] = useState(0);
   const { socket } = useSocket();
@@ -85,6 +80,14 @@ export default function HomeScreen() {
     queryFn: () => endpoints.notifications.list() as Promise<{ id: string; read?: boolean; isRead?: boolean }[]>,
     staleTime: 30000,
   });
+  // Cold-start / reconnect gate check — catches a pending check-in the driver
+  // missed while the app was closed (the live DRIVER_CHECKIN_REQUIRED socket
+  // event only reaches an app that's already open and connected).
+  const { data: checkinStatusRaw, refetch: refetchCheckinStatus } = useQuery({
+    queryKey: ['driver-checkin-status'],
+    queryFn: endpoints.driver.checkinStatus,
+    retry: false,
+  });
 
   const driverData = driverRaw as any;
   const earningsData = earningsRaw as any;
@@ -109,8 +112,21 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       refetchNotifications();
-    }, [refetchNotifications])
+      // Returning to this screen (e.g. backed out of /selfie) — allow another prompt.
+      checkinPromptedRef.current = false;
+      refetchCheckinStatus();
+    }, [refetchNotifications, refetchCheckinStatus])
   );
+
+  useEffect(() => {
+    const status = checkinStatusRaw as { checkInRequired?: boolean; checkInDeadline?: string | null } | undefined;
+    if (!status?.checkInRequired || checkinPromptedRef.current) return;
+    checkinPromptedRef.current = true;
+    router.push({
+      pathname: '/selfie',
+      params: { deadlineMinutes: String(computeDeadlineMinutes(status.checkInDeadline)) },
+    });
+  }, [checkinStatusRaw]);
 
   useEffect(() => {
     if (!socket) return;
@@ -144,7 +160,6 @@ export default function HomeScreen() {
   const showToastRef = useRef<((msg: string, type: 'warning' | 'success') => void) | null>(null);
   // Task 1: location tracking refs
   const locationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const appStateRef = useRef(AppState.currentState);
 
   useEffect(() => {
     if (online) {
@@ -219,15 +234,24 @@ export default function HomeScreen() {
     showToastRef.current?.('Ride is no longer available', 'warning');
   }, []);
 
-  const handleCheckinRequired = useCallback(() => {
-    setCheckinRequiredVisible(true);
-    setCheckinCountdown(60);
+  // Periodic ("long_shift") check-in prompt — same capture screen as the shuttle
+  // trip check-in, just no tripId and a deadline derived from the payload.
+  const handleCheckinRequired = useCallback((data: CheckinRequiredPayload) => {
+    if (checkinPromptedRef.current) return;
+    checkinPromptedRef.current = true;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+    router.push({
+      pathname: '/selfie',
+      params: { deadlineMinutes: String(computeDeadlineMinutes(data?.deadline)) },
+    });
   }, []);
 
+  // Selfie.tsx already reacts to these directly while it's mounted (closes on
+  // approved / prompts a retake on rejected) — this is just an ambient
+  // notification for when the driver isn't on that screen anymore.
   const handleCheckinApproved = useCallback(() => {
-    setCheckinApprovedVisible(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    showToastRef.current?.('Check-in approved — you can keep receiving requests.', 'success');
   }, []);
 
   const handleCheckinRejected = useCallback(() => {
@@ -254,6 +278,12 @@ export default function HomeScreen() {
     onCooldownCleared: handleCooldownCleared,
     onSurgeUpdated: handleSurgeUpdated,
   });
+
+  // Re-check the gate on reconnect too — covers a dropped connection that
+  // missed the live DRIVER_CHECKIN_REQUIRED event while it was down.
+  useEffect(() => {
+    if (socketConnected) refetchCheckinStatus();
+  }, [socketConnected, refetchCheckinStatus]);
 
   // FIX #6: was gated on `online` — spec requires registration immediately after login
   useEffect(() => {
@@ -325,18 +355,9 @@ export default function HomeScreen() {
     }
   };
 
-  // Task 1: background location task handles continuity — track AppState for checkin countdown only
-  useEffect(() => {
-    const sub = AppState.addEventListener('change', (nextState) => {
-      appStateRef.current = nextState;
-    });
-    return () => sub.remove();
-  }, []);
-
   // Task 1: clean up on unmount
   useEffect(() => () => {
     stopLocationTracking();
-    if (checkinCountdownRef.current) clearInterval(checkinCountdownRef.current);
   }, []);
 
   // Reconnecting banner — slide down when socket drops while online
@@ -348,57 +369,6 @@ export default function HomeScreen() {
       bounciness: 0,
     }).start();
   }, [online, socketConnected]);
-
-  // driver:checkin:required countdown — auto-go-offline if driver doesn't respond in 60 s
-  // Uses an absolute deadline so backgrounding the app doesn't stall the timer.
-  useEffect(() => {
-    if (!checkinRequiredVisible) {
-      if (checkinCountdownRef.current) {
-        clearInterval(checkinCountdownRef.current);
-        checkinCountdownRef.current = null;
-      }
-      checkinDeadlineMsRef.current = null;
-      return;
-    }
-
-    const CHECKIN_SECONDS = 60;
-    checkinDeadlineMsRef.current = Date.now() + CHECKIN_SECONDS * 1000;
-    setCheckinCountdown(CHECKIN_SECONDS);
-
-    const tick = () => {
-      if (!checkinDeadlineMsRef.current) return;
-      const remaining = Math.max(0, Math.round((checkinDeadlineMsRef.current - Date.now()) / 1000));
-      setCheckinCountdown(remaining);
-      if (remaining <= 0) {
-        if (checkinCountdownRef.current) {
-          clearInterval(checkinCountdownRef.current);
-          checkinCountdownRef.current = null;
-        }
-        // Time's up — take the driver offline
-        endpoints.driver.goOffline().catch(() => {});
-        stopLocationTracking();
-        setOnline(false);
-        setCheckinRequiredVisible(false);
-        showToastRef.current?.('You were taken offline — safety check-in not confirmed.', 'warning');
-      }
-    };
-
-    checkinCountdownRef.current = setInterval(tick, 1000);
-
-    // Recalculate from deadline when app returns to foreground
-    const appStateSub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') tick();
-    });
-
-    return () => {
-      if (checkinCountdownRef.current) {
-        clearInterval(checkinCountdownRef.current);
-        checkinCountdownRef.current = null;
-      }
-      appStateSub.remove();
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [checkinRequiredVisible]);
 
   const handleToggleOnline = async () => {
     if (togglingOnline) return;
@@ -535,99 +505,6 @@ export default function HomeScreen() {
           </View>
         </Animated.View>
       )}
-
-      {/* driver:checkin:required blocking modal */}
-      <Modal
-        visible={checkinRequiredVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => {}}
-      >
-        <View style={styles.checkinReqOverlay}>
-          <GlassView strong style={styles.checkinReqCard} borderRadius={28}>
-            <View style={styles.checkinReqIconWrap}>
-              <LinearGradient colors={['#f59e0b', '#d97706']} style={styles.checkinReqIconGrad}>
-                <ShieldCheck size={36} color="#fff" strokeWidth={2} />
-              </LinearGradient>
-            </View>
-
-            <Text style={[styles.checkinReqTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-              Safety check-in required
-            </Text>
-            <Text style={[styles.checkinReqSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-              Please confirm you are safe and fit to drive before continuing to receive ride requests.
-            </Text>
-
-            <View style={[styles.checkinReqCountdownWrap, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
-              <Text style={[styles.checkinReqCountdownNum, { color: checkinCountdown <= 10 ? '#ef4444' : colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-                {checkinCountdown}
-              </Text>
-              <Text style={[styles.checkinReqCountdownLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-                seconds to respond{'\n'}or you'll be taken offline
-              </Text>
-            </View>
-
-            <Pressable
-              style={[styles.checkinReqBtn, { opacity: checkinBusy ? 0.6 : 1 }]}
-              disabled={checkinBusy}
-              onPress={async () => {
-                setCheckinBusy(true);
-                try {
-                  await endpoints.driver.checkinAcknowledge();
-                  if (checkinCountdownRef.current) {
-                    clearInterval(checkinCountdownRef.current);
-                    checkinCountdownRef.current = null;
-                  }
-                  setCheckinRequiredVisible(false);
-                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-                } catch {
-                  Alert.alert('Error', 'Failed to confirm check-in. Please try again.');
-                } finally {
-                  setCheckinBusy(false);
-                }
-              }}
-            >
-              <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.checkinReqBtnGrad}>
-                <Check size={18} color="#fff" strokeWidth={2.5} />
-                <Text style={[styles.checkinReqBtnText, { fontFamily: 'Inter_700Bold' }]}>I'm ready to drive</Text>
-              </LinearGradient>
-            </Pressable>
-          </GlassView>
-        </View>
-      </Modal>
-
-      {/* driver:checkin:approved modal */}
-      <Modal
-        visible={checkinApprovedVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setCheckinApprovedVisible(false)}
-      >
-        <View style={styles.checkinOverlay}>
-          <GlassView strong style={styles.checkinCard} borderRadius={28}>
-            <View style={styles.checkinIconWrap}>
-              <LinearGradient colors={['#22c55e', '#16a34a']} style={styles.checkinIconGrad}>
-                <ShieldCheck size={36} color="#fff" strokeWidth={2} />
-              </LinearGradient>
-            </View>
-            <Text style={[styles.checkinTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-              Check-in approved!
-            </Text>
-            <Text style={[styles.checkinSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-              You've passed the safety check-in. You can continue receiving ride requests.
-            </Text>
-            <Pressable
-              style={styles.checkinBtn}
-              onPress={() => setCheckinApprovedVisible(false)}
-            >
-              <LinearGradient colors={['#22c55e', '#16a34a']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.checkinBtnGrad}>
-                <Check size={18} color="#fff" strokeWidth={2.5} />
-                <Text style={[styles.checkinBtnText, { fontFamily: 'Inter_700Bold' }]}>Got it</Text>
-              </LinearGradient>
-            </Pressable>
-          </GlassView>
-        </View>
-      </Modal>
 
       <View style={[styles.overlay, { paddingTop: topPad }]}>
         <View style={[styles.header, { flexDirection: R }]}>
@@ -944,27 +821,4 @@ const styles = StyleSheet.create({
   toastWrap: { position: 'absolute', left: 0, right: 0, zIndex: 100, paddingHorizontal: 16 },
   toastInner: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 16, shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 5 },
   toastText: { color: '#fff', fontSize: 13, fontFamily: 'Inter_600SemiBold', flex: 1, lineHeight: 18 },
-  // Check-in approved modal
-  checkinOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28 },
-  checkinCard: { width: '100%', padding: 28, alignItems: 'center', gap: 12 },
-  checkinIconWrap: { width: 80, height: 80, borderRadius: 40, overflow: 'hidden', marginBottom: 4, shadowColor: '#22c55e', shadowOpacity: 0.4, shadowRadius: 16, shadowOffset: { width: 0, height: 4 }, elevation: 8 },
-  checkinIconGrad: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  checkinTitle: { fontSize: 22, textAlign: 'center', marginTop: 4 },
-  checkinSub: { fontSize: 14, textAlign: 'center', lineHeight: 21 },
-  checkinBtn: { marginTop: 8, width: '100%', borderRadius: 16, overflow: 'hidden', elevation: 6, shadowColor: '#22c55e', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 8 },
-  checkinBtnGrad: { height: 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  checkinBtnText: { color: '#fff', fontSize: 15 },
-  // driver:checkin:required blocking modal
-  checkinReqOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.75)', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28 },
-  checkinReqCard: { width: '100%', padding: 28, alignItems: 'center', gap: 14 },
-  checkinReqIconWrap: { width: 80, height: 80, borderRadius: 40, overflow: 'hidden', marginBottom: 4, shadowColor: '#f59e0b', shadowOpacity: 0.45, shadowRadius: 16, shadowOffset: { width: 0, height: 4 }, elevation: 8 },
-  checkinReqIconGrad: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  checkinReqTitle: { fontSize: 22, textAlign: 'center' },
-  checkinReqSub: { fontSize: 14, textAlign: 'center', lineHeight: 21 },
-  checkinReqCountdownWrap: { flexDirection: 'row', alignItems: 'center', gap: 14, borderWidth: 1, borderRadius: 16, paddingVertical: 14, paddingHorizontal: 20, width: '100%' },
-  checkinReqCountdownNum: { fontSize: 44, lineHeight: 48, minWidth: 56, textAlign: 'center' },
-  checkinReqCountdownLabel: { fontSize: 13, lineHeight: 19, flex: 1 },
-  checkinReqBtn: { marginTop: 4, width: '100%', borderRadius: 16, overflow: 'hidden', elevation: 8, shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 12 },
-  checkinReqBtnGrad: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  checkinReqBtnText: { color: '#fff', fontSize: 16 },
 });

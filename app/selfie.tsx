@@ -19,6 +19,8 @@ import { useService } from '@/lib/serviceContext';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
 import { compressImage } from '@/lib/imageCompression';
+import { useSocket } from '@/lib/socketContext';
+import { SOCKET_EVENTS } from '@/constants/socketEvents';
 
 export default function SelfieScreen() {
   const insets = useSafeAreaInsets();
@@ -31,19 +33,27 @@ export default function SelfieScreen() {
   const [isUploading, setIsUploading] = useState(false);
   const [cameraBlocked, setCameraBlocked] = useState(false);
 
-  // Shuttle check-in params
+  // Shuttle trip check-in (tripId present) and the periodic "long_shift" driver
+  // check-in (deadlineMinutes present, no tripId) share this screen and its
+  // POST /driver/checkin submission — they only differ in the tripId field and copy.
   const params = useLocalSearchParams<{ tripId?: string; deadlineMinutes?: string }>();
   const shuttleCheckinMode = !!params.tripId;
-  const deadlineSecs = shuttleCheckinMode
+  const periodicCheckinMode = !params.tripId && !!params.deadlineMinutes;
+  const checkinMode = shuttleCheckinMode || periodicCheckinMode;
+  const deadlineSecs = checkinMode
     ? Math.max(1, parseInt(params.deadlineMinutes ?? '10', 10)) * 60
     : 0;
 
   const [secondsLeft, setSecondsLeft] = useState(deadlineSecs);
   const [timedOut, setTimedOut] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Prevents the sync POST response and a later DRIVER_CHECKIN_APPROVED/REJECTED
+  // socket event from both trying to act (double-navigate, double-alert).
+  const settledRef = useRef(false);
+  const { socket } = useSocket();
 
   useEffect(() => {
-    if (!shuttleCheckinMode) return;
+    if (!checkinMode) return;
     intervalRef.current = setInterval(() => {
       setSecondsLeft(prev => {
         if (prev <= 1) {
@@ -57,7 +67,37 @@ export default function SelfieScreen() {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [shuttleCheckinMode]);
+  }, [checkinMode]);
+
+  // Listen for the async approval/rejection verdict — fired right after the
+  // POST resolves. Both the shuttle and periodic paths get consistent
+  // close-on-approved / retake-on-rejected behavior via this, not just the
+  // synchronous POST response above.
+  useEffect(() => {
+    if (!checkinMode || !socket) return;
+
+    const handleApproved = () => {
+      if (settledRef.current) return;
+      settledRef.current = true;
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      setConfirmed(true);
+      setTimeout(() => router.back(), 1200);
+    };
+
+    const handleRejected = (data?: { message?: string }) => {
+      if (settledRef.current) return;
+      setPhoto(null);
+      Alert.alert(t.no_face_detected_title, data?.message ?? t.no_face_detected_msg);
+    };
+
+    socket.on(SOCKET_EVENTS.DRIVER_CHECKIN_APPROVED, handleApproved);
+    socket.on(SOCKET_EVENTS.DRIVER_CHECKIN_REJECTED, handleRejected);
+    return () => {
+      socket.off(SOCKET_EVENTS.DRIVER_CHECKIN_APPROVED, handleApproved);
+      socket.off(SOCKET_EVENTS.DRIVER_CHECKIN_REJECTED, handleRejected);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checkinMode, socket]);
 
   const formatCountdown = (secs: number) => {
     const m = Math.floor(secs / 60).toString().padStart(2, '0');
@@ -85,8 +125,8 @@ export default function SelfieScreen() {
 
   const handleConfirm = async () => {
     if (!photo || isUploading) return;
-    if (shuttleCheckinMode && timedOut) {
-      Alert.alert(t.timeout_alert_title, t.timeout_alert_body);
+    if (checkinMode && timedOut) {
+      Alert.alert(t.timeout_alert_title, shuttleCheckinMode ? t.timeout_alert_body : t.periodic_timeout_alert_body);
       return;
     }
     setIsUploading(true);
@@ -96,8 +136,8 @@ export default function SelfieScreen() {
       formData.append('file', { uri: compressed.uri, type: compressed.mimeType, name: compressed.fileName } as unknown as Blob);
       formData.append('type', 'selfie');
 
-      if (shuttleCheckinMode && params.tripId) {
-        formData.append('tripId', params.tripId);
+      if (checkinMode) {
+        if (params.tripId) formData.append('tripId', params.tripId);
         const response = await endpoints.driver.checkin(formData);
         if (!response.ok) throw new Error('Checkin failed');
         const result = await response.json() as { faceDetected?: boolean; message?: string };
@@ -106,6 +146,7 @@ export default function SelfieScreen() {
           Alert.alert(t.no_face_detected_title, result.message ?? t.no_face_detected_msg);
           return;
         }
+        settledRef.current = true;
         if (intervalRef.current) clearInterval(intervalRef.current);
         setConfirmed(true);
         setTimeout(() => router.back(), 1200);
@@ -161,12 +202,14 @@ export default function SelfieScreen() {
           <CheckCircle2 size={72} color="#1e1e28" />
         </View>
         <Text style={s.successTitle}>
-          {shuttleCheckinMode ? t.verified_title_checkin : t.selfie_all_set}
+          {shuttleCheckinMode ? t.verified_title_checkin : periodicCheckinMode ? t.verified_title_periodic_checkin : t.selfie_all_set}
         </Text>
         <Text style={s.successSub}>
           {shuttleCheckinMode
             ? t.verified_sub_checkin
-            : t.selfie_review_sub}
+            : periodicCheckinMode
+              ? t.verified_sub_periodic_checkin
+              : t.selfie_review_sub}
         </Text>
       </View>
     );
@@ -186,6 +229,12 @@ export default function SelfieScreen() {
               <Text style={s.title}>{t.selfie_checkin_title}</Text>
               <Text style={s.sub}>{t.selfie_checkin_sub}</Text>
             </>
+          ) : periodicCheckinMode ? (
+            <>
+              <Text style={s.step}>{t.selfie_periodic_checkin_step}</Text>
+              <Text style={s.title}>{t.selfie_periodic_checkin_title}</Text>
+              <Text style={s.sub}>{t.selfie_periodic_checkin_sub}</Text>
+            </>
           ) : (
             <>
               <Text style={s.step}>{t.reg_step_4_of_4}</Text>
@@ -195,14 +244,14 @@ export default function SelfieScreen() {
           )}
         </View>
 
-        {shuttleCheckinMode && (
+        {checkinMode && (
           <View style={[
             s.timerBox,
             timedOut ? { backgroundColor: '#fee2e2', borderColor: '#fca5a5' } : { backgroundColor: '#fff7ed', borderColor: '#fed7aa' },
           ]}>
             {timedOut ? (
               <Text style={[s.timerText, { color: '#dc2626', fontFamily: 'Inter_700Bold' }]}>
-                {t.checkin_timed_out_msg}
+                {shuttleCheckinMode ? t.checkin_timed_out_msg : t.periodic_checkin_timed_out_msg}
               </Text>
             ) : (
               <>
@@ -271,16 +320,18 @@ export default function SelfieScreen() {
               <Text style={s.retakeBtnText}>{t.retake_photo}</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[s.confirmBtn, { flex: 2, opacity: (isUploading || (shuttleCheckinMode && timedOut)) ? 0.6 : 1 }]}
+              style={[s.confirmBtn, { flex: 2, opacity: (isUploading || (checkinMode && timedOut)) ? 0.6 : 1 }]}
               onPress={handleConfirm}
               activeOpacity={0.9}
-              disabled={isUploading || (shuttleCheckinMode && timedOut)}
+              disabled={isUploading || (checkinMode && timedOut)}
             >
               {isUploading ? (
                 <ActivityIndicator color="white" />
               ) : (
                 <>
-                  <Text style={s.confirmBtnText}>{shuttleCheckinMode ? t.confirm_checkin : t.selfie_confirm}</Text>
+                  <Text style={s.confirmBtnText}>
+                    {shuttleCheckinMode ? t.confirm_checkin : periodicCheckinMode ? t.confirm_periodic_checkin : t.selfie_confirm}
+                  </Text>
                   <Check size={18} color="white" strokeWidth={2} />
                 </>
               )}
@@ -288,17 +339,17 @@ export default function SelfieScreen() {
           </View>
         ) : (
           <TouchableOpacity
-            style={[s.confirmBtn, { opacity: (shuttleCheckinMode && timedOut) ? 0.5 : 1 }]}
+            style={[s.confirmBtn, { opacity: (checkinMode && timedOut) ? 0.5 : 1 }]}
             onPress={takeSelfie}
             activeOpacity={0.9}
-            disabled={shuttleCheckinMode && timedOut}
+            disabled={checkinMode && timedOut}
           >
             <Camera size={20} color="white" />
             <Text style={s.confirmBtnText}>{t.take_photo_btn}</Text>
           </TouchableOpacity>
         )}
 
-        {!shuttleCheckinMode && (
+        {!checkinMode && (
           <View style={s.tipsRow}>
             {[t.tip_good_lighting, t.tip_face_centered, t.tip_no_glasses].map((tip) => (
               <View key={tip} style={s.tip}>

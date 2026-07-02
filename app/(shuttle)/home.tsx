@@ -26,6 +26,7 @@ import { useReferral } from '@/lib/referralContext';
 import { useSocket } from '@/lib/socketContext';
 import { useServiceControl } from '@/lib/serviceControlContext';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
+import { computeDeadlineMinutes, type CheckinRequiredPayload } from '@/lib/checkinDeadline';
 
 const TAB_BAR_HEIGHT = 96;
 
@@ -42,12 +43,15 @@ export default function ShuttleHomeScreen() {
 
   // Fix 2: shuttle check-in state
   const [shuttleCheckinRequired, setShuttleCheckinRequired] = useState<{ tripId: string; deadlineMinutes: number } | null>(null);
+  // Guards against double-navigating to /selfie when both the live
+  // DRIVER_CHECKIN_REQUIRED event and the checkin-status poll fire for the same prompt.
+  const checkinPromptedRef = useRef(false);
 
   const pulseScale = useRef(new Animated.Value(0.8)).current;
   const pulseOpacity = useRef(new Animated.Value(0.8)).current;
   const cardAnim = useRef(new Animated.Value(0)).current;
 
-  const { socket } = useSocket();
+  const { socket, connected: socketConnected } = useSocket();
   const { currency } = useServiceControl();
 
   // Broadcast GPS location every 5 s while the driver is online
@@ -64,6 +68,13 @@ export default function ShuttleHomeScreen() {
     queryKey: ['notifications'],
     queryFn: () => endpoints.notifications.list() as Promise<{ id: string; read?: boolean; isRead?: boolean }[]>,
     staleTime: 30000,
+  });
+  // Cold-start / reconnect gate check — catches a periodic check-in the driver
+  // missed while the app was closed or disconnected.
+  const { data: checkinStatusRaw, refetch: refetchCheckinStatus } = useQuery({
+    queryKey: ['driver-checkin-status'],
+    queryFn: endpoints.driver.checkinStatus,
+    retry: false,
   });
   const driverData = driverRaw as any;
 
@@ -84,8 +95,28 @@ export default function ShuttleHomeScreen() {
       refetch();
       queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['shuttle-lines'] });
-    }, [refetchNotifications, refetch, queryClient])
+      // Returning to this screen (e.g. backed out of /selfie) — allow another prompt.
+      checkinPromptedRef.current = false;
+      refetchCheckinStatus();
+    }, [refetchNotifications, refetch, queryClient, refetchCheckinStatus])
   );
+
+  // Re-check the gate on reconnect too — covers a dropped connection that
+  // missed the live DRIVER_CHECKIN_REQUIRED event while it was down.
+  useEffect(() => {
+    if (socketConnected) refetchCheckinStatus();
+  }, [socketConnected, refetchCheckinStatus]);
+
+  useEffect(() => {
+    const status = checkinStatusRaw as { checkInRequired?: boolean; checkInDeadline?: string | null } | undefined;
+    if (!status?.checkInRequired || checkinPromptedRef.current) return;
+    checkinPromptedRef.current = true;
+    router.push({
+      pathname: '/selfie',
+      params: { deadlineMinutes: String(computeDeadlineMinutes(status.checkInDeadline)) },
+    });
+  }, [checkinStatusRaw]);
+
   const currentStop = stops[currentStopIndex] ?? null;
   const nextStop = stops[currentStopIndex + 1] ?? null;
   const progress = stops.length > 0 ? currentStopIndex / stops.length : 0;
@@ -94,7 +125,9 @@ export default function ShuttleHomeScreen() {
     b => b.status === 'booked' || b.status === 'active' || b.status === 'pending_renewal'
   );
 
-  // Fix 2: listen for shuttle:checkin:required
+  // Fix 2: listen for shuttle:checkin:required — plus the periodic ("long_shift")
+  // driver check-in, which shuttle drivers need too if they stay online 10+ hours
+  // between trips.
   useEffect(() => {
     if (!socket) return;
 
@@ -106,14 +139,25 @@ export default function ShuttleHomeScreen() {
       });
     };
 
+    const handleDriverCheckinRequired = (data?: CheckinRequiredPayload) => {
+      if (checkinPromptedRef.current) return;
+      checkinPromptedRef.current = true;
+      router.push({
+        pathname: '/selfie',
+        params: { deadlineMinutes: String(computeDeadlineMinutes(data?.deadline)) },
+      });
+    };
+
     const handleNotificationNew = () => {
       setUnreadCount(prev => prev + 1);
     };
 
     socket.on(SOCKET_EVENTS.SHUTTLE_CHECKIN_REQUIRED, handleShuttleCheckinRequired);
+    socket.on(SOCKET_EVENTS.DRIVER_CHECKIN_REQUIRED, handleDriverCheckinRequired);
     socket.on(SOCKET_EVENTS.NOTIFICATION_NEW, handleNotificationNew);
     return () => {
       socket.off(SOCKET_EVENTS.SHUTTLE_CHECKIN_REQUIRED, handleShuttleCheckinRequired);
+      socket.off(SOCKET_EVENTS.DRIVER_CHECKIN_REQUIRED, handleDriverCheckinRequired);
       socket.off(SOCKET_EVENTS.NOTIFICATION_NEW, handleNotificationNew);
     };
   }, [socket]);

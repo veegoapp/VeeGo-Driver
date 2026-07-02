@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { useSocket } from '@/lib/socketContext';
 import { getToken, getUserIdFromToken } from '@/lib/auth';
 import { SOCKET_EVENTS } from '../constants/socketEvents';
+import type { CheckinRequiredPayload } from '@/lib/checkinDeadline';
 
 const RideOfferSchema = z.object({
   id: z.union([z.string(), z.number()]).transform(String),
@@ -70,7 +71,7 @@ type UseRideSocketOptions = {
   onRideNoLongerAvailable?: () => void;
   onWaitingChargeUpdated?: (charge: WaitingCharge) => void;
   onWaitingChargeCapped?: (charge: WaitingCharge) => void;
-  onCheckinRequired?: () => void;
+  onCheckinRequired?: (data: CheckinRequiredPayload) => void;
   onCheckinRejected?: () => void;
   onCheckinApproved?: () => void;
   onCooldownCleared?: () => void;
@@ -190,8 +191,9 @@ export function useRideSocket({
       waitingChargeCappedRef.current?.(parsed.data);
     };
 
-    const handleCheckinRequired = () => {
-      checkinRequiredRef.current?.();
+    const handleCheckinRequired = (raw: unknown) => {
+      const data = (raw && typeof raw === 'object' ? raw : {}) as CheckinRequiredPayload;
+      checkinRequiredRef.current?.(data);
     };
 
     const handleCheckinRejected = () => {

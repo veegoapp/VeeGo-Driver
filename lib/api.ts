@@ -426,7 +426,15 @@ export const endpoints = {
         clearTimeout(timeout);
       }
     },
-    checkinAcknowledge: () => api.post('/driver/checkin/acknowledge'),
+    // GET /driver/checkin/status — current check-in gate state, for cold start / reconnect.
+    checkinStatus: () => api.get<{
+      checkInRequired: boolean;
+      checkInDeadline: string | null;
+      lastCheckInAt: string | null;
+      isOnline: boolean;
+      onlineSince: string | null;
+      recentCheckins: unknown[];
+    }>('/driver/checkin/status'),
     ratings: () => api.get('/driver/me/ratings'),
     promotions: () => api.get<DriverPromotion[]>('/driver/promotions'),
 
