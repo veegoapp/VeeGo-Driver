@@ -23,17 +23,25 @@ import { navigateAfterOtp } from '@/lib/postAuthRouter';
 const OTP_LENGTH = 6;
 const RESEND_COOLDOWN = 60;
 
+function formatLockout(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
 export default function VerifyOtpScreen() {
   const insets = useSafeAreaInsets();
-  const { phone: phoneParam, maskedPhone: maskedPhoneParam } = useLocalSearchParams<{ phone: string; maskedPhone?: string }>();
+  const { phone: phoneParam, maskedPhone: maskedPhoneParam, retryAfter: retryAfterParam } = useLocalSearchParams<{ phone: string; maskedPhone?: string; retryAfter?: string }>();
   const phone = phoneParam ? decodeURIComponent(phoneParam) : '';
   const { login } = useAuth();
 
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [locked, setLocked] = useState(false);
+  const [lockoutRemaining, setLockoutRemaining] = useState(0);
   const [resending, setResending] = useState(false);
-  const [countdown, setCountdown] = useState(RESEND_COOLDOWN);
+  const [countdown, setCountdown] = useState(retryAfterParam ? Number(retryAfterParam) : RESEND_COOLDOWN);
   const inputRef = useRef<TextInput>(null);
 
   // Countdown timer for resend
@@ -43,13 +51,24 @@ export default function VerifyOtpScreen() {
     return () => clearTimeout(t);
   }, [countdown]);
 
+  // Countdown timer for the post-lockout window; unlocks automatically once it elapses.
+  useEffect(() => {
+    if (!locked) return;
+    if (lockoutRemaining <= 0) {
+      setLocked(false);
+      return;
+    }
+    const t = setTimeout(() => setLockoutRemaining(c => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [locked, lockoutRemaining]);
+
   // Auto-submit when 6 digits are entered
   useEffect(() => {
-    if (otp.length === OTP_LENGTH) handleVerify();
+    if (otp.length === OTP_LENGTH && !locked) handleVerify();
   }, [otp]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleVerify = async () => {
-    if (otp.length !== OTP_LENGTH || loading) return;
+    if (otp.length !== OTP_LENGTH || loading || locked) return;
     setError(null);
     setLoading(true);
     console.log('[OTP] ▶ Calling verifyOtp | phone:', phone, '| otp:', otp);
@@ -71,12 +90,22 @@ export default function VerifyOtpScreen() {
       await navigateAfterOtp(result.accessToken);
     } catch (err) {
       console.log('[OTP] ❌ verifyOtp error:', err);
+      let justLocked = false;
       if (err instanceof ApiError) {
         console.log('[OTP] status:', err.status, '| body:', JSON.stringify(err.body));
-        if (err.status === 400 || err.status === 401) {
-          setError('Invalid or expired OTP. Please try again.');
-        } else if (err.status === 429) {
-          setError('Too many attempts. Please wait and try again.');
+        const body = err.body as { error?: string; attemptsRemaining?: number; retryAfter?: number } | null;
+        if (err.status === 429) {
+          justLocked = true;
+          setLocked(true);
+          setLockoutRemaining(typeof body?.retryAfter === 'number' ? body.retryAfter : 900);
+          setError(body?.error ?? 'Too many incorrect attempts. Please request a new code.');
+        } else if (err.status === 400 || err.status === 401) {
+          const remaining = typeof body?.attemptsRemaining === 'number' ? body.attemptsRemaining : null;
+          setError(
+            remaining !== null
+              ? `Invalid code. ${remaining} attempt${remaining === 1 ? '' : 's'} left.`
+              : 'Invalid or expired OTP. Please try again.'
+          );
         } else {
           setError('Something went wrong. Please try again.');
         }
@@ -84,7 +113,7 @@ export default function VerifyOtpScreen() {
         setError('Could not connect. Check your internet and try again.');
       }
       setOtp('');
-      inputRef.current?.focus();
+      if (!justLocked) inputRef.current?.focus();
     } finally {
       setLoading(false);
     }
@@ -97,9 +126,20 @@ export default function VerifyOtpScreen() {
     try {
       await endpoints.auth.sendOtp(phone);
       setCountdown(RESEND_COOLDOWN);
+      // A fresh OTP clears any lockout and resets the attempt counter server-side.
+      setLocked(false);
+      setLockoutRemaining(0);
+      setOtp('');
+      inputRef.current?.focus();
     } catch (err) {
       console.log('[OTP] resend error:', err);
-      setError('Failed to resend code. Please try again.');
+      if (err instanceof ApiError && err.status === 429) {
+        const body = err.body as { error?: string; retryAfter?: number } | null;
+        setError(body?.error ?? 'Failed to resend code. Please try again.');
+        if (typeof body?.retryAfter === 'number') setCountdown(body.retryAfter);
+      } else {
+        setError('Failed to resend code. Please try again.');
+      }
     } finally {
       setResending(false);
     }
@@ -142,12 +182,12 @@ export default function VerifyOtpScreen() {
             </Text>
 
             {/* OTP boxes — single hidden input drives it */}
-            <Pressable style={s.otpWrap} onPress={() => inputRef.current?.focus()}>
+            <Pressable style={s.otpWrap} onPress={() => inputRef.current?.focus()} disabled={locked}>
               {Array.from({ length: OTP_LENGTH }).map((_, i) => {
                 const char = otp[i] ?? '';
                 const active = otp.length === i;
                 return (
-                  <View key={i} style={[s.otpBox, char && s.otpBoxFilled, active && s.otpBoxActive, !!error && s.otpBoxError]}>
+                  <View key={i} style={[s.otpBox, char && s.otpBoxFilled, active && s.otpBoxActive, !!error && s.otpBoxError, locked && s.otpBoxLocked]}>
                     <Text style={s.otpChar}>{char || (active ? '|' : '')}</Text>
                   </View>
                 );
@@ -161,10 +201,14 @@ export default function VerifyOtpScreen() {
               keyboardType="number-pad"
               maxLength={OTP_LENGTH}
               style={s.hiddenInput}
+              editable={!locked}
               autoFocus
             />
 
             {error && <Text style={s.errorText}>{error}</Text>}
+            {locked && lockoutRemaining > 0 && (
+              <Text style={s.lockoutText}>Try again in {formatLockout(lockoutRemaining)}</Text>
+            )}
 
             {loading && (
               <View style={s.loadingRow}>
@@ -225,9 +269,11 @@ const s = StyleSheet.create({
   otpBoxFilled: { backgroundColor: 'white', borderColor: '#3D52D5' },
   otpBoxActive: { borderColor: '#3D52D5', backgroundColor: 'white' },
   otpBoxError: { borderColor: '#e53935', backgroundColor: '#fff5f5' },
+  otpBoxLocked: { opacity: 0.5 },
   otpChar: { fontSize: 22, fontWeight: '700', color: '#1e1e28', fontFamily: 'Inter_700Bold' },
   hiddenInput: { position: 'absolute', opacity: 0, width: 1, height: 1 },
   errorText: { fontSize: 13, color: '#e53935', textAlign: 'center', fontFamily: 'Inter_400Regular' },
+  lockoutText: { fontSize: 13, color: '#5e5e72', textAlign: 'center', fontFamily: 'Inter_500Medium' },
   loadingRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   loadingText: { fontSize: 13, color: '#3D52D5', fontFamily: 'Inter_500Medium' },
   resendRow: { alignItems: 'center', marginTop: 4 },

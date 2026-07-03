@@ -63,8 +63,15 @@ export default function LoginScreen() {
     // _layout.tsx watches the token and calls navigateAfterAuth — no need to navigate here.
   };
 
-  const handleOtpRequired = (phone: string, maskedPhone?: string) => {
-    expoRouter.replace({ pathname: '/verify-otp', params: { phone: encodeURIComponent(phone), maskedPhone: maskedPhone ?? phone } } as any);
+  const handleOtpRequired = (phone: string, maskedPhone?: string, retryAfter?: number) => {
+    expoRouter.replace({
+      pathname: '/verify-otp',
+      params: {
+        phone: encodeURIComponent(phone),
+        maskedPhone: maskedPhone ?? phone,
+        ...(retryAfter ? { retryAfter: String(retryAfter) } : {}),
+      },
+    } as any);
   };
 
   return (
@@ -112,7 +119,7 @@ export default function LoginScreen() {
             </View>
 
             {tab === 'signin' ? (
-              <SignInForm isRTL={isRTL} onSuccess={(at, rt, status, serviceType) => handleSignInSuccess(at, rt, status, serviceType)} />
+              <SignInForm isRTL={isRTL} onSuccess={(at, rt, status, serviceType) => handleSignInSuccess(at, rt, status, serviceType)} onOtpRequired={handleOtpRequired} />
             ) : (
               <SignUpForm isRTL={isRTL} onOtpRequired={handleOtpRequired} />
             )}
@@ -128,9 +135,10 @@ export default function LoginScreen() {
   );
 }
 
-function SignInForm({ isRTL, onSuccess }: {
+function SignInForm({ isRTL, onSuccess, onOtpRequired }: {
   isRTL: boolean;
   onSuccess: (at: string, rt: string, status: 'pending' | 'approved', serviceType: string | null) => void;
+  onOtpRequired: (phone: string, maskedPhone?: string, retryAfter?: number) => void;
 }) {
   const { t } = useI18n();
   const [credential, setCredential] = useState('');
@@ -150,6 +158,13 @@ function SignInForm({ isRTL, onSuccess }: {
       const result = await endpoints.auth.driverLogin(credential.trim(), password);
       onSuccess(result.accessToken, result.refreshToken, result.status, result.serviceType);
     } catch (err) {
+      // Account exists but phone isn't verified yet — backend already auto-sent
+      // a fresh OTP, so route to verification instead of showing a login error.
+      if (err instanceof ApiError && (err.body as { requiresOtp?: boolean } | null)?.requiresOtp === true) {
+        const body = err.body as { phone: string; maskedPhone?: string; retryAfter?: number };
+        onOtpRequired(body.phone, body.maskedPhone, body.retryAfter);
+        return;
+      }
       setError(getErrorMessage(err, t));
     } finally {
       setLoading(false);
@@ -221,7 +236,7 @@ function SignInForm({ isRTL, onSuccess }: {
 
 type TermsData = { id: number; version: number; contentAr: string; contentEn: string; updatedAt: string };
 
-function SignUpForm({ isRTL, onOtpRequired }: { isRTL: boolean; onOtpRequired: (phone: string, maskedPhone?: string) => void }) {
+function SignUpForm({ isRTL, onOtpRequired }: { isRTL: boolean; onOtpRequired: (phone: string, maskedPhone?: string, retryAfter?: number) => void }) {
   const { t } = useI18n();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
