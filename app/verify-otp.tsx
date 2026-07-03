@@ -19,15 +19,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '@/lib/authContext';
 import { endpoints, ApiError } from '@/lib/api';
 import { navigateAfterOtp } from '@/lib/postAuthRouter';
+import { useCodeLockout, formatLockoutCountdown } from '@/hooks/useCodeLockout';
 
 const OTP_LENGTH = 6;
 const RESEND_COOLDOWN = 60;
-
-function formatLockout(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${s.toString().padStart(2, '0')}`;
-}
 
 export default function VerifyOtpScreen() {
   const insets = useSafeAreaInsets();
@@ -38,8 +33,7 @@ export default function VerifyOtpScreen() {
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [locked, setLocked] = useState(false);
-  const [lockoutRemaining, setLockoutRemaining] = useState(0);
+  const { locked, lockoutRemaining, lock, clear: clearLockout } = useCodeLockout();
   const [resending, setResending] = useState(false);
   const [countdown, setCountdown] = useState(retryAfterParam ? Number(retryAfterParam) : RESEND_COOLDOWN);
   const inputRef = useRef<TextInput>(null);
@@ -50,17 +44,6 @@ export default function VerifyOtpScreen() {
     const t = setTimeout(() => setCountdown(c => c - 1), 1000);
     return () => clearTimeout(t);
   }, [countdown]);
-
-  // Countdown timer for the post-lockout window; unlocks automatically once it elapses.
-  useEffect(() => {
-    if (!locked) return;
-    if (lockoutRemaining <= 0) {
-      setLocked(false);
-      return;
-    }
-    const t = setTimeout(() => setLockoutRemaining(c => c - 1), 1000);
-    return () => clearTimeout(t);
-  }, [locked, lockoutRemaining]);
 
   // Auto-submit when 6 digits are entered
   useEffect(() => {
@@ -96,8 +79,7 @@ export default function VerifyOtpScreen() {
         const body = err.body as { error?: string; attemptsRemaining?: number; retryAfter?: number } | null;
         if (err.status === 429) {
           justLocked = true;
-          setLocked(true);
-          setLockoutRemaining(typeof body?.retryAfter === 'number' ? body.retryAfter : 900);
+          lock(body?.retryAfter);
           setError(body?.error ?? 'Too many incorrect attempts. Please request a new code.');
         } else if (err.status === 400 || err.status === 401) {
           const remaining = typeof body?.attemptsRemaining === 'number' ? body.attemptsRemaining : null;
@@ -127,8 +109,7 @@ export default function VerifyOtpScreen() {
       await endpoints.auth.sendOtp(phone);
       setCountdown(RESEND_COOLDOWN);
       // A fresh OTP clears any lockout and resets the attempt counter server-side.
-      setLocked(false);
-      setLockoutRemaining(0);
+      clearLockout();
       setOtp('');
       inputRef.current?.focus();
     } catch (err) {
@@ -207,7 +188,7 @@ export default function VerifyOtpScreen() {
 
             {error && <Text style={s.errorText}>{error}</Text>}
             {locked && lockoutRemaining > 0 && (
-              <Text style={s.lockoutText}>Try again in {formatLockout(lockoutRemaining)}</Text>
+              <Text style={s.lockoutText}>Try again in {formatLockoutCountdown(lockoutRemaining)}</Text>
             )}
 
             {loading && (

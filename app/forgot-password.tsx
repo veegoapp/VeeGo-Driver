@@ -4,7 +4,7 @@ import {
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -16,11 +16,11 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  Animated,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { endpoints, ApiError } from '@/lib/api';
 import { useI18n } from '@/lib/i18nContext';
+import { useCodeLockout, formatLockoutCountdown } from '@/hooks/useCodeLockout';
 
 type Step = 'request' | 'reset' | 'done';
 type TDict = ReturnType<typeof useI18n>['t'];
@@ -28,13 +28,11 @@ type TDict = ReturnType<typeof useI18n>['t'];
 function getErrorMessage(err: unknown, t: TDict): string {
   if (err instanceof ApiError) {
     if (err.status === 0) return t.err_no_connection;
-    if (err.status === 404) return t.err_fp_not_found;
-    if (err.status === 400) return t.err_code_invalid;
-    if (err.status === 410) return t.err_code_expired;
-    if (err.status === 429) return t.err_too_many_attempts;
     if (err.status >= 500) return t.err_server_error;
     const body = err.body as { error?: string } | null;
     if (body?.error) return body.error;
+    if (err.status === 429) return t.err_too_many_attempts;
+    return t.err_code_invalid;
   }
   if (err instanceof TypeError) return t.err_no_connection;
   return t.err_generic;
@@ -43,7 +41,7 @@ function getErrorMessage(err: unknown, t: TDict): string {
 export default function ForgotPasswordScreen() {
   const insets = useSafeAreaInsets();
   const [step, setStep] = useState<Step>('request');
-  const [credential, setCredential] = useState('');
+  const [phone, setPhone] = useState('');
 
   return (
     <LinearGradient colors={['#f4f4fb', '#ededf4']} style={s.root}>
@@ -74,21 +72,24 @@ export default function ForgotPasswordScreen() {
           <View style={s.card}>
             {step === 'request' && (
               <RequestStep
-                onSuccess={(cred) => {
-                  setCredential(cred);
+                initialPhone={phone}
+                onSuccess={(p) => {
+                  setPhone(p);
                   setStep('reset');
                 }}
               />
             )}
             {step === 'reset' && (
               <ResetStep
-                credential={credential}
+                phone={phone}
                 onResend={() => setStep('request')}
                 onSuccess={() => setStep('done')}
               />
             )}
             {step === 'done' && (
-              <DoneStep onGoToLogin={() => router.replace('/login')} />
+              <DoneStep
+                onGoToLogin={() => router.replace({ pathname: '/login', params: { credential: encodeURIComponent(phone) } } as any)}
+              />
             )}
           </View>
         </ScrollView>
@@ -97,23 +98,38 @@ export default function ForgotPasswordScreen() {
   );
 }
 
-function RequestStep({ onSuccess }: { onSuccess: (credential: string) => void }) {
+function RequestStep({ onSuccess, initialPhone }: { onSuccess: (phone: string) => void; initialPhone?: string }) {
   const { t } = useI18n();
-  const [credential, setCredential] = useState('');
+  const [phone, setPhone] = useState(initialPhone ?? '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cooldown, setCooldown] = useState(0);
 
-  const canSubmit = credential.trim().length > 3;
+  const canSubmit = phone.trim().length > 7 && cooldown <= 0;
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setTimeout(() => setCooldown(c => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [cooldown]);
 
   const handle = async () => {
     if (!canSubmit || loading) return;
     setError(null);
     setLoading(true);
     try {
-      await endpoints.auth.forgotPassword(credential.trim());
-      onSuccess(credential.trim());
+      // Backend always responds 200 here regardless of whether the phone is
+      // registered, to avoid account enumeration — move to the code step either way.
+      await endpoints.auth.forgotPassword(phone.trim());
+      onSuccess(phone.trim());
     } catch (err) {
-      setError(getErrorMessage(err, t));
+      if (err instanceof ApiError && err.status === 429) {
+        const body = err.body as { error?: string; retryAfter?: number } | null;
+        setError(body?.error ?? t.err_too_many_attempts);
+        if (typeof body?.retryAfter === 'number') setCooldown(body.retryAfter);
+      } else {
+        setError(getErrorMessage(err, t));
+      }
     } finally {
       setLoading(false);
     }
@@ -130,11 +146,11 @@ function RequestStep({ onSuccess }: { onSuccess: (credential: string) => void })
         <View style={s.inputIcon}><Phone size={16} color="#5e5e72" /></View>
         <TextInput
           style={s.inputField}
-          placeholder={t.email_or_phone}
+          placeholder={t.phone}
           placeholderTextColor="#c3c3cc"
-          value={credential}
-          onChangeText={(v) => { setCredential(v); setError(null); }}
-          keyboardType="email-address"
+          value={phone}
+          onChangeText={(v) => { setPhone(v); setError(null); }}
+          keyboardType="phone-pad"
           autoCapitalize="none"
           autoCorrect={false}
           autoFocus
@@ -146,6 +162,10 @@ function RequestStep({ onSuccess }: { onSuccess: (credential: string) => void })
           <AlertCircle size={14} color="#e53935" />
           <Text style={s.errorText}>{error}</Text>
         </View>
+      )}
+
+      {cooldown > 0 && (
+        <Text style={s.cooldownText}>Try again in {cooldown}s</Text>
       )}
 
       <Pressable
@@ -163,11 +183,11 @@ function RequestStep({ onSuccess }: { onSuccess: (credential: string) => void })
 }
 
 function ResetStep({
-  credential,
+  phone,
   onResend,
   onSuccess,
 }: {
-  credential: string;
+  phone: string;
   onResend: () => void;
   onSuccess: () => void;
 }) {
@@ -178,6 +198,7 @@ function ResetStep({
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { locked, lockoutRemaining, lock } = useCodeLockout();
 
   const { t } = useI18n();
   const passwordRef = useRef<TextInput>(null);
@@ -185,10 +206,11 @@ function ResetStep({
 
   const passwordsMatch = password === confirmPassword;
   const canSubmit =
-    code.trim().length >= 4 &&
+    code.trim().length === 6 &&
     password.length >= 8 &&
     confirmPassword.length >= 8 &&
-    passwordsMatch;
+    passwordsMatch &&
+    !locked;
 
   const handle = async () => {
     if (!canSubmit || loading) return;
@@ -199,19 +221,34 @@ function ResetStep({
     setError(null);
     setLoading(true);
     try {
-      await endpoints.auth.resetPassword(credential, code.trim(), password);
+      // No tokens on success — the driver signs in manually with the new password.
+      await endpoints.auth.resetPassword(phone, code.trim(), password);
       onSuccess();
     } catch (err) {
-      setError(getErrorMessage(err, t));
+      if (err instanceof ApiError) {
+        const body = err.body as { error?: string; attemptsRemaining?: number; retryAfter?: number } | null;
+        if (err.status === 429) {
+          lock(body?.retryAfter);
+          setError(body?.error ?? 'Too many incorrect attempts. Please request a new code.');
+        } else if (err.status === 400) {
+          const remaining = typeof body?.attemptsRemaining === 'number' ? body.attemptsRemaining : null;
+          setError(
+            remaining !== null
+              ? `Invalid code. ${remaining} attempt${remaining === 1 ? '' : 's'} left.`
+              : (body?.error ?? t.err_code_invalid)
+          );
+        } else {
+          setError(getErrorMessage(err, t));
+        }
+      } else {
+        setError(getErrorMessage(err, t));
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const maskedCredential =
-    credential.includes('@')
-      ? credential.replace(/^(.{2})(.+)(@.+)$/, (_, a, b, c) => `${a}${'*'.repeat(Math.min(b.length, 4))}${c}`)
-      : credential.replace(/^(\+?\d{2,3})\d+(\d{3})$/, '$1****$2');
+  const maskedPhone = phone.replace(/^(\+?\d{2,3})\d+(\d{3})$/, '$1****$2');
 
   return (
     <View style={s.form}>
@@ -219,21 +256,22 @@ function ResetStep({
         <Text style={s.formTitle}>{t.enter_reset_code_title}</Text>
         <Text style={s.formSub}>
           {t.reset_code_sent_to}{' '}
-          <Text style={{ fontFamily: 'Inter_600SemiBold', color: '#1e1e28' }}>{maskedCredential}</Text>
+          <Text style={{ fontFamily: 'Inter_600SemiBold', color: '#1e1e28' }}>{maskedPhone}</Text>
           {t.reset_code_enter_below}
         </Text>
       </View>
 
-      <View style={s.inputWrap}>
+      <View style={[s.inputWrap, locked && s.inputWrapLocked]}>
         <View style={s.inputIcon}><Mail size={16} color="#5e5e72" /></View>
         <TextInput
           style={[s.inputField, { letterSpacing: 4, fontSize: 16 }]}
-          placeholder={t.reset_password_btn}
+          placeholder={t.reset_code_placeholder}
           placeholderTextColor="#c3c3cc"
           value={code}
-          onChangeText={(v) => { setCode(v.replace(/\D/g, '')); setError(null); }}
+          onChangeText={(v) => { setCode(v.replace(/\D/g, '').slice(0, 6)); setError(null); }}
           keyboardType="number-pad"
-          maxLength={8}
+          maxLength={6}
+          editable={!locked}
           autoFocus
           returnKeyType="next"
           onSubmitEditing={() => passwordRef.current?.focus()}
@@ -298,6 +336,12 @@ function ResetStep({
           <AlertCircle size={14} color="#e53935" />
           <Text style={s.errorText}>{error}</Text>
         </View>
+      )}
+
+      {locked && lockoutRemaining > 0 && (
+        <Text style={s.cooldownText}>
+          Try again in {formatLockoutCountdown(lockoutRemaining)}, or request a new code below.
+        </Text>
       )}
 
       <Pressable
@@ -392,6 +436,9 @@ const s = StyleSheet.create({
     borderColor: '#e53935',
     backgroundColor: '#fff5f5',
   },
+  inputWrapLocked: {
+    opacity: 0.5,
+  },
   inputIcon: { width: 28, alignItems: 'center' },
   inputField: { flex: 1, fontSize: 14, color: '#1e1e28', fontFamily: 'Inter_400Regular' },
   divider: { flexDirection: 'row', alignItems: 'center', gap: 8, marginVertical: 2 },
@@ -399,6 +446,7 @@ const s = StyleSheet.create({
   dividerText: { fontSize: 11, color: '#a0a0b8', fontFamily: 'Inter_500Medium', letterSpacing: 0.5 },
   errorRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 4 },
   errorText: { fontSize: 12, color: '#e53935', fontFamily: 'Inter_400Regular', flex: 1 },
+  cooldownText: { fontSize: 12, color: '#5e5e72', fontFamily: 'Inter_400Regular', paddingHorizontal: 4 },
   primaryBtn: {
     height: 56,
     borderRadius: 20,

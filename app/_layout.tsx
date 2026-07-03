@@ -132,12 +132,19 @@ function RootLayoutNav() {
     const inPreAuthZone = !currentScreen || PRE_AUTH_SCREENS.has(currentScreen);
     const inPendingZone = !!currentScreen && PENDING_SCREENS.has(currentScreen);
     const isOtpFlow = currentScreen === 'verify-otp';
+    // Account can be suspended before a token ever exists (e.g. login itself
+    // returns 403 account_suspended) — same carve-out as isOtpFlow, so the
+    // redirect below doesn't immediately bounce back to /login. Scoped to the
+    // !token branch only: an authenticated user landing on /suspended must
+    // stay put, which relies on inPreAuthZone (used further down for
+    // navigateAfterAuth) staying false for this screen.
+    const isSuspendedFlow = currentScreen === 'suspended';
 
     if (!token) {
       // Allow verify-otp without a token — the token doesn't exist yet during
       // the sign-up OTP flow. Redirecting here would kick the user back to login
       // right after registration.
-      if (!inPreAuthZone && !isOtpFlow) {
+      if (!inPreAuthZone && !isOtpFlow && !isSuspendedFlow) {
         queryClient.clear();
         // Defer to next tick so the navigator tree is fully mounted before
         // the REPLACE action is dispatched, preventing UnhandledAction errors.

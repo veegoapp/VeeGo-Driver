@@ -219,7 +219,7 @@ async function request<T>(
   if (response.status === 403) {
     let errorBody: unknown = null;
     try { errorBody = await response.json(); } catch { /* empty */ }
-    const reason = (errorBody as { reason?: string } | null)?.reason;
+    const reason = (errorBody as { error?: string } | null)?.error;
     if (reason === 'account_suspended') {
       _onAccountSuspended?.();
     }
@@ -321,13 +321,15 @@ export const endpoints = {
       request<{ success: boolean; accessToken: string; refreshToken: string; user: Record<string, unknown>; driver: Record<string, unknown> }>(
         'POST', '/auth/verify-otp', { phone, otp }
       ),
-    forgotPassword: (credential: string) =>
-      request<{ message: string }>(
-        'POST', '/driver/auth/forgot-password', { credential }
+    // Not role-scoped on the backend — same two endpoints the passenger app uses,
+    // looked up by phone number only (no /driver prefix, no email).
+    forgotPassword: (phone: string) =>
+      request<{ success: boolean; message: string }>(
+        'POST', '/auth/forgot-password', { phone }
       ),
-    resetPassword: (credential: string, code: string, newPassword: string) =>
-      request<{ message: string }>(
-        'POST', '/driver/auth/reset-password', { credential, code, newPassword }
+    resetPassword: (phone: string, token: string, newPassword: string) =>
+      request<{ success: boolean; message: string }>(
+        'POST', '/auth/reset-password', { phone, token, newPassword }
       ),
   },
 

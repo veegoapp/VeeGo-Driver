@@ -3,7 +3,7 @@
 // Sign Up → endpoints.auth.driverRegister({ name, email, phone, password, licenseNumber?, nationalId? })
 
 import { Navigation, User, Mail, Phone, Lock, Eye, EyeOff, AlertCircle, ArrowRight, CheckSquare, Square } from 'lucide-react-native';
-import { router as expoRouter } from 'expo-router';
+import { router as expoRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState, useEffect } from 'react';
 import {
@@ -49,6 +49,9 @@ export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const { t, isRTL } = useI18n();
   const { login } = useAuth();
+  // Prefilled after a successful password reset (see app/forgot-password.tsx DoneStep).
+  const { credential: credentialParam } = useLocalSearchParams<{ credential?: string }>();
+  const initialCredential = credentialParam ? decodeURIComponent(credentialParam) : undefined;
 
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
   const { setLanguage, language } = useI18n();
@@ -119,7 +122,7 @@ export default function LoginScreen() {
             </View>
 
             {tab === 'signin' ? (
-              <SignInForm isRTL={isRTL} onSuccess={(at, rt, status, serviceType) => handleSignInSuccess(at, rt, status, serviceType)} onOtpRequired={handleOtpRequired} />
+              <SignInForm isRTL={isRTL} onSuccess={(at, rt, status, serviceType) => handleSignInSuccess(at, rt, status, serviceType)} onOtpRequired={handleOtpRequired} initialCredential={initialCredential} />
             ) : (
               <SignUpForm isRTL={isRTL} onOtpRequired={handleOtpRequired} />
             )}
@@ -135,13 +138,14 @@ export default function LoginScreen() {
   );
 }
 
-function SignInForm({ isRTL, onSuccess, onOtpRequired }: {
+function SignInForm({ isRTL, onSuccess, onOtpRequired, initialCredential }: {
   isRTL: boolean;
   onSuccess: (at: string, rt: string, status: 'pending' | 'approved', serviceType: string | null) => void;
   onOtpRequired: (phone: string, maskedPhone?: string, retryAfter?: number) => void;
+  initialCredential?: string;
 }) {
   const { t } = useI18n();
-  const [credential, setCredential] = useState('');
+  const [credential, setCredential] = useState(initialCredential ?? '');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
