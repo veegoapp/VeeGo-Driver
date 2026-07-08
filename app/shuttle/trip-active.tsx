@@ -109,6 +109,7 @@ export default function ShuttleTripActiveScreen() {
   const [passengerStatuses, setPassengerStatuses] = useState<Record<string, PassengerStatus>>({});
   const [isArrivingLoading, setIsArrivingLoading] = useState(false);
   const [isNextLoading, setIsNextLoading] = useState(false);
+  const [failedStationActions, setFailedStationActions] = useState<{ id: string; name: string; action: 'boarded' | 'no_show' }[]>([]);
   const [focusTarget, setFocusTarget] = useState<{ latitude: number; longitude: number; zoom: number } | null>(null);
   const timeoutProcessingRef = useRef(false);
   const isFinishingRef = useRef(false);
@@ -170,6 +171,7 @@ export default function ShuttleTripActiveScreen() {
     setTimerActive(false);
     setFocusTarget(null);
     setStationTimeoutVisible(false);
+    setFailedStationActions([]);
     timeoutProcessingRef.current = false;
   }, [currentStopIndex]);
 
@@ -272,32 +274,66 @@ export default function ShuttleTripActiveScreen() {
     }
   }, [tripId, stationId, isArrivingLoading, nextCoords, t]);
 
-  const handleNextStop = useCallback(async () => {
+  const handleNextStop = useCallback(async (retryOnly?: { id: string; action: 'boarded' | 'no_show' }[]) => {
     if (isNextLoading) return;
     setIsNextLoading(true);
     try {
       if (tripId && stationId) {
-        const boardedIds = Object.entries(passengerStatuses).filter(([, s]) => s === 'boarded').map(([id]) => id);
-        const absentIds = Object.entries(passengerStatuses).filter(([, s]) => s === 'no_show').map(([id]) => id);
-        await Promise.allSettled(boardedIds.map(id => {
+        const boardedIds = retryOnly
+          ? retryOnly.filter(r => r.action === 'boarded').map(r => r.id)
+          : Object.entries(passengerStatuses).filter(([, s]) => s === 'boarded').map(([id]) => id);
+        const absentIds = retryOnly
+          ? retryOnly.filter(r => r.action === 'no_show').map(r => r.id)
+          : Object.entries(passengerStatuses).filter(([, s]) => s === 'no_show').map(([id]) => id);
+
+        const boardResults = await Promise.allSettled(boardedIds.map(id => {
           const p = passengers.find(px => px.id === id);
           const cashPayload = p?.paymentMethod === 'cash'
             ? { cashCollected: true, amountCollected: p.fareAmount }
             : {};
           return endpoints.shuttle.boardBooking(id, { stationId, ...cashPayload });
         }));
-        await Promise.allSettled(absentIds.map(id => endpoints.shuttle.noShowBooking(id)));
+        const absentResults = await Promise.allSettled(absentIds.map(id => endpoints.shuttle.noShowBooking(id)));
+
+        // Task: surface per-passenger failures instead of silently continuing
+        const failed: { id: string; name: string; action: 'boarded' | 'no_show' }[] = [];
+        boardResults.forEach((r, i) => {
+          if (r.status === 'rejected') {
+            const id = boardedIds[i];
+            failed.push({ id, name: passengers.find(px => px.id === id)?.name ?? id, action: 'boarded' });
+          }
+        });
+        absentResults.forEach((r, i) => {
+          if (r.status === 'rejected') {
+            const id = absentIds[i];
+            failed.push({ id, name: passengers.find(px => px.id === id)?.name ?? id, action: 'no_show' });
+          }
+        });
+
+        if (failed.length > 0) {
+          setFailedStationActions(failed);
+          Alert.alert(
+            t.boarding_partial_fail_title,
+            t.boarding_partial_fail_msg.replace('{names}', failed.map(f => f.name).join(', ')),
+            [
+              { text: t.cancel, style: 'cancel' },
+              { text: t.retry_label, onPress: () => { handleNextStop(failed); } },
+            ]
+          );
+          return;
+        }
+
+        setFailedStationActions([]);
         await endpoints.trips.stationCompleted(tripId, stationId);
       }
       nextStop();
     } catch {
       Alert.alert(t.error, t.station_action_error);
-      setIsNextLoading(false);
       return;
     } finally {
       setIsNextLoading(false);
     }
-  }, [isNextLoading, tripId, stationId, passengerStatuses, nextStop]);
+  }, [isNextLoading, tripId, stationId, passengerStatuses, passengers, nextStop, t]);
 
   const handleFinishRoute = useCallback(async () => {
     if (!activeLine) return;
@@ -625,7 +661,7 @@ export default function ShuttleTripActiveScreen() {
                     if (lastStopProcessingRef.current) return;
                     lastStopProcessingRef.current = true;
                     try {
-                      await handleNextStop();
+                      await handleNextStop(failedStationActions.length > 0 ? failedStationActions : undefined);
                     } finally {
                       lastStopProcessingRef.current = false;
                     }
@@ -634,7 +670,9 @@ export default function ShuttleTripActiveScreen() {
                 >
                   <LinearGradient colors={['#4f46e5', '#6366f1']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.primaryBtnGrad}>
                     <Navigation2 size={18} color="#fff" strokeWidth={2} />
-                    <Text style={[styles.primaryBtnText, { fontFamily: 'Inter_700Bold' }]}>{isNextLoading ? '…' : 'Depart to Next Stop →'}</Text>
+                    <Text style={[styles.primaryBtnText, { fontFamily: 'Inter_700Bold' }]}>
+                      {isNextLoading ? '…' : failedStationActions.length > 0 ? `Retry Failed (${failedStationActions.length}) →` : 'Depart to Next Stop →'}
+                    </Text>
                   </LinearGradient>
                 </Pressable>
               )}
