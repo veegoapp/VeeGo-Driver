@@ -234,7 +234,12 @@ export default function RideScreen() {
       }
 
       if (socket?.connected) {
-        socket.emit(SOCKET_EVENTS.DRIVER_SOS, { rideId: rideId ?? '', latitude, longitude });
+        const numericRideId = rideId ? Number(rideId) : undefined;
+        socket.emit(SOCKET_EVENTS.DRIVER_SOS, {
+          ...(numericRideId != null && !isNaN(numericRideId) ? { rideId: numericRideId } : {}),
+          latitude,
+          longitude,
+        });
       } else {
         await endpoints.rides.sos(rideId ?? '', { latitude, longitude });
       }
