@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowDownLeft, ArrowUpRight, Briefcase, CreditCard, Plus, Trash2, X } from 'lucide-react-native';
+import { ArrowDownLeft, ArrowUpRight, Briefcase, CreditCard, Plus, X } from 'lucide-react-native';
 import React, { useRef, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Animated, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Animated, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { GlassView } from '@/components/GlassView';
@@ -12,7 +12,6 @@ import { endpoints } from '@/lib/api';
 type WalletBalance = { balance: number };
 type Transaction = { id: string; title: string; sub: string; amount: number; incoming: boolean };
 type PayoutMethod = { id: string; type?: string; label?: string; name?: string; last4?: string; isDefault?: boolean; accountName?: string; bankName?: string };
-type MethodType = 'bank_transfer' | 'vodafone_cash' | 'instapay';
 
 const TAB_BAR_HEIGHT = 96;
 
@@ -29,15 +28,6 @@ export default function WalletScreen() {
   const [payoutVisible, setPayoutVisible] = useState(false);
   const [payoutAmount, setPayoutAmount] = useState('');
   const [isPayingOut, setIsPayingOut] = useState(false);
-
-  const [addMethodVisible, setAddMethodVisible] = useState(false);
-  const [methodType, setMethodType] = useState<MethodType>('bank_transfer');
-  const [accountNumber, setAccountNumber] = useState('');
-  const [accountName, setAccountName] = useState('');
-  const [bankName, setBankName] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [isAddingMethod, setIsAddingMethod] = useState(false);
-  const [removingId, setRemovingId] = useState<string | null>(null);
 
   const { data: balanceRaw, isLoading: balanceLoading, isError: balanceError } = useQuery({
     queryKey: ['wallet-balance'],
@@ -108,58 +98,6 @@ export default function WalletScreen() {
     }
   };
 
-  const resetAddForm = () => {
-    setMethodType('bank_transfer');
-    setAccountNumber('');
-    setAccountName('');
-    setBankName('');
-    setPhoneNumber('');
-  };
-
-  const handleAddMethod = async () => {
-    if (!accountNumber.trim() || !accountName.trim()) return;
-    if (methodType === 'bank_transfer' && !bankName.trim()) return;
-    if ((methodType === 'vodafone_cash' || methodType === 'instapay') && !phoneNumber.trim()) return;
-    setIsAddingMethod(true);
-    try {
-      await endpoints.wallet.addPayoutMethod({
-        type: methodType,
-        accountNumber: accountNumber.trim(),
-        accountName: accountName.trim(),
-        ...(methodType === 'bank_transfer' ? { bankName: bankName.trim() } : {}),
-        ...(methodType !== 'bank_transfer' ? { phoneNumber: phoneNumber.trim() } : {}),
-      });
-      await queryClient.invalidateQueries({ queryKey: ['payout-methods'] });
-      setAddMethodVisible(false);
-      resetAddForm();
-    } catch {
-      Alert.alert(t.error, t.add_method_error);
-    } finally {
-      setIsAddingMethod(false);
-    }
-  };
-
-  const handleRemoveMethod = (id: string, displayName: string) => {
-    Alert.alert(t.remove_method_confirm, displayName, [
-      { text: t.cancel, style: 'cancel' },
-      {
-        text: t.remove_method,
-        style: 'destructive',
-        onPress: async () => {
-          setRemovingId(id);
-          try {
-            await endpoints.wallet.removePayoutMethod(id);
-            await queryClient.invalidateQueries({ queryKey: ['payout-methods'] });
-          } catch {
-            Alert.alert(t.error, t.remove_method_error);
-          } finally {
-            setRemovingId(null);
-          }
-        },
-      },
-    ]);
-  };
-
   if (isLoading) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' }]}>
@@ -175,12 +113,6 @@ export default function WalletScreen() {
       </View>
     );
   }
-
-  const METHOD_TYPES: { key: MethodType; label: string }[] = [
-    { key: 'bank_transfer', label: t.bank_transfer },
-    { key: 'vodafone_cash', label: t.vodafone_cash },
-    { key: 'instapay', label: t.instapay },
-  ];
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -241,12 +173,6 @@ export default function WalletScreen() {
                     <Text style={[styles.actionText, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>{t.cash_out}</Text>
                   </LinearGradient>
                 </Pressable>
-                <Pressable onPress={() => setAddMethodVisible(true)} style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.9 : 1 }]}>
-                  <GlassView strong style={[styles.secondaryAction, { flexDirection: R }]} borderRadius={16}>
-                    <Plus size={16} color={colors.foreground} strokeWidth={2} />
-                    <Text style={[styles.actionText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.add}</Text>
-                  </GlassView>
-                </Pressable>
               </View>
             )}
           </View>
@@ -278,17 +204,6 @@ export default function WalletScreen() {
                 {method.isDefault && (
                   <Text style={[styles.defaultBadge, { color: colors.primary, fontFamily: 'Inter_700Bold' }]}>{t.default_card}</Text>
                 )}
-                <Pressable
-                  onPress={() => handleRemoveMethod(method.id, displayName)}
-                  disabled={removingId === method.id}
-                  style={({ pressed }) => [styles.trashBtn, { opacity: pressed || removingId === method.id ? 0.5 : 1 }]}
-                  hitSlop={8}
-                >
-                  {removingId === method.id
-                    ? <ActivityIndicator size="small" color={colors.destructive} />
-                    : <Trash2 size={16} color={colors.destructive} strokeWidth={2} />
-                  }
-                </Pressable>
               </GlassView>
             );
           }) : (
@@ -324,105 +239,6 @@ export default function WalletScreen() {
           ))}
         </GlassView>
       </ScrollView>
-
-      <Modal
-        visible={addMethodVisible}
-        animationType="slide"
-        transparent
-        onRequestClose={() => { setAddMethodVisible(false); resetAddForm(); }}
-      >
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => { setAddMethodVisible(false); resetAddForm(); }} />
-          <View style={[styles.modalSheet, { backgroundColor: colors.background }]}>
-            <View style={[styles.modalHeader, { flexDirection: R }]}>
-              <Text style={[styles.modalTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.add_payout_method}</Text>
-              <Pressable onPress={() => { setAddMethodVisible(false); resetAddForm(); }} hitSlop={8}>
-                <X size={20} color={colors.mutedForeground} strokeWidth={2} />
-              </Pressable>
-            </View>
-
-            <Text style={[styles.fieldLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.payout_method_type}</Text>
-            <View style={[styles.typeRow, { flexDirection: R }]}>
-              {METHOD_TYPES.map(({ key, label }) => (
-                <Pressable
-                  key={key}
-                  onPress={() => setMethodType(key)}
-                  style={[styles.typeChip, {
-                    backgroundColor: methodType === key ? colors.primary + '1A' : colors.secondary,
-                    borderColor: methodType === key ? colors.primary + '66' : 'transparent',
-                    flex: 1,
-                  }]}
-                >
-                  <Text style={[styles.typeChipText, {
-                    color: methodType === key ? colors.primary : colors.mutedForeground,
-                    fontFamily: methodType === key ? 'Inter_700Bold' : 'Inter_400Regular',
-                    textAlign: 'center',
-                  }]}>{label}</Text>
-                </Pressable>
-              ))}
-            </View>
-
-            <Text style={[styles.fieldLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.account_number}</Text>
-            <TextInput
-              value={accountNumber}
-              onChangeText={setAccountNumber}
-              keyboardType="numeric"
-              placeholder="000000000000"
-              placeholderTextColor={colors.mutedForeground}
-              style={[styles.fieldInput, { color: colors.foreground, borderColor: colors.border, fontFamily: 'Inter_400Regular', textAlign: TA }]}
-            />
-
-            <Text style={[styles.fieldLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.account_name}</Text>
-            <TextInput
-              value={accountName}
-              onChangeText={setAccountName}
-              placeholder={t.account_name}
-              placeholderTextColor={colors.mutedForeground}
-              style={[styles.fieldInput, { color: colors.foreground, borderColor: colors.border, fontFamily: 'Inter_400Regular', textAlign: TA }]}
-            />
-
-            {methodType === 'bank_transfer' && (
-              <>
-                <Text style={[styles.fieldLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.bank_name}</Text>
-                <TextInput
-                  value={bankName}
-                  onChangeText={setBankName}
-                  placeholder={t.bank_name}
-                  placeholderTextColor={colors.mutedForeground}
-                  style={[styles.fieldInput, { color: colors.foreground, borderColor: colors.border, fontFamily: 'Inter_400Regular', textAlign: TA }]}
-                />
-              </>
-            )}
-
-            {(methodType === 'vodafone_cash' || methodType === 'instapay') && (
-              <>
-                <Text style={[styles.fieldLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.phone}</Text>
-                <TextInput
-                  value={phoneNumber}
-                  onChangeText={setPhoneNumber}
-                  keyboardType="phone-pad"
-                  placeholder={t.phone_placeholder}
-                  placeholderTextColor={colors.mutedForeground}
-                  style={[styles.fieldInput, { color: colors.foreground, borderColor: colors.border, fontFamily: 'Inter_400Regular', textAlign: TA }]}
-                />
-              </>
-            )}
-
-            <Pressable
-              onPress={handleAddMethod}
-              disabled={isAddingMethod}
-              style={({ pressed }) => [styles.submitBtn, { opacity: pressed || isAddingMethod ? 0.8 : 1 }]}
-            >
-              <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.submitGrad}>
-                {isAddingMethod
-                  ? <ActivityIndicator color="#fff" size="small" />
-                  : <Text style={{ color: '#fff', fontFamily: 'Inter_700Bold', fontSize: 14 }}>{t.confirm}</Text>
-                }
-              </LinearGradient>
-            </Pressable>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
     </View>
   );
 }
