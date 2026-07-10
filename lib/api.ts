@@ -2,7 +2,7 @@
 // Run: npx expo install react-native-ssl-pinning
 // Then replace the fetch() calls in request() with the pinned fetch from that library,
 // configured with the SHA-256 hash of the production API certificate.
-import { getToken, getRefreshToken, saveToken, deleteToken, deleteRefreshToken } from './auth';
+import { getToken, getRefreshToken, saveToken, saveRefreshToken, deleteToken, deleteRefreshToken } from './auth';
 
 // ── Language / Accept-Language ─────────────────────────────────────────────────
 // Updated by lib/i18nContext whenever the driver switches language.
@@ -131,6 +131,9 @@ async function refreshAccessToken(): Promise<string | null> {
       const data = await response.json();
       if (data.accessToken) {
         await saveToken(data.accessToken);
+        if (data.refreshToken) {
+          await saveRefreshToken(data.refreshToken);
+        }
         return data.accessToken;
       }
       return null;
