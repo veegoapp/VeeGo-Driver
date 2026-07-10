@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { z } from 'zod';
 import { useSocket } from '@/lib/socketContext';
-import { getToken, getUserIdFromToken } from '@/lib/auth';
 import { SOCKET_EVENTS } from '../constants/socketEvents';
 import type { CheckinRequiredPayload } from '@/lib/checkinDeadline';
 
@@ -123,17 +122,12 @@ export function useRideSocket({
   const surgeUpdatedRef = useRef(onSurgeUpdated);
   surgeUpdatedRef.current = onSurgeUpdated;
 
-  // JOIN the driver room whenever the shared socket connects (or reconnects)
-  // Driver identity is derived from the JWT — not from the API response — to prevent room spoofing.
+  // No-op: the backend already auto-joins the driver's personal room on every
+  // connect/reconnect from the auth handshake, so no join emit is needed here.
   useEffect(() => {
     if (!socket) return;
 
-    const joinRoom = async () => {
-      const token = await getToken();
-      const driverIdFromToken = getUserIdFromToken(token);
-      if (!driverIdFromToken) return;
-      socket.emit(SOCKET_EVENTS.JOIN, `driver:${driverIdFromToken}`);
-    };
+    const joinRoom = async () => {};
 
     const onConnect = () => { joinRoom(); };
 

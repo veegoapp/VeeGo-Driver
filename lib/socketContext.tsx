@@ -41,7 +41,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
 
       const socket = io(SOCKET_URL, {
         path: '/api/socket.io',
-        auth: { token: t ? `Bearer ${t}` : '' },
+        auth: { token: t ?? '' },
         transports: ['polling', 'websocket'],
         reconnectionAttempts: 10,
         reconnectionDelay: 1000,
@@ -63,10 +63,6 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
 
       socket.on('disconnect', () => {
         setConnected(false);
-      });
-
-      socket.on('reconnect', () => {
-        setConnected(true);
       });
 
       socket.on('connect_error', () => {

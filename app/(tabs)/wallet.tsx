@@ -1,7 +1,8 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowDownLeft, ArrowUpRight, Briefcase, CreditCard, Plus, Trash2, X } from 'lucide-react-native';
+import { router } from 'expo-router';
+import { ArrowDownLeft, ArrowUpRight, Briefcase, CreditCard, Phone, Plus, X } from 'lucide-react-native';
 import React, { useRef, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Animated, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Animated, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { GlassView } from '@/components/GlassView';
@@ -11,10 +12,44 @@ import { endpoints } from '@/lib/api';
 
 type WalletBalance = { balance: number };
 type Transaction = { id: string; title: string; sub: string; amount: number; incoming: boolean };
-type PayoutMethod = { id: string; type?: string; label?: string; name?: string; last4?: string; isDefault?: boolean; accountName?: string; bankName?: string };
-type MethodType = 'bank_transfer' | 'vodafone_cash' | 'instapay';
+// A driver's own saved payout destination (see /driver/payout-accounts).
+// Only instapay / vodafone_cash are supported today; methodKey is a plain
+// string so future methods (e.g. bank accounts) don't need a shape change.
+type PayoutAccount = {
+  id: number;
+  methodKey: string;
+  accountName: string;
+  accountNumber: string;
+  isDefault: boolean;
+  isVerified: boolean;
+  isActive: boolean;
+};
+// One row from GET /driver/wallet/payouts — the driver's own payout requests.
+type PayoutHistoryItem = {
+  id: number;
+  amount: number;
+  status: 'pending' | 'processing' | 'paid' | 'cancelled';
+  method: string | null;
+  accountName: string | null;
+  maskedAccountNumber: string | null;
+  createdAt: string;
+  paidAt: string | null;
+};
 
 const TAB_BAR_HEIGHT = 96;
+
+// Maps a payout request's status to a badge color + label, reusing existing
+// status_pending / status_paid_out / status_cancelled translation keys.
+function payoutStatusBadge(status: PayoutHistoryItem['status'], colors: ReturnType<typeof useColors>, t: ReturnType<typeof useI18n>['t']) {
+  switch (status) {
+    case 'paid':
+      return { label: t.status_paid_out, color: colors.primary };
+    case 'cancelled':
+      return { label: t.status_cancelled, color: colors.destructive };
+    default:
+      return { label: t.status_pending, color: colors.mutedForeground };
+  }
+}
 
 export default function WalletScreen() {
   const colors = useColors();
@@ -30,15 +65,6 @@ export default function WalletScreen() {
   const [payoutAmount, setPayoutAmount] = useState('');
   const [isPayingOut, setIsPayingOut] = useState(false);
 
-  const [addMethodVisible, setAddMethodVisible] = useState(false);
-  const [methodType, setMethodType] = useState<MethodType>('bank_transfer');
-  const [accountNumber, setAccountNumber] = useState('');
-  const [accountName, setAccountName] = useState('');
-  const [bankName, setBankName] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [isAddingMethod, setIsAddingMethod] = useState(false);
-  const [removingId, setRemovingId] = useState<string | null>(null);
-
   const { data: balanceRaw, isLoading: balanceLoading, isError: balanceError } = useQuery({
     queryKey: ['wallet-balance'],
     queryFn: endpoints.wallet.balance,
@@ -47,9 +73,14 @@ export default function WalletScreen() {
     queryKey: ['wallet-transactions'],
     queryFn: endpoints.wallet.transactions,
   });
-  const { data: payoutMethodsRaw } = useQuery({
-    queryKey: ['payout-methods'],
-    queryFn: endpoints.wallet.payoutMethods,
+  const { data: payoutAccountsRaw } = useQuery({
+    queryKey: ['payout-accounts'],
+    queryFn: endpoints.wallet.getPayoutAccounts,
+    retry: false,
+  });
+  const { data: payoutHistoryRaw, isLoading: historyLoading, isError: historyError } = useQuery({
+    queryKey: ['payout-history'],
+    queryFn: endpoints.wallet.getPayoutHistory,
     retry: false,
   });
 
@@ -61,10 +92,12 @@ export default function WalletScreen() {
   };
   const _txRaw = txRaw as Transaction[] | { transactions?: Transaction[]; data?: Transaction[] } | undefined;
   const txs: Transaction[] = Array.isArray(_txRaw) ? _txRaw : ((_txRaw as { transactions?: Transaction[] })?.transactions ?? ((_txRaw as { data?: Transaction[] })?.data ?? []));
-  const _pmRaw = payoutMethodsRaw as PayoutMethod[] | { methods?: PayoutMethod[]; data?: PayoutMethod[] } | undefined;
-  const payoutMethods: PayoutMethod[] = Array.isArray(_pmRaw)
-    ? _pmRaw
-    : ((_pmRaw as { methods?: PayoutMethod[] })?.methods ?? ((_pmRaw as { data?: PayoutMethod[] })?.data ?? []));
+  const _paRaw = payoutAccountsRaw as PayoutAccount[] | { data?: PayoutAccount[] } | undefined;
+  const payoutAccounts: PayoutAccount[] = (
+    Array.isArray(_paRaw) ? _paRaw : ((_paRaw as { data?: PayoutAccount[] })?.data ?? [])
+  ).filter(a => a.isActive);
+  const _phRaw = payoutHistoryRaw as PayoutHistoryItem[] | { data?: PayoutHistoryItem[] } | undefined;
+  const payoutHistory: PayoutHistoryItem[] = Array.isArray(_phRaw) ? _phRaw : ((_phRaw as { data?: PayoutHistoryItem[] })?.data ?? []);
 
   const isLoading = balanceLoading || txLoading;
   const isError = balanceError || txError;
@@ -78,6 +111,11 @@ export default function WalletScreen() {
   }, [balanceLoading]);
 
   const handlePayoutOpen = () => {
+    if (payoutAccounts.length === 0) {
+      Alert.alert(t.error, (t as any).no_payout_methods ?? 'Please add a payout account first.');
+      router.push('/payout-accounts' as any);
+      return;
+    }
     setPayoutAmount(String(balanceData?.balance ?? ''));
     setPayoutVisible(true);
   };
@@ -88,76 +126,26 @@ export default function WalletScreen() {
       Alert.alert(t.invalid_amount_title, t.invalid_amount_msg);
       return;
     }
-    const selectedMethod = payoutMethods.find(m => m.isDefault) ?? payoutMethods[0] ?? null;
-    if (!selectedMethod) {
-      Alert.alert(t.error, (t as any).no_payout_methods ?? 'Please add a payout method first.');
+    // Prefer the driver's default account, falling back to the first active one.
+    const selectedAccount = payoutAccounts.find(a => a.isDefault) ?? payoutAccounts[0] ?? null;
+    if (!selectedAccount) {
+      Alert.alert(t.error, (t as any).no_payout_methods ?? 'Please add a payout account first.');
       return;
     }
     setIsPayingOut(true);
     try {
-      await endpoints.wallet.payout(amount, selectedMethod.id);
+      await endpoints.wallet.payout(amount, selectedAccount.id);
       await queryClient.invalidateQueries({ queryKey: ['wallet-balance'] });
       await queryClient.invalidateQueries({ queryKey: ['wallet-transactions'] });
       setPayoutVisible(false);
       setPayoutAmount('');
-      Alert.alert(t.payout_success_title, `${amount.toFixed(2)} ${t.egp} payout initiated.`);
+      // Payout request is pending admin confirmation — not yet paid.
+      Alert.alert(t.payout_success_title, t.payout_pending_msg);
     } catch {
       Alert.alert(t.error, t.payout_fail_msg);
     } finally {
       setIsPayingOut(false);
     }
-  };
-
-  const resetAddForm = () => {
-    setMethodType('bank_transfer');
-    setAccountNumber('');
-    setAccountName('');
-    setBankName('');
-    setPhoneNumber('');
-  };
-
-  const handleAddMethod = async () => {
-    if (!accountNumber.trim() || !accountName.trim()) return;
-    if (methodType === 'bank_transfer' && !bankName.trim()) return;
-    if ((methodType === 'vodafone_cash' || methodType === 'instapay') && !phoneNumber.trim()) return;
-    setIsAddingMethod(true);
-    try {
-      await endpoints.wallet.addPayoutMethod({
-        type: methodType,
-        accountNumber: accountNumber.trim(),
-        accountName: accountName.trim(),
-        ...(methodType === 'bank_transfer' ? { bankName: bankName.trim() } : {}),
-        ...(methodType !== 'bank_transfer' ? { phoneNumber: phoneNumber.trim() } : {}),
-      });
-      await queryClient.invalidateQueries({ queryKey: ['payout-methods'] });
-      setAddMethodVisible(false);
-      resetAddForm();
-    } catch {
-      Alert.alert(t.error, t.add_method_error);
-    } finally {
-      setIsAddingMethod(false);
-    }
-  };
-
-  const handleRemoveMethod = (id: string, displayName: string) => {
-    Alert.alert(t.remove_method_confirm, displayName, [
-      { text: t.cancel, style: 'cancel' },
-      {
-        text: t.remove_method,
-        style: 'destructive',
-        onPress: async () => {
-          setRemovingId(id);
-          try {
-            await endpoints.wallet.removePayoutMethod(id);
-            await queryClient.invalidateQueries({ queryKey: ['payout-methods'] });
-          } catch {
-            Alert.alert(t.error, t.remove_method_error);
-          } finally {
-            setRemovingId(null);
-          }
-        },
-      },
-    ]);
   };
 
   if (isLoading) {
@@ -175,12 +163,6 @@ export default function WalletScreen() {
       </View>
     );
   }
-
-  const METHOD_TYPES: { key: MethodType; label: string }[] = [
-    { key: 'bank_transfer', label: t.bank_transfer },
-    { key: 'vodafone_cash', label: t.vodafone_cash },
-    { key: 'instapay', label: t.instapay },
-  ];
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -241,12 +223,6 @@ export default function WalletScreen() {
                     <Text style={[styles.actionText, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>{t.cash_out}</Text>
                   </LinearGradient>
                 </Pressable>
-                <Pressable onPress={() => setAddMethodVisible(true)} style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.9 : 1 }]}>
-                  <GlassView strong style={[styles.secondaryAction, { flexDirection: R }]} borderRadius={16}>
-                    <Plus size={16} color={colors.foreground} strokeWidth={2} />
-                    <Text style={[styles.actionText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.add}</Text>
-                  </GlassView>
-                </Pressable>
               </View>
             )}
           </View>
@@ -254,54 +230,89 @@ export default function WalletScreen() {
 
         <View style={[styles.sectionHeader, { flexDirection: R }]}>
           <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>{t.payout_methods}</Text>
+          <Pressable onPress={() => router.push('/payout-accounts' as any)} hitSlop={8}>
+            <Text style={[styles.addBtn, { color: colors.primary, fontFamily: 'Inter_700Bold' }]}>{t.manage}</Text>
+          </Pressable>
         </View>
         <View style={{ gap: 8 }}>
-          {payoutMethods.length > 0 ? payoutMethods.map((method) => {
-            const displayName = method.label ?? method.name ?? method.accountName ?? method.bankName ?? t.payment_method_fallback;
-            return (
-              <GlassView key={method.id} style={[styles.methodCard, { flexDirection: R }]} borderRadius={16}>
-                <View style={[styles.methodIcon, { backgroundColor: method.isDefault ? colors.primary + '26' : colors.secondary }]}>
-                  {method.type === 'bank' || method.type === 'bank_transfer' ? (
-                    <Briefcase size={20} color={method.isDefault ? colors.primary : colors.mutedForeground} strokeWidth={2} />
-                  ) : (
-                    <CreditCard size={20} color={method.isDefault ? colors.primary : colors.mutedForeground} strokeWidth={2} />
-                  )}
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.methodName, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
-                    {displayName}{method.last4 ? ` — ****${method.last4}` : ''}
-                  </Text>
-                  {method.isDefault && (
-                    <Text style={[styles.methodSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>{t.default_card}</Text>
-                  )}
-                </View>
-                {method.isDefault && (
-                  <Text style={[styles.defaultBadge, { color: colors.primary, fontFamily: 'Inter_700Bold' }]}>{t.default_card}</Text>
+          {payoutAccounts.length > 0 ? payoutAccounts.map((account) => (
+            <GlassView key={account.id} style={[styles.methodCard, { flexDirection: R }]} borderRadius={16}>
+              <View style={[styles.methodIcon, { backgroundColor: account.isDefault ? colors.primary + '26' : colors.secondary }]}>
+                {account.methodKey === 'vodafone_cash' ? (
+                  <Phone size={20} color={account.isDefault ? colors.primary : colors.mutedForeground} strokeWidth={2} />
+                ) : account.methodKey === 'instapay' ? (
+                  <Briefcase size={20} color={account.isDefault ? colors.primary : colors.mutedForeground} strokeWidth={2} />
+                ) : (
+                  <CreditCard size={20} color={account.isDefault ? colors.primary : colors.mutedForeground} strokeWidth={2} />
                 )}
-                <Pressable
-                  onPress={() => handleRemoveMethod(method.id, displayName)}
-                  disabled={removingId === method.id}
-                  style={({ pressed }) => [styles.trashBtn, { opacity: pressed || removingId === method.id ? 0.5 : 1 }]}
-                  hitSlop={8}
-                >
-                  {removingId === method.id
-                    ? <ActivityIndicator size="small" color={colors.destructive} />
-                    : <Trash2 size={16} color={colors.destructive} strokeWidth={2} />
-                  }
-                </Pressable>
-              </GlassView>
-            );
-          }) : (
-            <GlassView style={[styles.methodCard, { flexDirection: R }]} borderRadius={16}>
-              <View style={[styles.methodIcon, { backgroundColor: colors.secondary }]}>
-                <Plus size={20} color={colors.mutedForeground} strokeWidth={2} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.methodName, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>{t.no_payout_methods}</Text>
+                <Text style={[styles.methodName, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
+                  {account.accountName} — {account.accountNumber}
+                </Text>
+                <Text style={[styles.methodSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>
+                  {account.isVerified ? t.default_card : t.pending_verification}
+                </Text>
               </View>
+              {account.isDefault && (
+                <Text style={[styles.defaultBadge, { color: colors.primary, fontFamily: 'Inter_700Bold' }]}>{t.default_card}</Text>
+              )}
             </GlassView>
+          )) : (
+            <Pressable onPress={() => router.push('/payout-accounts' as any)}>
+              <GlassView style={[styles.methodCard, { flexDirection: R }]} borderRadius={16}>
+                <View style={[styles.methodIcon, { backgroundColor: colors.secondary }]}>
+                  <Plus size={20} color={colors.mutedForeground} strokeWidth={2} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.methodName, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>{t.no_payout_methods}</Text>
+                </View>
+              </GlassView>
+            </Pressable>
           )}
         </View>
+
+        <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', marginTop: 24, marginBottom: 12, textAlign: TA }]}>{t.payout_history_label}</Text>
+        {historyLoading ? (
+          <GlassView borderRadius={16} style={{ padding: 24, alignItems: 'center' }}>
+            <ActivityIndicator color={colors.primary} />
+          </GlassView>
+        ) : historyError ? (
+          <GlassView borderRadius={16} style={{ padding: 24, alignItems: 'center' }}>
+            <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13 }}>{t.payout_history_load_err}</Text>
+          </GlassView>
+        ) : payoutHistory.length === 0 ? (
+          <GlassView borderRadius={16} style={{ padding: 24, alignItems: 'center' }}>
+            <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13 }}>{t.payout_history_empty}</Text>
+          </GlassView>
+        ) : (
+          <GlassView borderRadius={16}>
+            {payoutHistory.map((item, i) => {
+              const badge = payoutStatusBadge(item.status, colors, t);
+              return (
+                <View key={item.id} style={[styles.txItem, { flexDirection: R }, i > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}>
+                  <View style={[styles.txIcon, { backgroundColor: colors.secondary }]}>
+                    <ArrowUpRight size={16} color={colors.mutedForeground} strokeWidth={2} />
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={[styles.txTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]} numberOfLines={1}>
+                      {item.accountName ?? item.method}{item.maskedAccountNumber ? ` — ${item.maskedAccountNumber}` : ''}
+                    </Text>
+                    <Text style={[styles.txSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]} numberOfLines={1}>
+                      {new Date(item.createdAt).toLocaleDateString()}
+                    </Text>
+                  </View>
+                  <View style={{ alignItems: isRTL ? 'flex-start' : 'flex-end', gap: 4 }}>
+                    <Text style={[styles.txAmount, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
+                      {item.amount.toFixed(2)} {t.egp}
+                    </Text>
+                    <Text style={[styles.defaultBadge, { color: badge.color, fontFamily: 'Inter_700Bold' }]}>{badge.label}</Text>
+                  </View>
+                </View>
+              );
+            })}
+          </GlassView>
+        )}
 
         <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', marginTop: 24, marginBottom: 12, textAlign: TA }]}>{t.transactions_label}</Text>
         <GlassView borderRadius={16}>
@@ -324,105 +335,6 @@ export default function WalletScreen() {
           ))}
         </GlassView>
       </ScrollView>
-
-      <Modal
-        visible={addMethodVisible}
-        animationType="slide"
-        transparent
-        onRequestClose={() => { setAddMethodVisible(false); resetAddForm(); }}
-      >
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => { setAddMethodVisible(false); resetAddForm(); }} />
-          <View style={[styles.modalSheet, { backgroundColor: colors.background }]}>
-            <View style={[styles.modalHeader, { flexDirection: R }]}>
-              <Text style={[styles.modalTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.add_payout_method}</Text>
-              <Pressable onPress={() => { setAddMethodVisible(false); resetAddForm(); }} hitSlop={8}>
-                <X size={20} color={colors.mutedForeground} strokeWidth={2} />
-              </Pressable>
-            </View>
-
-            <Text style={[styles.fieldLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.payout_method_type}</Text>
-            <View style={[styles.typeRow, { flexDirection: R }]}>
-              {METHOD_TYPES.map(({ key, label }) => (
-                <Pressable
-                  key={key}
-                  onPress={() => setMethodType(key)}
-                  style={[styles.typeChip, {
-                    backgroundColor: methodType === key ? colors.primary + '1A' : colors.secondary,
-                    borderColor: methodType === key ? colors.primary + '66' : 'transparent',
-                    flex: 1,
-                  }]}
-                >
-                  <Text style={[styles.typeChipText, {
-                    color: methodType === key ? colors.primary : colors.mutedForeground,
-                    fontFamily: methodType === key ? 'Inter_700Bold' : 'Inter_400Regular',
-                    textAlign: 'center',
-                  }]}>{label}</Text>
-                </Pressable>
-              ))}
-            </View>
-
-            <Text style={[styles.fieldLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.account_number}</Text>
-            <TextInput
-              value={accountNumber}
-              onChangeText={setAccountNumber}
-              keyboardType="numeric"
-              placeholder="000000000000"
-              placeholderTextColor={colors.mutedForeground}
-              style={[styles.fieldInput, { color: colors.foreground, borderColor: colors.border, fontFamily: 'Inter_400Regular', textAlign: TA }]}
-            />
-
-            <Text style={[styles.fieldLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.account_name}</Text>
-            <TextInput
-              value={accountName}
-              onChangeText={setAccountName}
-              placeholder={t.account_name}
-              placeholderTextColor={colors.mutedForeground}
-              style={[styles.fieldInput, { color: colors.foreground, borderColor: colors.border, fontFamily: 'Inter_400Regular', textAlign: TA }]}
-            />
-
-            {methodType === 'bank_transfer' && (
-              <>
-                <Text style={[styles.fieldLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.bank_name}</Text>
-                <TextInput
-                  value={bankName}
-                  onChangeText={setBankName}
-                  placeholder={t.bank_name}
-                  placeholderTextColor={colors.mutedForeground}
-                  style={[styles.fieldInput, { color: colors.foreground, borderColor: colors.border, fontFamily: 'Inter_400Regular', textAlign: TA }]}
-                />
-              </>
-            )}
-
-            {(methodType === 'vodafone_cash' || methodType === 'instapay') && (
-              <>
-                <Text style={[styles.fieldLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.phone}</Text>
-                <TextInput
-                  value={phoneNumber}
-                  onChangeText={setPhoneNumber}
-                  keyboardType="phone-pad"
-                  placeholder={t.phone_placeholder}
-                  placeholderTextColor={colors.mutedForeground}
-                  style={[styles.fieldInput, { color: colors.foreground, borderColor: colors.border, fontFamily: 'Inter_400Regular', textAlign: TA }]}
-                />
-              </>
-            )}
-
-            <Pressable
-              onPress={handleAddMethod}
-              disabled={isAddingMethod}
-              style={({ pressed }) => [styles.submitBtn, { opacity: pressed || isAddingMethod ? 0.8 : 1 }]}
-            >
-              <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.submitGrad}>
-                {isAddingMethod
-                  ? <ActivityIndicator color="#fff" size="small" />
-                  : <Text style={{ color: '#fff', fontFamily: 'Inter_700Bold', fontSize: 14 }}>{t.confirm}</Text>
-                }
-              </LinearGradient>
-            </Pressable>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
     </View>
   );
 }

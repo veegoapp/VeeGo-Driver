@@ -2,7 +2,7 @@
 // Run: npx expo install react-native-ssl-pinning
 // Then replace the fetch() calls in request() with the pinned fetch from that library,
 // configured with the SHA-256 hash of the production API certificate.
-import { getToken, getRefreshToken, saveToken, deleteToken, deleteRefreshToken } from './auth';
+import { getToken, getRefreshToken, saveToken, saveRefreshToken, deleteToken, deleteRefreshToken } from './auth';
 
 // ── Language / Accept-Language ─────────────────────────────────────────────────
 // Updated by lib/i18nContext whenever the driver switches language.
@@ -131,6 +131,9 @@ async function refreshAccessToken(): Promise<string | null> {
       const data = await response.json();
       if (data.accessToken) {
         await saveToken(data.accessToken);
+        if (data.refreshToken) {
+          await saveRefreshToken(data.refreshToken);
+        }
         return data.accessToken;
       }
       return null;
@@ -522,10 +525,19 @@ export const endpoints = {
     feature: () => api.get('/config/driver-wallet-feature'),
     balance: () => api.get('/driver/wallet/balance'),
     transactions: (page = 1, limit = 20) => api.get(`/driver/earnings/history?page=${page}&limit=${limit}`),
-    payout: (amount: number, method: string) => api.post('/driver/wallet/payout', { amount, method }),
+    // Payout now requests against a specific saved payout account and only
+    // creates a pending request — see getPayoutAccounts/addPayoutAccount below.
+    payout: (amount: number, payoutAccountId: number) => api.post('/driver/wallet/payout', { amount, payoutAccountId }),
+    // Catalog of enabled payout method *types* (instapay, vodafone_cash, ...),
+    // used to populate the method picker when adding a payout account.
     payoutMethods: () => api.get('/driver/wallet/payout-methods'),
-    addPayoutMethod: (data: unknown) => api.post('/driver/wallet/payout-methods', data),
-    removePayoutMethod: (id: string) => api.del(`/driver/wallet/payout-methods/${id}`),
+    getPayoutAccounts: () => api.get('/driver/payout-accounts'),
+    addPayoutAccount: (data: { methodKey: string; accountName: string; accountNumber: string }) =>
+      api.post('/driver/payout-accounts', data),
+    deletePayoutAccount: (id: number) => api.del(`/driver/payout-accounts/${id}`),
+    setDefaultPayoutAccount: (id: number) => api.patch(`/driver/payout-accounts/${id}/default`),
+    // The driver's own payout requests (pending/paid/cancelled), newest first.
+    getPayoutHistory: () => api.get('/driver/wallet/payouts'),
   },
 
   shuttle: {

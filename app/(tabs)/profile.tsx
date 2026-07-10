@@ -188,6 +188,7 @@ export default function ProfileScreen() {
             isRTL={isRTL}
           />
           <MenuItem icon="file-text" label={t.documents_label} onPress={() => router.push('/documents')} colors={colors} isRTL={isRTL} />
+          <MenuItem icon="credit-card" label={t.payment_info_label} onPress={() => router.push('/payout-accounts' as any)} colors={colors} isRTL={isRTL} />
           <MenuItem icon="target" label={t.bonus_targets} onPress={() => router.push('/bonus-targets')} colors={colors} isRTL={isRTL} />
           {driverReferralInfo?.config.enabled && (
             <MenuItem icon="gift" label={t.driver_referral_menu_label} onPress={() => router.push('/driver-referral')} colors={colors} isRTL={isRTL} />
