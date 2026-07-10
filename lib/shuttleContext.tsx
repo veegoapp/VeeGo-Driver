@@ -701,7 +701,7 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
     socket.on(SOCKET_EVENTS.SHUTTLE_TRIP_STATUS, handleTripStatus);
     socket.on(SOCKET_EVENTS.SHUTTLE_STATE_SYNC, handleStateSync);
     socket.on(SOCKET_EVENTS.TRIP_ACTIVATED, handleTripActivated);
-    socket.on('reconnect', handleReconnect);
+    socket.io.on('reconnect', handleReconnect);
 
     return () => {
       socket.off(SOCKET_EVENTS.NOTIFICATION_NEW, handleNotification);
@@ -714,7 +714,7 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
       socket.off(SOCKET_EVENTS.SHUTTLE_TRIP_STATUS, handleTripStatus);
       socket.off(SOCKET_EVENTS.SHUTTLE_STATE_SYNC, handleStateSync);
       socket.off(SOCKET_EVENTS.TRIP_ACTIVATED, handleTripActivated);
-      socket.off('reconnect', handleReconnect);
+      socket.io.off('reconnect', handleReconnect);
     };
   }, [socket, queryClient]);
 
