@@ -17,10 +17,12 @@
       "backgroundColor": "#1B1F2E"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "bundleIdentifier": "com.veego.driver"
     },
     "android": {
-      "backgroundColor": "#1B1F2E"
+      "backgroundColor": "#1B1F2E",
+      "package": "com.veego.driver"
     },
     "plugins": [
       [
