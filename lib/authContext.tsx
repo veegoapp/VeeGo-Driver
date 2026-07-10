@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { getToken, saveToken, deleteToken, saveRefreshToken, deleteRefreshToken } from './auth';
+import { endpoints } from './api';
 
 type AuthContextType = {
   token: string | null;
@@ -28,6 +29,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
+    try {
+      await endpoints.auth.logout();
+    } catch {
+      // Server logout failed (network/offline) — local logout must still complete.
+    }
     await deleteToken();
     await deleteRefreshToken();
     setToken(null);
