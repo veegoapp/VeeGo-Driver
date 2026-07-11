@@ -1,0 +1,145 @@
+Driver App Production Audit — Read Only First
+
+Scope
+
+Audit ONLY the Driver App repository.
+
+Do NOT modify code yet.
+
+The goal is to create a complete report of the current production readiness state of the driver app and identify required fixes.
+
+---
+
+Important Boundaries
+
+Do NOT touch:
+
+- Backend repository.
+- Passenger app.
+- Admin dashboard.
+- Database.
+- API contracts.
+- Payment logic.
+
+Only analyze the Driver App code.
+
+---
+
+Audit Areas
+
+1. Safety Features Audit
+
+Review the driver safety screen/features.
+
+Check:
+
+- Share Trip functionality.
+- "I'm Safe" button.
+- Emergency actions.
+- Any buttons that show success messages without a real backend action.
+- Any missing API/socket/database integration.
+
+For every finding report:
+
+- Current behavior.
+- Expected behavior.
+- File location.
+- Severity.
+- Recommended fix.
+
+---
+
+2. Shuttle Renewal Socket Event
+
+Audit the driver app socket implementation.
+
+The backend has an event:
+
+shuttle:renewal:confirmed
+
+Check:
+
+- Is the driver app listening for this event?
+- Is the socket event constant defined?
+- Is there a handler?
+- What happens when a shuttle booking renewal is confirmed?
+
+If missing:
+
+Report:
+
+- Where the listener should be added.
+- What screen/state should receive the update.
+- Any required UI changes.
+
+Do NOT implement yet.
+
+---
+
+3. Socket System Audit
+
+Review:
+
+- Socket connection lifecycle.
+- Authentication.
+- Reconnect behavior.
+- Event subscriptions after reconnect.
+- Missing listeners.
+- Memory leaks from missing cleanup.
+
+---
+
+4. API Integration Audit
+
+Review:
+
+- Broken endpoints.
+- Old endpoints.
+- Missing error handling.
+- Fake success messages.
+- Incorrect request/response handling.
+
+---
+
+5. Location Tracking Audit
+
+Review:
+
+- Driver location updates.
+- Background tracking.
+- Permission handling.
+- Battery considerations.
+- Reconnect behavior.
+
+---
+
+6. Security Audit
+
+Review:
+
+- Token storage.
+- Certificate pinning status.
+- Sensitive data exposure.
+- Debug logs.
+- Production configuration.
+
+---
+
+Output
+
+Create:
+
+DRIVER_APP_PRODUCTION_AUDIT.md
+
+The report must contain:
+
+1. Critical issues.
+2. Medium issues.
+3. Low priority cleanup.
+4. Files involved.
+5. Recommended implementation order.
+
+Important:
+
+Do not modify any files.
+This is audit only.
