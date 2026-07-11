@@ -253,29 +253,52 @@ export default function RideScreen() {
     }
   };
 
-  const handleShareTrip = async () => {
-    if (shareBusy) return;
+  const copyShareLink = async (url: string) => {
+    const Clipboard = await import('expo-clipboard');
+    await Clipboard.setStringAsync(url);
+  };
+
+  const handleRevokeShareTrip = async () => {
+    if (!shareLink || shareBusy) return;
     setShareBusy(true);
     try {
-      if (shareLink) {
-        await endpoints.tripShare.revoke(shareLink.id);
-        setShareLink(null);
-        Alert.alert(t.trip_share_revoked_title, t.trip_share_revoked_msg);
-      } else {
-        const numericRideId = rideId ? Number(rideId) : undefined;
-        if (numericRideId == null || isNaN(numericRideId)) return;
-        const result = await endpoints.tripShare.create({ rideId: numericRideId });
-        setShareLink({ id: result.id, url: result.url });
-        Alert.alert(t.trip_share_created_title, t.trip_share_created_msg, [
-          { text: t.trip_share_copy_btn, onPress: async () => {
-              const Clipboard = await import('expo-clipboard');
-              await Clipboard.setStringAsync(result.url);
-            } },
-          { text: t.ok, style: 'default', onPress: () => { Share.share({ message: result.url }).catch(() => {}); } },
-        ]);
-      }
+      await endpoints.tripShare.revoke(shareLink.id);
+      setShareLink(null);
+      Alert.alert(t.trip_share_revoked_title, t.trip_share_revoked_msg);
     } catch {
-      Alert.alert(t.action_failed_title, shareLink ? t.trip_share_revoke_error : t.trip_share_error);
+      Alert.alert(t.action_failed_title, t.trip_share_revoke_error);
+    } finally {
+      setShareBusy(false);
+    }
+  };
+
+  const handleShareTrip = async () => {
+    if (shareBusy) return;
+
+    if (shareLink) {
+      // A link is already active — offer to copy/share it again or stop
+      // sharing, instead of silently revoking on tap.
+      Alert.alert(t.trip_share_active_title, t.trip_share_active_msg, [
+        { text: t.trip_share_copy_btn, onPress: () => { copyShareLink(shareLink.url); } },
+        { text: t.trip_share_send_btn, onPress: () => { Share.share({ message: shareLink.url }).catch(() => {}); } },
+        { text: t.trip_share_revoke_btn, style: 'destructive', onPress: handleRevokeShareTrip },
+        { text: t.cancel, style: 'cancel' },
+      ]);
+      return;
+    }
+
+    setShareBusy(true);
+    try {
+      const numericRideId = rideId ? Number(rideId) : undefined;
+      if (numericRideId == null || isNaN(numericRideId)) return;
+      const result = await endpoints.tripShare.create({ rideId: numericRideId });
+      setShareLink({ id: result.id, url: result.url });
+      Alert.alert(t.trip_share_created_title, t.trip_share_created_msg, [
+        { text: t.trip_share_copy_btn, onPress: () => { copyShareLink(result.url); } },
+        { text: t.ok, style: 'default', onPress: () => { Share.share({ message: result.url }).catch(() => {}); } },
+      ]);
+    } catch {
+      Alert.alert(t.action_failed_title, t.trip_share_error);
     } finally {
       setShareBusy(false);
     }
