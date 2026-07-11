@@ -51,12 +51,30 @@ async function syncPending(): Promise<void> {
   const pending = await readPending();
   if (pending.length === 0) return;
 
-  // Purge from storage immediately before upload to minimise retention window
-  await AsyncStorage.removeItem(PENDING_KEY);
+  // Upload chunk by chunk; only remove each chunk from storage after the
+  // server confirms receipt. If a batch fails, re-queue the failed chunk
+  // and all remaining items so they are retried on the next sync cycle.
+  const failed: LocationSnapshot[] = [];
 
   for (let i = 0; i < pending.length; i += BATCH_CHUNK) {
     const chunk = pending.slice(i, i + BATCH_CHUNK);
-    await endpoints.tracking.sendBatch(chunk);
+    try {
+      await endpoints.tracking.sendBatch(chunk);
+    } catch {
+      // Upload failed — keep this chunk and everything after it for retry
+      failed.push(...pending.slice(i));
+      break;
+    }
+  }
+
+  if (failed.length === 0) {
+    await AsyncStorage.removeItem(PENDING_KEY);
+  } else {
+    try {
+      await AsyncStorage.setItem(PENDING_KEY, JSON.stringify(failed));
+    } catch {
+      // Storage write failed — data may be lost, but prefer not crashing
+    }
   }
 }
 

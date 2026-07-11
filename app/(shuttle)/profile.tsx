@@ -138,11 +138,12 @@ export default function ShuttleProfileScreen() {
   const handleCopyCode = async () => {
     try {
       await Clipboard.setStringAsync(referralCode);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
     } catch {
-      Alert.alert(t.referral_code_section, referralCode);
+      // Clipboard unavailable — code is visible on screen; no blocking alert needed
     }
+    // Show the inline "Copied" indicator regardless so the driver gets feedback
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
   };
 
   // ── Avatar change request flow ────────────────────────────────────────

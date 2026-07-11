@@ -54,10 +54,10 @@ export default function VerifyOtpScreen() {
     if (otp.length !== OTP_LENGTH || loading || locked) return;
     setError(null);
     setLoading(true);
-    console.log('[OTP] ▶ Calling verifyOtp | phone:', phone, '| otp:', otp);
+    if (__DEV__) console.log('[OTP] ▶ Calling verifyOtp');
     try {
       const result = await endpoints.auth.verifyOtp(phone, otp);
-      console.log('[OTP] ✅ verifyOtp response:', JSON.stringify(result));
+      if (__DEV__) console.log('[OTP] ✅ verifyOtp succeeded');
 
       // Accept any pending terms now that we have a real token
       AsyncStorage.getItem('driver_terms_pending_version').then(async (pendingVersion) => {
@@ -69,13 +69,13 @@ export default function VerifyOtpScreen() {
       }).catch(() => {});
 
       await login(result.accessToken, result.refreshToken);
-      console.log('[OTP] ✅ login() done → calling navigateAfterOtp');
+      if (__DEV__) console.log('[OTP] ✅ login() done → calling navigateAfterOtp');
       await navigateAfterOtp(result.accessToken);
     } catch (err) {
-      console.log('[OTP] ❌ verifyOtp error:', err);
+      if (__DEV__) console.log('[OTP] ❌ verifyOtp error:', err);
       let justLocked = false;
       if (err instanceof ApiError) {
-        console.log('[OTP] status:', err.status, '| body:', JSON.stringify(err.body));
+        if (__DEV__) console.log('[OTP] status:', err.status, '| body:', JSON.stringify(err.body));
         const body = err.body as { error?: string; attemptsRemaining?: number; retryAfter?: number } | null;
         if (err.status === 429) {
           justLocked = true;

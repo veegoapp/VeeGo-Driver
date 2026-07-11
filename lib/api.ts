@@ -95,6 +95,25 @@ export interface DriverReferralInfo {
   };
 }
 
+// ── MIME type helper ──────────────────────────────────────────────────────────
+// Infers a MIME type from a file URI/path extension. Falls back to image/jpeg
+// (the most common document photo format) when the extension is unrecognised.
+function inferMimeType(uri: string): string {
+  const ext = uri.split('?')[0].split('.').pop()?.toLowerCase();
+  const map: Record<string, string> = {
+    jpg:  'image/jpeg',
+    jpeg: 'image/jpeg',
+    png:  'image/png',
+    gif:  'image/gif',
+    webp: 'image/webp',
+    heic: 'image/heic',
+    heif: 'image/heif',
+    pdf:  'application/pdf',
+  };
+  return (ext && map[ext]) ?? 'image/jpeg';
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 // Fix 8: callback invoked when server returns 403 account_suspended
 type SuspendedCallback = () => void;
 let _onAccountSuspended: SuspendedCallback | null = null;
@@ -221,7 +240,9 @@ async function request<T>(
   // Fix 8: intercept 403 account_suspended
   if (response.status === 403) {
     let errorBody: unknown = null;
-    try { errorBody = await response.json(); } catch { /* empty */ }
+    try { errorBody = await response.json(); } catch (e) {
+      if (__DEV__) console.warn('[API] Could not parse 403 response body as JSON:', e);
+    }
     const reason = (errorBody as { error?: string } | null)?.error;
     if (reason === 'account_suspended') {
       _onAccountSuspended?.();
@@ -413,8 +434,8 @@ export const endpoints = {
     },
     // Step 2: Register an already-uploaded document URL with the backend.
     // POST /driver/me/documents  (JSON body)
-    registerDocument: (type: string, fileUrl: string, mimeType = 'image/jpeg') =>
-      request<{ id: string; type: string; fileUrl: string }>('POST', '/driver/me/documents', { type, fileUrl, mimeType }),
+    registerDocument: (type: string, fileUrl: string, mimeType?: string) =>
+      request<{ id: string; type: string; fileUrl: string }>('POST', '/driver/me/documents', { type, fileUrl, mimeType: mimeType ?? inferMimeType(fileUrl) }),
     // Fix 2: shuttle check-in — POST /driver/checkin with selfie + optional tripId
     checkin: async (formData: FormData) => {
       const token = await getToken();
@@ -490,13 +511,10 @@ export const endpoints = {
       return api.get(`/driver/trips?${params.join('&')}`);
     },
     detail: (tripId: string) => api.get(`/driver/trips/${tripId}`),
-    /* defined — not yet connected to UI */
     accept: (tripId: string) => api.patch(`/driver/trips/${tripId}/accept`),
-    /* defined — not yet connected to UI */
     reject: (tripId: string) => api.patch(`/driver/trips/${tripId}/reject`),
     start: (tripId: string) => api.patch(`/driver/trips/${tripId}/start`),
     complete: (tripId: string) => api.patch(`/driver/trips/${tripId}/complete`),
-    /* defined — not yet connected to UI */
     cancel: (tripId: string, reason: string) =>
       api.patch(`/driver/trips/${tripId}/cancel`, { reason }),
     stations: (tripId: string) => api.get(`/driver/trips/${tripId}/stations`),

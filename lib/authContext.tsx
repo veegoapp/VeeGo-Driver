@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { getToken, saveToken, deleteToken, saveRefreshToken, deleteRefreshToken } from './auth';
 import { endpoints } from './api';
+import { stopLocationTracking } from './backgroundLocationTask';
 
 type AuthContextType = {
   token: string | null;
@@ -29,6 +30,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
+    // Stop background GPS task before clearing credentials so no stale
+    // location updates are sent after the session ends.
+    await stopLocationTracking();
     try {
       await endpoints.auth.logout();
     } catch {

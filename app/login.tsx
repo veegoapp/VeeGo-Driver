@@ -267,37 +267,36 @@ function SignUpForm({ isRTL, onOtpRequired }: { isRTL: boolean; onOtpRequired: (
     if (!canSubmit) return;
     setError(null);
     setLoading(true);
-    console.log('[SIGNUP] ▶ Register button pressed');
-    console.log('[SIGNUP] Fields → name:', name.trim(), '| email:', email.trim(), '| phone:', phone.trim(), '| password length:', password.length);
+    if (__DEV__) console.log('[SIGNUP] ▶ Register button pressed');
     try {
-      console.log('[SIGNUP] Calling endpoints.auth.driverRegister ...');
+      if (__DEV__) console.log('[SIGNUP] Calling endpoints.auth.driverRegister ...');
       const result = await endpoints.auth.driverRegister({
         name: name.trim(),
         email: email.trim(),
         phone: phone.trim(),
         password,
       });
-      console.log('[SIGNUP] ✅ Register response:', JSON.stringify(result));
+      if (__DEV__) console.log('[SIGNUP] ✅ Register succeeded');
       // Accept terms silently after registration — token arrives after OTP
       // so we store the pending version to accept once we have the token
       if (termsData) {
         try {
           await AsyncStorage.setItem('driver_terms_pending_version', String(termsData.version));
-          console.log('[SIGNUP] Terms pending version saved:', termsData.version);
+          if (__DEV__) console.log('[SIGNUP] Terms pending version saved:', termsData.version);
         } catch { /* ignore */ }
       }
       // Phase 2: register returns requiresOtp, not tokens
-      console.log('[SIGNUP] → Navigating to OTP screen | phone:', result.phone, '| maskedPhone:', result.maskedPhone);
+      if (__DEV__) console.log('[SIGNUP] → Navigating to OTP screen');
       onOtpRequired(result.phone, result.maskedPhone);
     } catch (err) {
-      console.log('[SIGNUP] ❌ Error during register:', err);
-      if (err instanceof ApiError) {
+      if (__DEV__) console.log('[SIGNUP] ❌ Error during register:', err);
+      if (__DEV__ && err instanceof ApiError) {
         console.log('[SIGNUP] ApiError status:', err.status, '| body:', JSON.stringify(err.body));
       }
       setError(getErrorMessage(err, t));
     } finally {
       setLoading(false);
-      console.log('[SIGNUP] ■ Register flow finished (loading=false)');
+      if (__DEV__) console.log('[SIGNUP] ■ Register flow finished (loading=false)');
     }
   };
 

@@ -1,0 +1,164 @@
+Driver App Local Fixes Only
+
+Scope:
+You are connected to the Driver App repository only.
+
+Important rules:
+- Modify ONLY the Driver App code.
+- Do NOT modify backend code.
+- Do NOT modify API contracts.
+- Do NOT create new backend endpoints.
+- Do NOT change database models.
+- Do NOT change authentication flow.
+- Do NOT change payment logic.
+- Do NOT change socket event contracts.
+- Do NOT refactor unrelated files.
+- Keep all existing behavior unchanged except the specific fixes below.
+- Before changing any file, verify the current implementation.
+- After changes, run the available type checks/build checks if possible.
+
+Goal:
+Fix only the confirmed Driver App issues that can be solved locally without backend changes.
+
+Tasks:
+
+1) Remove sensitive data from production logs
+
+Check and fix these areas:
+- app/login.tsx
+- app/verify-otp.tsx
+- lib/api.ts
+
+Requirements:
+- Remove or protect console logs that expose:
+  - OTP values
+  - user personal data
+  - authentication tokens
+- Any debug logging that remains must only run in development mode.
+- Do not remove useful error handling logs unless they expose sensitive information.
+
+---
+
+2) Fix location tracking data loss
+
+File:
+- hooks/useActiveLocationTracking.ts
+
+Problem:
+Pending locations are currently removed before confirming successful upload.
+
+Requirements:
+- Do not delete stored locations before the server confirms successful upload.
+- Only remove pending locations after sendBatch succeeds.
+- If upload fails:
+  - keep the stored locations
+  - allow retry later.
+- Do not change the backend request format.
+
+---
+
+3) Stop background location tracking on logout
+
+Check:
+- lib/authContext.tsx
+- lib/auth.ts
+- location tracking utilities
+
+Problem:
+Logout does not always stop background tracking.
+
+Requirements:
+- When the driver logs out:
+  - stop background location tracking
+  - clear tracking tasks if needed.
+- Do not change the login/logout API behavior.
+- Do not change token handling except adding the tracking cleanup.
+
+---
+
+4) Improve API JSON parsing error handling
+
+File:
+- lib/api.ts
+
+Problem:
+Some JSON parsing errors are silently ignored.
+
+Requirements:
+- Do not change API responses.
+- Do not hide parsing failures silently.
+- In development mode, provide useful debug information.
+- Keep existing fallback behavior if required for compatibility.
+
+---
+
+5) Fix document upload MIME type handling
+
+File:
+- lib/api.ts
+
+Problem:
+Document upload defaults always to image/jpeg.
+
+Requirements:
+- Detect the real file type when possible from the file information or extension.
+- Send the correct MIME type.
+- Do not change the upload endpoint or request structure.
+
+---
+
+6) Improve simple UI feedback
+
+File:
+- app/(shuttle)/profile.tsx
+
+Problem:
+Simple actions use blocking alerts.
+
+Requirements:
+- Replace only unnecessary blocking alerts with better feedback if the project already has an existing toast/feedback system.
+- Do not redesign the screen.
+- Do not change unrelated UI.
+
+---
+
+7) Clean only confirmed unused local code
+
+Only review:
+- Unused local socket constants that are clearly unused.
+- Old comments saying features are not connected when they are already connected.
+
+Rules:
+- Do NOT delete anything that may be part of a future backend contract.
+- If uncertain, leave it unchanged.
+
+---
+
+Verification:
+
+After completing the changes, create:
+
+driver-local-fixes-report.md
+
+Include:
+
+# Changes Made
+
+For each task:
+- File changed
+- What was changed
+- Why
+
+# Not Changed
+
+Confirm:
+- Backend untouched
+- API contracts untouched
+- Database untouched
+- Authentication untouched
+- Payment untouched
+- Socket contracts untouched
+
+# Verification
+
+Include build/typecheck results if available.
