@@ -1,6 +1,15 @@
 // Register background location task before any React rendering
 import '@/lib/backgroundLocationTask';
 
+// Certificate pinning (TODO #8) must be active before any network request
+// fires. Fail closed: an initialization error in production is rethrown so
+// the app does not silently boot with an unpinned connection to the backend.
+import { initializeCertificatePinning } from '@/lib/certificatePinning';
+const _certPinningInit = initializeCertificatePinning().catch((err) => {
+  console.error('[CertPinning] Failed to initialize certificate pinning:', err);
+  if (!__DEV__) throw err;
+});
+
 import { useFonts } from 'expo-font';
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';

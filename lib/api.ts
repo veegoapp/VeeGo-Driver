@@ -1,7 +1,7 @@
-// TODO FIX-12: Add certificate pinning with react-native-ssl-pinning.
-// Run: npx expo install react-native-ssl-pinning
-// Then replace the fetch() calls in request() with the pinned fetch from that library,
-// configured with the SHA-256 hash of the production API certificate.
+// Certificate pinning for all fetch() calls below is configured globally in
+// lib/certificatePinning.ts (initialized from app/_layout.tsx) — it patches
+// the native networking layer, so no changes are needed here. See
+// docs/certificate-pinning.md.
 import { getToken, getRefreshToken, saveToken, saveRefreshToken, deleteToken, deleteRefreshToken } from './auth';
 
 // ── Language / Accept-Language ─────────────────────────────────────────────────
