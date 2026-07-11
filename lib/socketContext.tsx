@@ -65,8 +65,9 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
         setConnected(false);
       });
 
-      socket.on('connect_error', () => {
-        // connection error — socket will retry automatically
+      socket.on('connect_error', (err) => {
+        // Connection error — socket.io will retry automatically per reconnectionAttempts config.
+        if (__DEV__) console.warn('[Socket] connect_error:', err?.message ?? err);
       });
     })();
 

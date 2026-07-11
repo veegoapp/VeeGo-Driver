@@ -1,4 +1,4 @@
-// Certificate Pinning (TODO #8) ─────────────────────────────────────────────
+// Certificate Pinning ────────────────────────────────────────────────────────
 //
 // Pins the VeeGo backend's HTTPS certificate using SSL public-key pinning via
 // `react-native-ssl-public-key-pinning`. This library patches the native
@@ -93,11 +93,20 @@ export async function initializeCertificatePinning(): Promise<void> {
     },
   });
 
-  // Fail closed on pin mismatch: log the security event. The native layer
-  // has already aborted the connection — this listener is for
-  // observability/alerting only, it does not decide pass/fail.
+  // The native layer has already aborted the TLS connection on pin mismatch —
+  // this listener is for observability only, it does not decide pass/fail.
+  // Log the event so it surfaces in crash reporters and log aggregation tools.
   addSslPinningErrorListener((error) => {
     console.error('[CertPinning] SSL pin validation failed:', error);
+    if (__DEV__) {
+      console.warn(
+        '[CertPinning] A certificate pin mismatch was detected. Possible causes:\n' +
+        '  1. Certificate rotation — update EXPO_PUBLIC_CERT_PIN_SHA256 (see docs/certificate-pinning.md)\n' +
+        '  2. MITM/proxy — check network environment\n' +
+        '  3. Misconfigured pin hash\n' +
+        'The native layer has already blocked the request.',
+      );
+    }
   });
 
   _initialized = true;

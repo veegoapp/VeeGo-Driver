@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import * as Location from 'expo-location'; // Task 1: GPS tracking
+import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import { DRIVER_LOCATION_TASK } from '@/lib/backgroundLocationTask';
 import { AlertCircle, Bell, Check, CheckCircle, Settings, Star, TrendingUp, X } from 'lucide-react-native';
@@ -38,7 +38,6 @@ export default function HomeScreen() {
   const { t, isRTL } = useI18n();
   const [online, setOnline] = useState(false);
   const [togglingOnline, setTogglingOnline] = useState(false);
-  // Task 1: GPS location tracking state
   const [locationError, setLocationError] = useState<string | null>(null);
   const [request, setRequest] = useState<RideRequest | null>(null);
   const [surgeZones, setSurgeZones] = useState<SurgeZone[]>([]);
@@ -158,7 +157,6 @@ export default function HomeScreen() {
   const dismissRequestRef = useRef<(() => void) | null>(null);
   const dismissSilentlyRef = useRef<(() => void) | null>(null);
   const showToastRef = useRef<((msg: string, type: 'warning' | 'success') => void) | null>(null);
-  // Task 1: location tracking refs
   const locationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -285,14 +283,14 @@ export default function HomeScreen() {
     if (socketConnected) refetchCheckinStatus();
   }, [socketConnected, refetchCheckinStatus]);
 
-  // FIX #6: was gated on `online` — spec requires registration immediately after login
+  // Push token registration happens on login, not just when going online
   useEffect(() => {
     if (token) {
       endpoints.pushTokens.register(Platform.OS as 'ios' | 'android' | 'web', token).catch(() => {});
     }
   }, [token]);
 
-  // Task 1: start GPS tracking using background location task — returns false if permission denied
+  // Start GPS tracking using background location task — returns false if permission denied
   const startLocationTracking = async (): Promise<boolean> => {
     const { status: fgStatus } = await Location.requestForegroundPermissionsAsync();
     if (fgStatus !== 'granted') {
@@ -340,7 +338,6 @@ export default function HomeScreen() {
     return true;
   };
 
-  // Task 1: stop GPS tracking
   const stopLocationTracking = () => {
     // Stop background location task
     TaskManager.isTaskRegisteredAsync(DRIVER_LOCATION_TASK)
@@ -355,7 +352,7 @@ export default function HomeScreen() {
     }
   };
 
-  // Task 1: clean up on unmount
+  // Stop location tracking on unmount
   useEffect(() => () => {
     stopLocationTracking();
   }, []);
@@ -382,11 +379,10 @@ export default function HomeScreen() {
     setTogglingOnline(true);
     statusDebounceRef.current = setTimeout(async () => {
     try {
-      // FIX #3: was setStatus(bool) to single endpoint — now two separate endpoints per spec
       await (next ? endpoints.driver.goOnline() : endpoints.driver.goOffline());
       lastSubmittedStatusRef.current = nextStatus;
       if (next) {
-        // Task 1: request permission and start tracking; revert if denied
+        // Request location permission and start tracking; revert status if denied
         const ok = await startLocationTracking();
         if (!ok) {
           await endpoints.driver.goOffline().catch(() => {});
@@ -516,7 +512,7 @@ export default function HomeScreen() {
                   <Text style={[styles.hiText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>{t.hi}, {(driverData?.name ?? '—').split(' ')[0]}</Text>
                   <View style={[styles.ratingRow, { flexDirection: R }]}>
                     <Star size={12} color={colors.accent} fill={colors.accent} strokeWidth={2} />
-                    {/* FIX #4: parseFloat — backend returns rating as string */}
+                    {/* backend returns rating as a string — parseFloat for numeric display */}
                     <Text style={[styles.ratingText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{driverData?.rating != null ? parseFloat(String(driverData.rating)).toFixed(1) : '—'}</Text>
                   </View>
                 </View>
@@ -559,7 +555,7 @@ export default function HomeScreen() {
               </View>
             ) : (
               <View style={[styles.statsPillInner, { flexDirection: R }]}>
-                {/* FIX #4: parseFloat — backend returns totalEarnings as string */}
+                {/* backend returns totalEarnings as a string — parseFloat for numeric formatting */}
                 <StatItem label={t.today} value={`${parseFloat(String(earningsData?.summary?.totalEarnings ?? 0)).toFixed(2)} ${t.egp}`} highlight colors={colors} isRTL={isRTL} />
                 <View style={[styles.divider, { backgroundColor: colors.border }]} />
                 <StatItem label={t.trips} value={String(earningsData?.trips ?? '—')} colors={colors} isRTL={isRTL} />
@@ -599,7 +595,7 @@ export default function HomeScreen() {
         </View>
       )}
 
-      {/* Task 1: location permission error banner */}
+      {/* Location permission error banner */}
       {locationError && (
         <View style={[styles.locationErrorBanner, { bottom: TAB_BAR_HEIGHT + 130, backgroundColor: '#ef444415', borderColor: '#ef444430' }]}>
           <AlertCircle size={14} color="#ef4444" strokeWidth={2} />
@@ -771,7 +767,6 @@ const styles = StyleSheet.create({
   demandHeader: { alignItems: 'center', gap: 6 },
   demandTitle: { fontSize: 12 },
   demandText: { fontSize: 11, marginTop: 4, lineHeight: 16 },
-  // Task 1: location error banner
   locationErrorBanner: { position: 'absolute', left: 20, right: 20, flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: 14, borderWidth: 1 },
   surgeBadge: { position: 'absolute', alignSelf: 'center', left: 20, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(213,178,61,0.12)', borderWidth: 1, borderColor: 'rgba(213,178,61,0.45)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7 },
   locationErrorText: { flex: 1, fontSize: 12, lineHeight: 16 },

@@ -1,7 +1,7 @@
 // Register background location task before any React rendering
 import '@/lib/backgroundLocationTask';
 
-// Certificate pinning (TODO #8) must be active before any network request
+// Certificate pinning must be active before any network request
 // fires. Fail closed: an initialization error in production is rethrown so
 // the app does not silently boot with an unpinned connection to the backend.
 import { initializeCertificatePinning } from '@/lib/certificatePinning';
@@ -49,7 +49,8 @@ const queryClient = new QueryClient({
   },
 });
 
-// 🚀 FIX: removed verify-otp from pre-auth screens
+// verify-otp is excluded: the token does not exist yet during the sign-up OTP flow.
+// Redirecting here would kick the user back to login right after registration.
 const PRE_AUTH_SCREENS = new Set([
   'login',
   'language-select',
@@ -195,7 +196,7 @@ function RootLayoutNav() {
 
     if (inPendingZone) return;
 
-    // 🚀 FIX: block ALL auto navigation during OTP flow
+    // Block auto navigation during OTP flow — token does not exist yet
     if (isOtpFlow) return;
 
     if (inPreAuthZone) {

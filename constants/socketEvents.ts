@@ -23,10 +23,10 @@ export const SOCKET_EVENTS = {
   DRIVER_CHECKIN_REJECTED:  "driver:checkin:rejected",
   DRIVER_CHECKIN_APPROVED:  "driver:checkin:approved",
 
-  // Server → Driver: shuttle check-in (Fix 2)
+  // Server → Driver: shuttle check-in
   SHUTTLE_CHECKIN_REQUIRED: "shuttle:checkin:required",
 
-  // Server → Driver: shuttle station timeout (Fix 3)
+  // Server → Driver: shuttle station timeout
   SHUTTLE_STATION_TIMEOUT:  "shuttle:station:timeout",
 
   // Server → Driver: force disconnect
@@ -42,7 +42,7 @@ export const SOCKET_EVENTS = {
   SERVICE_CONTROL_CHANGED:  "service:control:changed",
   SERVICE_SETTINGS_CHANGED: "service:settings:changed",
 
-  /* unused — reserved for future */
+  /* unused — reserved for future backend compatibility: do not remove */
   DRIVER_LOCATION_ACK:      "driver:location:ack",
 
   // Server → Driver: surge
@@ -120,17 +120,17 @@ export const SOCKET_EVENTS = {
   JOIN_TRIP:                "join:trip",
   LEAVE_TRIP:               "leave:trip",
   DRIVER_HEARTBEAT:         "driver:heartbeat",
-  /* unused — reserved for future */
+  /* unused — reserved for future backend compatibility: do not remove */
   DRIVER_STATUS_ONLINE:     "driver:status:online",
-  /* unused — reserved for future */
+  /* unused — reserved for future backend compatibility: do not remove */
   DRIVER_STATUS_OFFLINE:    "driver:status:offline",
-  /* unused — reserved for future */
+  /* unused — reserved for future backend compatibility: do not remove */
   DRIVER_STATUS_BUSY:       "driver:status:busy",
   DRIVER_LOCATION_UPDATE:   "driver:location:update",
   DRIVER_RIDE_LOCATION:     "driver:ride:location",
-  /* unused — reserved for future */
+  /* unused — reserved for future backend compatibility: do not remove */
   DRIVER_TRIP_START:        "driver:trip:start",
-  /* unused — reserved for future */
+  /* unused — reserved for future backend compatibility: do not remove */
   DRIVER_TRIP_COMPLETE:     "driver:trip:complete",
 } as const;
 

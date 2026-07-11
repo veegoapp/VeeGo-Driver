@@ -41,9 +41,11 @@ class ApiError extends Error {
   }
 }
 
-// Typed envelope for POST /shuttle/lines/:id/complete
-// Backend has historically returned fields at root level AND nested under data —
-// both paths are guarded at the call site. Keep the double-fallback in trip-active.tsx.
+// Typed envelope for POST /driver/trips/:id/complete (shuttle trip completion).
+// The double-fallback (root-level fields AND nested under .data) is intentional:
+// the backend has returned both shapes at different times. Do not remove either
+// path until the backend response shape is confirmed stable across all versions.
+// See usage in app/shuttle/trip-active.tsx (handleFinishRoute).
 export interface ShuttleCompleteResponse {
   earnedAmount?: number;
   walletBalance?: number;
@@ -114,7 +116,7 @@ function inferMimeType(uri: string): string {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Fix 8: callback invoked when server returns 403 account_suspended
+// Global callback invoked when the server returns 403 account_suspended
 type SuspendedCallback = () => void;
 let _onAccountSuspended: SuspendedCallback | null = null;
 export function setOnAccountSuspended(cb: SuspendedCallback) {
@@ -237,7 +239,7 @@ async function request<T>(
     throw new ApiError(401, 'Unauthorized', null);
   }
 
-  // Fix 8: intercept 403 account_suspended
+  // Intercept 403 account_suspended — invoke global callback before throwing
   if (response.status === 403) {
     let errorBody: unknown = null;
     try { errorBody = await response.json(); } catch (e) {
@@ -375,7 +377,9 @@ export const endpoints = {
         });
         if (!response.ok) {
           let errorBody: unknown = null;
-          try { errorBody = await response.json(); } catch { /* empty */ }
+          try { errorBody = await response.json(); } catch (e) {
+            if (__DEV__) console.warn('[API] Could not parse avatar-request error body as JSON:', e);
+          }
           throw new ApiError(response.status, response.statusText, errorBody);
         }
         return response.json();
@@ -436,7 +440,7 @@ export const endpoints = {
     // POST /driver/me/documents  (JSON body)
     registerDocument: (type: string, fileUrl: string, mimeType?: string) =>
       request<{ id: string; type: string; fileUrl: string }>('POST', '/driver/me/documents', { type, fileUrl, mimeType: mimeType ?? inferMimeType(fileUrl) }),
-    // Fix 2: shuttle check-in — POST /driver/checkin with selfie + optional tripId
+    // POST /driver/checkin with selfie + optional tripId
     checkin: async (formData: FormData) => {
       const token = await getToken();
       const controller = new AbortController();
@@ -565,7 +569,7 @@ export const endpoints = {
     availableWeeks: (routeId: string | number) =>
       api.get(`/shuttle/lines/${routeId}/available-weeks`),
 
-    // Fix 5: correct available-slots endpoint — only returns slots with full-week coverage
+    // GET /shuttle/available-slots — only returns slots with full-week coverage
     availableSlots: (routeId: string | number, weekStart: string) =>
       api.get(`/shuttle/available-slots?routeId=${routeId}&weekStart=${weekStart}`),
 
@@ -679,7 +683,7 @@ export const endpoints = {
     history: (page = 1, limit = 20) =>
       api.get(`/shuttle/driver/my-trips?page=${page}&limit=${limit}`),
 
-    // Fix 7: rate a passenger after a trip
+    // POST /shuttle/ratings — rate a passenger after a trip
     ratePassenger: (tripId: string, rateeId: string, stars: number) =>
       api.post('/shuttle/ratings', { tripId, rateeId, stars }),
 
