@@ -78,7 +78,7 @@ export default function ShuttleHomeScreen() {
   });
   const driverData = driverRaw as any;
 
-  const { activeLine, stops, currentStopIndex, allLines, renewalBooking, myBookings, tripCancelledBanner, dismissTripCancelledBanner, refetch } = useShuttle();
+  const { activeLine, stops, currentStopIndex, allLines, renewalBooking, myBookings, tripCancelledBanner, dismissTripCancelledBanner, bookingStatusBanner, dismissBookingStatusBanner, refetch } = useShuttle();
   const { incomingReferralsCount, pendingReferrals } = useReferral();
   const queryClient = useQueryClient();
 
@@ -370,6 +370,31 @@ export default function ShuttleHomeScreen() {
               <X size={16} color="#DC2626" strokeWidth={2} />
             </Pressable>
           </View>
+        )}
+
+        {/* Booking cancelled / reassigned banner (SHUTTLE_BOOKING_CANCELLED vs SHUTTLE_BOOKING_REASSIGNED) */}
+        {!!bookingStatusBanner && (
+          bookingStatusBanner.type === 'cancelled' ? (
+            <View style={[styles.cancelBanner, { backgroundColor: '#FEF2F2', borderColor: '#FCA5A5' }]}>
+              <AlertTriangle size={16} color="#DC2626" strokeWidth={2} />
+              <Text style={[styles.cancelBannerText, { color: '#DC2626', fontFamily: 'Inter_600SemiBold', flex: 1 }]}>
+                {bookingStatusBanner.message}
+              </Text>
+              <Pressable onPress={dismissBookingStatusBanner} hitSlop={8}>
+                <X size={16} color="#DC2626" strokeWidth={2} />
+              </Pressable>
+            </View>
+          ) : (
+            <View style={[styles.cancelBanner, { backgroundColor: '#EFF6FF', borderColor: '#93C5FD' }]}>
+              <RefreshCw size={16} color="#2563EB" strokeWidth={2} />
+              <Text style={[styles.cancelBannerText, { color: '#1D4ED8', fontFamily: 'Inter_600SemiBold', flex: 1 }]}>
+                {bookingStatusBanner.message}
+              </Text>
+              <Pressable onPress={dismissBookingStatusBanner} hitSlop={8}>
+                <X size={16} color="#2563EB" strokeWidth={2} />
+              </Pressable>
+            </View>
+          )
         )}
 
         {/* Renewal banner */}

@@ -333,6 +333,15 @@ export type SlotReleasedAlert = {
   routeName: string;
 };
 
+// ─── Booking cancelled / reassigned banner payload ────────────────────────────
+// SHUTTLE_BOOKING_CANCELLED and SHUTTLE_BOOKING_REASSIGNED are distinct events
+// with distinct meaning — a reassignment must never read as a cancellation.
+
+export type BookingStatusBanner = {
+  type: 'cancelled' | 'reassigned';
+  message: string;
+};
+
 // ─── Context type ─────────────────────────────────────────────────────────────
 
 type ShuttleContextType = {
@@ -366,6 +375,9 @@ type ShuttleContextType = {
   // Real-time slot-released toast (populated by socket event, consumed by layout)
   slotReleasedAlert: SlotReleasedAlert | null;
   dismissSlotReleasedAlert: () => void;
+  // Booking cancelled/reassigned notification (SHUTTLE_BOOKING_CANCELLED / SHUTTLE_BOOKING_REASSIGNED)
+  bookingStatusBanner: BookingStatusBanner | null;
+  dismissBookingStatusBanner: () => void;
 };
 
 export const ShuttleContext = createContext<ShuttleContextType>({
@@ -391,6 +403,8 @@ export const ShuttleContext = createContext<ShuttleContextType>({
   resetTrip: () => {},
   slotReleasedAlert: null,
   dismissSlotReleasedAlert: () => {},
+  bookingStatusBanner: null,
+  dismissBookingStatusBanner: () => {},
 });
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
@@ -407,6 +421,8 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
   const [startedTripId, setStartedTripId] = useState<string | null>(null);
   // Real-time slot-released toast state
   const [slotReleasedAlert, setSlotReleasedAlert] = useState<SlotReleasedAlert | null>(null);
+  // Booking cancelled/reassigned banner state
+  const [bookingStatusBanner, setBookingStatusBanner] = useState<BookingStatusBanner | null>(null);
 
   // ── AppState: pause polling in background, force-refetch on foreground ───
 
@@ -611,14 +627,37 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    // Backend now sends { bookingId, routeId, reason } — use payload for targeted invalidation
-    const handleBookingCancelled = (data?: { bookingId?: string | number; routeId?: string | number; reason?: string }) => {
+    // Backend sends { bookingId, routeId, reason } — use payload for targeted invalidation.
+    // SHUTTLE_BOOKING_CANCELLED: the booking is gone — show cancellation wording.
+    const handleShuttleBookingCancelled = (data?: { bookingId?: string | number; routeId?: string | number; reason?: string }) => {
       queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['shuttle-lines'] });
-      // Invalidate the specific booking detail cache entry if we have its id
       if (data?.bookingId != null) {
         queryClient.invalidateQueries({ queryKey: ['shuttle-booking-detail', String(data.bookingId)] });
       }
+      setBookingStatusBanner({
+        type: 'cancelled',
+        message: data?.reason
+          ? `Your shuttle booking has been cancelled: ${data.reason}`
+          : 'Your shuttle booking has been cancelled.',
+      });
+    };
+
+    // SHUTTLE_BOOKING_REASSIGNED: the booking still exists, moved to a
+    // different bus/trip — this is NOT a cancellation and must never use
+    // cancellation wording.
+    const handleShuttleBookingReassigned = (data?: { bookingId?: string | number; routeId?: string | number; reason?: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['shuttle-lines'] });
+      if (data?.bookingId != null) {
+        queryClient.invalidateQueries({ queryKey: ['shuttle-booking-detail', String(data.bookingId)] });
+      }
+      setBookingStatusBanner({
+        type: 'reassigned',
+        message: data?.reason
+          ? `Your shuttle booking has been reassigned: ${data.reason}`
+          : 'Your shuttle booking has been reassigned to a different trip. Your booking is still active.',
+      });
     };
 
     // Trip crossed the minimum-passenger threshold (pending → active)
@@ -692,8 +731,8 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
     };
 
     socket.on(SOCKET_EVENTS.NOTIFICATION_NEW, handleNotification);
-    socket.on(SOCKET_EVENTS.SHUTTLE_BOOKING_CANCELLED, handleBookingCancelled);
-    socket.on(SOCKET_EVENTS.SHUTTLE_BOOKING_REASSIGNED, handleBookingCancelled);
+    socket.on(SOCKET_EVENTS.SHUTTLE_BOOKING_CANCELLED, handleShuttleBookingCancelled);
+    socket.on(SOCKET_EVENTS.SHUTTLE_BOOKING_REASSIGNED, handleShuttleBookingReassigned);
     socket.on(SOCKET_EVENTS.SHUTTLE_RENEWAL_CONFIRMED, handleRenewalConfirmed);
     socket.on(SOCKET_EVENTS.SHUTTLE_BOOKING_CREATED, handleBookingCreated);
     socket.on(SOCKET_EVENTS.SLOT_TAKEN, handleSlotTaken);
@@ -705,8 +744,8 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       socket.off(SOCKET_EVENTS.NOTIFICATION_NEW, handleNotification);
-      socket.off(SOCKET_EVENTS.SHUTTLE_BOOKING_CANCELLED, handleBookingCancelled);
-      socket.off(SOCKET_EVENTS.SHUTTLE_BOOKING_REASSIGNED, handleBookingCancelled);
+      socket.off(SOCKET_EVENTS.SHUTTLE_BOOKING_CANCELLED, handleShuttleBookingCancelled);
+      socket.off(SOCKET_EVENTS.SHUTTLE_BOOKING_REASSIGNED, handleShuttleBookingReassigned);
       socket.off(SOCKET_EVENTS.SHUTTLE_RENEWAL_CONFIRMED, handleRenewalConfirmed);
       socket.off(SOCKET_EVENTS.SHUTTLE_BOOKING_CREATED, handleBookingCreated);
       socket.off(SOCKET_EVENTS.SLOT_TAKEN, handleSlotTaken);
@@ -735,6 +774,7 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
 
   const dismissTripCancelledBanner = () => setTripCancelledBanner(null);
   const dismissSlotReleasedAlert = () => setSlotReleasedAlert(null);
+  const dismissBookingStatusBanner = () => setBookingStatusBanner(null);
 
   // Gap A + B: resets all in-trip local state after trip completion
   const resetTrip = () => {
@@ -769,6 +809,8 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
         resetTrip,
         slotReleasedAlert,
         dismissSlotReleasedAlert,
+        bookingStatusBanner,
+        dismissBookingStatusBanner,
       }}
     >
       {children}
