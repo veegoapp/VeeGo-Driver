@@ -540,6 +540,17 @@ export const endpoints = {
     weekly: (weeks = 4) => api.get(`/earnings/weekly?weeks=${weeks}`),
   },
 
+  // Driver Trip Sharing: a driver-generated, temporary, revocable public
+  // link (default 24h) so anyone holding it can see live trip status.
+  // Independent of SOS / emergency-contact — the driver decides when to
+  // share and can revoke at any time.
+  tripShare: {
+    create: (data: { rideId?: number; tripId?: number }) =>
+      api.post<{ id: number; token: string; url: string; expiresAt: string }>('/driver/trip-share', data),
+    revoke: (id: number) =>
+      api.patch<{ ok: boolean }>(`/driver/trip-share/${id}/revoke`),
+  },
+
   safety: {
     shareTrip: (data: { rideId?: string; contactPhone?: string }) =>
       api.post<{ ok: boolean; message?: string }>('/driver/safety/share-trip', data),

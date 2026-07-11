@@ -2,12 +2,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { safeBack } from '@/lib/navUtils';
 import {
-  AlertTriangle, Check, ChevronLeft, Clock, Navigation2, Users, X,
+  AlertTriangle, Check, ChevronLeft, Clock, Navigation2, Share2, Users, X,
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert, Dimensions, Linking, Platform, Pressable, ScrollView,
-  StyleSheet, Text, View,
+  Share, StyleSheet, Text, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MapBackdrop } from '@/components/MapBackdrop';
@@ -111,6 +111,8 @@ export default function ShuttleTripActiveScreen() {
   const [isNextLoading, setIsNextLoading] = useState(false);
   const [failedStationActions, setFailedStationActions] = useState<{ id: string; name: string; action: 'boarded' | 'no_show' }[]>([]);
   const [focusTarget, setFocusTarget] = useState<{ latitude: number; longitude: number; zoom: number } | null>(null);
+  const [shareBusy, setShareBusy] = useState(false);
+  const [shareLink, setShareLink] = useState<{ id: number; url: string } | null>(null);
   const timeoutProcessingRef = useRef(false);
   const isFinishingRef = useRef(false);
   const lastStopProcessingRef = useRef(false);
@@ -410,6 +412,35 @@ export default function ShuttleTripActiveScreen() {
     );
   }, [effectivePos, passengers, activeLine, tripId, currentStop, currentStopIndex, stops.length, t]);
 
+  // ── Share Trip ───────────────────────────────────────────────────────────────
+  const handleShareTrip = useCallback(async () => {
+    if (shareBusy) return;
+    setShareBusy(true);
+    try {
+      if (shareLink) {
+        await endpoints.tripShare.revoke(shareLink.id);
+        setShareLink(null);
+        Alert.alert(t.trip_share_revoked_title, t.trip_share_revoked_msg);
+      } else {
+        const numericTripId = tripId != null ? Number(tripId) : undefined;
+        if (numericTripId == null || isNaN(numericTripId)) return;
+        const result = await endpoints.tripShare.create({ tripId: numericTripId });
+        setShareLink({ id: result.id, url: result.url });
+        Alert.alert(t.trip_share_created_title, t.trip_share_created_msg, [
+          { text: t.trip_share_copy_btn, onPress: async () => {
+              const Clipboard = await import('expo-clipboard');
+              await Clipboard.setStringAsync(result.url);
+            } },
+          { text: t.ok, style: 'default', onPress: () => { Share.share({ message: result.url }).catch(() => {}); } },
+        ]);
+      }
+    } catch {
+      Alert.alert(t.error, shareLink ? t.trip_share_revoke_error : t.trip_share_error);
+    } finally {
+      setShareBusy(false);
+    }
+  }, [shareBusy, shareLink, tripId, t]);
+
   // ── Progress dots ──────────────────────────────────────────────────────────
   const progressDots = (
     <View style={styles.progressDots}>
@@ -468,6 +499,19 @@ export default function ShuttleTripActiveScreen() {
                 </Text>
               </GlassView>
             )}
+
+            {/* Share Trip button */}
+            <Pressable
+              onPress={handleShareTrip}
+              disabled={shareBusy}
+              style={({ pressed }) => [
+                styles.shareTripBtn,
+                { opacity: shareBusy ? 0.6 : 1, transform: [{ scale: pressed ? 0.93 : 1 }] },
+              ]}
+              accessibilityLabel="Share Trip"
+            >
+              <Share2 size={14} color={colors.foreground} strokeWidth={2.5} />
+            </Pressable>
 
             {/* SOS button */}
             <Pressable
@@ -895,6 +939,13 @@ const styles = StyleSheet.create({
   passengerPhone: { fontSize: 12 },
   statusBtns: { flexDirection: 'row', gap: 8 },
   statusBtn: { width: 44, height: 44, borderRadius: 13, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+
+  // Share Trip button
+  shareTripBtn: {
+    width: 32, height: 32, borderRadius: 16,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(10,10,20,0.72)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
+  },
 
   // SOS button
   sosBtn: {

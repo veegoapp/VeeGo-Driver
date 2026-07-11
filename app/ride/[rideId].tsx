@@ -1,8 +1,8 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
-import { AlertTriangle, Check, ChevronUp, Clock, MessageCircle, Navigation, Phone, Shield, Star } from 'lucide-react-native';
+import { AlertTriangle, Check, ChevronUp, Clock, MessageCircle, Navigation, Phone, Share2, Shield, Star } from 'lucide-react-native';
 import React, { useRef, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Animated, Image, Linking, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Animated, Image, Linking, Platform, Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { MapBackdrop } from '@/components/MapBackdrop';
@@ -59,6 +59,8 @@ export default function RideScreen() {
   const [ratingSubmitting, setRatingSubmitting] = useState(false);
   const [busy, setBusy] = useState(false);
   const [sosBusy, setSosBusy] = useState(false);
+  const [shareBusy, setShareBusy] = useState(false);
+  const [shareLink, setShareLink] = useState<{ id: number; url: string } | null>(null);
   const hasRecovered = useRef(false);
 
   const { data: rideRaw } = useQuery({
@@ -251,6 +253,34 @@ export default function RideScreen() {
     }
   };
 
+  const handleShareTrip = async () => {
+    if (shareBusy) return;
+    setShareBusy(true);
+    try {
+      if (shareLink) {
+        await endpoints.tripShare.revoke(shareLink.id);
+        setShareLink(null);
+        Alert.alert(t.trip_share_revoked_title, t.trip_share_revoked_msg);
+      } else {
+        const numericRideId = rideId ? Number(rideId) : undefined;
+        if (numericRideId == null || isNaN(numericRideId)) return;
+        const result = await endpoints.tripShare.create({ rideId: numericRideId });
+        setShareLink({ id: result.id, url: result.url });
+        Alert.alert(t.trip_share_created_title, t.trip_share_created_msg, [
+          { text: t.trip_share_copy_btn, onPress: async () => {
+              const Clipboard = await import('expo-clipboard');
+              await Clipboard.setStringAsync(result.url);
+            } },
+          { text: t.ok, style: 'default', onPress: () => { Share.share({ message: result.url }).catch(() => {}); } },
+        ]);
+      }
+    } catch {
+      Alert.alert(t.action_failed_title, shareLink ? t.trip_share_revoke_error : t.trip_share_error);
+    } finally {
+      setShareBusy(false);
+    }
+  };
+
   const handleSubmitRating = async () => {
     if (rating === 0 || ratingSubmitting) return;
     setRatingSubmitting(true);
@@ -426,15 +456,28 @@ export default function RideScreen() {
                 <Shield size={14} color={colors.mutedForeground} strokeWidth={2} />
                 <Text style={[styles.safetyText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{t.safety_toolkit_trip}</Text>
               </View>
-              <Pressable
-                onPress={handleSOS}
-                disabled={sosBusy}
-                style={[styles.sosBtn, { opacity: sosBusy ? 0.6 : 1 }]}
-                accessibilityLabel="Send SOS"
-              >
-                <AlertTriangle size={14} color={colors.destructiveForeground} strokeWidth={2} />
-                <Text style={[styles.sosBtnText, { color: colors.destructiveForeground, fontFamily: 'Inter_700Bold' }]}>SOS</Text>
-              </Pressable>
+              <View style={styles.bottomActions}>
+                <Pressable
+                  onPress={handleShareTrip}
+                  disabled={shareBusy}
+                  style={[styles.shareBtn, { backgroundColor: colors.secondary, opacity: shareBusy ? 0.6 : 1 }]}
+                  accessibilityLabel="Share Trip"
+                >
+                  <Share2 size={14} color={colors.foreground} strokeWidth={2} />
+                  <Text style={[styles.shareBtnText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
+                    {shareLink ? t.trip_share_revoke_btn : t.trip_share_btn}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={handleSOS}
+                  disabled={sosBusy}
+                  style={[styles.sosBtn, { opacity: sosBusy ? 0.6 : 1 }]}
+                  accessibilityLabel="Send SOS"
+                >
+                  <AlertTriangle size={14} color={colors.destructiveForeground} strokeWidth={2} />
+                  <Text style={[styles.sosBtnText, { color: colors.destructiveForeground, fontFamily: 'Inter_700Bold' }]}>SOS</Text>
+                </Pressable>
+              </View>
             </View>
           </GlassView>
         </Animated.View>
@@ -492,6 +535,9 @@ const styles = StyleSheet.create({
   bottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 },
   safetyRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   safetyText: { fontSize: 12 },
+  bottomActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  shareBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
+  shareBtnText: { fontSize: 12 },
   sosBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#ef4444', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
   sosBtnText: { fontSize: 12 },
   commentInput: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, fontFamily: 'Inter_400Regular', marginTop: 12, minHeight: 60, textAlignVertical: 'top' },
