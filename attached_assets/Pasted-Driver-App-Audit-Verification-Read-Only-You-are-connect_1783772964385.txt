@@ -1,0 +1,103 @@
+Driver App Audit Verification (Read Only)
+
+You are connected to the Driver App repository only.
+
+Important rules:
+- Do NOT modify any files.
+- Do NOT create new files except the final markdown report.
+- Do NOT refactor code.
+- Do NOT fix issues.
+- Do NOT change API contracts.
+- This is only a verification audit.
+
+Goal:
+We already have a previous audit report. Your job is to verify if each reported issue actually exists in the current codebase.
+
+For every issue below, answer:
+
+Status: YES or NO
+
+YES = The issue really exists in the current code.
+NO = The issue is not found or already fixed.
+
+Evidence:
+Provide a very short proof:
+- file name
+- function name or approximate location
+- one small code reference if possible
+
+Do not write long explanations.
+
+Issues to verify:
+
+1. Sensitive information appears in production logs:
+- OTP values
+- user information
+- authentication tokens
+without a development-only check.
+
+2. SOS does not notify the saved emergency contact.
+Check if SOS only alerts operations and does not send anything to the saved emergency contact.
+
+3. Emergency contact is saved only on the device and not stored in the backend.
+
+4. Location tracking data can be lost:
+Check if pending locations are deleted before successful server upload confirmation.
+
+5. Share Trip feature is incomplete or not actually working.
+
+6. "I'm Safe" feature is only a UI message and does not perform a real action.
+
+7. Background location tracking is not stopped when the driver logs out.
+
+8. Shuttle booking cancellation and reassignment events do not have correct dedicated handlers.
+
+9. Check-in API does not properly handle failed responses or HTTP errors.
+
+10. API JSON parsing errors are silently ignored.
+
+11. There are unused or duplicated API endpoints.
+
+12. Wallet payout shows success without confirming the real payout status.
+
+13. Document uploads always send a fixed file type instead of the real file type.
+
+14. Certificate pinning failures only log errors and do not trigger a proper app response.
+
+15. Safety/share translation keys exist without actual implementation.
+
+16. Trip accept/reject/cancel functions exist but are not connected to the UI.
+
+17. Unused socket events exist without listeners or usage.
+
+18. Simple actions use blocking alerts instead of better feedback methods.
+
+19. Over-the-air updates are disabled in app configuration.
+
+20. There is old temporary fallback code or duplicated response handling.
+
+Output:
+
+Create a file:
+
+driver-audit-verification-report.md
+
+Format:
+
+# Driver App Audit Verification
+
+## Issue 1
+Status:
+Evidence:
+
+## Issue 2
+Status:
+Evidence:
+
+...
+
+# Summary
+
+Confirmed issues:
+False positives:
+Already fixed items:
