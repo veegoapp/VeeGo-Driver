@@ -55,6 +55,12 @@ export interface ShuttleCompleteResponse {
   };
 }
 
+// Backend-persisted emergency contact (SOS Phase 1) — one per driver.
+export interface EmergencyContact {
+  name: string;
+  phone: string;
+}
+
 // Enriched driver profile returned by GET /driver/profile
 export interface DriverProfileEnriched {
   id: string;
@@ -875,6 +881,13 @@ export const endpoints = {
   settings: {
     get: () => api.get('/driver/me/settings'),
     update: (data: unknown) => api.patch('/driver/me/settings', data),
+  },
+
+  // SOS Phase 1: emergency contact is now stored on the backend (one per
+  // driver) instead of only on-device. GET returns { name, phone } | null.
+  emergencyContact: {
+    get: () => api.get<EmergencyContact | null>('/driver/me/emergency-contact'),
+    update: (data: EmergencyContact) => api.patch<EmergencyContact>('/driver/me/emergency-contact', data),
   },
 
   bonusTargets: {

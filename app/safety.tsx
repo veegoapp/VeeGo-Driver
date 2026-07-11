@@ -15,13 +15,17 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
+import { endpoints, type EmergencyContact } from '@/lib/api';
 
+// SOS Phase 1: the emergency contact now lives on the backend (one per
+// driver) instead of only on-device. We still mirror it into AsyncStorage
+// under the same key so the shuttle trip SOS flow (app/shuttle/trip-active.tsx),
+// which reads this key directly, keeps working unchanged.
 const EC_STORAGE_KEY = 'veego_emergency_contact';
-
-type EmergencyContact = { name: string; phone: string };
 
 export default function SafetyScreen() {
   const colors = useColors();
@@ -29,42 +33,47 @@ export default function SafetyScreen() {
   const { t, isRTL } = useI18n();
   const topPad = insets.top;
   const TA = isRTL ? 'right' as const : 'left' as const;
+  const queryClient = useQueryClient();
 
   const [ecName, setEcName] = useState('');
   const [ecPhone, setEcPhone] = useState('');
   const [ecSaved, setEcSaved] = useState(false);
-  const [savedContact, setSavedContact] = useState<EmergencyContact | null>(null);
   const ecSavedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    AsyncStorage.getItem(EC_STORAGE_KEY).then(raw => {
-      if (raw) {
-        try {
-          const ec: EmergencyContact = JSON.parse(raw);
-          setEcName(ec.name ?? '');
-          setEcPhone(ec.phone ?? '');
-          setSavedContact(ec);
-        } catch { /* ignore */ }
-      }
-    });
-    return () => { if (ecSavedTimer.current) clearTimeout(ecSavedTimer.current); };
-  }, []);
+  const { data: savedContact } = useQuery({
+    queryKey: ['emergency-contact'],
+    queryFn: endpoints.emergencyContact.get,
+  });
 
-  const handleSaveContact = async () => {
+  useEffect(() => {
+    if (savedContact) {
+      setEcName(savedContact.name);
+      setEcPhone(savedContact.phone);
+      AsyncStorage.setItem(EC_STORAGE_KEY, JSON.stringify(savedContact)).catch(() => { /* ignore */ });
+    }
+    return () => { if (ecSavedTimer.current) clearTimeout(ecSavedTimer.current); };
+  }, [savedContact]);
+
+  const saveMutation = useMutation({
+    mutationFn: (contact: EmergencyContact) => endpoints.emergencyContact.update(contact),
+    onSuccess: (contact) => {
+      queryClient.setQueryData(['emergency-contact'], contact);
+      AsyncStorage.setItem(EC_STORAGE_KEY, JSON.stringify(contact)).catch(() => { /* ignore */ });
+      setEcSaved(true);
+      if (ecSavedTimer.current) clearTimeout(ecSavedTimer.current);
+      ecSavedTimer.current = setTimeout(() => setEcSaved(false), 3000);
+    },
+    onError: () => {
+      Alert.alert(t.error, t.emergency_contact_save_err);
+    },
+  });
+
+  const handleSaveContact = () => {
     if (!ecName.trim() || !ecPhone.trim()) {
       Alert.alert(t.error, t.emergency_contact_save_err);
       return;
     }
-    try {
-      const contact = { name: ecName.trim(), phone: ecPhone.trim() };
-      await AsyncStorage.setItem(EC_STORAGE_KEY, JSON.stringify(contact));
-      setSavedContact(contact);
-      setEcSaved(true);
-      if (ecSavedTimer.current) clearTimeout(ecSavedTimer.current);
-      ecSavedTimer.current = setTimeout(() => setEcSaved(false), 3000);
-    } catch {
-      Alert.alert(t.error, t.emergency_contact_save_err);
-    }
+    saveMutation.mutate({ name: ecName.trim(), phone: ecPhone.trim() });
   };
 
   const handleOpenWhatsApp = () => {
@@ -191,11 +200,12 @@ export default function SafetyScreen() {
           />
           <Pressable
             onPress={handleSaveContact}
+            disabled={saveMutation.isPending}
             style={({ pressed }) => [
               styles.saveBtn,
               {
                 backgroundColor: ecSaved ? colors.success : colors.primary,
-                opacity: pressed ? 0.85 : 1,
+                opacity: pressed || saveMutation.isPending ? 0.85 : 1,
               },
             ]}
           >
