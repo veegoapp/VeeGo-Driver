@@ -2,7 +2,7 @@ import { Navigation } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Redirect, router } from 'expo-router';
 import { ArrowRight, Shield, TrendingUp, Zap } from 'lucide-react-native';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Platform,
@@ -11,11 +11,13 @@ import {
   Text,
   View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { Animation } from '@/constants/animations';
 import { useI18n } from '@/lib/i18nContext';
 import { useService } from '@/lib/serviceContext';
+import { useAuth } from '@/lib/authContext';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
@@ -27,14 +29,38 @@ const FEATURES = [
   { Icon: Shield, label: '24/7 driver support & safety toolkit' },
 ] as const;
 
+const ONBOARDING_KEY = 'veego_has_seen_onboarding';
+
 export default function SplashScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const {} = useService();
   const { language, isLanguageLoading } = useI18n();
+  const { token, isLoading: authLoading } = useAuth();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
   const logoScale = useRef(new Animated.Value(0.7)).current;
+
+  // First-launch onboarding gate — checked unconditionally (before any early
+  // return below) so this hook always fires in the same order every render.
+  // A device that already holds a valid session is implicitly past
+  // first-run: mark onboarding seen instead of showing it, so an existing
+  // driver's next logout/expiry doesn't suddenly surface it either.
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
+  const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
+  useEffect(() => {
+    if (authLoading) return;
+    if (token) {
+      AsyncStorage.setItem(ONBOARDING_KEY, '1').catch(() => {});
+      setHasSeenOnboarding(true);
+      setOnboardingChecked(true);
+      return;
+    }
+    AsyncStorage.getItem(ONBOARDING_KEY)
+      .then((v) => setHasSeenOnboarding(v === '1'))
+      .catch(() => setHasSeenOnboarding(false))
+      .finally(() => setOnboardingChecked(true));
+  }, [authLoading, token]);
 
   if (isLanguageLoading) {
     return null;
@@ -42,6 +68,14 @@ export default function SplashScreen() {
 
   if (!language) {
     return <Redirect href="/language-select" />;
+  }
+
+  if (!onboardingChecked) {
+    return null;
+  }
+
+  if (!hasSeenOnboarding) {
+    return <Redirect href="/onboarding" />;
   }
 
   useEffect(() => {
