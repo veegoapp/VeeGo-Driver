@@ -3,6 +3,7 @@ import { Animated, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WifiOff, Wifi } from 'lucide-react-native';
 import { API_BASE_URL } from '@/lib/api';
+import { Animation } from '@/constants/animations';
 
 const PING_INTERVAL_MS  = 8000;  // check every 8 seconds
 const RECONNECT_SHOW_MS = 2500;  // show "Connected" toast for 2.5s then hide
@@ -27,7 +28,7 @@ export function ServerStatusBanner() {
 
   const slideOut = () => {
     Animated.timing(translateY, {
-      toValue: -80, useNativeDriver: true, duration: 300,
+      toValue: -80, useNativeDriver: true, duration: Animation.duration.normal,
     }).start(() => setBanner('hidden'));
   };
 

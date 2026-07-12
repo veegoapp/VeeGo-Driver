@@ -5,6 +5,7 @@ import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
+import { Animation } from '@/constants/animations';
 
 type TabBarProps = {
   state: { index: number; routes: Array<{ key: string; name: string }> };
@@ -44,8 +45,8 @@ export function BottomTabBar({ state, navigation }: TabBarProps) {
     const tw = tabWidths.current[index];
     if (tx === undefined || !(tw > 0)) return;
     Animated.parallel([
-      Animated.spring(pillX, { toValue: tx, stiffness: 380, damping: 32, useNativeDriver: false }),
-      Animated.spring(pillW, { toValue: tw, stiffness: 380, damping: 32, useNativeDriver: false }),
+      Animated.spring(pillX, { toValue: tx, ...Animation.spring.tabBar, useNativeDriver: false }),
+      Animated.spring(pillW, { toValue: tw, ...Animation.spring.tabBar, useNativeDriver: false }),
     ]).start();
   };
 
@@ -53,7 +54,7 @@ export function BottomTabBar({ state, navigation }: TabBarProps) {
   useEffect(() => {
     layoutGen.current += 1;
     Animated.sequence([
-      Animated.timing(labelOpacity, { toValue: 0, duration: 100, useNativeDriver: true }),
+      Animated.timing(labelOpacity, { toValue: 0, duration: Animation.duration.instant, useNativeDriver: true }),
       Animated.timing(labelOpacity, { toValue: 1, duration: 180, useNativeDriver: true }),
     ]).start();
   }, [language]);

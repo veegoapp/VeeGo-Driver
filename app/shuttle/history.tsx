@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Animation } from '@/constants/animations';
 import { useQuery } from '@tanstack/react-query';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
@@ -355,7 +356,7 @@ function TripCard({
   useEffect(() => {
     Animated.parallel([
       Animated.spring(slideAnim, { toValue: 0, stiffness: 260, damping: 22, useNativeDriver: true, delay: Math.min(idx, 10) * 40 }),
-      Animated.timing(fadeAnim,  { toValue: 1, duration: 300, useNativeDriver: true, delay: Math.min(idx, 10) * 40 }),
+      Animated.timing(fadeAnim,  { toValue: 1, duration: Animation.duration.normal, useNativeDriver: true, delay: Math.min(idx, 10) * 40 }),
     ]).start();
   }, []);
 

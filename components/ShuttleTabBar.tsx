@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { useReferral } from '@/lib/referralContext';
 import { useI18n } from '@/lib/i18nContext';
+import { Animation } from '@/constants/animations';
 
 type TabBarProps = {
   state: { index: number; routes: Array<{ key: string; name: string }> };
@@ -58,8 +59,7 @@ export function ShuttleTabBar({ state, navigation }: TabBarProps) {
     }
     Animated.spring(pillX, {
       toValue: targetX,
-      stiffness: 380,
-      damping: 32,
+      ...Animation.spring.tabBar,
       useNativeDriver: false,
     }).start();
   }, [activeIndex, tabWidth, visualIndex]);

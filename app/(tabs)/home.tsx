@@ -9,6 +9,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSocket } from '@/lib/socketContext';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
+import { Animation } from '@/constants/animations';
 import {
   ActivityIndicator,
   Animated,
@@ -409,7 +410,7 @@ export default function HomeScreen() {
     setToastType(type);
     Animated.spring(toastAnim, { toValue: 0, useNativeDriver: true, bounciness: 0 }).start();
     toastTimerRef.current = setTimeout(() => {
-      Animated.timing(toastAnim, { toValue: -80, duration: 300, useNativeDriver: true }).start(() => setToastMsg(null));
+      Animated.timing(toastAnim, { toValue: -80, duration: Animation.duration.normal, useNativeDriver: true }).start(() => setToastMsg(null));
     }, 3500);
   };
   showToastRef.current = showToast;

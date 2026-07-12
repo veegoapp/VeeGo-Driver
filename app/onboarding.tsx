@@ -9,6 +9,7 @@ import { ArrowRight } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Rect, G } from 'react-native-svg';
 import { useI18n } from '@/lib/i18nContext';
+import { Animation } from '@/constants/animations';
 
 const { width } = Dimensions.get('window');
 
@@ -227,7 +228,7 @@ function Dot({ active, done }: { active: boolean; done: boolean }) {
   useEffect(() => {
     Animated.parallel([
       Animated.spring(dotWidth, { toValue: active ? 22 : 6, damping: 18, useNativeDriver: false }),
-      Animated.timing(dotOpacity, { toValue: active ? 1 : done ? 0.7 : 0.4, duration: 200, useNativeDriver: false }),
+      Animated.timing(dotOpacity, { toValue: active ? 1 : done ? 0.7 : 0.4, duration: Animation.duration.fast, useNativeDriver: false }),
     ]).start();
   }, [active, done]);
 

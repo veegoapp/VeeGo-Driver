@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Language, useI18n } from '@/lib/i18nContext';
+import { Animation } from '@/constants/animations';
 
 const LANG_OPTIONS: { lang: Language; label: string; nativeLabel: string; flag: string }[] = [
   { lang: 'en', label: 'English', nativeLabel: 'Continue in English', flag: '🇬🇧' },
@@ -27,7 +28,7 @@ export default function LanguageSelectScreen() {
 
   React.useEffect(() => {
     Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: false }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: Animation.duration.slow, useNativeDriver: false }),
       Animated.timing(slideAnim, { toValue: 0, duration: 420, useNativeDriver: false }),
     ]).start();
   }, []);

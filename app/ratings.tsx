@@ -8,6 +8,7 @@ import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
+import { Animation } from '@/constants/animations';
 
 type RatingEntry = {
   id: number;
@@ -63,7 +64,7 @@ export default function RatingsScreen() {
   useEffect(() => {
     if (!breakdown.length) return;
     Animated.stagger(80, breakdown.map((r, i) =>
-      Animated.timing(barAnims[i], { toValue: r.pct / 100, duration: 800, useNativeDriver: false })
+      Animated.timing(barAnims[i], { toValue: r.pct / 100, duration: Animation.duration.slower, useNativeDriver: false })
     )).start();
   }, [ratings.length]);
 

@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
+import { Animation } from '@/constants/animations';
 import { useI18n } from '@/lib/i18nContext';
 import { useService } from '@/lib/serviceContext';
 
@@ -42,7 +43,7 @@ export default function SplashScreen() {
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: false }),
-      Animated.timing(slideAnim, { toValue: 0, duration: 500, useNativeDriver: false }),
+      Animated.timing(slideAnim, { toValue: 0, duration: Animation.duration.slow, useNativeDriver: false }),
       Animated.spring(logoScale, { toValue: 1, stiffness: 200, damping: 18, useNativeDriver: false }),
     ]).start();
   }, []);
