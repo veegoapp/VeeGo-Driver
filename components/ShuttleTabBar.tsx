@@ -31,13 +31,15 @@ const PILL_PX = 8;
 export function ShuttleTabBar({ state, navigation }: TabBarProps) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const activeIndex = state.index;
   const [tabWidth, setTabWidth] = useState(0);
   const pillX = useRef(new Animated.Value(0)).current;
   // Native-driven "pop" applied to the newly-active tab's icon only.
   const iconScale = useRef(new Animated.Value(1)).current;
   const initialized = useRef(false);
+  // Label cross-fade on language switch — matches BottomTabBar's behavior.
+  const labelOpacity = useRef(new Animated.Value(1)).current;
 
   // Incoming referral badge count — drives the red dot on the Home tab icon
   const { incomingReferralsCount } = useReferral();
@@ -48,6 +50,14 @@ export function ShuttleTabBar({ state, navigation }: TabBarProps) {
   const rtl = I18nManager.isRTL;
 
   const visualIndex = rtl ? SHUTTLE_TAB_NAMES.length - 1 - activeIndex : activeIndex;
+
+  // Language change: fade labels out, let the RTL reflow + new text land, then fade in.
+  useEffect(() => {
+    Animated.sequence([
+      Animated.timing(labelOpacity, { toValue: 0, duration: Animation.duration.instant, useNativeDriver: true }),
+      Animated.timing(labelOpacity, { toValue: 1, duration: 180, useNativeDriver: true }),
+    ]).start();
+  }, [language]);
 
   useEffect(() => {
     if (tabWidth <= 0) return;
@@ -93,7 +103,7 @@ export function ShuttleTabBar({ state, navigation }: TabBarProps) {
             pointerEvents="none"
           >
             <LinearGradient
-              colors={['#1e1e28', '#1e1e28']}
+              colors={colors.gradientPrimary}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.activePillGradient}
@@ -124,31 +134,34 @@ export function ShuttleTabBar({ state, navigation }: TabBarProps) {
               onPress={onPress}
               testID={`shuttle-tab-${item.name}`}
             >
-              {/* Icon with optional referral badge */}
-              <View style={styles.iconWrap}>
-                <Animated.View style={isActive ? { transform: [{ scale: iconScale }] } : null}>
-                  <item.Icon
-                    size={20}
-                    color={isActive ? '#fff' : colors.mutedForeground}
-                    strokeWidth={2}
-                  />
-                </Animated.View>
-                {showBadge && (
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>
-                      {incomingReferralsCount > 9 ? '9+' : String(incomingReferralsCount)}
-                    </Text>
-                  </View>
-                )}
-              </View>
-              <Text
-                style={[
-                  styles.tabLabel,
-                  { color: isActive ? '#fff' : colors.mutedForeground, fontFamily: 'Inter_600SemiBold' },
-                ]}
-              >
-                {t[item.key]}
-              </Text>
+              {/* labelOpacity fades icon+label together on language switch. */}
+              <Animated.View style={{ opacity: labelOpacity, alignItems: 'center', gap: 2 }}>
+                {/* Icon with optional referral badge */}
+                <View style={styles.iconWrap}>
+                  <Animated.View style={isActive ? { transform: [{ scale: iconScale }] } : null}>
+                    <item.Icon
+                      size={20}
+                      color={isActive ? colors.primaryForeground : colors.mutedForeground}
+                      strokeWidth={2}
+                    />
+                  </Animated.View>
+                  {showBadge && (
+                    <View style={styles.badge}>
+                      <Text style={styles.badgeText}>
+                        {incomingReferralsCount > 9 ? '9+' : String(incomingReferralsCount)}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+                <Text
+                  style={[
+                    styles.tabLabel,
+                    { color: isActive ? colors.primaryForeground : colors.mutedForeground, fontFamily: 'Inter_600SemiBold' },
+                  ]}
+                >
+                  {t[item.key]}
+                </Text>
+              </Animated.View>
             </Pressable>
           );
         })}

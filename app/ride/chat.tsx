@@ -19,13 +19,13 @@ import { useColors } from '@/hooks/useColors';
 import { useSocket } from '@/lib/socketContext';
 import { endpoints, type RideMessage } from '@/lib/api';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
-import { useI18n } from '@/lib/i18nContext';
+import { useI18n, rtlIconStyle } from '@/lib/i18nContext';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 
 export default function RideChatScreen() {
   const colors = useColors();
-  const { t } = useI18n();
+  const { t, isRTL } = useI18n();
   const insets = useSafeAreaInsets();
   const { rideId } = useLocalSearchParams<{ rideId: string }>();
   const { socket } = useSocket();
@@ -92,7 +92,7 @@ export default function RideChatScreen() {
           onPress={() => router.back()}
           style={[styles.backBtn, { backgroundColor: colors.glass, borderColor: colors.border }]}
         >
-          <ArrowLeft size={20} color={colors.foreground} strokeWidth={2} />
+          <ArrowLeft size={20} color={colors.foreground} strokeWidth={2} style={rtlIconStyle(isRTL)} />
         </Pressable>
         <Text style={[styles.headerTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.message_rider_title}</Text>
       </View>

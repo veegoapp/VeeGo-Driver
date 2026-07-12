@@ -18,7 +18,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
-import { useI18n } from '@/lib/i18nContext';
+import { useI18n, rtlIconStyle } from '@/lib/i18nContext';
 import { endpoints, type EmergencyContact } from '@/lib/api';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
@@ -99,7 +99,7 @@ export default function SafetyScreen() {
           onPress={() => router.back()}
           style={[styles.backBtn, { backgroundColor: colors.glass, borderColor: colors.border }]}
         >
-          <ArrowLeft size={20} color={colors.foreground} strokeWidth={2} />
+          <ArrowLeft size={20} color={colors.foreground} strokeWidth={2} style={rtlIconStyle(isRTL)} />
         </Pressable>
 
         {/* Title */}

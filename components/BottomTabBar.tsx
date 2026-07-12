@@ -107,7 +107,7 @@ export function BottomTabBar({ state, navigation }: TabBarProps) {
             pointerEvents="none"
           >
             <LinearGradient
-              colors={['#2d2d42', '#1e1e28']}
+              colors={colors.gradientPrimary}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.activePillGradient}

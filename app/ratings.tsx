@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
-import { useI18n } from '@/lib/i18nContext';
+import { useI18n, rtlIconStyle } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
 import { Animation } from '@/constants/animations';
 import { Typography } from '@/constants/typography';
@@ -94,7 +94,7 @@ export default function RatingsScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={{ paddingTop: topPad + 8, paddingBottom: 40, paddingHorizontal: 20 }} showsVerticalScrollIndicator={false}>
         <Pressable onPress={() => router.back()} style={[styles.backBtn, { backgroundColor: colors.glass, borderColor: colors.border }]}>
-          <ArrowLeft size={20} color={colors.foreground} strokeWidth={2} />
+          <ArrowLeft size={20} color={colors.foreground} strokeWidth={2} style={rtlIconStyle(isRTL)} />
         </Pressable>
 
         {/* Average rating hero */}
