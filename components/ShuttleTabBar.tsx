@@ -35,6 +35,8 @@ export function ShuttleTabBar({ state, navigation }: TabBarProps) {
   const activeIndex = state.index;
   const [tabWidth, setTabWidth] = useState(0);
   const pillX = useRef(new Animated.Value(0)).current;
+  // Native-driven "pop" applied to the newly-active tab's icon only.
+  const iconScale = useRef(new Animated.Value(1)).current;
   const initialized = useRef(false);
 
   // Incoming referral badge count — drives the red dot on the Home tab icon
@@ -57,11 +59,17 @@ export function ShuttleTabBar({ state, navigation }: TabBarProps) {
       pillX.setValue(targetX);
       return;
     }
+    // Position runs on the native thread via `transform: translateX` (the `left`
+    // used above is a static container offset, not animated) for a jump-free slide.
     Animated.spring(pillX, {
       toValue: targetX,
       ...Animation.spring.tabBar,
-      useNativeDriver: false,
+      useNativeDriver: true,
     }).start();
+    // Icon "pop" — the newly active tab's icon springs up from a slightly
+    // smaller scale, giving the switch a bit of premium tactile feedback.
+    iconScale.setValue(0.85);
+    Animated.spring(iconScale, { toValue: 1, ...Animation.spring.tabBar, useNativeDriver: true }).start();
   }, [activeIndex, tabWidth, visualIndex]);
 
   const bottomPadding = insets.bottom;
@@ -118,11 +126,13 @@ export function ShuttleTabBar({ state, navigation }: TabBarProps) {
             >
               {/* Icon with optional referral badge */}
               <View style={styles.iconWrap}>
-                <item.Icon
-                  size={20}
-                  color={isActive ? '#fff' : colors.mutedForeground}
-                  strokeWidth={2}
-                />
+                <Animated.View style={isActive ? { transform: [{ scale: iconScale }] } : null}>
+                  <item.Icon
+                    size={20}
+                    color={isActive ? '#fff' : colors.mutedForeground}
+                    strokeWidth={2}
+                  />
+                </Animated.View>
                 {showBadge && (
                   <View style={styles.badge}>
                     <Text style={styles.badgeText}>

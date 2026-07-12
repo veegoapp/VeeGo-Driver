@@ -32,6 +32,8 @@ export function BottomTabBar({ state, navigation }: TabBarProps) {
 
   const pillX = useRef(new Animated.Value(0)).current;
   const pillW = useRef(new Animated.Value(0)).current;
+  // Native-driven "pop" applied to the newly-active tab's icon only.
+  const iconScale = useRef(new Animated.Value(1)).current;
   const [pillReady, setPillReady] = useState(false);
 
   const tabWidths = useRef<number[]>([]);
@@ -44,10 +46,16 @@ export function BottomTabBar({ state, navigation }: TabBarProps) {
     const tx = tabOffsets.current[index];
     const tw = tabWidths.current[index];
     if (tx === undefined || !(tw > 0)) return;
-    Animated.parallel([
-      Animated.spring(pillX, { toValue: tx, ...Animation.spring.tabBar, useNativeDriver: false }),
-      Animated.spring(pillW, { toValue: tw, ...Animation.spring.tabBar, useNativeDriver: false }),
-    ]).start();
+    // Position runs on the native thread via `transform: translateX` (unlike `left`,
+    // translateX can be natively driven) for a jump-free, jank-free slide.
+    Animated.spring(pillX, { toValue: tx, ...Animation.spring.tabBar, useNativeDriver: true }).start();
+    // Width cannot be natively driven by classic Animated; kept on the JS thread
+    // with the same spring tuning so both motions feel like one unit.
+    Animated.spring(pillW, { toValue: tw, ...Animation.spring.tabBar, useNativeDriver: false }).start();
+    // Icon "pop" — the newly active tab's icon springs up from a slightly
+    // smaller scale, giving the switch a bit of premium tactile feedback.
+    iconScale.setValue(0.85);
+    Animated.spring(iconScale, { toValue: 1, ...Animation.spring.tabBar, useNativeDriver: true }).start();
   };
 
   // Language change: bump generation and fade labels
@@ -136,11 +144,13 @@ export function BottomTabBar({ state, navigation }: TabBarProps) {
               <Animated.View
                 style={{ alignItems: 'center', justifyContent: 'center', gap: 2, opacity: labelOpacity }}
               >
-                <item.Icon
-                  size={20}
-                  color={isActive ? colors.primaryForeground : colors.mutedForeground}
-                  strokeWidth={2}
-                />
+                <Animated.View style={isActive ? { transform: [{ scale: iconScale }] } : null}>
+                  <item.Icon
+                    size={20}
+                    color={isActive ? colors.primaryForeground : colors.mutedForeground}
+                    strokeWidth={2}
+                  />
+                </Animated.View>
                 <Text
                   style={[
                     styles.tabLabel,
