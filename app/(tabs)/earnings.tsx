@@ -126,7 +126,7 @@ export default function EarningsScreen() {
         </View>
 
         <Animated.View style={[styles.heroCard, { opacity: heroAnim, transform: [{ translateY: heroAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
-          <LinearGradient colors={['#2d2d42', '#D5B23D']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroGrad}>
+          <LinearGradient colors={['#2d2d42', '#55c49a']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroGrad}>
             <View style={styles.heroBlobTop} />
             <View style={styles.heroContent}>
               <Text style={[styles.heroLabel, { color: colors.primaryForeground + 'CC', fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.total_this_week}</Text>
@@ -195,7 +195,7 @@ export default function EarningsScreen() {
 
         <Pressable onPress={() => router.push('/ratings')} style={({ pressed }) => [{ transform: [{ scale: pressed ? 0.98 : 1 }], marginTop: 20 }]}>
           <GlassView style={[styles.levelCard, { flexDirection: R }]} borderRadius={20}>
-            <LinearGradient colors={['#2d2d42', '#D5B23D']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.levelIcon}>
+            <LinearGradient colors={['#2d2d42', '#55c49a']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.levelIcon}>
               <Zap size={24} color={colors.primaryForeground} strokeWidth={2} />
             </LinearGradient>
             <View style={{ flex: 1 }}>

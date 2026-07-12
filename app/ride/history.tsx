@@ -177,7 +177,7 @@ export default function RideHistoryScreen() {
                   backgroundColor: 'rgba(61,82,213,0.08)',
                 }}
               >
-                <Text style={{ color: '#3D52D5', fontFamily: 'Inter_600SemiBold', fontSize: 14 }}>
+                <Text style={{ color: '#55c49a', fontFamily: 'Inter_600SemiBold', fontSize: 14 }}>
                   Load more
                 </Text>
               </Pressable>
@@ -185,7 +185,7 @@ export default function RideHistoryScreen() {
 
             {isLoading && page > 1 && (
               <View style={{ alignItems: 'center', paddingVertical: 20 }}>
-                <ActivityIndicator color="#3D52D5" />
+                <ActivityIndicator color="#55c49a" />
               </View>
             )}
           </View>
@@ -250,7 +250,7 @@ function RideCard({
       <View style={[{ flexDirection: R, gap: 10, alignItems: 'flex-start' }]}>
         {/* Dot line */}
         <View style={styles.routeDots}>
-          <View style={[styles.dotTop, { backgroundColor: '#3D52D5' }]} />
+          <View style={[styles.dotTop, { backgroundColor: '#55c49a' }]} />
           <View style={[styles.routeLine, { backgroundColor: colors.border }]} />
           <View style={[styles.dotBottom, { backgroundColor: colors.accent }]} />
         </View>

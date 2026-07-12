@@ -143,7 +143,7 @@ export default function VerifyOtpScreen() {
             </TouchableOpacity>
             <View style={s.logoRow}>
               <View style={s.logoIcon}><Navigation size={20} color="white" /></View>
-              <Text style={s.wordmark}>Vee<Text style={{ color: '#3D52D5' }}>Go</Text></Text>
+              <Text style={s.wordmark}>Vee<Text style={{ color: '#55c49a' }}>Go</Text></Text>
             </View>
             <View style={{ width: 38 }} />
           </View>
@@ -152,7 +152,7 @@ export default function VerifyOtpScreen() {
           <View style={s.card}>
             <View style={s.iconWrap}>
               <LinearGradient colors={['#eef0fd', '#dde1fb']} style={s.iconCircle}>
-                <MessageCircle size={34} color="#3D52D5" strokeWidth={1.8} />
+                <MessageCircle size={34} color="#55c49a" strokeWidth={1.8} />
               </LinearGradient>
             </View>
 
@@ -193,7 +193,7 @@ export default function VerifyOtpScreen() {
 
             {loading && (
               <View style={s.loadingRow}>
-                <ActivityIndicator size="small" color="#3D52D5" />
+                <ActivityIndicator size="small" color="#55c49a" />
                 <Text style={s.loadingText}>Verifying…</Text>
               </View>
             )}
@@ -204,7 +204,7 @@ export default function VerifyOtpScreen() {
               ) : (
                 <TouchableOpacity onPress={handleResend} disabled={resending} activeOpacity={0.7}>
                   {resending
-                    ? <ActivityIndicator size="small" color="#3D52D5" />
+                    ? <ActivityIndicator size="small" color="#55c49a" />
                     : <Text style={s.resendBtn}>Resend code</Text>
                   }
                 </TouchableOpacity>
@@ -247,8 +247,8 @@ const s = StyleSheet.create({
     backgroundColor: '#f2f2f5', borderWidth: 1.5, borderColor: '#e5e5ea',
     alignItems: 'center', justifyContent: 'center',
   },
-  otpBoxFilled: { backgroundColor: 'white', borderColor: '#3D52D5' },
-  otpBoxActive: { borderColor: '#3D52D5', backgroundColor: 'white' },
+  otpBoxFilled: { backgroundColor: 'white', borderColor: '#55c49a' },
+  otpBoxActive: { borderColor: '#55c49a', backgroundColor: 'white' },
   otpBoxError: { borderColor: '#e53935', backgroundColor: '#fff5f5' },
   otpBoxLocked: { opacity: 0.5 },
   otpChar: { fontSize: 22, fontWeight: '700', color: '#1e1e28', fontFamily: 'Inter_700Bold' },
@@ -256,10 +256,10 @@ const s = StyleSheet.create({
   errorText: { fontSize: 13, color: '#e53935', textAlign: 'center', fontFamily: 'Inter_400Regular' },
   lockoutText: { fontSize: 13, color: '#5e5e72', textAlign: 'center', fontFamily: 'Inter_500Medium' },
   loadingRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  loadingText: { fontSize: 13, color: '#3D52D5', fontFamily: 'Inter_500Medium' },
+  loadingText: { fontSize: 13, color: '#55c49a', fontFamily: 'Inter_500Medium' },
   resendRow: { alignItems: 'center', marginTop: 4 },
   resendCooldown: { fontSize: 13, color: '#5e5e72', fontFamily: 'Inter_400Regular' },
   resendCount: { fontWeight: '700', color: '#1e1e28', fontFamily: 'Inter_700Bold' },
-  resendBtn: { fontSize: 14, color: '#3D52D5', fontWeight: '600', fontFamily: 'Inter_600SemiBold', textDecorationLine: 'underline' },
+  resendBtn: { fontSize: 14, color: '#55c49a', fontWeight: '600', fontFamily: 'Inter_600SemiBold', textDecorationLine: 'underline' },
   hint: { fontSize: 12, color: '#9e9ea8', textAlign: 'center', lineHeight: 18, paddingHorizontal: 8 },
 });

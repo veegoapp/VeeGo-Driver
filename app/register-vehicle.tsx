@@ -674,12 +674,12 @@ const s = StyleSheet.create({
   },
   sheetItemSelected: { backgroundColor: '#f2f4fe' },
   sheetItemText: { fontSize: 15, color: '#1e1e28', fontFamily: 'Inter_400Regular' },
-  sheetItemTextSelected: { fontWeight: '600', color: '#3D52D5', fontFamily: 'Inter_600SemiBold' },
-  sheetItemDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#3D52D5' },
+  sheetItemTextSelected: { fontWeight: '600', color: '#55c49a', fontFamily: 'Inter_600SemiBold' },
+  sheetItemDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#55c49a' },
   categoryBadge: {
     backgroundColor: '#f0f4ff', borderRadius: 99, paddingHorizontal: 8, paddingVertical: 3,
     borderWidth: 1, borderColor: '#d0d8f8',
   },
-  categoryBadgeText: { fontSize: 11, color: '#3D52D5', fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  categoryBadgeText: { fontSize: 11, color: '#55c49a', fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
   colorSwatch: { width: 18, height: 18, borderRadius: 9, borderWidth: 1, borderColor: '#e5e5ea' },
 });

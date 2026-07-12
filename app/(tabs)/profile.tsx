@@ -148,7 +148,7 @@ export default function ProfileScreen() {
                     source={{ uri: avatarUri }}
                     style={[styles.avatar, { borderColor: colors.primary + '66' }]}
                   />
-                  <LinearGradient colors={['#2d2d42', '#D5B23D']} style={styles.awardBadge}>
+                  <LinearGradient colors={['#2d2d42', '#55c49a']} style={styles.awardBadge}>
                     <Award size={16} color={colors.primaryForeground} strokeWidth={2} />
                   </LinearGradient>
                 </View>

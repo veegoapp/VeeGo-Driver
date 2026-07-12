@@ -120,12 +120,12 @@ export default function PendingApprovalScreen() {
         {/* Logo */}
         <View style={s.logoRow}>
           <View style={s.logoIcon}><Navigation size={26} color="white" /></View>
-          <Text style={s.wordmark}>Vee<Text style={{ color: '#3D52D5' }}>Go</Text></Text>
+          <Text style={s.wordmark}>Vee<Text style={{ color: '#55c49a' }}>Go</Text></Text>
         </View>
 
         {loading ? (
           <View style={s.loadingCard}>
-            <ActivityIndicator size="large" color="#3D52D5" />
+            <ActivityIndicator size="large" color="#55c49a" />
           </View>
         ) : (
           <View style={s.card}>
@@ -222,11 +222,11 @@ export default function PendingApprovalScreen() {
             <Text style={s.contactTitle}>Need help?</Text>
             <View style={s.contactRow}>
               <View style={s.contactChip}>
-                <Mail size={14} color="#3D52D5" />
+                <Mail size={14} color="#55c49a" />
                 <Text style={s.contactText}>drivers@veego.app</Text>
               </View>
               <View style={s.contactChip}>
-                <Phone size={14} color="#3D52D5" />
+                <Phone size={14} color="#55c49a" />
                 <Text style={s.contactText}>+20 100 000 0000</Text>
               </View>
             </View>
@@ -310,8 +310,8 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     backgroundColor: '#f2f4fe', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 8,
   },
-  pollingDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#3D52D5' },
-  pollingText: { fontSize: 12, color: '#3D52D5', fontFamily: 'Inter_500Medium' },
+  pollingDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#55c49a' },
+  pollingText: { fontSize: 12, color: '#55c49a', fontFamily: 'Inter_500Medium' },
   stepsBlock: { gap: 0, marginTop: 4 },
   stepRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, minHeight: 40 },
   stepLeft: { alignItems: 'center', width: 20 },
@@ -342,7 +342,7 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 6,
     backgroundColor: '#eef0fc', borderRadius: 99, paddingHorizontal: 14, paddingVertical: 8,
   },
-  contactText: { fontSize: 12, color: '#3D52D5', fontWeight: '500', fontFamily: 'Inter_500Medium' },
+  contactText: { fontSize: 12, color: '#55c49a', fontWeight: '500', fontFamily: 'Inter_500Medium' },
   logoutBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 6, marginTop: 24, paddingVertical: 8,

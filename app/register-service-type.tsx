@@ -150,7 +150,7 @@ export default function RegisterServiceTypeScreen() {
 
         {loadingControls ? (
           <View style={s.loadingWrap}>
-            <ActivityIndicator size="large" color="#3D52D5" />
+            <ActivityIndicator size="large" color="#55c49a" />
             <Text style={s.loadingText}>Loading available services…</Text>
           </View>
         ) : (

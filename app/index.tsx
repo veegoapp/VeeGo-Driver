@@ -68,7 +68,7 @@ return (
             <Navigation size={32} color="#ffffff" />
           </View>
           <View>
-            <Text style={[styles.logoName, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>Vee<Text style={{ color: '#3D52D5' }}>Go</Text></Text>
+            <Text style={[styles.logoName, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>Vee<Text style={{ color: '#55c49a' }}>Go</Text></Text>
             <Text style={[styles.logoSub, { color: '#1e1e28', fontFamily: 'Inter_700Bold' }]}>DRIVER</Text>
           </View>
         </Animated.View>

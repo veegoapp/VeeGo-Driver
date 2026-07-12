@@ -99,7 +99,7 @@ export default function LoginScreen() {
             <View style={s.logoIcon}>
               <Navigation size={32} color="#ffffff" />
             </View>
-            <Text style={s.wordmark}>Vee<Text style={{ color: '#3D52D5' }}>Go</Text></Text>
+            <Text style={s.wordmark}>Vee<Text style={{ color: '#55c49a' }}>Go</Text></Text>
             <View style={s.driverPill}>
               <Text style={s.driverPillText}>DRIVER</Text>
             </View>

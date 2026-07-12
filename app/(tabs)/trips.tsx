@@ -295,12 +295,12 @@ export default function TripsScreen() {
                 onPress={() => setPage(p => p + 1)}
                 style={{ marginTop: 8, marginBottom: 16, alignItems: 'center', paddingVertical: 14, borderRadius: 16, backgroundColor: 'rgba(61,82,213,0.08)' }}
               >
-                <Text style={{ color: '#3D52D5', fontFamily: 'Inter_600SemiBold', fontSize: 14 }}>{t.load_more_label}</Text>
+                <Text style={{ color: '#55c49a', fontFamily: 'Inter_600SemiBold', fontSize: 14 }}>{t.load_more_label}</Text>
               </Pressable>
             )}
             {isLoading && page > 1 && (
               <View style={{ alignItems: 'center', paddingVertical: 20 }}>
-                <ActivityIndicator color="#3D52D5" />
+                <ActivityIndicator color="#55c49a" />
               </View>
             )}
           </View>

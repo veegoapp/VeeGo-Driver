@@ -841,7 +841,7 @@ function RouteCard({
               </View>
             )}
             <View style={[styles.lineStat, { marginLeft: 'auto' as any }]}>
-              <Text style={[styles.lineStatText, { color: '#3D52D5', fontFamily: 'Inter_600SemiBold' }]}>
+              <Text style={[styles.lineStatText, { color: '#55c49a', fontFamily: 'Inter_600SemiBold' }]}>
                 {ctaLabel}
               </Text>
             </View>

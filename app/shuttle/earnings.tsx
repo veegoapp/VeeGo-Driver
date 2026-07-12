@@ -114,7 +114,7 @@ export default function EarningsScreen() {
         </View>
 
         <View style={[styles.walletBadge, { backgroundColor: '#EEF2FF' }]}>
-          <Wallet size={18} color="#3D52D5" strokeWidth={2} />
+          <Wallet size={18} color="#55c49a" strokeWidth={2} />
         </View>
       </View>
 
@@ -145,7 +145,7 @@ export default function EarningsScreen() {
                 style={[
                   styles.filterChip,
                   active
-                    ? { backgroundColor: '#3D52D5', borderColor: '#3D52D5' }
+                    ? { backgroundColor: '#55c49a', borderColor: '#55c49a' }
                     : { backgroundColor: colors.secondary, borderColor: colors.border },
                 ]}
               >
@@ -163,7 +163,7 @@ export default function EarningsScreen() {
         {/* ── Loading state ───────────────────────────────────────────── */}
         {isLoading && !refreshing && (
           <View style={styles.centeredBlock}>
-            <ActivityIndicator size="large" color="#3D52D5" />
+            <ActivityIndicator size="large" color="#55c49a" />
             <Text style={[styles.loadingLabel, { color: colors.mutedForeground }]}>
               {t.loading_label}
             </Text>
@@ -227,13 +227,13 @@ export default function EarningsScreen() {
               {/* Net Profit */}
               <View style={[styles.summaryRow, { borderBottomColor: 'transparent' }]}>
                 <View style={[styles.summaryIconWrap, { backgroundColor: '#EEF2FF' }]}>
-                  <Wallet size={20} color="#3D52D5" strokeWidth={2} />
+                  <Wallet size={20} color="#55c49a" strokeWidth={2} />
                 </View>
                 <View style={{ flex: 1, paddingHorizontal: 12 }}>
                   <Text style={[styles.summaryLabel, { color: colors.mutedForeground, textAlign: TA }]}>
                     {t.net_profit_label}
                   </Text>
-                  <Text style={[styles.summaryAmount, { color: '#3D52D5', textAlign: TA }]}>
+                  <Text style={[styles.summaryAmount, { color: '#55c49a', textAlign: TA }]}>
                     {formatCurrency(netProfit, t.egp)}
                   </Text>
                 </View>

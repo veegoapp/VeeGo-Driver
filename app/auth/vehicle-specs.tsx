@@ -265,7 +265,7 @@ export default function VehicleSpecsScreen() {
           <View style={s.logoIcon}>
             <Navigation size={18} color="white" />
           </View>
-          <Text style={s.logoText}>Vee<Text style={{ color: '#3D52D5' }}>Go</Text></Text>
+          <Text style={s.logoText}>Vee<Text style={{ color: '#55c49a' }}>Go</Text></Text>
         </View>
 
         {/* Header */}

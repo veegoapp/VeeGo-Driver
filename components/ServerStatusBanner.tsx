@@ -100,8 +100,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 6,
   },
-  offlineBg: { backgroundColor: '#dc2626' },
-  onlineBg:  { backgroundColor: '#16a34a' },
+  offlineBg: { backgroundColor: '#E85454' },
+  onlineBg:  { backgroundColor: '#3CC97A' },
   inner: {
     flexDirection: 'row',
     alignItems: 'center',

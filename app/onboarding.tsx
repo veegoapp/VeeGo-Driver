@@ -28,13 +28,13 @@ function IllustDrive() {
         <Circle cx="108" cy="170" r="6" fill="#f2f2f5" />
         <Circle cx="192" cy="170" r="14" fill="#1e1e28" />
         <Circle cx="192" cy="170" r="6" fill="#f2f2f5" />
-        <Rect x="224" y="128" width="12" height="8" fill="#D5B23D" opacity="0.85" rx="3" />
+        <Rect x="224" y="128" width="12" height="8" fill="#55c49a" opacity="0.85" rx="3" />
         <Rect x="64" y="128" width="12" height="8" fill="#e85454" opacity="0.5" rx="3" />
         <Rect x="208" y="46" width="68" height="30" fill="white" rx="12" />
-        <Rect x="218" y="56" width="18" height="10" fill="#D5B23D" rx="3" opacity="0.7" />
+        <Rect x="218" y="56" width="18" height="10" fill="#55c49a" rx="3" opacity="0.7" />
         <Rect x="240" y="56" width="28" height="10" fill="#1e1e28" rx="3" opacity="0.15" />
         <Rect x="28" y="66" width="58" height="28" fill="white" rx="10" />
-        <Rect x="38" y="76" width="12" height="8" fill="#D5B23D" rx="2" opacity="0.8" />
+        <Rect x="38" y="76" width="12" height="8" fill="#55c49a" rx="2" opacity="0.8" />
         <Rect x="54" y="76" width="24" height="8" fill="#1e1e28" rx="2" opacity="0.15" />
       </Svg>
     </View>
@@ -51,7 +51,7 @@ function IllustStats() {
         <Rect x="38" y="44" width="90" height="10" fill="#e8e8ee" rx="5" />
         <Rect x="38" y="60" width="56" height="18" fill="#1e1e28" rx="6" />
         <Rect x="196" y="38" width="66" height="38" fill="#f8f8fb" rx="12" />
-        <Rect x="206" y="50" width="12" height="14" fill="#D5B23D" rx="3" opacity="0.7" />
+        <Rect x="206" y="50" width="12" height="14" fill="#55c49a" rx="3" opacity="0.7" />
         <Rect x="222" y="50" width="32" height="6" fill="#1e1e28" rx="2" opacity="0.2" />
         <Rect x="222" y="60" width="22" height="6" fill="#1e1e28" rx="2" opacity="0.12" />
         {bars.map((h, i) => (
@@ -148,7 +148,7 @@ export default function OnboardingScreen() {
           <View style={s.logoIcon}>
             <Navigation size={32} color="#ffffff" />
           </View>
-          <Text style={s.logoText}>Vee<Text style={{ color: '#3D52D5' }}>Go</Text></Text>
+          <Text style={s.logoText}>Vee<Text style={{ color: '#55c49a' }}>Go</Text></Text>
           <View style={s.driverBadge}>
             <Text style={s.driverBadgeText}>DRIVER</Text>
           </View>
