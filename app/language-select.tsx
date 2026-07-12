@@ -13,6 +13,9 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Language, useI18n } from '@/lib/i18nContext';
+import { Animation } from '@/constants/animations';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
 
 const LANG_OPTIONS: { lang: Language; label: string; nativeLabel: string; flag: string }[] = [
   { lang: 'en', label: 'English', nativeLabel: 'Continue in English', flag: '🇬🇧' },
@@ -27,7 +30,7 @@ export default function LanguageSelectScreen() {
 
   React.useEffect(() => {
     Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: false }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: Animation.duration.slow, useNativeDriver: false }),
       Animated.timing(slideAnim, { toValue: 0, duration: 420, useNativeDriver: false }),
     ]).start();
   }, []);
@@ -62,7 +65,7 @@ export default function LanguageSelectScreen() {
           </View>
           <View>
             <Text style={styles.logoName}>
-              Vee<Text style={{ color: '#3D52D5' }}>Go</Text>
+              Vee<Text style={{ color: '#55c49a' }}>Go</Text>
             </Text>
             <Text style={styles.logoSub}>DRIVER</Text>
           </View>
@@ -133,7 +136,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F6F8',
-    paddingHorizontal: 24,
+    paddingHorizontal: Spacing.xl,
     justifyContent: 'space-between',
   },
   inner: {
@@ -143,8 +146,8 @@ const styles = StyleSheet.create({
   logoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginTop: 16,
+    gap: Spacing.md,
+    marginTop: Spacing.lg,
   },
   logoIcon: {
     width: 50,
@@ -190,10 +193,10 @@ const styles = StyleSheet.create({
     opacity: 0.55,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: Typography.size.sm,
     fontFamily: 'Inter_400Regular',
     color: '#6B7280',
-    marginTop: 4,
+    marginTop: Spacing.xs,
     textAlign: 'center',
   },
   optionsContainer: {
@@ -215,7 +218,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 22,
-    gap: 16,
+    gap: Spacing.lg,
   },
   cardInnerRTL: {
     flexDirection: 'row-reverse',

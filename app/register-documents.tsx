@@ -24,6 +24,10 @@ import { useI18n } from '@/lib/i18nContext';
 import { endpoints, ApiError } from '@/lib/api';
 import { signupStore } from '@/lib/signupStore';
 import { compressImage } from '@/lib/imageCompression';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Radius } from '@/constants/radius';
+import { Shadows } from '@/constants/shadows';
 
 type DocSlot = {
   id: string;
@@ -214,7 +218,7 @@ export default function RegisterDocumentsScreen() {
   return (
     <View style={[s.root, { backgroundColor: '#fafafd' }]}>
       <ScrollView
-        contentContainerStyle={{ paddingTop: topPad + 20, paddingBottom: botPad + 120, paddingHorizontal: 24 }}
+        contentContainerStyle={{ paddingTop: topPad + 20, paddingBottom: botPad + 120, paddingHorizontal: Spacing.xl }}
         showsVerticalScrollIndicator={false}
       >
         <View style={s.header}>
@@ -235,7 +239,7 @@ export default function RegisterDocumentsScreen() {
         <View style={s.sections}>
           {SECTIONS.map((section) => (
             <View key={section.title} style={s.section}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
                 <Text style={s.sectionTitle}>{section.title}</Text>
                 {section.optional && (
                   <View style={s.optionalBadge}><Text style={s.optionalBadgeText}>Optional</Text></View>
@@ -367,41 +371,41 @@ export default function RegisterDocumentsScreen() {
 
 const s = StyleSheet.create({
   root: { flex: 1 },
-  blockedRoot: { alignItems: 'center', justifyContent: 'center', padding: 32 },
+  blockedRoot: { alignItems: 'center', justifyContent: 'center', padding: Spacing.xxl },
   blockedCard: {
     backgroundColor: 'white', borderRadius: 28, padding: 28,
-    alignItems: 'center', gap: 12,
+    alignItems: 'center', gap: Spacing.md,
     borderWidth: 1, borderColor: '#e5e5ea',
-    shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.07, shadowRadius: 16, elevation: 4,
+    shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.07, shadowRadius: 16, elevation: Shadows.medium.elevation,
     width: '100%',
   },
   blockedIconBox: {
-    width: 80, height: 80, borderRadius: 24, backgroundColor: '#f2f2f5',
-    alignItems: 'center', justifyContent: 'center', marginBottom: 4,
+    width: 80, height: 80, borderRadius: Radius.xl, backgroundColor: '#f2f2f5',
+    alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.xs,
   },
-  blockedTitle: { fontSize: 20, fontWeight: '700', color: '#1e1e28', textAlign: 'center', fontFamily: 'Inter_700Bold' },
-  blockedSub: { fontSize: 14, color: '#5e5e72', lineHeight: 21, textAlign: 'center', fontFamily: 'Inter_400Regular' },
+  blockedTitle: { fontSize: 20, fontWeight: Typography.weight.bold, color: '#1e1e28', textAlign: 'center', fontFamily: 'Inter_700Bold' },
+  blockedSub: { fontSize: Typography.size.sm, color: '#5e5e72', lineHeight: 21, textAlign: 'center', fontFamily: 'Inter_400Regular' },
   settingsBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#1e1e28', borderRadius: 16, height: 48,
-    paddingHorizontal: 24, marginTop: 8,
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
+    backgroundColor: '#1e1e28', borderRadius: Radius.lg, height: 48,
+    paddingHorizontal: Spacing.xl, marginTop: Spacing.sm,
   },
-  settingsBtnText: { color: 'white', fontSize: 14, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
-  retryPermBtn: { paddingVertical: 8 },
+  settingsBtnText: { color: 'white', fontSize: Typography.size.sm, fontWeight: Typography.weight.semibold, fontFamily: 'Inter_600SemiBold' },
+  retryPermBtn: { paddingVertical: Spacing.sm },
   retryPermText: { fontSize: 13, color: '#5e5e72', fontFamily: 'Inter_400Regular', textDecorationLine: 'underline' },
-  header: { marginBottom: 20, gap: 8 },
-  step: { fontSize: 12, fontWeight: '600', color: '#5e5e72', letterSpacing: 1, textTransform: 'uppercase', fontFamily: 'Inter_600SemiBold' },
-  title: { fontSize: 34, fontWeight: '700', color: '#1e1e28', letterSpacing: -1.2, lineHeight: 40, fontFamily: 'Inter_700Bold' },
-  sub: { fontSize: 14, color: '#5e5e72', lineHeight: 20, fontFamily: 'Inter_400Regular' },
-  progress: { marginBottom: 24, gap: 8 },
+  header: { marginBottom: 20, gap: Spacing.sm },
+  step: { fontSize: Typography.size.xs, fontWeight: Typography.weight.semibold, color: '#5e5e72', letterSpacing: 1, textTransform: 'uppercase', fontFamily: 'Inter_600SemiBold' },
+  title: { fontSize: 34, fontWeight: Typography.weight.bold, color: '#1e1e28', letterSpacing: -1.2, lineHeight: 40, fontFamily: 'Inter_700Bold' },
+  sub: { fontSize: Typography.size.sm, color: '#5e5e72', lineHeight: 20, fontFamily: 'Inter_400Regular' },
+  progress: { marginBottom: Spacing.xl, gap: Spacing.sm },
   progressBar: { height: 4, backgroundColor: '#e8e8ee', borderRadius: 99, overflow: 'hidden' },
-  progressFill: { height: '100%', backgroundColor: '#3D52D5', borderRadius: 99 },
-  progressText: { fontSize: 12, color: '#5e5e72', fontFamily: 'Inter_500Medium' },
-  sections: { gap: 24 },
-  section: { gap: 12 },
-  sectionTitle: { fontSize: 12, fontWeight: '700', color: '#1e1e28', letterSpacing: 0.8, textTransform: 'uppercase', fontFamily: 'Inter_700Bold' },
-  optionalBadge: { backgroundColor: '#f2f2f5', borderRadius: 99, paddingHorizontal: 8, paddingVertical: 2 },
-  optionalBadgeText: { fontSize: 10, color: '#5e5e72', fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  progressFill: { height: '100%', backgroundColor: '#55c49a', borderRadius: 99 },
+  progressText: { fontSize: Typography.size.xs, color: '#5e5e72', fontFamily: 'Inter_500Medium' },
+  sections: { gap: Spacing.xl },
+  section: { gap: Spacing.md },
+  sectionTitle: { fontSize: Typography.size.xs, fontWeight: Typography.weight.bold, color: '#1e1e28', letterSpacing: 0.8, textTransform: 'uppercase', fontFamily: 'Inter_700Bold' },
+  optionalBadge: { backgroundColor: '#f2f2f5', borderRadius: 99, paddingHorizontal: Spacing.sm, paddingVertical: 2 },
+  optionalBadgeText: { fontSize: 10, color: '#5e5e72', fontWeight: Typography.weight.semibold, fontFamily: 'Inter_600SemiBold' },
   slotsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   slot: {
     width: '47.5%', aspectRatio: 4 / 3,
@@ -421,49 +425,49 @@ const s = StyleSheet.create({
   },
   retakeBtn: {
     position: 'absolute', bottom: 8, right: 8,
-    flexDirection: 'row', alignItems: 'center', gap: 4,
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.xs,
     backgroundColor: 'rgba(255,255,255,0.92)', borderRadius: 99,
-    paddingHorizontal: 8, paddingVertical: 4,
+    paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs,
     borderWidth: 1, borderColor: '#e5e5ea',
   },
-  retakeText: { fontSize: 10, fontWeight: '600', color: '#1e1e28' },
-  slotEmpty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 4, padding: 12 },
+  retakeText: { fontSize: 10, fontWeight: Typography.weight.semibold, color: '#1e1e28' },
+  slotEmpty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.xs, padding: Spacing.md },
   slotIconBox: {
     width: 44, height: 44, borderRadius: 14, backgroundColor: '#f2f2f5',
     alignItems: 'center', justifyContent: 'center', marginBottom: 2,
   },
-  slotLabel: { fontSize: 12, fontWeight: '700', color: '#1e1e28', textAlign: 'center', fontFamily: 'Inter_700Bold' },
+  slotLabel: { fontSize: Typography.size.xs, fontWeight: Typography.weight.bold, color: '#1e1e28', textAlign: 'center', fontFamily: 'Inter_700Bold' },
   slotHint: { fontSize: 10, color: '#5e5e72', textAlign: 'center', lineHeight: 14 },
   cameraBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.xs,
     backgroundColor: '#1e1e28', borderRadius: 99,
     paddingHorizontal: 10, paddingVertical: 5, marginTop: 6,
   },
-  cameraBtnText: { fontSize: 10, fontWeight: '600', color: 'white' },
+  cameraBtnText: { fontSize: 10, fontWeight: Typography.weight.semibold, color: 'white' },
   noteBox: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 8,
-    backgroundColor: '#f2f2f5', borderRadius: 14, padding: 14, marginTop: 16,
+    flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm,
+    backgroundColor: '#f2f2f5', borderRadius: 14, padding: 14, marginTop: Spacing.lg,
   },
-  noteText: { flex: 1, fontSize: 12, color: '#5e5e72', lineHeight: 18, fontFamily: 'Inter_400Regular' },
+  noteText: { flex: 1, fontSize: Typography.size.xs, color: '#5e5e72', lineHeight: 18, fontFamily: 'Inter_400Regular' },
   referralSection: { marginTop: 20 },
-  referralLabel: { fontSize: 13, fontWeight: '600', color: '#1e1e28', fontFamily: 'Inter_600SemiBold', marginBottom: 8 },
+  referralLabel: { fontSize: 13, fontWeight: Typography.weight.semibold, color: '#1e1e28', fontFamily: 'Inter_600SemiBold', marginBottom: Spacing.sm },
   referralInput: {
-    height: 52, borderRadius: 14, paddingHorizontal: 16,
+    height: 52, borderRadius: 14, paddingHorizontal: Spacing.lg,
     backgroundColor: 'white', borderWidth: 1.5, borderColor: '#e5e5ea',
     fontSize: 15, fontFamily: 'Inter_600SemiBold', color: '#1e1e28',
   },
   referralHint: { fontSize: 11, color: '#c2410c', marginTop: 6, fontFamily: 'Inter_400Regular' },
   footer: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
-    paddingHorizontal: 24, paddingTop: 16,
+    paddingHorizontal: Spacing.xl, paddingTop: Spacing.lg,
     backgroundColor: 'rgba(250,250,253,0.95)',
     borderTopWidth: 1, borderTopColor: '#e5e5ea',
   },
   submitBtn: {
-    height: 56, borderRadius: 20, backgroundColor: '#3D52D5',
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    shadowColor: '#3D52D5', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.25, shadowRadius: 20, elevation: 8,
+    height: 56, borderRadius: 20, backgroundColor: '#55c49a',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm,
+    shadowColor: '#55c49a', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.25, shadowRadius: 20, elevation: Shadows.large.elevation,
   },
   submitBtnDisabled: { opacity: 0.4 },
-  submitBtnText: { color: 'white', fontSize: 15, fontWeight: '600', fontFamily: 'Inter_600SemiBold', textAlign: 'center' },
+  submitBtnText: { color: 'white', fontSize: 15, fontWeight: Typography.weight.semibold, fontFamily: 'Inter_600SemiBold', textAlign: 'center' },
 });

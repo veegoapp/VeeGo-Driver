@@ -24,6 +24,9 @@ import { useI18n } from '@/lib/i18nContext';
 import { useSocket } from '@/lib/socketContext';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
 import { api, endpoints, type ShuttleCompleteResponse } from '@/lib/api';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Radius } from '@/constants/radius';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 const APPROACH_THRESHOLD_M = 250;
@@ -701,7 +704,7 @@ export default function ShuttleTripActiveScreen() {
             )}
 
             {/* Action button */}
-            <View style={{ marginTop: 12 }}>
+            <View style={{ marginTop: Spacing.md }}>
               {isLastStop ? (
                 <Pressable
                   disabled={lastStopProcessingRef.current || isNextLoading}
@@ -794,7 +797,7 @@ export default function ShuttleTripActiveScreen() {
 
           {/* Station timeout banner */}
           {stationTimeoutVisible && (
-            <View style={[styles.timeoutBanner, { marginTop: 0, marginBottom: 8 }]}>
+            <View style={[styles.timeoutBanner, { marginTop: 0, marginBottom: Spacing.sm }]}>
               <AlertTriangle size={14} color="#d97706" strokeWidth={2} />
               <Text style={[styles.timeoutText, { fontFamily: 'Inter_400Regular', flex: 1 }]}>
                 {t.station_timeout_msg}
@@ -845,10 +848,10 @@ const styles = StyleSheet.create({
   container: { flex: 1, overflow: 'hidden' },
 
   // Top bar
-  topBar: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16 },
+  topBar: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, paddingHorizontal: Spacing.lg },
   backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   tripBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 5 },
-  badgeText: { fontSize: 12 },
+  badgeText: { fontSize: Typography.size.xs },
 
   // Navigation HUD (en_route only)
   hudContainer: {
@@ -866,24 +869,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
   },
   hudCell: { flex: 1, alignItems: 'center', gap: 2 },
-  hudPrimary: { fontSize: 18, color: '#fff', lineHeight: 22 },
+  hudPrimary: { fontSize: Typography.size.lg, color: '#fff', lineHeight: 22 },
   hudLabel: { fontSize: 10, color: 'rgba(255,255,255,0.45)', letterSpacing: 0.8, textTransform: 'uppercase' },
   hudSep: { width: 1, height: 30, backgroundColor: 'rgba(255,255,255,0.1)' },
 
   // Approaching banner
   approachBannerWrapper: { position: 'absolute', bottom: 12, left: 16, right: 16 },
   approachBanner: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
     backgroundColor: 'rgba(20,18,8,0.88)', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10,
     borderWidth: 1, borderColor: 'rgba(245,158,11,0.5)',
   },
   approachText: { flex: 1, fontSize: 13, color: '#fef3c7' },
-  approachBadge: { backgroundColor: '#f59e0b22', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3, alignItems: 'center' },
-  approachBadgeText: { fontSize: 12, color: '#f59e0b' },
+  approachBadge: { backgroundColor: '#f59e0b22', borderRadius: 10, paddingHorizontal: Spacing.sm, paddingVertical: 3, alignItems: 'center' },
+  approachBadgeText: { fontSize: Typography.size.xs, color: '#f59e0b' },
 
   // At stop sheet — absolute bottom overlay, height fits content
   atStopSheet: { position: 'absolute', bottom: 0, left: 0, right: 0, borderTopLeftRadius: 28, borderTopRightRadius: 28, borderTopWidth: 1, borderLeftWidth: 1, borderRightWidth: 1 },
-  atStopDivider: { height: 1, marginHorizontal: 16 },
+  atStopDivider: { height: 1, marginHorizontal: Spacing.lg },
 
   // En route sheet — glass overlay at bottom of screen
   enRouteSheet: {
@@ -891,7 +894,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    paddingHorizontal: 16,
+    paddingHorizontal: Spacing.lg,
     paddingTop: 10,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
@@ -901,71 +904,71 @@ const styles = StyleSheet.create({
     borderRightWidth: 1,
     borderColor: 'rgba(255,255,255,0.10)',
   },
-  enRouteHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.2)', alignSelf: 'center', marginBottom: 12 },
+  enRouteHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.2)', alignSelf: 'center', marginBottom: Spacing.md },
 
   // Progress dots
-  progressDots: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 16 },
+  progressDots: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginBottom: Spacing.lg },
   dot: { height: 8, width: 14, borderRadius: 4 },
 
   // Next stop card
   nextStopCard: { borderRadius: 18, borderWidth: 1, padding: 14, marginBottom: 10, backgroundColor: 'rgba(255,255,255,0.06)' },
-  nextStopCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  nextStopCardHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   stopIndexBadge: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  stopIndexText: { fontSize: 14 },
+  stopIndexText: { fontSize: Typography.size.sm },
   nextStopLabel: { fontSize: 11, marginBottom: 2 },
-  nextStopName: { fontSize: 16 },
-  distanceBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, alignItems: 'center' },
-  distanceText: { fontSize: 14 },
+  nextStopName: { fontSize: Typography.size.md },
+  distanceBadge: { paddingHorizontal: 10, paddingVertical: Spacing.xs, borderRadius: 10, alignItems: 'center' },
+  distanceText: { fontSize: Typography.size.sm },
   etaText: { fontSize: 11, marginTop: 1 },
   passengerCountRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.07)' },
   passengerCountText: { fontSize: 13 },
 
   // Mark arrived button
-  arrivedBtn: { borderRadius: 16, overflow: 'hidden', marginBottom: 10 },
-  arrivedBtnGrad: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  arrivedBtn: { borderRadius: Radius.lg, overflow: 'hidden', marginBottom: 10 },
+  arrivedBtnGrad: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
   arrivedBtnText: { fontSize: 15, color: '#fff' },
 
   // Finish button (en-route last stop)
-  finishBtn: { height: 44, borderRadius: 14, borderWidth: 1.5, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  finishBtnText: { fontSize: 14 },
+  finishBtn: { height: 44, borderRadius: 14, borderWidth: 1.5, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
+  finishBtnText: { fontSize: Typography.size.sm },
 
   // At stop header
-  atStopHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 18, paddingBottom: 14 },
-  stopModeBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', backgroundColor: '#ef444418', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, marginBottom: 6, borderWidth: 1, borderColor: '#ef444440' },
+  atStopHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.lg, paddingTop: 18, paddingBottom: 14 },
+  stopModeBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', backgroundColor: '#ef444418', paddingHorizontal: Spacing.sm, paddingVertical: 3, borderRadius: Radius.sm, marginBottom: 6, borderWidth: 1, borderColor: '#ef444440' },
   stopModeDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#ef4444' },
   stopModeLabel: { fontSize: 10, letterSpacing: 1.2, color: '#ef4444' },
-  atStopName: { fontSize: 18 },
-  timerBlock: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, borderWidth: 1 },
-  timerText: { fontSize: 18, letterSpacing: 2 },
+  atStopName: { fontSize: Typography.size.lg },
+  timerBlock: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: Radius.md, borderWidth: 1 },
+  timerText: { fontSize: Typography.size.lg, letterSpacing: 2 },
 
   // Timeout banner
   timeoutBanner: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    marginHorizontal: 16, marginTop: 8, marginBottom: 0,
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
+    marginHorizontal: Spacing.lg, marginTop: Spacing.sm, marginBottom: 0,
     backgroundColor: '#f59e0b12', borderColor: '#f59e0b44', borderWidth: 1,
-    borderRadius: 12, padding: 10,
+    borderRadius: Radius.md, padding: 10,
   },
   timeoutText: { fontSize: 13, color: '#d97706', lineHeight: 18 },
 
   // Passenger list
-  passengerList: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 16 },
-  emptyPassengers: { paddingVertical: 32, alignItems: 'center', gap: 10 },
-  emptyPassengersText: { fontSize: 14, textAlign: 'center' },
+  passengerList: { paddingHorizontal: Spacing.lg, paddingTop: 10, paddingBottom: Spacing.lg },
+  emptyPassengers: { paddingVertical: Spacing.xxl, alignItems: 'center', gap: 10 },
+  emptyPassengersText: { fontSize: Typography.size.sm, textAlign: 'center' },
   passengerRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    padding: 12, borderRadius: 16, borderWidth: 1,
-    marginBottom: 8,
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
+    padding: Spacing.md, borderRadius: Radius.lg, borderWidth: 1,
+    marginBottom: Spacing.sm,
   },
   passengerAvatar: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  passengerInitial: { fontSize: 16 },
-  passengerName: { fontSize: 14, marginBottom: 2 },
-  passengerPhone: { fontSize: 12 },
-  statusBtns: { flexDirection: 'row', gap: 8 },
+  passengerInitial: { fontSize: Typography.size.md },
+  passengerName: { fontSize: Typography.size.sm, marginBottom: 2 },
+  passengerPhone: { fontSize: Typography.size.xs },
+  statusBtns: { flexDirection: 'row', gap: Spacing.sm },
   statusBtn: { width: 44, height: 44, borderRadius: 13, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
 
   // Share Trip button
   shareTripBtn: {
-    width: 32, height: 32, borderRadius: 16,
+    width: 32, height: 32, borderRadius: Radius.lg,
     alignItems: 'center', justifyContent: 'center',
     backgroundColor: 'rgba(10,10,20,0.72)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
   },
@@ -980,14 +983,14 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(255,100,100,0.35)',
   },
   sosBtnText: {
-    fontSize: 12, color: '#fff', fontFamily: 'Inter_700Bold', letterSpacing: 0.5,
+    fontSize: Typography.size.xs, color: '#fff', fontFamily: 'Inter_700Bold', letterSpacing: 0.5,
   },
 
   // Primary action button
-  paymentCashBadge: { alignSelf: 'flex-start', marginTop: 4, backgroundColor: '#fef3c7', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: '#fcd34d' },
-  paymentPaidBadge: { alignSelf: 'flex-start', marginTop: 4, backgroundColor: '#dcfce7', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: '#86efac' },
+  paymentCashBadge: { alignSelf: 'flex-start', marginTop: Spacing.xs, backgroundColor: '#fef3c7', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: '#fcd34d' },
+  paymentPaidBadge: { alignSelf: 'flex-start', marginTop: Spacing.xs, backgroundColor: '#dcfce7', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: '#86efac' },
   paymentBadgeText: { fontSize: 11 },
   primaryBtn: { borderRadius: 18, overflow: 'hidden' },
-  primaryBtnGrad: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  primaryBtnGrad: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
   primaryBtnText: { fontSize: 15, color: '#fff' },
 });

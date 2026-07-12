@@ -17,6 +17,10 @@ import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
 import type { FinancialAnalytics } from '@/lib/api';
+import { Typography } from '@/constants/typography';
+import { VeeGoCard } from '@/components/ui/VeeGoCard';
+import { Spacing } from '@/constants/spacing';
+import { Radius } from '@/constants/radius';
 
 // ─── Timeframe filter options ─────────────────────────────────────────────────
 type Range = 'today' | 'week' | 'month';
@@ -104,7 +108,7 @@ export default function EarningsScreen() {
           />
         </Pressable>
 
-        <View style={{ flex: 1, paddingHorizontal: 12 }}>
+        <View style={{ flex: 1, paddingHorizontal: Spacing.md }}>
           <Text style={[styles.headerTitle, { color: colors.foreground, textAlign: TA }]}>
             {t.financial_hub}
           </Text>
@@ -114,7 +118,7 @@ export default function EarningsScreen() {
         </View>
 
         <View style={[styles.walletBadge, { backgroundColor: '#EEF2FF' }]}>
-          <Wallet size={18} color="#3D52D5" strokeWidth={2} />
+          <Wallet size={18} color="#55c49a" strokeWidth={2} />
         </View>
       </View>
 
@@ -145,7 +149,7 @@ export default function EarningsScreen() {
                 style={[
                   styles.filterChip,
                   active
-                    ? { backgroundColor: '#3D52D5', borderColor: '#3D52D5' }
+                    ? { backgroundColor: '#55c49a', borderColor: '#55c49a' }
                     : { backgroundColor: colors.secondary, borderColor: colors.border },
                 ]}
               >
@@ -163,7 +167,7 @@ export default function EarningsScreen() {
         {/* ── Loading state ───────────────────────────────────────────── */}
         {isLoading && !refreshing && (
           <View style={styles.centeredBlock}>
-            <ActivityIndicator size="large" color="#3D52D5" />
+            <ActivityIndicator size="large" color="#55c49a" />
             <Text style={[styles.loadingLabel, { color: colors.mutedForeground }]}>
               {t.loading_label}
             </Text>
@@ -193,13 +197,23 @@ export default function EarningsScreen() {
         {/* ── Summary cards ───────────────────────────────────────────── */}
         {!isLoading && !isError && (
           <>
-            <View style={[styles.summaryCard, { borderColor: colors.border, backgroundColor: colors.card }]}>
+            <VeeGoCard
+              variant="outlined"
+              style={{
+                borderRadius: Radius.lg,
+                borderColor: colors.border,
+                backgroundColor: colors.card,
+                padding: 0,
+                overflow: 'hidden',
+                marginBottom: Spacing.xs,
+              }}
+            >
               {/* Total Cash Collected */}
               <View style={[styles.summaryRow, { borderBottomColor: colors.border }]}>
                 <View style={[styles.summaryIconWrap, { backgroundColor: '#F0FDF4' }]}>
                   <TrendingUp size={20} color="#16A34A" strokeWidth={2} />
                 </View>
-                <View style={{ flex: 1, paddingHorizontal: 12 }}>
+                <View style={{ flex: 1, paddingHorizontal: Spacing.md }}>
                   <Text style={[styles.summaryLabel, { color: colors.mutedForeground, textAlign: TA }]}>
                     {t.total_cash_received}
                   </Text>
@@ -214,7 +228,7 @@ export default function EarningsScreen() {
                 <View style={[styles.summaryIconWrap, { backgroundColor: '#FFF7ED' }]}>
                   <TrendingDown size={20} color="#EA580C" strokeWidth={2} />
                 </View>
-                <View style={{ flex: 1, paddingHorizontal: 12 }}>
+                <View style={{ flex: 1, paddingHorizontal: Spacing.md }}>
                   <Text style={[styles.summaryLabel, { color: colors.mutedForeground, textAlign: TA }]}>
                     {t.app_commission}
                   </Text>
@@ -227,18 +241,18 @@ export default function EarningsScreen() {
               {/* Net Profit */}
               <View style={[styles.summaryRow, { borderBottomColor: 'transparent' }]}>
                 <View style={[styles.summaryIconWrap, { backgroundColor: '#EEF2FF' }]}>
-                  <Wallet size={20} color="#3D52D5" strokeWidth={2} />
+                  <Wallet size={20} color="#55c49a" strokeWidth={2} />
                 </View>
-                <View style={{ flex: 1, paddingHorizontal: 12 }}>
+                <View style={{ flex: 1, paddingHorizontal: Spacing.md }}>
                   <Text style={[styles.summaryLabel, { color: colors.mutedForeground, textAlign: TA }]}>
                     {t.net_profit_label}
                   </Text>
-                  <Text style={[styles.summaryAmount, { color: '#3D52D5', textAlign: TA }]}>
+                  <Text style={[styles.summaryAmount, { color: '#55c49a', textAlign: TA }]}>
                     {formatCurrency(netProfit, t.egp)}
                   </Text>
                 </View>
               </View>
-            </View>
+            </VeeGoCard>
 
             {/* ── Transaction ledger ──────────────────────────────────── */}
             <Text style={[styles.sectionTitle, { color: colors.foreground, textAlign: TA }]}>
@@ -320,8 +334,8 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.md,
     borderBottomWidth: 1,
   },
   backBtn: {
@@ -337,7 +351,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_700Bold',
   },
   headerSub: {
-    fontSize: 12,
+    fontSize: Typography.size.xs,
     fontFamily: 'Inter_400Regular',
     marginTop: 1,
   },
@@ -349,16 +363,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   scrollContent: {
-    padding: 16,
-    gap: 12,
+    padding: Spacing.lg,
+    gap: Spacing.md,
   },
   filterRow: {
-    gap: 8,
-    marginBottom: 4,
+    gap: Spacing.sm,
+    marginBottom: Spacing.xs,
   },
   filterChip: {
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: Spacing.sm,
     paddingHorizontal: 10,
     borderRadius: 10,
     borderWidth: 1,
@@ -372,19 +386,19 @@ const styles = StyleSheet.create({
   centeredBlock: {
     paddingVertical: 60,
     alignItems: 'center',
-    gap: 12,
+    gap: Spacing.md,
   },
   loadingLabel: {
-    fontSize: 14,
+    fontSize: Typography.size.sm,
     fontFamily: 'Inter_400Regular',
   },
   errorCard: {
-    borderRadius: 16,
+    borderRadius: Radius.lg,
     borderWidth: 1,
-    padding: 24,
+    padding: Spacing.xl,
     alignItems: 'center',
     gap: 10,
-    marginVertical: 8,
+    marginVertical: Spacing.sm,
   },
   errorTitle: {
     fontSize: 15,
@@ -402,7 +416,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 9,
     borderRadius: 10,
-    marginTop: 4,
+    marginTop: Spacing.xs,
   },
   retryBtnLabel: {
     color: '#fff',
@@ -410,16 +424,16 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_600SemiBold',
   },
   summaryCard: {
-    borderRadius: 16,
+    borderRadius: Radius.lg,
     borderWidth: 1,
     overflow: 'hidden',
-    marginBottom: 4,
+    marginBottom: Spacing.xs,
   },
   summaryRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.lg,
     borderBottomWidth: 1,
   },
   summaryIconWrap: {
@@ -430,9 +444,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   summaryLabel: {
-    fontSize: 12,
+    fontSize: Typography.size.xs,
     fontFamily: 'Inter_500Medium',
-    marginBottom: 4,
+    marginBottom: Spacing.xs,
   },
   summaryAmount: {
     fontSize: 20,
@@ -440,15 +454,15 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
   sectionTitle: {
-    fontSize: 14,
+    fontSize: Typography.size.sm,
     fontFamily: 'Inter_700Bold',
-    marginTop: 8,
-    marginBottom: 4,
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.xs,
   },
   emptyCard: {
-    borderRadius: 16,
+    borderRadius: Radius.lg,
     borderWidth: 1,
-    padding: 32,
+    padding: Spacing.xxl,
     alignItems: 'center',
     gap: 10,
   },
@@ -465,9 +479,9 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: Spacing.md,
     alignItems: 'center',
-    gap: 8,
+    gap: Spacing.sm,
     marginBottom: 2,
   },
   txDate: {

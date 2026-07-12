@@ -13,6 +13,9 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Radius } from '@/constants/radius';
 
 type Props = {
   visible: boolean;
@@ -80,20 +83,20 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   header: {
     alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1,
+    paddingHorizontal: 20, paddingVertical: Spacing.lg, borderBottomWidth: 1,
   },
-  title: { fontSize: 18, fontFamily: 'Inter_700Bold', flex: 1 },
+  title: { fontSize: Typography.size.lg, fontFamily: 'Inter_700Bold', flex: 1 },
   closeBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   banner: {
-    marginHorizontal: 20, marginTop: 12,
-    borderRadius: 12, borderWidth: 1, padding: 12,
+    marginHorizontal: 20, marginTop: Spacing.md,
+    borderRadius: Radius.md, borderWidth: 1, padding: Spacing.md,
   },
   bannerText: { fontSize: 13, fontFamily: 'Inter_400Regular', lineHeight: 20 },
-  scrollContent: { paddingHorizontal: 20, paddingVertical: 16 },
-  bodyText: { fontSize: 14, fontFamily: 'Inter_400Regular', lineHeight: 24 },
-  footer: { paddingHorizontal: 20, paddingTop: 12, borderTopWidth: 1 },
+  scrollContent: { paddingHorizontal: 20, paddingVertical: Spacing.lg },
+  bodyText: { fontSize: Typography.size.sm, fontFamily: 'Inter_400Regular', lineHeight: 24 },
+  footer: { paddingHorizontal: 20, paddingTop: Spacing.md, borderTopWidth: 1 },
   acceptBtn: {
-    height: 52, borderRadius: 16,
+    height: 52, borderRadius: Radius.lg,
     alignItems: 'center', justifyContent: 'center',
   },
   acceptBtnText: { fontSize: 15, fontFamily: 'Inter_600SemiBold' },

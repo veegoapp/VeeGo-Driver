@@ -16,6 +16,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '@/lib/i18nContext';
 import { useService } from '@/lib/serviceContext';
 import { endpoints, ApiError } from '@/lib/api';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Radius } from '@/constants/radius';
+import { Shadows } from '@/constants/shadows';
 
 type ServiceOption = {
   key: string;       // value sent to backend: 'car'|'shuttle'|'scooter'|'delivery'
@@ -137,7 +141,7 @@ export default function RegisterServiceTypeScreen() {
   return (
     <View style={[s.root, { backgroundColor: '#fafafd' }]}>
       <ScrollView
-        contentContainerStyle={{ paddingTop: topPad + 20, paddingBottom: botPad + 120, paddingHorizontal: 24 }}
+        contentContainerStyle={{ paddingTop: topPad + 20, paddingBottom: botPad + 120, paddingHorizontal: Spacing.xl }}
         showsVerticalScrollIndicator={false}
       >
         <View style={s.header}>
@@ -150,7 +154,7 @@ export default function RegisterServiceTypeScreen() {
 
         {loadingControls ? (
           <View style={s.loadingWrap}>
-            <ActivityIndicator size="large" color="#3D52D5" />
+            <ActivityIndicator size="large" color="#55c49a" />
             <Text style={s.loadingText}>Loading available services…</Text>
           </View>
         ) : (
@@ -231,38 +235,38 @@ export default function RegisterServiceTypeScreen() {
 
 const s = StyleSheet.create({
   root: { flex: 1 },
-  header: { marginBottom: 24, gap: 8 },
-  step: { fontSize: 12, fontWeight: '600', color: '#5e5e72', letterSpacing: 1, textTransform: 'uppercase', fontFamily: 'Inter_600SemiBold' },
-  title: { fontSize: 34, fontWeight: '700', color: '#1e1e28', letterSpacing: -1.2, lineHeight: 40, fontFamily: 'Inter_700Bold' },
-  sub: { fontSize: 14, color: '#5e5e72', lineHeight: 20, fontFamily: 'Inter_400Regular' },
-  loadingWrap: { alignItems: 'center', gap: 12, paddingTop: 40 },
+  header: { marginBottom: Spacing.xl, gap: Spacing.sm },
+  step: { fontSize: Typography.size.xs, fontWeight: Typography.weight.semibold, color: '#5e5e72', letterSpacing: 1, textTransform: 'uppercase', fontFamily: 'Inter_600SemiBold' },
+  title: { fontSize: 34, fontWeight: Typography.weight.bold, color: '#1e1e28', letterSpacing: -1.2, lineHeight: 40, fontFamily: 'Inter_700Bold' },
+  sub: { fontSize: Typography.size.sm, color: '#5e5e72', lineHeight: 20, fontFamily: 'Inter_400Regular' },
+  loadingWrap: { alignItems: 'center', gap: Spacing.md, paddingTop: 40 },
   loadingText: { fontSize: 13, color: '#5e5e72', fontFamily: 'Inter_400Regular' },
-  optionsGrid: { gap: 12 },
+  optionsGrid: { gap: Spacing.md },
   optionCard: {
     borderRadius: 22, borderWidth: 1.5, borderColor: '#e5e5ea', overflow: 'hidden',
-    shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
+    shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: Shadows.small.elevation,
   },
   optionCardSelected: { borderWidth: 2 },
   optionCardDisabled: { opacity: 0.55 },
   optionCardInner: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 18 },
-  iconBox: { width: 52, height: 52, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  optLabel: { fontSize: 16, fontWeight: '700', color: '#1e1e28', fontFamily: 'Inter_700Bold', marginBottom: 3 },
+  iconBox: { width: 52, height: 52, borderRadius: Radius.lg, alignItems: 'center', justifyContent: 'center' },
+  optLabel: { fontSize: Typography.size.md, fontWeight: Typography.weight.bold, color: '#1e1e28', fontFamily: 'Inter_700Bold', marginBottom: 3 },
   optLabelDisabled: { color: '#9e9ea8' },
-  optDesc: { fontSize: 12, color: '#5e5e72', lineHeight: 17, fontFamily: 'Inter_400Regular' },
+  optDesc: { fontSize: Typography.size.xs, color: '#5e5e72', lineHeight: 17, fontFamily: 'Inter_400Regular' },
   optDescDisabled: { color: '#b0b0bc' },
   selectedDot: { width: 10, height: 10, borderRadius: 5 },
-  errorText: { fontSize: 13, color: '#e53935', textAlign: 'center', marginTop: 8, fontFamily: 'Inter_400Regular' },
+  errorText: { fontSize: 13, color: '#e53935', textAlign: 'center', marginTop: Spacing.sm, fontFamily: 'Inter_400Regular' },
   footer: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
-    paddingHorizontal: 24, paddingTop: 16,
+    paddingHorizontal: Spacing.xl, paddingTop: Spacing.lg,
     backgroundColor: 'rgba(250,250,253,0.95)',
     borderTopWidth: 1, borderTopColor: '#e5e5ea',
   },
   continueBtn: {
     height: 56, borderRadius: 20, backgroundColor: '#1e1e28',
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 20, elevation: 8,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm,
+    shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 20, elevation: Shadows.large.elevation,
   },
   continueBtnDisabled: { opacity: 0.35 },
-  continueBtnText: { color: 'white', fontSize: 15, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  continueBtnText: { color: 'white', fontSize: 15, fontWeight: Typography.weight.semibold, fontFamily: 'Inter_600SemiBold' },
 });

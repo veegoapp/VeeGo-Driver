@@ -20,6 +20,8 @@ import { useSocket } from '@/lib/socketContext';
 import { endpoints, type RideMessage } from '@/lib/api';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
 import { useI18n } from '@/lib/i18nContext';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
 
 export default function RideChatScreen() {
   const colors = useColors();
@@ -108,7 +110,7 @@ export default function RideChatScreen() {
           ref={flatListRef}
           data={messages}
           keyExtractor={m => String(m.id)}
-          contentContainerStyle={{ padding: 16, gap: 10 }}
+          contentContainerStyle={{ padding: Spacing.lg, gap: 10 }}
           renderItem={({ item }) => {
             const isDriver = item.senderRole === 'driver';
             return (
@@ -158,18 +160,18 @@ export default function RideChatScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingHorizontal: Spacing.lg, paddingBottom: Spacing.md, borderBottomWidth: 1 },
   backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  headerTitle: { fontSize: 16 },
+  headerTitle: { fontSize: Typography.size.md },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  emptyText: { fontSize: 14 },
+  emptyText: { fontSize: Typography.size.sm },
   bubbleWrap: { maxWidth: '80%' },
   bubbleLeft: { alignSelf: 'flex-start' },
   bubbleRight: { alignSelf: 'flex-end' },
-  bubble: { padding: 12, gap: 4 },
-  bubbleText: { fontSize: 14 },
+  bubble: { padding: Spacing.md, gap: Spacing.xs },
+  bubbleText: { fontSize: Typography.size.sm },
   bubbleTime: { fontSize: 10, alignSelf: 'flex-end' },
-  inputBar: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, paddingHorizontal: 16, paddingTop: 10, borderTopWidth: 1 },
-  input: { flex: 1, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, fontSize: 14, maxHeight: 120 },
+  inputBar: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, paddingHorizontal: Spacing.lg, paddingTop: 10, borderTopWidth: 1 },
+  input: { flex: 1, borderRadius: 20, paddingHorizontal: Spacing.lg, paddingVertical: 10, fontSize: Typography.size.sm, maxHeight: 120 },
   sendBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
 });

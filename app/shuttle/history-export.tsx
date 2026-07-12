@@ -18,6 +18,8 @@ import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
 
 // ── Types shared with history.tsx ──────────────────────────────────────────────
 type RawTrip = Record<string, unknown>;
@@ -350,17 +352,17 @@ export default function HistoryExportScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Icon + subtitle */}
-        <View style={{ alignItems: 'center', paddingTop: 32, paddingBottom: 28 }}>
+        <View style={{ alignItems: 'center', paddingTop: Spacing.xxl, paddingBottom: 28 }}>
           <View style={[styles.iconWrap, { backgroundColor: colors.secondary }]}>
             <FileText size={32} color={colors.foreground} strokeWidth={1.5} />
           </View>
-          <Text style={[styles.subtitle, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: 'center', marginTop: 12 }]}>
+          <Text style={[styles.subtitle, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: 'center', marginTop: Spacing.md }]}>
             {t.export_subtitle}
           </Text>
         </View>
 
         {/* Preset chips */}
-        <Text style={[styles.sectionLabel, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA, marginBottom: 12 }]}>
+        <Text style={[styles.sectionLabel, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA, marginBottom: Spacing.md }]}>
           {t.export_date_range}
         </Text>
         <View style={[styles.presetsGrid, { flexDirection: R }]}>
@@ -393,9 +395,9 @@ export default function HistoryExportScreen() {
         </View>
 
         {/* Info note */}
-        <GlassView style={[styles.infoCard, { flexDirection: R, marginTop: 24 }]} borderRadius={14}>
+        <GlassView style={[styles.infoCard, { flexDirection: R, marginTop: Spacing.xl }]} borderRadius={14}>
           <View style={{ flex: 1 }}>
-            <Text style={[{ fontSize: 12, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA, lineHeight: 18 }]}>
+            <Text style={[{ fontSize: Typography.size.xs, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA, lineHeight: 18 }]}>
               {t.export_info_note}
             </Text>
           </View>
@@ -435,8 +437,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.md,
     borderBottomWidth: 1,
   },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
@@ -448,27 +450,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  subtitle: { fontSize: 14, lineHeight: 20, maxWidth: 260 },
-  sectionLabel: { fontSize: 14 },
+  subtitle: { fontSize: Typography.size.sm, lineHeight: 20, maxWidth: 260 },
+  sectionLabel: { fontSize: Typography.size.sm },
   presetsGrid: {
     flexWrap: 'wrap',
     gap: 10,
   },
   presetChip: {
-    paddingHorizontal: 16,
+    paddingHorizontal: Spacing.lg,
     paddingVertical: 10,
     borderRadius: 10,
     borderWidth: 1,
   },
   presetLabel: { fontSize: 13 },
-  infoCard: { padding: 14, gap: 8 },
+  infoCard: { padding: 14, gap: Spacing.sm },
   generateBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    paddingVertical: 16,
+    paddingVertical: Spacing.lg,
     borderRadius: 14,
   },
-  generateLabel: { fontSize: 16, color: '#fff' },
+  generateLabel: { fontSize: Typography.size.md, color: '#fff' },
 });

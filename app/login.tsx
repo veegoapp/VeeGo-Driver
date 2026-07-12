@@ -24,6 +24,9 @@ import { useI18n } from '@/lib/i18nContext';
 import { useAuth } from '@/lib/authContext';
 import { endpoints, ApiError } from '@/lib/api';
 import { TermsModal } from '@/components/TermsModal';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Shadows } from '@/constants/shadows';
 
 const TERMS_VERSION_KEY = 'driver_terms_accepted_version';
 
@@ -99,7 +102,7 @@ export default function LoginScreen() {
             <View style={s.logoIcon}>
               <Navigation size={32} color="#ffffff" />
             </View>
-            <Text style={s.wordmark}>Vee<Text style={{ color: '#3D52D5' }}>Go</Text></Text>
+            <Text style={s.wordmark}>Vee<Text style={{ color: '#55c49a' }}>Go</Text></Text>
             <View style={s.driverPill}>
               <Text style={s.driverPillText}>DRIVER</Text>
             </View>
@@ -208,7 +211,7 @@ function SignInForm({ isRTL, onSuccess, onOtpRequired, initialCredential }: {
           autoCapitalize="none"
           autoCorrect={false}
         />
-        <TouchableOpacity onPress={() => setShowPass(p => !p)} style={{ padding: 4 }}>
+        <TouchableOpacity onPress={() => setShowPass(p => !p)} style={{ padding: Spacing.xs }}>
           {showPass ? <EyeOff size={16} color="#5e5e72" /> : <Eye size={16} color="#5e5e72" />}
         </TouchableOpacity>
       </View>
@@ -330,7 +333,7 @@ function SignUpForm({ isRTL, onOtpRequired }: { isRTL: boolean; onOtpRequired: (
       <View style={[s.inputWrap, { flexDirection: R }]}>
         <View style={s.inputIcon}><Lock size={16} color="#5e5e72" /></View>
         <TextInput style={[s.inputField, { textAlign: TA, flex: 1 }]} placeholder={t.password_min_8} placeholderTextColor="#c3c3cc" value={password} onChangeText={setPassword} secureTextEntry={!showPass} autoCapitalize="none" autoCorrect={false} />
-        <TouchableOpacity onPress={() => setShowPass(p => !p)} style={{ padding: 4 }}>
+        <TouchableOpacity onPress={() => setShowPass(p => !p)} style={{ padding: Spacing.xs }}>
           {showPass ? <EyeOff size={16} color="#5e5e72" /> : <Eye size={16} color="#5e5e72" />}
         </TouchableOpacity>
       </View>
@@ -387,55 +390,55 @@ const s = StyleSheet.create({
   root: { flex: 1 },
   langBar: {
     position: 'absolute', right: 20, zIndex: 20, alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.85)', borderRadius: 99, paddingHorizontal: 6, paddingVertical: 4, gap: 2,
+    backgroundColor: 'rgba(255,255,255,0.85)', borderRadius: 99, paddingHorizontal: 6, paddingVertical: Spacing.xs, gap: 2,
     shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3,
   },
-  langChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 99 },
+  langChip: { paddingHorizontal: Spacing.md, paddingVertical: 6, borderRadius: 99 },
   langChipActive: { backgroundColor: '#1e1e28' },
-  langText: { fontSize: 12, fontWeight: '600', color: '#5e5e72' },
+  langText: { fontSize: Typography.size.xs, fontWeight: Typography.weight.semibold, color: '#5e5e72' },
   langTextActive: { color: 'white' },
   langSep: { width: 1, height: 14, backgroundColor: '#e5e5ea' },
   scroll: { flexGrow: 1, paddingHorizontal: 20, gap: 20, justifyContent: 'center' },
-  logoBlock: { alignItems: 'center', gap: 10, paddingBottom: 4 },
+  logoBlock: { alignItems: 'center', gap: 10, paddingBottom: Spacing.xs },
   logoIcon: {
     width: 64, height: 64, borderRadius: 22, backgroundColor: '#1e1e28',
     alignItems: 'center', justifyContent: 'center',
     shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 14 }, shadowOpacity: 0.22, shadowRadius: 30, elevation: 10,
   },
-  wordmark: { fontSize: 30, fontWeight: '700', color: '#1e1e28', letterSpacing: -1.2, fontFamily: 'Inter_700Bold' },
-  driverPill: { backgroundColor: 'rgba(30,30,40,0.08)', borderRadius: 99, paddingHorizontal: 12, paddingVertical: 4 },
-  driverPillText: { fontSize: 10, fontWeight: '700', color: '#1e1e28', letterSpacing: 2 },
+  wordmark: { fontSize: 30, fontWeight: Typography.weight.bold, color: '#1e1e28', letterSpacing: -1.2, fontFamily: 'Inter_700Bold' },
+  driverPill: { backgroundColor: 'rgba(30,30,40,0.08)', borderRadius: 99, paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs },
+  driverPillText: { fontSize: 10, fontWeight: Typography.weight.bold, color: '#1e1e28', letterSpacing: 2 },
   card: {
     backgroundColor: 'rgba(255,255,255,0.92)', borderRadius: 32, borderWidth: 1, borderColor: 'rgba(255,255,255,0.7)',
-    overflow: 'hidden', shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.08, shadowRadius: 18, elevation: 4,
+    overflow: 'hidden', shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.08, shadowRadius: 18, elevation: Shadows.medium.elevation,
   },
   tabs: { borderBottomWidth: 1, borderBottomColor: '#e5e5ea' },
   tabBtn: { flex: 1, paddingVertical: 18, alignItems: 'center' },
   tabBtnActive: { borderBottomWidth: 2, borderBottomColor: '#1e1e28', marginBottom: -1 },
-  tabText: { fontSize: 13, fontWeight: '500', color: '#5e5e72' },
-  tabTextActive: { color: '#1e1e28', fontWeight: '700', fontFamily: 'Inter_700Bold' },
-  form: { padding: 24, gap: 12 },
-  formHeader: { gap: 4, marginBottom: 4 },
-  formTitle: { fontSize: 22, fontWeight: '700', color: '#1e1e28', letterSpacing: -0.5, fontFamily: 'Inter_700Bold' },
+  tabText: { fontSize: 13, fontWeight: Typography.weight.medium, color: '#5e5e72' },
+  tabTextActive: { color: '#1e1e28', fontWeight: Typography.weight.bold, fontFamily: 'Inter_700Bold' },
+  form: { padding: Spacing.xl, gap: Spacing.md },
+  formHeader: { gap: Spacing.xs, marginBottom: Spacing.xs },
+  formTitle: { fontSize: Typography.size.xl, fontWeight: Typography.weight.bold, color: '#1e1e28', letterSpacing: -0.5, fontFamily: 'Inter_700Bold' },
   formSub: { fontSize: 13, color: '#5e5e72', fontFamily: 'Inter_400Regular' },
-  inputWrap: { alignItems: 'center', backgroundColor: '#f2f2f5', borderRadius: 18, height: 54, paddingHorizontal: 16, gap: 10 },
+  inputWrap: { alignItems: 'center', backgroundColor: '#f2f2f5', borderRadius: 18, height: 54, paddingHorizontal: Spacing.lg, gap: 10 },
   inputIcon: { width: 28, alignItems: 'center' },
-  inputField: { flex: 1, fontSize: 14, color: '#1e1e28', fontFamily: 'Inter_400Regular' },
-  errorRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 4 },
-  errorText: { fontSize: 12, color: '#e53935', fontFamily: 'Inter_400Regular', flex: 1 },
+  inputField: { flex: 1, fontSize: Typography.size.sm, color: '#1e1e28', fontFamily: 'Inter_400Regular' },
+  errorRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: Spacing.xs },
+  errorText: { fontSize: Typography.size.xs, color: '#e53935', fontFamily: 'Inter_400Regular', flex: 1 },
   primaryBtn: {
     height: 56, borderRadius: 20, backgroundColor: '#1e1e28',
-    alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 4,
+    alignItems: 'center', justifyContent: 'center', gap: Spacing.sm, marginTop: Spacing.xs,
     shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.18, shadowRadius: 18, elevation: 6,
   },
-  primaryBtnText: { color: 'white', fontSize: 15, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
-  optionalToggle: { alignItems: 'center', gap: 6, paddingVertical: 4 },
-  optionalToggleText: { fontSize: 12, color: '#5e5e72', fontFamily: 'Inter_400Regular' },
-  termsCheckRow: { alignItems: 'center', gap: 10, paddingVertical: 4 },
+  primaryBtnText: { color: 'white', fontSize: 15, fontWeight: Typography.weight.semibold, fontFamily: 'Inter_600SemiBold' },
+  optionalToggle: { alignItems: 'center', gap: 6, paddingVertical: Spacing.xs },
+  optionalToggleText: { fontSize: Typography.size.xs, color: '#5e5e72', fontFamily: 'Inter_400Regular' },
+  termsCheckRow: { alignItems: 'center', gap: 10, paddingVertical: Spacing.xs },
   termsCheckText: { fontSize: 13, color: '#5e5e72', fontFamily: 'Inter_400Regular', flex: 1, lineHeight: 20 },
   termsCheckLink: { color: '#1e1e28', fontFamily: 'Inter_600SemiBold', textDecorationLine: 'underline' },
   terms: { fontSize: 11, color: '#5e5e72', lineHeight: 16 },
-  termsLink: { color: '#1e1e28', fontWeight: '600' },
-  forgotBtn: { alignItems: 'center', paddingVertical: 4 },
+  termsLink: { color: '#1e1e28', fontWeight: Typography.weight.semibold },
+  forgotBtn: { alignItems: 'center', paddingVertical: Spacing.xs },
   forgotText: { fontSize: 13, color: '#5e5e72', fontFamily: 'Inter_400Regular', textDecorationLine: 'underline' },
 });

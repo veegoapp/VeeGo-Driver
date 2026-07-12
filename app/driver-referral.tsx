@@ -17,6 +17,9 @@ import * as Clipboard from 'expo-clipboard';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Radius } from '@/constants/radius';
 
 const CARD_RADIUS = 16;
 
@@ -136,7 +139,7 @@ export default function DriverReferralScreen() {
       {Header}
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: insets.bottom + 40 }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: Spacing.lg, paddingBottom: insets.bottom + 40 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
       >
         {/* Code card */}
@@ -225,48 +228,48 @@ function StatTile({
 const styles = StyleSheet.create({
   root: { flex: 1 },
   header: {
-    alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingBottom: 16,
+    alignItems: 'center', gap: Spacing.md, paddingHorizontal: 20, paddingBottom: Spacing.lg,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { fontSize: 20 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40, gap: 12 },
-  stateIconWrap: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
-  stateTitle: { fontSize: 16 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40, gap: Spacing.md },
+  stateIconWrap: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.xs },
+  stateTitle: { fontSize: Typography.size.md },
   stateSub: { fontSize: 13, lineHeight: 20 },
-  retryBtn: { marginTop: 8, paddingHorizontal: 28, paddingVertical: 11, borderRadius: 12 },
-  retryText: { fontSize: 14 },
+  retryBtn: { marginTop: Spacing.sm, paddingHorizontal: 28, paddingVertical: 11, borderRadius: Radius.md },
+  retryText: { fontSize: Typography.size.sm },
 
   codeCard: {
-    borderRadius: CARD_RADIUS, borderWidth: 1, padding: 24, alignItems: 'center', gap: 4,
-    marginTop: 8,
+    borderRadius: CARD_RADIUS, borderWidth: 1, padding: Spacing.xl, alignItems: 'center', gap: Spacing.xs,
+    marginTop: Spacing.sm,
   },
   codeLabel: { fontSize: 11, letterSpacing: 1, textTransform: 'uppercase' },
-  codeValue: { fontSize: 28, letterSpacing: 1, marginTop: 4 },
-  codeActionsRow: { gap: 10, marginTop: 16, width: '100%' },
+  codeValue: { fontSize: Typography.size.xxl, letterSpacing: 1, marginTop: Spacing.xs },
+  codeActionsRow: { gap: 10, marginTop: Spacing.lg, width: '100%' },
   codeActionBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    height: 46, borderRadius: 12,
+    height: 46, borderRadius: Radius.md,
   },
   codeActionText: { fontSize: 13 },
 
   explainerCard: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 10,
-    marginTop: 16, borderRadius: 14, borderWidth: 1, padding: 14,
+    marginTop: Spacing.lg, borderRadius: 14, borderWidth: 1, padding: 14,
   },
   explainerText: { flex: 1, fontSize: 13, lineHeight: 20 },
 
   discountCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    marginTop: 16, borderRadius: CARD_RADIUS, borderWidth: 1, padding: 16,
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
+    marginTop: Spacing.lg, borderRadius: CARD_RADIUS, borderWidth: 1, padding: Spacing.lg,
   },
   discountIconWrap: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   discountValue: { fontSize: 24 },
-  discountLabel: { fontSize: 12, marginTop: 2 },
+  discountLabel: { fontSize: Typography.size.xs, marginTop: 2 },
 
-  statsRow: { gap: 10, marginTop: 16 },
+  statsRow: { gap: 10, marginTop: Spacing.lg },
   statTile: {
-    flex: 1, alignItems: 'center', gap: 6, paddingVertical: 16, paddingHorizontal: 8,
+    flex: 1, alignItems: 'center', gap: 6, paddingVertical: Spacing.lg, paddingHorizontal: Spacing.sm,
     borderRadius: CARD_RADIUS, borderWidth: 1,
   },
   statValue: { fontSize: 20 },

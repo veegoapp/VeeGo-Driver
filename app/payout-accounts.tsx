@@ -21,6 +21,9 @@ import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Radius } from '@/constants/radius';
 
 // A driver's own saved payout destination (see /driver/payout-accounts).
 // Only instapay / vodafone_cash are supported today; the type picker below
@@ -167,7 +170,7 @@ export default function PayoutAccountsScreen() {
           </View>
         ) : (
           <>
-            <View style={{ gap: 8 }}>
+            <View style={{ gap: Spacing.sm }}>
               {accounts.length === 0 ? (
                 <View style={[styles.emptyBox, { backgroundColor: colors.secondary, borderColor: BORDER_COLOR }]}>
                   <CreditCard size={36} color={colors.mutedForeground} strokeWidth={1.5} />
@@ -189,7 +192,7 @@ export default function PayoutAccountsScreen() {
                   {busyId === account.id ? (
                     <ActivityIndicator size="small" color={colors.mutedForeground} />
                   ) : (
-                    <View style={{ flexDirection: R, alignItems: 'center', gap: 4 }}>
+                    <View style={{ flexDirection: R, alignItems: 'center', gap: Spacing.xs }}>
                       {account.isDefault ? (
                         <Text style={[styles.defaultBadge, { color: colors.primary }]}>{t.default_card}</Text>
                       ) : (
@@ -206,7 +209,7 @@ export default function PayoutAccountsScreen() {
               ))}
             </View>
 
-            <Pressable onPress={() => setAddVisible(true)} style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1, marginTop: 16 }]}>
+            <Pressable onPress={() => setAddVisible(true)} style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1, marginTop: Spacing.lg }]}>
               <GlassView strong style={[styles.addAccountBtn, { flexDirection: R }]} borderRadius={16}>
                 <Plus size={18} color={colors.foreground} strokeWidth={2} />
                 <Text style={[styles.addAccountText, { color: colors.foreground }]}>{t.add_payout_method}</Text>
@@ -293,38 +296,38 @@ export default function PayoutAccountsScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  headerRow: { alignItems: 'center', gap: 12, marginBottom: 24 },
+  headerRow: { alignItems: 'center', gap: Spacing.md, marginBottom: Spacing.xl },
   backBtn: {
     width: 40, height: 40, borderRadius: 20,
     alignItems: 'center', justifyContent: 'center', borderWidth: 1,
   },
-  pageTitle: { fontSize: 22, fontFamily: 'Inter_700Bold' },
+  pageTitle: { fontSize: Typography.size.xl, fontFamily: 'Inter_700Bold' },
   center: { alignItems: 'center', paddingVertical: 60 },
   emptyBox: {
-    alignItems: 'center', justifyContent: 'center', gap: 12,
+    alignItems: 'center', justifyContent: 'center', gap: Spacing.md,
     borderRadius: 20, borderWidth: 1, paddingVertical: 48,
   },
-  emptyText: { fontSize: 14, fontFamily: 'Inter_400Regular' },
-  accountCard: { alignItems: 'center', gap: 12, padding: 14 },
-  methodIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  accountName: { fontSize: 14, fontFamily: 'Inter_700Bold' },
-  accountSub: { fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 2 },
+  emptyText: { fontSize: Typography.size.sm, fontFamily: 'Inter_400Regular' },
+  accountCard: { alignItems: 'center', gap: Spacing.md, padding: 14 },
+  methodIcon: { width: 40, height: 40, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
+  accountName: { fontSize: Typography.size.sm, fontFamily: 'Inter_700Bold' },
+  accountSub: { fontSize: Typography.size.xs, fontFamily: 'Inter_400Regular', marginTop: 2 },
   defaultBadge: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1, textTransform: 'uppercase' },
   iconBtn: { padding: 6 },
-  addAccountBtn: { alignItems: 'center', justifyContent: 'center', gap: 8, padding: 16 },
-  addAccountText: { fontSize: 14, fontFamily: 'Inter_700Bold' },
+  addAccountBtn: { alignItems: 'center', justifyContent: 'center', gap: Spacing.sm, padding: Spacing.lg },
+  addAccountText: { fontSize: Typography.size.sm, fontFamily: 'Inter_700Bold' },
   modalOverlay: { flex: 1, justifyContent: 'flex-end' },
   modalSheet: {
-    borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40,
+    borderTopLeftRadius: Radius.xl, borderTopRightRadius: Radius.xl, padding: Spacing.xl, paddingBottom: 40,
     elevation: 24, shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.2, shadowRadius: 16,
   },
   modalHeader: { alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
-  modalTitle: { fontSize: 16, fontFamily: 'Inter_700Bold' },
+  modalTitle: { fontSize: Typography.size.md, fontFamily: 'Inter_700Bold' },
   fieldLabel: { fontSize: 11, fontFamily: 'Inter_700Bold', letterSpacing: 1.5, textTransform: 'uppercase', marginTop: 14, marginBottom: 6 },
-  fieldInput: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, fontSize: 15, fontFamily: 'Inter_400Regular', marginBottom: 2 },
-  typeRow: { gap: 6, marginBottom: 4 },
-  typeChip: { paddingVertical: 8, paddingHorizontal: 4, borderRadius: 10, borderWidth: 1 },
-  typeChipText: { fontSize: 12, fontFamily: 'Inter_600SemiBold' },
-  submitBtn: { height: 48, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginTop: 20 },
-  submitText: { color: '#fff', fontFamily: 'Inter_700Bold', fontSize: 14 },
+  fieldInput: { borderWidth: 1, borderRadius: Radius.md, paddingHorizontal: 14, paddingVertical: 10, fontSize: 15, fontFamily: 'Inter_400Regular', marginBottom: 2 },
+  typeRow: { gap: 6, marginBottom: Spacing.xs },
+  typeChip: { paddingVertical: Spacing.sm, paddingHorizontal: Spacing.xs, borderRadius: 10, borderWidth: 1 },
+  typeChipText: { fontSize: Typography.size.xs, fontFamily: 'Inter_600SemiBold' },
+  submitBtn: { height: 48, borderRadius: Radius.lg, alignItems: 'center', justifyContent: 'center', marginTop: 20 },
+  submitText: { color: '#fff', fontFamily: 'Inter_700Bold', fontSize: Typography.size.sm },
 });

@@ -2,7 +2,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { AlertTriangle, Check, ChevronUp, Clock, MessageCircle, Navigation, Phone, Share2, Shield, Star } from 'lucide-react-native';
 import React, { useRef, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Animated, Image, Linking, Platform, Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Animated, Easing, Image, Linking, Platform, Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { MapBackdrop } from '@/components/MapBackdrop';
@@ -17,6 +17,10 @@ import { getToken, getUserIdFromToken } from '@/lib/auth';
 import { useI18n } from '@/lib/i18nContext';
 import { useSocket } from '@/lib/socketContext';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Radius } from '@/constants/radius';
+import { Shadows } from '@/constants/shadows';
 
 type Phase = 'to_pickup' | 'arrived' | 'in_trip' | 'completed';
 type PhaseCopy = { label: string; cta: string; next: Phase };
@@ -171,8 +175,8 @@ export default function RideScreen() {
     if (!waitingCharge || waitingCharge.capped) return;
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 0.7, duration: 700, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 0.7, duration: 700, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 700, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
       ])
     );
     loop.start();
@@ -512,56 +516,56 @@ export default function RideScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   overlay: { flex: 1 },
-  topNav: { paddingHorizontal: 16, paddingTop: 8 },
-  navCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16 },
+  topNav: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.sm },
+  navCard: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, padding: Spacing.lg },
   navIcon: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   navEta: { fontSize: 10, letterSpacing: 2, textTransform: 'uppercase' },
-  navAddress: { fontSize: 16, marginTop: 2 },
-  completedOverlay: { position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, zIndex: 20 },
-  checkCircle: { width: 96, height: 96, borderRadius: 48, overflow: 'hidden', elevation: 8, shadowColor: '#2d2d42', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 16 },
+  navAddress: { fontSize: Typography.size.md, marginTop: 2 },
+  completedOverlay: { position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xl, zIndex: 20 },
+  checkCircle: { width: 96, height: 96, borderRadius: 48, overflow: 'hidden', elevation: Shadows.large.elevation, shadowColor: '#2d2d42', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 16 },
   checkCircleGrad: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  completedTitle: { fontSize: 24, marginTop: 24 },
+  completedTitle: { fontSize: 24, marginTop: Spacing.xl },
   fareEarned: { fontSize: 48, lineHeight: 52 },
-  fareNote: { fontSize: 14, marginTop: 8 },
-  ratingCard: { padding: 16, marginTop: 24, width: '100%' },
+  fareNote: { fontSize: Typography.size.sm, marginTop: Spacing.sm },
+  ratingCard: { padding: Spacing.lg, marginTop: Spacing.xl, width: '100%' },
   ratingCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  ratingAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#e5e5ea' },
+  ratingAvatar: { width: 32, height: 32, borderRadius: Radius.lg, backgroundColor: '#e5e5ea' },
   ratingCardLabel: { fontSize: 10, letterSpacing: 2, textTransform: 'uppercase', flexShrink: 1 },
-  starsRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 },
-  ratingActionsRow: { flexDirection: 'row', gap: 12, marginTop: 24, width: '100%' },
-  skipBtn: { flex: 1, height: 56, borderRadius: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  skipBtnText: { fontSize: 16 },
-  doneBtn: { flex: 1, borderRadius: 16, overflow: 'hidden' },
+  starsRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: Spacing.md },
+  ratingActionsRow: { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.xl, width: '100%' },
+  skipBtn: { flex: 1, height: 56, borderRadius: Radius.lg, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  skipBtnText: { fontSize: Typography.size.md },
+  doneBtn: { flex: 1, borderRadius: Radius.lg, overflow: 'hidden' },
   doneBtnGrad: { height: 56, alignItems: 'center', justifyContent: 'center' },
-  doneBtnText: { fontSize: 16 },
-  sheet: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 12, paddingBottom: 12, zIndex: 30 },
+  doneBtnText: { fontSize: Typography.size.md },
+  sheet: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: Spacing.md, paddingBottom: Spacing.md, zIndex: 30 },
   sheetCard: { padding: 20 },
-  sheetHandle: { width: 48, height: 6, borderRadius: 3, alignSelf: 'center', marginBottom: 16 },
-  riderRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  riderAvatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#e5e5ea' },
-  riderName: { fontSize: 16 },
-  riderMeta: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
-  riderMetaText: { fontSize: 12 },
+  sheetHandle: { width: 48, height: 6, borderRadius: 3, alignSelf: 'center', marginBottom: Spacing.lg },
+  riderRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
+  riderAvatar: { width: 48, height: 48, borderRadius: Radius.xl, backgroundColor: '#e5e5ea' },
+  riderName: { fontSize: Typography.size.md },
+  riderMeta: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginTop: 2 },
+  riderMetaText: { fontSize: Typography.size.xs },
   actionBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   waitingTicker: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    marginTop: 14, paddingHorizontal: 12, paddingVertical: 8,
-    borderRadius: 12, borderWidth: 1,
+    marginTop: 14, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
+    borderRadius: Radius.md, borderWidth: 1,
   },
   waitingTickerText: { fontSize: 13, flex: 1 },
   cappedBadge: { backgroundColor: '#ef444422', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
   cappedText: { fontSize: 9, color: '#ef4444', letterSpacing: 0.8 },
-  phaseLabel: { fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase', marginTop: 16 },
-  ctaBtn: { marginTop: 12, borderRadius: 16, overflow: 'hidden', elevation: 8, shadowColor: '#2d2d42', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 12 },
-  ctaBtnGrad: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  ctaBtnText: { fontSize: 16 },
-  bottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 },
+  phaseLabel: { fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase', marginTop: Spacing.lg },
+  ctaBtn: { marginTop: Spacing.md, borderRadius: Radius.lg, overflow: 'hidden', elevation: Shadows.large.elevation, shadowColor: '#2d2d42', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 12 },
+  ctaBtnGrad: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
+  ctaBtnText: { fontSize: Typography.size.md },
+  bottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: Spacing.md },
   safetyRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  safetyText: { fontSize: 12 },
-  bottomActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  shareBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
-  shareBtnText: { fontSize: 12 },
-  sosBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#ef4444', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
-  sosBtnText: { fontSize: 12 },
-  commentInput: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, fontFamily: 'Inter_400Regular', marginTop: 12, minHeight: 60, textAlignVertical: 'top' },
+  safetyText: { fontSize: Typography.size.xs },
+  bottomActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  shareBtn: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, paddingHorizontal: Spacing.md, paddingVertical: 6, borderRadius: 10 },
+  shareBtnText: { fontSize: Typography.size.xs },
+  sosBtn: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, backgroundColor: '#ef4444', paddingHorizontal: Spacing.md, paddingVertical: 6, borderRadius: 10 },
+  sosBtnText: { fontSize: Typography.size.xs },
+  commentInput: { borderWidth: 1, borderRadius: Radius.md, paddingHorizontal: 14, paddingVertical: 10, fontSize: Typography.size.sm, fontFamily: 'Inter_400Regular', marginTop: Spacing.md, minHeight: 60, textAlignVertical: 'top' },
 });

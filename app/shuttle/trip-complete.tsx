@@ -26,6 +26,8 @@ import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { useShuttle } from '@/lib/shuttleContext';
 import { endpoints, type TripRevenueSummary } from '@/lib/api';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
 
 type Params = {
   earnedAmount?: string;
@@ -254,7 +256,7 @@ export default function TripCompleteScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  inner: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, paddingTop: 40, paddingBottom: 24 },
+  inner: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, paddingTop: 40, paddingBottom: Spacing.xl },
   iconWrap: { alignItems: 'center' },
   iconCircle: {
     width: 120,
@@ -269,13 +271,13 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   title: { fontSize: 26, lineHeight: 34 },
-  subtitle: { fontSize: 14, lineHeight: 22 },
-  cardsWrap: { width: '100%', gap: 12, marginTop: 32 },
-  sectionHeader: { fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 },
+  subtitle: { fontSize: Typography.size.sm, lineHeight: 22 },
+  cardsWrap: { width: '100%', gap: Spacing.md, marginTop: Spacing.xxl },
+  sectionHeader: { fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, marginBottom: Spacing.xs },
   earningsCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: Spacing.lg,
     padding: 18,
   },
   cardIconWrap: {
@@ -285,7 +287,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cardLabel: { fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 },
+  cardLabel: { fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: Spacing.xs },
   cardAmount: { fontSize: 26 },
   cardAmountSmall: { fontSize: 20 },
   cardCurrency: { fontSize: 13, marginBottom: 2 },
@@ -293,13 +295,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 12,
+    paddingTop: Spacing.md,
     borderTopWidth: 1,
-    marginTop: 4,
+    marginTop: Spacing.xs,
   },
-  totalLabel: { fontSize: 14 },
-  totalAmount: { fontSize: 16 },
-  bottomBar: { paddingHorizontal: 20, paddingTop: 12 },
+  totalLabel: { fontSize: Typography.size.sm },
+  totalAmount: { fontSize: Typography.size.md },
+  bottomBar: { paddingHorizontal: 20, paddingTop: Spacing.md },
   ctaBtn: {
     height: 58,
     flexDirection: 'row',
@@ -308,5 +310,5 @@ const styles = StyleSheet.create({
     gap: 10,
     borderRadius: 18,
   },
-  ctaBtnText: { color: '#fff', fontSize: 16 },
+  ctaBtnText: { color: '#fff', fontSize: Typography.size.md },
 });

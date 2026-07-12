@@ -3,6 +3,9 @@ import { Animated, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WifiOff, Wifi } from 'lucide-react-native';
 import { API_BASE_URL } from '@/lib/api';
+import { Animation } from '@/constants/animations';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
 
 const PING_INTERVAL_MS  = 8000;  // check every 8 seconds
 const RECONNECT_SHOW_MS = 2500;  // show "Connected" toast for 2.5s then hide
@@ -27,7 +30,7 @@ export function ServerStatusBanner() {
 
   const slideOut = () => {
     Animated.timing(translateY, {
-      toValue: -80, useNativeDriver: true, duration: 300,
+      toValue: -80, useNativeDriver: true, duration: Animation.duration.normal,
     }).start(() => setBanner('hidden'));
   };
 
@@ -97,19 +100,19 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: 9999,
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: Spacing.lg,
     paddingVertical: 6,
   },
-  offlineBg: { backgroundColor: '#dc2626' },
-  onlineBg:  { backgroundColor: '#16a34a' },
+  offlineBg: { backgroundColor: '#E85454' },
+  onlineBg:  { backgroundColor: '#3CC97A' },
   inner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: Spacing.sm,
   },
   text: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: Typography.size.xs,
     fontFamily: 'Inter_600SemiBold',
   },
 });

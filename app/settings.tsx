@@ -6,6 +6,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
 
 const SECTIONS = [
   {
@@ -107,12 +109,12 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  navBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 8 },
+  navBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.lg, paddingBottom: Spacing.sm },
   navBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  navTitle: { fontSize: 18 },
-  scroll: { paddingHorizontal: 20, paddingTop: 16 },
-  section: { marginBottom: 24 },
-  sectionLabel: { fontSize: 10, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 8, paddingHorizontal: 4 },
+  navTitle: { fontSize: Typography.size.lg },
+  scroll: { paddingHorizontal: 20, paddingTop: Spacing.lg },
+  section: { marginBottom: Spacing.xl },
+  sectionLabel: { fontSize: 10, letterSpacing: 2, textTransform: 'uppercase', marginBottom: Spacing.sm, paddingHorizontal: Spacing.xs },
   row: { alignItems: 'center', gap: 14, padding: 14 },
   iconBox: { width: 36, height: 36, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   rowLabel: { flex: 1, fontSize: 15 },

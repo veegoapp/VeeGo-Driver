@@ -24,6 +24,9 @@ import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
 import type { BonusTarget } from '@/lib/api';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Radius } from '@/constants/radius';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -186,7 +189,7 @@ export default function BonusTargetsScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{
             paddingHorizontal: 20,
-            paddingTop: 16,
+            paddingTop: Spacing.lg,
             paddingBottom: insets.bottom + 40,
           }}
           refreshControl={
@@ -414,9 +417,9 @@ const styles = StyleSheet.create({
   // Header
   header: {
     alignItems: 'center',
-    gap: 12,
+    gap: Spacing.md,
     paddingHorizontal: 20,
-    paddingBottom: 16,
+    paddingBottom: Spacing.lg,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   backBtn: {
@@ -436,13 +439,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 40,
-    gap: 12,
+    gap: Spacing.md,
   },
   emptyWrap: {
     alignItems: 'center',
     paddingTop: 48,
-    paddingHorizontal: 32,
-    gap: 12,
+    paddingHorizontal: Spacing.xxl,
+    gap: Spacing.md,
   },
   stateIconWrap: {
     width: 72,
@@ -450,10 +453,10 @@ const styles = StyleSheet.create({
     borderRadius: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 4,
+    marginBottom: Spacing.xs,
   },
   stateTitle: {
-    fontSize: 16,
+    fontSize: Typography.size.md,
     fontFamily: 'Inter_700Bold',
   },
   stateSub: {
@@ -462,13 +465,13 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   retryBtn: {
-    marginTop: 8,
+    marginTop: Spacing.sm,
     paddingHorizontal: 28,
     paddingVertical: 11,
-    borderRadius: 12,
+    borderRadius: Radius.md,
   },
   retryText: {
-    fontSize: 14,
+    fontSize: Typography.size.sm,
     fontFamily: 'Inter_700Bold',
   },
 
@@ -485,19 +488,19 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     paddingVertical: 20,
-    paddingHorizontal: 12,
+    paddingHorizontal: Spacing.md,
     gap: 6,
   },
   summaryIconWrap: {
     width: 40,
     height: 40,
-    borderRadius: 12,
+    borderRadius: Radius.md,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 2,
   },
   summaryAmount: {
-    fontSize: 22,
+    fontSize: Typography.size.xl,
     fontFamily: 'Inter_700Bold',
   },
   summaryAmountUnit: {
@@ -517,14 +520,14 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_600SemiBold',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
-    marginBottom: 12,
+    marginBottom: Spacing.md,
     paddingHorizontal: 2,
   },
 
   // Timeline
   timelineRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: Spacing.md,
   },
   spineCol: {
     alignItems: 'center',
@@ -534,7 +537,7 @@ const styles = StyleSheet.create({
   spineDot: {
     width: 24,
     height: 24,
-    borderRadius: 12,
+    borderRadius: Radius.md,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
@@ -543,7 +546,7 @@ const styles = StyleSheet.create({
   spineLine: {
     flex: 1,
     width: 2,
-    marginTop: 4,
+    marginTop: Spacing.xs,
     borderRadius: 1,
     minHeight: 20,
   },
@@ -564,19 +567,19 @@ const styles = StyleSheet.create({
     paddingBottom: 0,
   },
   milestoneTitle: {
-    fontSize: 14,
+    fontSize: Typography.size.sm,
     fontFamily: 'Inter_700Bold',
     marginBottom: 2,
   },
   milestoneDesc: {
-    fontSize: 12,
+    fontSize: Typography.size.xs,
     fontFamily: 'Inter_400Regular',
     lineHeight: 18,
   },
   statusBadge: {
     paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingVertical: Spacing.xs,
+    borderRadius: Radius.sm,
     flexShrink: 0,
   },
   statusText: {
@@ -588,7 +591,7 @@ const styles = StyleSheet.create({
   // Progress
   progressSection: {
     paddingHorizontal: 14,
-    paddingTop: 12,
+    paddingTop: Spacing.md,
     paddingBottom: 10,
   },
   progressMeta: {
@@ -620,14 +623,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 14,
     paddingBottom: 14,
-    gap: 8,
+    gap: Spacing.sm,
     flexWrap: 'wrap',
   },
   payoutPill: {
     alignItems: 'center',
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 8,
+    borderRadius: Radius.sm,
     gap: 2,
   },
   payoutLabel: {
@@ -635,7 +638,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
   },
   payoutValue: {
-    fontSize: 12,
+    fontSize: Typography.size.xs,
     fontFamily: 'Inter_700Bold',
   },
   datePill: {
@@ -665,7 +668,7 @@ const styles = StyleSheet.create({
     borderRadius: 3.5,
   },
   payoutStatusText: {
-    fontSize: 12,
+    fontSize: Typography.size.xs,
     fontFamily: 'Inter_600SemiBold',
   },
 });

@@ -4,6 +4,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ServiceStatus } from '@/lib/serviceControlContext';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
 
 const REDIRECT_DELAY_S = 3;
 
@@ -125,25 +127,25 @@ const s = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.14)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
   serviceChip: {
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: Typography.weight.bold,
     color: 'rgba(255,255,255,0.45)',
     letterSpacing: 2.5,
     fontFamily: 'Inter_700Bold',
   },
   title: {
     fontSize: 26,
-    fontWeight: '700',
+    fontWeight: Typography.weight.bold,
     color: '#ffffff',
     textAlign: 'center',
     letterSpacing: -0.6,
     fontFamily: 'Inter_700Bold',
   },
   message: {
-    fontSize: 14,
+    fontSize: Typography.size.sm,
     color: 'rgba(255,255,255,0.6)',
     textAlign: 'center',
     lineHeight: 22,
@@ -173,22 +175,22 @@ const s = StyleSheet.create({
   },
   redirectCount: {
     color: '#6b7fff',
-    fontWeight: '700',
+    fontWeight: Typography.weight.bold,
     fontFamily: 'Inter_700Bold',
   },
   backBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: Spacing.sm,
     backgroundColor: '#ffffff',
     borderRadius: 99,
     paddingHorizontal: 22,
-    paddingVertical: 12,
-    marginTop: 8,
+    paddingVertical: Spacing.md,
+    marginTop: Spacing.sm,
   },
   backBtnText: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: Typography.size.sm,
+    fontWeight: Typography.weight.semibold,
     color: '#1e1e28',
     fontFamily: 'Inter_600SemiBold',
   },

@@ -20,6 +20,10 @@ import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints, type EmergencyContact } from '@/lib/api';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Radius } from '@/constants/radius';
+import { Shadows } from '@/constants/shadows';
 
 // SOS Phase 1: the emergency contact now lives on the backend (one per
 // driver) instead of only on-device. We still mirror it into AsyncStorage
@@ -120,7 +124,7 @@ export default function SafetyScreen() {
               <View style={[styles.savedAvatar, { backgroundColor: colors.primary + '22' }]}>
                 <User size={22} color={colors.primary} strokeWidth={2} />
               </View>
-              <View style={{ flex: 1, paddingHorizontal: 12 }}>
+              <View style={{ flex: 1, paddingHorizontal: Spacing.md }}>
                 <Text style={[styles.savedName, { color: colors.foreground, textAlign: TA }]}>
                   {savedContact.name}
                 </Text>
@@ -145,7 +149,7 @@ export default function SafetyScreen() {
                 onPress={handleOpenWhatsApp}
                 style={[styles.savedActionBtn, { backgroundColor: '#25D36615', borderColor: '#25D36640' }]}
               >
-                <Text style={{ fontSize: 16 }}>💬</Text>
+                <Text style={{ fontSize: Typography.size.md }}>💬</Text>
                 <Text style={[styles.savedActionText, { color: '#25D366' }]}>
                   {t.safety_open_whatsapp}
                 </Text>
@@ -234,48 +238,48 @@ const styles = StyleSheet.create({
     width: 40, height: 40, borderRadius: 20,
     alignItems: 'center', justifyContent: 'center', borderWidth: 1,
   },
-  titleRow: { alignItems: 'center', gap: 14, marginTop: 24 },
+  titleRow: { alignItems: 'center', gap: 14, marginTop: Spacing.xl },
   titleIcon: {
     width: 52, height: 52, borderRadius: 18,
     alignItems: 'center', justifyContent: 'center',
     shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35, shadowRadius: 12, elevation: 8,
+    shadowOpacity: 0.35, shadowRadius: 12, elevation: Shadows.large.elevation,
   },
-  pageTitle: { fontSize: 22, fontFamily: 'Inter_700Bold' },
+  pageTitle: { fontSize: Typography.size.xl, fontFamily: 'Inter_700Bold' },
   pageSub: { fontSize: 13, marginTop: 3, fontFamily: 'Inter_400Regular', lineHeight: 18 },
-  savedCard: { padding: 16, gap: 14 },
-  savedHeader: { alignItems: 'center', gap: 12 },
+  savedCard: { padding: Spacing.lg, gap: 14 },
+  savedHeader: { alignItems: 'center', gap: Spacing.md },
   savedAvatar: {
-    width: 48, height: 48, borderRadius: 24,
+    width: 48, height: 48, borderRadius: Radius.xl,
     alignItems: 'center', justifyContent: 'center',
   },
   savedName: { fontSize: 17, fontFamily: 'Inter_700Bold' },
-  savedPhone: { fontSize: 14, marginTop: 2, fontFamily: 'Inter_400Regular' },
-  savedActions: { gap: 10, marginTop: 4 },
+  savedPhone: { fontSize: Typography.size.sm, marginTop: 2, fontFamily: 'Inter_400Regular' },
+  savedActions: { gap: 10, marginTop: Spacing.xs },
   savedActionBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 7, paddingVertical: 11, borderRadius: 14, borderWidth: 1,
   },
-  savedActionText: { fontSize: 14, fontFamily: 'Inter_700Bold' },
+  savedActionText: { fontSize: Typography.size.sm, fontFamily: 'Inter_700Bold' },
   emptyContactCard: {
-    alignItems: 'center', gap: 10, paddingVertical: 32,
+    alignItems: 'center', gap: 10, paddingVertical: Spacing.xxl,
     borderRadius: 18, borderWidth: 1,
   },
-  emptyContactText: { fontSize: 14, fontFamily: 'Inter_400Regular' },
+  emptyContactText: { fontSize: Typography.size.sm, fontFamily: 'Inter_400Regular' },
   sectionLabel: {
-    fontSize: 12, letterSpacing: 2, textTransform: 'uppercase',
-    marginTop: 32, marginBottom: 12, fontFamily: 'Inter_700Bold',
+    fontSize: Typography.size.xs, letterSpacing: 2, textTransform: 'uppercase',
+    marginTop: Spacing.xxl, marginBottom: Spacing.md, fontFamily: 'Inter_700Bold',
   },
-  formCard: { padding: 16, gap: 10 },
+  formCard: { padding: Spacing.lg, gap: 10 },
   ecInput: {
-    borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12,
+    borderRadius: Radius.md, paddingHorizontal: 14, paddingVertical: Spacing.md,
     fontSize: 15, borderWidth: 1, fontFamily: 'Inter_400Regular',
   },
   saveBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, height: 50, borderRadius: 16, marginTop: 4,
+    gap: Spacing.sm, height: 50, borderRadius: Radius.lg, marginTop: Spacing.xs,
     shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25, shadowRadius: 8, elevation: 4,
+    shadowOpacity: 0.25, shadowRadius: 8, elevation: Shadows.medium.elevation,
   },
   saveBtnText: { fontSize: 15, fontFamily: 'Inter_700Bold' },
   infoNote: {

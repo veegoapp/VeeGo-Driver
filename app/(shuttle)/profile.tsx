@@ -47,6 +47,9 @@ import { useService } from '@/lib/serviceContext';
 import { endpoints } from '@/lib/api';
 import type { DriverProfileEnriched } from '@/lib/api';
 import { compressImage } from '@/lib/imageCompression';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Radius } from '@/constants/radius';
 
 const TAB_BAR_HEIGHT = 96;
 const CARD_RADIUS = 16;
@@ -232,7 +235,7 @@ export default function ShuttleProfileScreen() {
         {/* ── GROUP 1: Master Driver Card ─────────────────────────────── */}
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           {isLoading ? (
-            <ActivityIndicator size="large" color={colors.primary} style={{ marginVertical: 32 }} />
+            <ActivityIndicator size="large" color={colors.primary} style={{ marginVertical: Spacing.xxl }} />
           ) : (
             <>
               {/* Avatar + edit trigger */}
@@ -436,7 +439,7 @@ export default function ShuttleProfileScreen() {
           {/* Language inline toggle */}
           <View style={[styles.menuRow, { flexDirection: R }]}>
             <View style={[styles.menuIconWrap, { backgroundColor: colors.secondary }]}>
-              <Text style={{ fontSize: 16 }}>🌐</Text>
+              <Text style={{ fontSize: Typography.size.md }}>🌐</Text>
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.menuLabel, { color: colors.foreground, textAlign: TA }]}>{t.language}</Text>
@@ -465,7 +468,7 @@ export default function ShuttleProfileScreen() {
           {/* Dark Mode toggle */}
           <View style={[styles.menuRow, { flexDirection: R }]}>
             <View style={[styles.menuIconWrap, { backgroundColor: colors.secondary }]}>
-              <Text style={{ fontSize: 16 }}>{isDarkMode ? '🌙' : '☀️'}</Text>
+              <Text style={{ fontSize: Typography.size.md }}>{isDarkMode ? '🌙' : '☀️'}</Text>
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.menuLabel, { color: colors.foreground, textAlign: TA }]}>{t.dark_mode}</Text>
@@ -683,19 +686,19 @@ const styles = StyleSheet.create({
   pageTitle: {
     fontSize: 24,
     fontFamily: 'Inter_700Bold',
-    marginBottom: 16,
+    marginBottom: Spacing.lg,
   },
 
   // Card — background supplied dynamically via inline style
   card: {
     borderRadius: CARD_RADIUS,
     borderWidth: 1,
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
     overflow: 'hidden',
   },
 
   // Group 1 — Master Driver Card
-  avatarRow: { alignItems: 'center', paddingTop: 24, paddingBottom: 8 },
+  avatarRow: { alignItems: 'center', paddingTop: Spacing.xl, paddingBottom: Spacing.sm },
   avatarWrap: { position: 'relative' },
   avatar: {
     width: 96,
@@ -718,43 +721,43 @@ const styles = StyleSheet.create({
   driverName: {
     fontSize: 20,
     fontFamily: 'Inter_700Bold',
-    marginTop: 8,
+    marginTop: Spacing.sm,
     paddingHorizontal: 20,
   },
   driverMeta: {
     fontSize: 13,
     fontFamily: 'Inter_400Regular',
-    marginTop: 4,
-    marginBottom: 12,
+    marginTop: Spacing.xs,
+    marginBottom: Spacing.md,
   },
   ratingPill: {
     alignSelf: 'center',
-    borderRadius: 24,
+    borderRadius: Radius.xl,
     paddingVertical: 6,
     paddingHorizontal: 14,
     gap: 5,
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: Spacing.lg,
   },
   ratingText: {
     fontSize: 15,
     fontFamily: 'Inter_700Bold',
   },
   ratingLabel: {
-    fontSize: 12,
+    fontSize: Typography.size.xs,
     fontFamily: 'Inter_400Regular',
   },
 
   // Read-only locked row
   lockedRow: {
     alignItems: 'center',
-    gap: 8,
+    gap: Spacing.sm,
     paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingVertical: Spacing.md,
     borderTopWidth: 1,
   },
   lockedLabel: {
-    fontSize: 12,
+    fontSize: Typography.size.xs,
     fontFamily: 'Inter_400Regular',
     flex: 1,
   },
@@ -766,13 +769,13 @@ const styles = StyleSheet.create({
   // Referral code
   referralCard: {
     alignItems: 'center',
-    gap: 12,
-    padding: 16,
+    gap: Spacing.md,
+    padding: Spacing.lg,
   },
   referralIconWrap: {
     width: 44,
     height: 44,
-    borderRadius: 12,
+    borderRadius: Radius.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -783,9 +786,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
   },
   referralCode: {
-    fontSize: 22,
+    fontSize: Typography.size.xl,
     fontFamily: 'Inter_700Bold',
-    marginTop: 4,
+    marginTop: Spacing.xs,
     letterSpacing: 2,
   },
   referralHint: {
@@ -796,17 +799,17 @@ const styles = StyleSheet.create({
   copyBtn: {
     width: 40,
     height: 40,
-    borderRadius: 12,
+    borderRadius: Radius.md,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
   },
   copiedMsg: {
-    fontSize: 12,
+    fontSize: Typography.size.xs,
     fontFamily: 'Inter_600SemiBold',
     textAlign: 'center',
     marginTop: -4,
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
 
   // Section header
@@ -815,17 +818,17 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_600SemiBold',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
-    marginTop: 8,
+    marginTop: Spacing.sm,
     marginBottom: 6,
-    paddingHorizontal: 4,
+    paddingHorizontal: Spacing.xs,
   },
 
   // Menu rows
   menuRow: {
     alignItems: 'center',
-    gap: 12,
+    gap: Spacing.md,
     paddingVertical: 14,
-    paddingHorizontal: 16,
+    paddingHorizontal: Spacing.lg,
   },
   menuIconWrap: {
     width: 38,
@@ -835,43 +838,43 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   menuLabel: {
-    fontSize: 14,
+    fontSize: Typography.size.sm,
     fontFamily: 'Inter_600SemiBold',
   },
   menuSub: {
-    fontSize: 12,
+    fontSize: Typography.size.xs,
     fontFamily: 'Inter_400Regular',
     marginTop: 2,
   },
   divider: {
     height: 1,
-    marginHorizontal: 16,
+    marginHorizontal: Spacing.lg,
   },
 
   // Language chips
   langRow: {
     gap: 6,
-    marginTop: 8,
+    marginTop: Spacing.sm,
     flexWrap: 'wrap',
   },
   langChip: {
-    paddingHorizontal: 12,
+    paddingHorizontal: Spacing.md,
     paddingVertical: 5,
     borderRadius: 20,
     borderWidth: 1,
   },
   langChipText: {
-    fontSize: 12,
+    fontSize: Typography.size.xs,
     fontFamily: 'Inter_600SemiBold',
   },
 
   // Bonus targets
   bonusRow: {
-    padding: 16,
+    padding: Spacing.lg,
     gap: 10,
   },
   bonusTitle: {
-    fontSize: 14,
+    fontSize: Typography.size.sm,
     fontFamily: 'Inter_600SemiBold',
     flex: 1,
   },
@@ -880,10 +883,10 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_700Bold',
   },
   bonusSub: {
-    fontSize: 12,
+    fontSize: Typography.size.xs,
     fontFamily: 'Inter_400Regular',
     marginTop: 2,
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
   progressTrack: {
     height: 6,
@@ -903,24 +906,24 @@ const styles = StyleSheet.create({
   // Sign out
   signOutBtn: {
     alignItems: 'center',
-    gap: 12,
-    padding: 16,
+    gap: Spacing.md,
+    padding: Spacing.lg,
     borderRadius: CARD_RADIUS,
     borderWidth: 1,
     borderColor: 'rgba(232,84,84,0.15)',
-    marginTop: 8,
-    marginBottom: 4,
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.xs,
   },
   signOutText: {
-    fontSize: 14,
+    fontSize: Typography.size.sm,
     fontFamily: 'Inter_700Bold',
   },
 
   version: {
-    fontSize: 12,
+    fontSize: Typography.size.xs,
     fontFamily: 'Inter_400Regular',
     textAlign: 'center',
-    marginTop: 12,
+    marginTop: Spacing.md,
   },
 
   // Avatar change modal
@@ -929,10 +932,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.35)',
   },
   modalSheet: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 24,
-    paddingTop: 12,
+    borderTopLeftRadius: Radius.xl,
+    borderTopRightRadius: Radius.xl,
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.md,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.1,
@@ -947,44 +950,44 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: Typography.size.lg,
     fontFamily: 'Inter_700Bold',
     marginBottom: 20,
   },
   modalFieldLabel: {
-    fontSize: 12,
+    fontSize: Typography.size.xs,
     fontFamily: 'Inter_600SemiBold',
     textTransform: 'uppercase',
     letterSpacing: 0.6,
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
   modalTextInput: {
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: Radius.md,
     padding: 14,
-    fontSize: 14,
+    fontSize: Typography.size.sm,
     fontFamily: 'Inter_400Regular',
     minHeight: 88,
-    marginBottom: 16,
+    marginBottom: Spacing.lg,
   },
   photoPickerBtn: {
     alignItems: 'center',
     gap: 10,
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: Radius.md,
     paddingVertical: 14,
-    paddingHorizontal: 16,
+    paddingHorizontal: Spacing.lg,
     marginBottom: 20,
   },
   selectedThumb: {
     width: 36,
     height: 36,
-    borderRadius: 8,
+    borderRadius: Radius.sm,
     backgroundColor: '#EAEDF2',
   },
   photoPickerText: {
     flex: 1,
-    fontSize: 14,
+    fontSize: Typography.size.sm,
     fontFamily: 'Inter_400Regular',
   },
   submitBtn: {
@@ -1004,7 +1007,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   cancelLinkText: {
-    fontSize: 14,
+    fontSize: Typography.size.sm,
     fontFamily: 'Inter_400Regular',
   },
 });

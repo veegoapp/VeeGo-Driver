@@ -30,6 +30,9 @@ import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
 import { useReferral } from '@/lib/referralContext';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Radius } from '@/constants/radius';
 
 type Params = {
   referralId: string;
@@ -175,23 +178,23 @@ export default function ReferralIncomingScreen() {
       >
         {/* Banner */}
         <GlassView style={[styles.banner, { backgroundColor: '#FFF7ED', borderColor: '#FED7AA' }]} borderRadius={16}>
-          <Text style={{ fontSize: 28 }}>🔔</Text>
+          <Text style={{ fontSize: Typography.size.xxl }}>🔔</Text>
           <View style={{ flex: 1 }}>
-            <Text style={[{ fontSize: 14, color: '#92400E', fontFamily: 'Inter_700Bold', textAlign: TA }]}>
+            <Text style={[{ fontSize: Typography.size.sm, color: '#92400E', fontFamily: 'Inter_700Bold', textAlign: TA }]}>
               {t.referral_incoming_title}
             </Text>
-            <Text style={[{ fontSize: 12, color: '#B45309', fontFamily: 'Inter_400Regular', marginTop: 3, textAlign: TA }]}>
+            <Text style={[{ fontSize: Typography.size.xs, color: '#B45309', fontFamily: 'Inter_400Regular', marginTop: 3, textAlign: TA }]}>
               {t.referral_incoming_sub}
             </Text>
           </View>
         </GlassView>
 
         {/* Route name */}
-        <View style={{ marginTop: 24 }}>
-          <Text style={[{ fontSize: 22, color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
+        <View style={{ marginTop: Spacing.xl }}>
+          <Text style={[{ fontSize: Typography.size.xl, color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
             {routeName}
           </Text>
-          <Text style={[{ fontSize: 14, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', marginTop: 4, textAlign: TA }]}>
+          <Text style={[{ fontSize: Typography.size.sm, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', marginTop: Spacing.xs, textAlign: TA }]}>
             {fromStation} → {toStation}
           </Text>
         </View>
@@ -229,10 +232,10 @@ export default function ReferralIncomingScreen() {
 
         {/* Vehicle / Line info */}
         {(vehicleType || lineNumber) && (
-          <GlassView style={[styles.vehicleCard, { marginTop: 12 }]} borderRadius={16}>
-            <View style={[{ flexDirection: R, alignItems: 'center', gap: 12 }]}>
+          <GlassView style={[styles.vehicleCard, { marginTop: Spacing.md }]} borderRadius={16}>
+            <View style={[{ flexDirection: R, alignItems: 'center', gap: Spacing.md }]}>
               <View style={[styles.vehicleIconWrap, { backgroundColor: '#1e1e2810' }]}>
-                <Text style={{ fontSize: 22 }}>🚐</Text>
+                <Text style={{ fontSize: Typography.size.xl }}>🚐</Text>
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[{ fontSize: 11, color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textTransform: 'uppercase', letterSpacing: 0.8, textAlign: TA }]}>
@@ -272,7 +275,7 @@ export default function ReferralIncomingScreen() {
           <Pressable
             onPress={handleAccept}
             disabled={accepting || declining}
-            style={({ pressed }) => [{ borderRadius: 16, overflow: 'hidden', opacity: pressed ? 0.88 : accepting ? 0.7 : 1 }]}
+            style={({ pressed }) => [{ borderRadius: Radius.lg, overflow: 'hidden', opacity: pressed ? 0.88 : accepting ? 0.7 : 1 }]}
           >
             <LinearGradient
               colors={['#16a34a', '#15803d']}
@@ -302,8 +305,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.md,
     borderBottomWidth: 1,
   },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
@@ -311,21 +314,21 @@ const styles = StyleSheet.create({
   banner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: Spacing.md,
     padding: 14,
     marginTop: 20,
     borderWidth: 1,
   },
   infoRow: { gap: 10 },
-  infoCard: { flex: 1, alignItems: 'center', padding: 14, gap: 4 },
+  infoCard: { flex: 1, alignItems: 'center', padding: 14, gap: Spacing.xs },
   infoCardLabel: { fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, textAlign: 'center' },
   infoCardValue: { fontSize: 15, textAlign: 'center' },
-  vehicleCard: { padding: 16 },
+  vehicleCard: { padding: Spacing.lg },
   vehicleIconWrap: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   bottomBar: {
     flexDirection: 'row',
     gap: 10,
-    paddingHorizontal: 16,
+    paddingHorizontal: Spacing.lg,
     paddingTop: 14,
     borderTopWidth: 1,
   },
@@ -334,7 +337,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 16,
+    borderRadius: Radius.lg,
     borderWidth: 1.5,
   },
   declineBtnText: { fontSize: 15 },
@@ -343,14 +346,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    borderRadius: 16,
+    gap: Spacing.sm,
+    borderRadius: Radius.lg,
   },
   acceptBtnText: { color: '#fff', fontSize: 15 },
-  resolvedWrap: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, gap: 16 },
+  resolvedWrap: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xxl, gap: Spacing.lg },
   resolvedIcon: { width: 96, height: 96, borderRadius: 48, alignItems: 'center', justifyContent: 'center' },
   resolvedTitle: { fontSize: 20, textAlign: 'center' },
-  resolvedSub: { fontSize: 14, textAlign: 'center', lineHeight: 22 },
-  resolvedBtn: { marginTop: 8, height: 50, paddingHorizontal: 36, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  resolvedBtnText: { color: '#fff', fontSize: 14 },
+  resolvedSub: { fontSize: Typography.size.sm, textAlign: 'center', lineHeight: 22 },
+  resolvedBtn: { marginTop: Spacing.sm, height: 50, paddingHorizontal: 36, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  resolvedBtnText: { color: '#fff', fontSize: Typography.size.sm },
 });

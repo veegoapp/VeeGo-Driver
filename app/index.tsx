@@ -13,8 +13,13 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
+import { Animation } from '@/constants/animations';
 import { useI18n } from '@/lib/i18nContext';
 import { useService } from '@/lib/serviceContext';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Radius } from '@/constants/radius';
+import { Shadows } from '@/constants/shadows';
 
 const FEATURES = [
   { Icon: TrendingUp, label: 'Real-time earnings & instant payouts' },
@@ -42,7 +47,7 @@ export default function SplashScreen() {
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: false }),
-      Animated.timing(slideAnim, { toValue: 0, duration: 500, useNativeDriver: false }),
+      Animated.timing(slideAnim, { toValue: 0, duration: Animation.duration.slow, useNativeDriver: false }),
       Animated.spring(logoScale, { toValue: 1, stiffness: 200, damping: 18, useNativeDriver: false }),
     ]).start();
   }, []);
@@ -68,7 +73,7 @@ return (
             <Navigation size={32} color="#ffffff" />
           </View>
           <View>
-            <Text style={[styles.logoName, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>Vee<Text style={{ color: '#3D52D5' }}>Go</Text></Text>
+            <Text style={[styles.logoName, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>Vee<Text style={{ color: '#55c49a' }}>Go</Text></Text>
             <Text style={[styles.logoSub, { color: '#1e1e28', fontFamily: 'Inter_700Bold' }]}>DRIVER</Text>
           </View>
         </Animated.View>
@@ -116,22 +121,22 @@ return (
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { flex: 1, paddingHorizontal: 24 },
-  logoRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  content: { flex: 1, paddingHorizontal: Spacing.xl },
+  logoRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   logoIcon: {
     width: 56, height: 56, borderRadius: 20, backgroundColor: '#1e1e28',
     alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.22, shadowRadius: 24, elevation: 8,
+    shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.22, shadowRadius: 24, elevation: Shadows.large.elevation,
   },
   logoName: { fontSize: 30, letterSpacing: -0.5 },
   logoSub: { fontSize: 11, letterSpacing: 3.5, opacity: 0.6 },
   headline: { fontSize: 48, lineHeight: 52, letterSpacing: -1 },
   headlineAccent: { fontSize: 48, lineHeight: 52, letterSpacing: -1, opacity: 0.5 },
   subtitle: { fontSize: 15, marginTop: 20, lineHeight: 24 },
-  featureCard: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 16, borderWidth: 1 },
-  featureIcon: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  featureLabel: { fontSize: 14, flex: 1 },
-  ctaBtn: { borderRadius: 16, overflow: 'hidden', elevation: 8, shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 16 },
-  ctaBtnInner: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#1e1e28', borderRadius: 16 },
-  ctaBtnText: { fontSize: 16 },
+  featureCard: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, borderRadius: Radius.lg, borderWidth: 1 },
+  featureIcon: { width: 36, height: 36, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
+  featureLabel: { fontSize: Typography.size.sm, flex: 1 },
+  ctaBtn: { borderRadius: Radius.lg, overflow: 'hidden', elevation: Shadows.large.elevation, shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 16 },
+  ctaBtnInner: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm, backgroundColor: '#1e1e28', borderRadius: Radius.lg },
+  ctaBtnText: { fontSize: Typography.size.md },
 });

@@ -20,6 +20,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '@/lib/i18nContext';
 import { useService } from '@/lib/serviceContext';
 import { endpoints, ApiError } from '@/lib/api';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Radius } from '@/constants/radius';
+import { Shadows } from '@/constants/shadows';
 
 // ─── Types matching backend catalog ──────────────────────────────────────────
 
@@ -347,7 +351,7 @@ export default function RegisterVehicleScreen() {
   return (
     <View style={[s.root, { backgroundColor: '#fafafd' }]}>
       <ScrollView
-        contentContainerStyle={{ paddingTop: topPad + 16, paddingBottom: botPad + 120, paddingHorizontal: 24 }}
+        contentContainerStyle={{ paddingTop: topPad + 16, paddingBottom: botPad + 120, paddingHorizontal: Spacing.xl }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
@@ -501,13 +505,13 @@ export default function RegisterVehicleScreen() {
                     style={({ pressed }) => [s.sheetItem, selected && s.sheetItemSelected, pressed && { opacity: 0.7 }]}
                     onPress={() => handlePickerSelect(item)}
                   >
-                    <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                    <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: Spacing.sm, flex: 1 }}>
                       {item.hexCode !== undefined && (
                         <View style={[s.colorSwatch, { backgroundColor: item.hexCode ?? '#ccc' }]} />
                       )}
                       <Text style={[s.sheetItemText, selected && s.sheetItemTextSelected]}>{displayLabel}</Text>
                     </View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
                       {item.sub && (
                         <View style={s.categoryBadge}>
                           <Text style={s.categoryBadgeText}>{item.sub}</Text>
@@ -560,7 +564,7 @@ function DropdownField({
             <Text style={[s.dropdownErrorText, { flex: 1 }]}>{errorLabel}</Text>
           </Pressable>
           {errorDetail ? (
-            <Text style={{ fontSize: 11, color: '#c0392b', fontFamily: 'Inter_400Regular', marginTop: 4, paddingHorizontal: 4 }}>
+            <Text style={{ fontSize: 11, color: '#c0392b', fontFamily: 'Inter_400Regular', marginTop: Spacing.xs, paddingHorizontal: Spacing.xs }}>
               {errorDetail}
             </Text>
           ) : null}
@@ -578,7 +582,7 @@ function DropdownField({
           <View style={[s.dropdownInner, { flexDirection: R }]}>
             {colorHex ? <View style={[s.colorDot, { backgroundColor: colorHex }]} /> : null}
             {loading ? (
-              <ActivityIndicator size="small" color="#5e5e72" style={{ marginRight: 8 }} />
+              <ActivityIndicator size="small" color="#5e5e72" style={{ marginRight: Spacing.sm }} />
             ) : (
               <Text
                 style={[s.dropdownValue, !value && s.dropdownPlaceholder, { textAlign: TA, flex: 1 }]}
@@ -603,83 +607,83 @@ const s = StyleSheet.create({
     width: 42, height: 42, borderRadius: 14, backgroundColor: 'white',
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 1, borderColor: '#e5e5ea',
-    shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2,
+    shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: Shadows.small.elevation,
   },
-  header: { marginTop: 24, marginBottom: 28, gap: 8 },
-  step: { fontSize: 12, fontWeight: '600', color: '#5e5e72', letterSpacing: 1, textTransform: 'uppercase', fontFamily: 'Inter_600SemiBold' },
-  title: { fontSize: 34, fontWeight: '700', color: '#1e1e28', letterSpacing: -1.2, lineHeight: 40, fontFamily: 'Inter_700Bold' },
-  sub: { fontSize: 14, color: '#5e5e72', lineHeight: 20, fontFamily: 'Inter_400Regular' },
-  fields: { gap: 16 },
+  header: { marginTop: Spacing.xl, marginBottom: 28, gap: Spacing.sm },
+  step: { fontSize: Typography.size.xs, fontWeight: Typography.weight.semibold, color: '#5e5e72', letterSpacing: 1, textTransform: 'uppercase', fontFamily: 'Inter_600SemiBold' },
+  title: { fontSize: 34, fontWeight: Typography.weight.bold, color: '#1e1e28', letterSpacing: -1.2, lineHeight: 40, fontFamily: 'Inter_700Bold' },
+  sub: { fontSize: Typography.size.sm, color: '#5e5e72', lineHeight: 20, fontFamily: 'Inter_400Regular' },
+  fields: { gap: Spacing.lg },
   fieldWrap: { gap: 6 },
-  fieldLabel: { fontSize: 12, fontWeight: '600', color: '#1e1e28', letterSpacing: 0.3, fontFamily: 'Inter_600SemiBold' },
+  fieldLabel: { fontSize: Typography.size.xs, fontWeight: Typography.weight.semibold, color: '#1e1e28', letterSpacing: 0.3, fontFamily: 'Inter_600SemiBold' },
   dropdownRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: 'white', borderRadius: 18, height: 54, paddingHorizontal: 16,
+    backgroundColor: 'white', borderRadius: 18, height: 54, paddingHorizontal: Spacing.lg,
     borderWidth: 1, borderColor: '#e5e5ea',
     shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
   },
   dropdownDisabled: { backgroundColor: '#f8f8fa', borderColor: '#ebebf0' },
   dropdownError: { backgroundColor: '#fff5f5', borderColor: '#fca5a5', gap: 10 },
   dropdownErrorText: { fontSize: 13, color: '#c0392b', fontFamily: 'Inter_400Regular' },
-  dropdownInner: { flex: 1, alignItems: 'center', gap: 8 },
-  dropdownValue: { fontSize: 14, color: '#1e1e28', fontFamily: 'Inter_400Regular' },
+  dropdownInner: { flex: 1, alignItems: 'center', gap: Spacing.sm },
+  dropdownValue: { fontSize: Typography.size.sm, color: '#1e1e28', fontFamily: 'Inter_400Regular' },
   dropdownPlaceholder: { color: '#c3c3cc' },
-  colorDot: { width: 16, height: 16, borderRadius: 8, borderWidth: 1, borderColor: '#e5e5ea' },
+  colorDot: { width: 16, height: 16, borderRadius: Radius.sm, borderWidth: 1, borderColor: '#e5e5ea' },
   infoChip: {
     alignItems: 'center', gap: 7, paddingHorizontal: 14, paddingVertical: 10,
     backgroundColor: '#eef0fd', borderRadius: 14, borderWidth: 1, borderColor: '#c7cdf7',
   },
-  infoChipText: { fontSize: 13, color: '#3D52D5', fontWeight: '500', fontFamily: 'Inter_500Medium', flex: 1 },
+  infoChipText: { fontSize: 13, color: '#3D52D5', fontWeight: Typography.weight.medium, fontFamily: 'Inter_500Medium', flex: 1 },
   footer: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
-    paddingHorizontal: 24, paddingTop: 16,
+    paddingHorizontal: Spacing.xl, paddingTop: Spacing.lg,
     backgroundColor: 'rgba(250,250,253,0.95)',
     borderTopWidth: 1, borderTopColor: '#e5e5ea',
   },
   continueBtn: {
     height: 56, borderRadius: 20, backgroundColor: '#1e1e28',
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 20, elevation: 8,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm,
+    shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 20, elevation: Shadows.large.elevation,
   },
   continueBtnDisabled: { opacity: 0.35 },
-  continueBtnText: { color: 'white', fontSize: 15, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  continueBtnText: { color: 'white', fontSize: 15, fontWeight: Typography.weight.semibold, fontFamily: 'Inter_600SemiBold' },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
   sheet: {
     backgroundColor: 'white',
     borderTopLeftRadius: 28, borderTopRightRadius: 28,
-    paddingTop: 12,
+    paddingTop: Spacing.md,
     shadowColor: '#1e1e28', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.08, shadowRadius: 16, elevation: 12,
   },
-  sheetHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: '#e5e5ea', alignSelf: 'center', marginBottom: 12 },
+  sheetHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: '#e5e5ea', alignSelf: 'center', marginBottom: Spacing.md },
   searchWrap: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    marginHorizontal: 24, marginBottom: 8,
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
+    marginHorizontal: Spacing.xl, marginBottom: Spacing.sm,
     backgroundColor: '#f5f5f8', borderRadius: 14, paddingHorizontal: 14, height: 44,
     borderWidth: 1, borderColor: '#e5e5ea',
   },
   searchIcon: { flexShrink: 0 },
-  searchInput: { flex: 1, fontSize: 14, color: '#1e1e28', fontFamily: 'Inter_400Regular' },
+  searchInput: { flex: 1, fontSize: Typography.size.sm, color: '#1e1e28', fontFamily: 'Inter_400Regular' },
   sheetHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 24, paddingBottom: 12,
+    paddingHorizontal: Spacing.xl, paddingBottom: Spacing.md,
     borderBottomWidth: 1, borderBottomColor: '#f0f0f5',
   },
-  sheetTitle: { fontSize: 16, fontWeight: '700', color: '#1e1e28', fontFamily: 'Inter_700Bold' },
-  sheetLoader: { height: 120, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
-  sheetEmpty: { fontSize: 14, color: '#5e5e72', fontFamily: 'Inter_400Regular', textAlign: 'center', lineHeight: 22 },
+  sheetTitle: { fontSize: Typography.size.md, fontWeight: Typography.weight.bold, color: '#1e1e28', fontFamily: 'Inter_700Bold' },
+  sheetLoader: { height: 120, alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xl },
+  sheetEmpty: { fontSize: Typography.size.sm, color: '#5e5e72', fontFamily: 'Inter_400Regular', textAlign: 'center', lineHeight: 22 },
   sheetItem: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 24, paddingVertical: 14,
+    paddingHorizontal: Spacing.xl, paddingVertical: 14,
     borderBottomWidth: 1, borderBottomColor: '#f7f7fa',
   },
   sheetItemSelected: { backgroundColor: '#f2f4fe' },
   sheetItemText: { fontSize: 15, color: '#1e1e28', fontFamily: 'Inter_400Regular' },
-  sheetItemTextSelected: { fontWeight: '600', color: '#3D52D5', fontFamily: 'Inter_600SemiBold' },
-  sheetItemDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#3D52D5' },
+  sheetItemTextSelected: { fontWeight: Typography.weight.semibold, color: '#55c49a', fontFamily: 'Inter_600SemiBold' },
+  sheetItemDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#55c49a' },
   categoryBadge: {
-    backgroundColor: '#f0f4ff', borderRadius: 99, paddingHorizontal: 8, paddingVertical: 3,
+    backgroundColor: '#f0f4ff', borderRadius: 99, paddingHorizontal: Spacing.sm, paddingVertical: 3,
     borderWidth: 1, borderColor: '#d0d8f8',
   },
-  categoryBadgeText: { fontSize: 11, color: '#3D52D5', fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  categoryBadgeText: { fontSize: 11, color: '#55c49a', fontWeight: Typography.weight.semibold, fontFamily: 'Inter_600SemiBold' },
   colorSwatch: { width: 18, height: 18, borderRadius: 9, borderWidth: 1, borderColor: '#e5e5ea' },
 });

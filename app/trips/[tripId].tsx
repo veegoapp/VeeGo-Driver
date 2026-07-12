@@ -19,6 +19,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { endpoints } from '@/lib/api';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Radius } from '@/constants/radius';
 
 // Task 3: updated TripDetail to match backend spec
 type TripDetail = {
@@ -218,7 +221,7 @@ export default function TripDetailScreen() {
 
             {/* Route */}
             {(data.pickup || data.destination) && (
-              <GlassView style={{ marginTop: 16 }} borderRadius={20}>
+              <GlassView style={{ marginTop: Spacing.lg }} borderRadius={20}>
                 <RouteRow icon={<MapPin size={16} color={colors.primary} strokeWidth={2} />} label="Pickup" value={data.pickup ?? '—'} colors={colors} />
                 <View style={[styles.routeLine, { backgroundColor: colors.border }]} />
                 <RouteRow icon={<Navigation size={16} color={colors.foreground} strokeWidth={2} />} label="Destination" value={data.destination ?? '—'} colors={colors} />
@@ -227,7 +230,7 @@ export default function TripDetailScreen() {
 
             {/* Bookings count */}
             {Array.isArray(data.bookings) && data.bookings.length > 0 && (
-              <GlassView style={{ marginTop: 16 }} borderRadius={20}>
+              <GlassView style={{ marginTop: Spacing.lg }} borderRadius={20}>
                 <View style={styles.detailRow}>
                   <Users size={16} color={colors.mutedForeground} strokeWidth={2} />
                   <Text style={[styles.detailLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>Bookings</Text>
@@ -238,7 +241,7 @@ export default function TripDetailScreen() {
 
             {/* Timestamps */}
             {data.date && (
-              <GlassView style={{ marginTop: 16 }} borderRadius={20}>
+              <GlassView style={{ marginTop: Spacing.lg }} borderRadius={20}>
                 <View style={styles.detailRow}>
                   <Clock size={16} color={colors.mutedForeground} strokeWidth={2} />
                   <Text style={[styles.detailLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>Date</Text>
@@ -304,7 +307,7 @@ export default function TripDetailScreen() {
 
             {/* Task 3: station lifecycle */}
             {stations.length > 0 && (
-              <View style={{ marginTop: 24 }}>
+              <View style={{ marginTop: Spacing.xl }}>
                 <Text style={[styles.sectionLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>STATIONS</Text>
                 <View style={{ gap: 10, marginTop: 10 }}>
                   {stations.map((station) => (
@@ -419,47 +422,47 @@ function RouteRow({ icon, label, value, colors }: {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  pageTitle: { fontSize: 24, marginTop: 24 },
-  pageSubtitle: { fontSize: 13, marginTop: 4 },
-  centeredState: { marginTop: 60, alignItems: 'center', padding: 32, gap: 10 },
-  stateTitle: { fontSize: 16, textAlign: 'center' },
+  pageTitle: { fontSize: 24, marginTop: Spacing.xl },
+  pageSubtitle: { fontSize: 13, marginTop: Spacing.xs },
+  centeredState: { marginTop: 60, alignItems: 'center', padding: Spacing.xxl, gap: 10 },
+  stateTitle: { fontSize: Typography.size.md, textAlign: 'center' },
   stateSub: { fontSize: 13, textAlign: 'center' },
-  statsRow: { flexDirection: 'row', alignItems: 'center', marginTop: 20, padding: 4 },
-  statCell: { flex: 1, alignItems: 'center', paddingVertical: 16, gap: 4 },
+  statsRow: { flexDirection: 'row', alignItems: 'center', marginTop: 20, padding: Spacing.xs },
+  statCell: { flex: 1, alignItems: 'center', paddingVertical: Spacing.lg, gap: Spacing.xs },
   statDivider: { width: 1, height: 40 },
   statValue: { fontSize: 17 },
   statLabel: { fontSize: 10, letterSpacing: 1, textTransform: 'uppercase' },
-  routeRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, padding: 16 },
+  routeRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.md, padding: Spacing.lg },
   routeIconWrap: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   routeLine: { height: 1, marginLeft: 60 },
   routeLabel: { fontSize: 10, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 2 },
-  routeValue: { fontSize: 14, lineHeight: 20 },
-  detailRow: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 16 },
+  routeValue: { fontSize: Typography.size.sm, lineHeight: 20 },
+  detailRow: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: Spacing.lg },
   detailLabel: { fontSize: 13, flex: 1 },
   detailValue: { fontSize: 13 },
-  rowSep: { height: 1, marginHorizontal: 16 },
+  rowSep: { height: 1, marginHorizontal: Spacing.lg },
   sectionLabel: { fontSize: 10, letterSpacing: 2, textTransform: 'uppercase' },
   // Task 2: action buttons
   actionBar: { gap: 10, marginTop: 20 },
-  rejectBtn: { flex: 1, height: 52, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  acceptBtnWrap: { flex: 2, borderRadius: 16, overflow: 'hidden', elevation: 6, shadowColor: '#2d2d42', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 8 },
-  fullActionBtn: { marginTop: 20, borderRadius: 16, overflow: 'hidden', elevation: 6, shadowColor: '#22c55e', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 8 },
+  rejectBtn: { flex: 1, height: 52, borderRadius: Radius.lg, alignItems: 'center', justifyContent: 'center' },
+  acceptBtnWrap: { flex: 2, borderRadius: Radius.lg, overflow: 'hidden', elevation: 6, shadowColor: '#2d2d42', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 8 },
+  fullActionBtn: { marginTop: 20, borderRadius: Radius.lg, overflow: 'hidden', elevation: 6, shadowColor: '#22c55e', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 8 },
   acceptBtnGrad: { height: 52, alignItems: 'center', justifyContent: 'center' },
   actionBtnText: { fontSize: 15 },
   // Task 3: station
   stationCard: { padding: 14 },
   stationDot: { width: 12, height: 12, borderRadius: 6 },
-  stationName: { fontSize: 14 },
+  stationName: { fontSize: Typography.size.sm },
   stationMeta: { fontSize: 11, marginTop: 2 },
-  stationBtn: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, alignItems: 'center', justifyContent: 'center', minWidth: 64 },
-  stationBtnText: { fontSize: 12 },
+  stationBtn: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center', minWidth: 64 },
+  stationBtnText: { fontSize: Typography.size.xs },
   // Modal
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: 24 },
-  modalCard: { width: '100%', padding: 24, gap: 12 },
-  modalTitle: { fontSize: 18 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: Spacing.xl },
+  modalCard: { width: '100%', padding: Spacing.xl, gap: Spacing.md },
+  modalTitle: { fontSize: Typography.size.lg },
   modalSub: { fontSize: 13 },
-  modalInput: { borderWidth: 1, borderRadius: 12, padding: 12, fontSize: 14, minHeight: 80, textAlignVertical: 'top' },
-  modalActions: { flexDirection: 'row', gap: 10, marginTop: 4 },
+  modalInput: { borderWidth: 1, borderRadius: Radius.md, padding: Spacing.md, fontSize: Typography.size.sm, minHeight: 80, textAlignVertical: 'top' },
+  modalActions: { flexDirection: 'row', gap: 10, marginTop: Spacing.xs },
   modalBtn: { flex: 1, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  modalBtnText: { fontSize: 14 },
+  modalBtnText: { fontSize: Typography.size.sm },
 });

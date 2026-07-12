@@ -17,6 +17,9 @@ import { SOCKET_EVENTS } from '@/constants/socketEvents';
 import { useShuttle, type ShuttleBooking } from '@/lib/shuttleContext';
 import { endpoints, ApiError } from '@/lib/api';
 import { useI18n } from '@/lib/i18nContext';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Radius } from '@/constants/radius';
 
 const TAB_BAR_HEIGHT = 96;
 
@@ -273,7 +276,7 @@ export default function BookingsScreen() {
         contentContainerStyle={{
           paddingTop: topPad + 8,
           paddingBottom: TAB_BAR_HEIGHT + 24,
-          paddingHorizontal: 16,
+          paddingHorizontal: Spacing.lg,
         }}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -347,7 +350,7 @@ export default function BookingsScreen() {
                 </Pressable>
               </View>
             ) : (
-              <View style={{ gap: 8, marginTop: 4 }}>
+              <View style={{ gap: Spacing.sm, marginTop: Spacing.xs }}>
                 {upcomingBookings.map(b => (
                   <BookingCard
                     key={b.id}
@@ -393,7 +396,7 @@ export default function BookingsScreen() {
                 </Text>
               </View>
             ) : (
-              <View style={{ gap: 8, marginTop: 4 }}>
+              <View style={{ gap: Spacing.sm, marginTop: Spacing.xs }}>
                 {driverTrips.map(trip => (
                   <CompletedTripCard key={trip.id} trip={trip} colors={colors} />
                 ))}
@@ -773,7 +776,7 @@ function CompletedTripCard({
         </View>
       </View>
 
-      <View style={{ alignItems: 'flex-end', gap: 4 }}>
+      <View style={{ alignItems: 'flex-end', gap: Spacing.xs }}>
         <Text style={[styles.earningsText, { color: '#16a34a' }]}>
           {netEarnings}
         </Text>
@@ -920,7 +923,7 @@ function BookingDetailSheet({
       <ScrollView
         showsVerticalScrollIndicator={false}
         style={{ flex: 1 }}
-        contentContainerStyle={{ gap: 12, paddingBottom: 8 }}
+        contentContainerStyle={{ gap: Spacing.md, paddingBottom: Spacing.sm }}
       >
         {/* ── Dynamic threshold status badge ── */}
         {hasDetail ? (
@@ -1119,8 +1122,8 @@ function InfoRow({
 const styles = StyleSheet.create({
   container: { flex: 1 },
 
-  pageTitle: { fontSize: 24, fontFamily: 'Inter_700Bold', textAlign: 'right', paddingTop: 8 },
-  pageSub: { fontSize: 13, fontFamily: 'Inter_400Regular', textAlign: 'right', marginTop: 4 },
+  pageTitle: { fontSize: 24, fontFamily: 'Inter_700Bold', textAlign: 'right', paddingTop: Spacing.sm },
+  pageSub: { fontSize: 13, fontFamily: 'Inter_400Regular', textAlign: 'right', marginTop: Spacing.xs },
 
   // Main tabs
   mainTabRow: {
@@ -1155,18 +1158,18 @@ const styles = StyleSheet.create({
   emptyState: { alignItems: 'center', marginTop: 48, gap: 10 },
   emptyTitle: { fontSize: 15, fontFamily: 'Inter_700Bold', textAlign: 'center' },
   emptySub: { fontSize: 13, fontFamily: 'Inter_400Regular', textAlign: 'center' },
-  loaderWrap: { padding: 32, alignItems: 'center' },
+  loaderWrap: { padding: Spacing.xxl, alignItems: 'center' },
 
   // Smart empty state (upcoming tab — no scheduled week blocks)
   smartEmptyState: {
     alignItems: 'center',
     marginTop: 56,
-    marginHorizontal: 8,
-    gap: 16,
+    marginHorizontal: Spacing.sm,
+    gap: Spacing.lg,
     backgroundColor: '#fff',
     borderRadius: 20,
     paddingVertical: 40,
-    paddingHorizontal: 24,
+    paddingHorizontal: Spacing.xl,
   },
   smartEmptyTitle: {
     fontSize: 15,
@@ -1175,7 +1178,7 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   smartEmptyCta: {
-    marginTop: 4,
+    marginTop: Spacing.xs,
     borderRadius: 14,
     paddingVertical: 14,
     paddingHorizontal: 20,
@@ -1183,7 +1186,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   smartEmptyCtaText: {
-    fontSize: 14,
+    fontSize: Typography.size.sm,
     fontFamily: 'Inter_700Bold',
     color: '#fff',
     textAlign: 'center',
@@ -1191,22 +1194,22 @@ const styles = StyleSheet.create({
 
   // Renewal banner
   renewalBanner: {
-    marginTop: 16,
+    marginTop: Spacing.lg,
     backgroundColor: '#FFFBEB',
     borderWidth: 1,
     borderColor: '#FCD34D88',
-    borderRadius: 16,
-    padding: 16,
-    gap: 8,
+    borderRadius: Radius.lg,
+    padding: Spacing.lg,
+    gap: Spacing.sm,
   },
   renewalHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: Spacing.sm,
   },
   renewalTitle: {
     flex: 1,
-    fontSize: 14,
+    fontSize: Typography.size.sm,
     fontFamily: 'Inter_700Bold',
     color: '#92400E',
     textAlign: 'right',
@@ -1214,10 +1217,10 @@ const styles = StyleSheet.create({
   countdownPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: Spacing.xs,
     backgroundColor: '#FEF3C7',
-    borderRadius: 8,
-    paddingHorizontal: 8,
+    borderRadius: Radius.sm,
+    paddingHorizontal: Spacing.sm,
     paddingVertical: 3,
   },
   countdownText: {
@@ -1233,7 +1236,7 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   renewalRouteMeta: {
-    fontSize: 12,
+    fontSize: Typography.size.xs,
     fontFamily: 'Inter_400Regular',
     color: '#92400E',
     textAlign: 'right',
@@ -1247,8 +1250,8 @@ const styles = StyleSheet.create({
   },
   renewalActions: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: 4,
+    gap: Spacing.sm,
+    marginTop: Spacing.xs,
   },
   renewalConfirmBtn: {
     flex: 1,
@@ -1257,8 +1260,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     backgroundColor: '#1e1e28',
-    borderRadius: 12,
-    paddingVertical: 12,
+    borderRadius: Radius.md,
+    paddingVertical: Spacing.md,
   },
   renewalConfirmLabel: {
     fontSize: 13,
@@ -1270,8 +1273,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#FEF3C7',
-    borderRadius: 12,
-    paddingVertical: 12,
+    borderRadius: Radius.md,
+    paddingVertical: Spacing.md,
     borderWidth: 1,
     borderColor: '#FCD34D88',
   },
@@ -1285,7 +1288,7 @@ const styles = StyleSheet.create({
   bookingCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: Spacing.md,
     padding: 14,
     borderRadius: 14,
     borderWidth: 1,
@@ -1297,14 +1300,14 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     backgroundColor: '#1e1e28',
   },
-  bookingCardRoute: { fontSize: 14, fontFamily: 'Inter_700Bold', textAlign: 'right' },
+  bookingCardRoute: { fontSize: Typography.size.sm, fontFamily: 'Inter_700Bold', textAlign: 'right' },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5, justifyContent: 'flex-end' },
-  metaText: { fontSize: 12, fontFamily: 'Inter_400Regular' },
-  dot: { fontSize: 12 },
+  metaText: { fontSize: Typography.size.xs, fontFamily: 'Inter_400Regular' },
+  dot: { fontSize: Typography.size.xs },
   weekPill: {
-    paddingHorizontal: 8,
+    paddingHorizontal: Spacing.sm,
     paddingVertical: 3,
-    borderRadius: 8,
+    borderRadius: Radius.sm,
   },
   weekPillText: { fontSize: 11, fontFamily: 'Inter_600SemiBold' },
   renewalPill: {
@@ -1325,7 +1328,7 @@ const styles = StyleSheet.create({
   tripCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: Spacing.md,
     padding: 14,
     borderRadius: 14,
     borderWidth: 1,
@@ -1348,14 +1351,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 16,
-    marginTop: 8,
+    gap: Spacing.lg,
+    marginTop: Spacing.sm,
   },
   pageBtn: {
     borderWidth: 1,
     borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
   },
   pageBtnText: { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
   pageIndicator: { fontSize: 13, fontFamily: 'Inter_400Regular' },
@@ -1363,10 +1366,10 @@ const styles = StyleSheet.create({
   // Bottom sheet
   sheetOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)' },
   sheet: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingTop: 12,
-    paddingHorizontal: 16,
+    borderTopLeftRadius: Radius.xl,
+    borderTopRightRadius: Radius.xl,
+    paddingTop: Spacing.md,
+    paddingHorizontal: Spacing.lg,
     maxHeight: '85%',
   },
   sheetHandle: {
@@ -1374,13 +1377,13 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 2,
     alignSelf: 'center',
-    marginBottom: 16,
+    marginBottom: Spacing.lg,
   },
   sheetHeaderRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 12,
-    marginBottom: 16,
+    gap: Spacing.md,
+    marginBottom: Spacing.lg,
   },
   sheetTitle: {
     fontSize: 17,
@@ -1397,7 +1400,7 @@ const styles = StyleSheet.create({
   sheetCloseBtn: {
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: Radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1406,9 +1409,9 @@ const styles = StyleSheet.create({
   thresholdBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    padding: 12,
-    borderRadius: 12,
+    gap: Spacing.sm,
+    padding: Spacing.md,
+    borderRadius: Radius.md,
     borderWidth: 1,
     justifyContent: 'flex-end',
   },
@@ -1443,7 +1446,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   passengerCount: { fontSize: 32, fontFamily: 'Inter_700Bold' },
-  passengerTotal: { fontSize: 18, fontFamily: 'Inter_400Regular' },
+  passengerTotal: { fontSize: Typography.size.lg, fontFamily: 'Inter_400Regular' },
   passengerLabel: { fontSize: 13, fontFamily: 'Inter_400Regular', marginRight: 2 },
   progressTrack: {
     height: 6,
@@ -1471,7 +1474,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: Spacing.md,
     justifyContent: 'flex-end',
   },
   infoLabel: { fontSize: 13, fontFamily: 'Inter_400Regular', flex: 1, textAlign: 'right' },
@@ -1483,12 +1486,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: Spacing.sm,
     paddingVertical: 14,
     borderRadius: 14,
     borderWidth: 1,
   },
-  actionBtnLabel: { fontSize: 14, fontFamily: 'Inter_700Bold' },
+  actionBtnLabel: { fontSize: Typography.size.sm, fontFamily: 'Inter_700Bold' },
 
   // ── Dialog styles ──────────────────────────────────────────────────
   dialogOverlay: {
@@ -1496,7 +1499,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.55)',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: Spacing.xl,
   },
   dialogCard: {
     width: '100%',
@@ -1513,22 +1516,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingTop: 28,
-    paddingBottom: 12,
+    paddingBottom: Spacing.md,
   },
-  dialogBody: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8 },
-  dialogTitle: { fontSize: 18, marginBottom: 10 },
-  dialogBodyText: { fontSize: 14, lineHeight: 22 },
+  dialogBody: { paddingHorizontal: 20, paddingTop: Spacing.md, paddingBottom: Spacing.sm },
+  dialogTitle: { fontSize: Typography.size.lg, marginBottom: 10 },
+  dialogBodyText: { fontSize: Typography.size.sm, lineHeight: 22 },
   dialogButtons: {
     flexDirection: 'row',
     borderTopWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
     gap: 10,
   },
   dialogBtnSecondary: {
     flex: 1,
     height: 46,
-    borderRadius: 12,
+    borderRadius: Radius.md,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1536,7 +1539,7 @@ const styles = StyleSheet.create({
   dialogBtnDestructive: {
     flex: 1,
     height: 46,
-    borderRadius: 12,
+    borderRadius: Radius.md,
     alignItems: 'center',
     justifyContent: 'center',
   },

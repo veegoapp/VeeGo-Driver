@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  Easing,
   Platform,
   Pressable,
   ScrollView,
@@ -27,6 +28,10 @@ import { useSocket } from '@/lib/socketContext';
 import { useServiceControl } from '@/lib/serviceControlContext';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
 import { computeDeadlineMinutes, type CheckinRequiredPayload } from '@/lib/checkinDeadline';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Radius } from '@/constants/radius';
+import { Shadows } from '@/constants/shadows';
 
 const TAB_BAR_HEIGHT = 96;
 
@@ -216,8 +221,8 @@ export default function ShuttleHomeScreen() {
     const pulse = Animated.loop(
       Animated.sequence([
         Animated.parallel([
-          Animated.timing(pulseScale, { toValue: 2.2, duration: 2000, useNativeDriver: true }),
-          Animated.timing(pulseOpacity, { toValue: 0, duration: 2000, useNativeDriver: true }),
+          Animated.timing(pulseScale, { toValue: 2.2, duration: 2000, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+          Animated.timing(pulseOpacity, { toValue: 0, duration: 2000, easing: Easing.out(Easing.ease), useNativeDriver: true }),
         ]),
         Animated.parallel([
           Animated.timing(pulseScale, { toValue: 0.8, duration: 0, useNativeDriver: true }),
@@ -276,7 +281,7 @@ export default function ShuttleHomeScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
-        contentContainerStyle={{ paddingTop: topPad + 8, paddingBottom: TAB_BAR_HEIGHT + 24, paddingHorizontal: 16 }}
+        contentContainerStyle={{ paddingTop: topPad + 8, paddingBottom: TAB_BAR_HEIGHT + 24, paddingHorizontal: Spacing.lg }}
         showsVerticalScrollIndicator={false}
         style={{ flex: 1 }}
       >
@@ -441,7 +446,7 @@ export default function ShuttleHomeScreen() {
 
         {/* Active trip card */}
         {activeLine && online && (
-          <Animated.View style={[{ marginTop: 16, opacity: cardAnim, transform: [{ translateY: cardAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
+          <Animated.View style={[{ marginTop: Spacing.lg, opacity: cardAnim, transform: [{ translateY: cardAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
             <GlassView strong style={[styles.activeCard, { borderColor: '#1e1e2833' }]} borderRadius={24}>
               <View style={styles.activeCardHeader}>
                 <View style={styles.livePill}>
@@ -560,15 +565,15 @@ export default function ShuttleHomeScreen() {
                   },
                 })
               }
-              style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1, marginTop: 12 }]}
+              style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1, marginTop: Spacing.md }]}
             >
               <GlassView style={[styles.referralBanner, { backgroundColor: '#FFF7ED', borderColor: '#FED7AA' }]} borderRadius={16}>
                 <View style={[styles.referralBannerPulse, { backgroundColor: '#F97316' }]} />
                 <View style={{ flex: 1 }}>
-                  <Text style={[{ fontSize: 14, color: '#92400E', fontFamily: 'Inter_700Bold', textAlign: TA }]}>
+                  <Text style={[{ fontSize: Typography.size.sm, color: '#92400E', fontFamily: 'Inter_700Bold', textAlign: TA }]}>
                     {incomingReferralsCount === 1 ? t.referral_incoming_title : `${incomingReferralsCount} ${t.referral_incoming_title}`}
                   </Text>
-                  <Text style={[{ fontSize: 12, color: '#B45309', fontFamily: 'Inter_400Regular', marginTop: 2, textAlign: TA }]}>
+                  <Text style={[{ fontSize: Typography.size.xs, color: '#B45309', fontFamily: 'Inter_400Regular', marginTop: 2, textAlign: TA }]}>
                     {t.referral_incoming_sub}
                   </Text>
                 </View>
@@ -584,7 +589,7 @@ export default function ShuttleHomeScreen() {
         })()}
 
         {/* Upcoming Trips section */}
-        <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA, marginTop: 24 }]}>
+        <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA, marginTop: Spacing.xl }]}>
           {t.upcoming_trips}
         </Text>
 
@@ -631,7 +636,7 @@ export default function ShuttleHomeScreen() {
 
         {/* No active booking — only shown when there are no upcoming or active trips */}
         {upcomingBookings.length === 0 && !activeLine && (
-          <GlassView style={[styles.noLineCard, { marginTop: 16 }]} borderRadius={20}>
+          <GlassView style={[styles.noLineCard, { marginTop: Spacing.lg }]} borderRadius={20}>
             <GitBranch size={32} color={colors.mutedForeground} strokeWidth={2} />
             <Text style={[styles.noLineTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.no_booking}</Text>
             <Text style={[styles.noLineSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
@@ -704,7 +709,7 @@ function UpcomingTripCard({
             {(isRTL && booking.routeNameAr) ? booking.routeNameAr : booking.routeName}
           </Text>
           {(booking.fromStation || booking.toStation || line) && (
-            <Text style={[{ fontSize: 12, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]} numberOfLines={1}>
+            <Text style={[{ fontSize: Typography.size.xs, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]} numberOfLines={1}>
               {booking.fromStation ?? line?.from} → {booking.toStation ?? line?.to}
             </Text>
           )}
@@ -790,98 +795,98 @@ function StatItem({ label, value, highlight, colors }: { label: string; value: s
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingTop: 8 },
-  greeting: { fontSize: 12 },
-  driverName: { fontSize: 22, marginTop: 2 },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingTop: Spacing.sm },
+  greeting: { fontSize: Typography.size.xs },
+  driverName: { fontSize: Typography.size.xl, marginTop: 2 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   iconBtn: {},
   iconBtnGlass: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', position: 'relative' },
   notifDot: { position: 'absolute', top: 2, right: 2, minWidth: 14, height: 14, borderRadius: 7, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 2 },
   notifDotText: { fontSize: 7, color: '#fff', fontFamily: 'Inter_700Bold' },
-  serviceChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1 },
+  serviceChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: Spacing.md, paddingVertical: 6, borderWidth: 1 },
   serviceChipDot: { width: 6, height: 6, borderRadius: 3 },
   serviceChipText: { fontSize: 10, letterSpacing: 1.5 },
-  onlineRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 20 },
+  onlineRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, marginTop: 20 },
   pulseWrap: { width: 56, height: 56, alignItems: 'center', justifyContent: 'center' },
   pulseRing: { position: 'absolute', width: 56, height: 56, borderRadius: 28 },
-  onlineBtn: { width: 56, height: 56, borderRadius: 28, overflow: 'hidden', elevation: 8, shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.35, shadowRadius: 16 },
+  onlineBtn: { width: 56, height: 56, borderRadius: 28, overflow: 'hidden', elevation: Shadows.large.elevation, shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.35, shadowRadius: 16 },
   onlineBtnGrad: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   onlineBtnOff: { flex: 1, alignItems: 'center', justifyContent: 'center', borderWidth: 2 },
-  onlineStatus: { fontSize: 14 },
-  onlineSub: { fontSize: 12, marginTop: 2 },
-  cancelBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: 12, borderWidth: 1, marginTop: 12 },
+  onlineStatus: { fontSize: Typography.size.sm },
+  onlineSub: { fontSize: Typography.size.xs, marginTop: 2 },
+  cancelBanner: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, padding: Spacing.md, borderRadius: Radius.md, borderWidth: 1, marginTop: Spacing.md },
   cancelBannerText: { fontSize: 13 },
-  renewalCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, marginTop: 16 },
+  renewalCard: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, padding: 14, marginTop: Spacing.lg },
   renewalIconWrap: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   renewalTitle: { fontSize: 13 },
   renewalRoute: { fontSize: 11, marginTop: 2 },
   renewalCountdown: { fontSize: 11, marginTop: 3 },
   renewalBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  statsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 12, marginTop: 16 },
-  statItem: { flex: 1, alignItems: 'center', paddingHorizontal: 4 },
+  statsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: Spacing.md, marginTop: Spacing.lg },
+  statItem: { flex: 1, alignItems: 'center', paddingHorizontal: Spacing.xs },
   statLabel: { fontSize: 10, letterSpacing: 0.8, textTransform: 'uppercase' },
-  statValue: { fontSize: 14, marginTop: 2 },
+  statValue: { fontSize: Typography.size.sm, marginTop: 2 },
   divider: { width: 1, height: 28 },
-  sectionTitle: { fontSize: 16 },
+  sectionTitle: { fontSize: Typography.size.md },
   activeCard: { padding: 20 },
-  activeCardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  livePill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 4, backgroundColor: '#1e1e2815', borderRadius: 99, borderWidth: 1, borderColor: '#1e1e2830' },
+  activeCardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.md },
+  livePill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: Spacing.xs, backgroundColor: '#1e1e2815', borderRadius: 99, borderWidth: 1, borderColor: '#1e1e2830' },
   liveDot: { width: 6, height: 6, borderRadius: 3 },
   liveText: { fontSize: 10, letterSpacing: 2 },
-  lineNumber: { fontSize: 12 },
-  activeLineName: { fontSize: 18 },
-  activeLineRoute: { fontSize: 13, marginTop: 4 },
-  seatRow: { flexDirection: 'row', gap: 8, marginTop: 12, flexWrap: 'wrap' },
-  vehicleBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1 },
+  lineNumber: { fontSize: Typography.size.xs },
+  activeLineName: { fontSize: Typography.size.lg },
+  activeLineRoute: { fontSize: 13, marginTop: Spacing.xs },
+  seatRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.md, flexWrap: 'wrap' },
+  vehicleBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: Spacing.xs, borderRadius: Radius.sm, borderWidth: 1 },
   vehicleBadgeText: { fontSize: 11, letterSpacing: 0.5 },
-  seatBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1 },
-  seatBadgeText: { fontSize: 12 },
-  progressWrap: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 16 },
+  seatBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: Spacing.xs, borderRadius: Radius.sm, borderWidth: 1 },
+  seatBadgeText: { fontSize: Typography.size.xs },
+  progressWrap: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: Spacing.lg },
   progressTrack: { flex: 1, height: 6, borderRadius: 3, overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: 3 },
   progressPct: { fontSize: 13, minWidth: 32, textAlign: 'right' },
-  stopRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: 16 },
-  stopBox: { flex: 1, flexDirection: 'row', gap: 8 },
-  stopDotCurrent: { width: 10, height: 10, borderRadius: 5, marginTop: 4 },
-  stopDotNext: { width: 10, height: 10, borderRadius: 5, marginTop: 4, borderWidth: 2, backgroundColor: 'transparent' },
+  stopRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm, marginTop: Spacing.lg },
+  stopBox: { flex: 1, flexDirection: 'row', gap: Spacing.sm },
+  stopDotCurrent: { width: 10, height: 10, borderRadius: 5, marginTop: Spacing.xs },
+  stopDotNext: { width: 10, height: 10, borderRadius: 5, marginTop: Spacing.xs, borderWidth: 2, backgroundColor: 'transparent' },
   stopBoxLabel: { fontSize: 9, letterSpacing: 1 },
   stopBoxName: { fontSize: 13, marginTop: 2 },
   stopBoxMeta: { fontSize: 11, marginTop: 2 },
   stopArrow: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
-  dotsRow: { flexDirection: 'row', alignItems: 'center', marginTop: 16, flexWrap: 'wrap' },
+  dotsRow: { flexDirection: 'row', alignItems: 'center', marginTop: Spacing.lg, flexWrap: 'wrap' },
   dotItem: { flexDirection: 'row', alignItems: 'center' },
   dot: { width: 8, height: 8, borderRadius: 4 },
   dotLine: { width: 16, height: 2, marginHorizontal: 2 },
-  continueBtn: { marginTop: 16, borderRadius: 14, overflow: 'hidden' },
-  continueBtnGrad: { height: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  continueBtnText: { color: '#fff', fontSize: 14 },
-  upcomingEmpty: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 16, borderWidth: 1, marginTop: 8 },
+  continueBtn: { marginTop: Spacing.lg, borderRadius: 14, overflow: 'hidden' },
+  continueBtnGrad: { height: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
+  continueBtnText: { color: '#fff', fontSize: Typography.size.sm },
+  upcomingEmpty: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: Spacing.lg, borderWidth: 1, marginTop: Spacing.sm },
   upcomingEmptyText: { fontSize: 13 },
-  upcomingCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, overflow: 'hidden' },
+  upcomingCard: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, padding: 14, overflow: 'hidden' },
   upcomingAccent: { width: 4, height: 36, borderRadius: 2 },
-  upcomingRouteName: { fontSize: 14 },
+  upcomingRouteName: { fontSize: Typography.size.sm },
   upcomingMeta: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  upcomingMetaText: { fontSize: 12 },
-  upcomingMetaDot: { fontSize: 14 },
-  upcomingStatusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1 },
+  upcomingMetaText: { fontSize: Typography.size.xs },
+  upcomingMetaDot: { fontSize: Typography.size.sm },
+  upcomingStatusBadge: { paddingHorizontal: 10, paddingVertical: Spacing.xs, borderRadius: Radius.sm, borderWidth: 1 },
   upcomingStatusText: { fontSize: 11, letterSpacing: 0.5 },
-  paxBarWrap: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
+  paxBarWrap: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: Spacing.xs },
   paxBarTrack: { flex: 1, height: 4, borderRadius: 2, overflow: 'hidden' },
   paxBarFill: { height: '100%', borderRadius: 2 },
   paxBarLabel: { fontSize: 10, minWidth: 32, textAlign: 'right' },
   referralBanner: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, borderWidth: 1.5 },
   referralBannerPulse: { width: 8, height: 8, borderRadius: 4 },
-  referralBannerBadge: { minWidth: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
+  referralBannerBadge: { minWidth: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xs },
   referralBannerBadgeText: { fontSize: 11, color: '#fff' },
-  floatingOfflineWrap: { position: 'absolute', left: 0, right: 0, alignItems: 'center', gap: 6, paddingBottom: 8 },
+  floatingOfflineWrap: { position: 'absolute', left: 0, right: 0, alignItems: 'center', gap: 6, paddingBottom: Spacing.sm },
   floatingPulseWrap: { alignItems: 'center', justifyContent: 'center' },
-  floatingOfflineBtn: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center', borderWidth: 2, elevation: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.12, shadowRadius: 12 },
-  floatingOfflineLabel: { fontSize: 14 },
-  floatingOfflineSub: { fontSize: 12 },
+  floatingOfflineBtn: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center', borderWidth: 2, elevation: Shadows.large.elevation, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.12, shadowRadius: 12 },
+  floatingOfflineLabel: { fontSize: Typography.size.sm },
+  floatingOfflineSub: { fontSize: Typography.size.xs },
   noLineCard: { alignItems: 'center', padding: 28, gap: 10 },
-  noLineTitle: { fontSize: 16, marginTop: 4 },
+  noLineTitle: { fontSize: Typography.size.md, marginTop: Spacing.xs },
   noLineSub: { fontSize: 13, textAlign: 'center', lineHeight: 20 },
-  goToLinesBtn: { marginTop: 8, borderRadius: 14, overflow: 'hidden', width: '100%' },
-  goToLinesBtnGrad: { height: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  goToLinesBtnText: { color: '#fff', fontSize: 14 },
+  goToLinesBtn: { marginTop: Spacing.sm, borderRadius: 14, overflow: 'hidden', width: '100%' },
+  goToLinesBtnGrad: { height: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
+  goToLinesBtnText: { color: '#fff', fontSize: Typography.size.sm },
 });

@@ -2483,7 +2483,7 @@ export function LanguageSwitchOverlay() {
             <Text style={overlayStyles.logoArrow}>➤</Text>
           </View>
           <Text style={overlayStyles.logoText}>
-            Vee<Text style={{ color: '#3D52D5' }}>Go</Text>
+            Vee<Text style={{ color: '#55c49a' }}>Go</Text>
           </Text>
         </View>
 
@@ -2540,12 +2540,12 @@ const overlayStyles = StyleSheet.create({
   spinner: {
     width: 52, height: 52, borderRadius: 26,
     borderWidth: 3,
-    borderColor: '#3D52D5',
+    borderColor: '#55c49a',
     borderTopColor: 'transparent',
   },
   checkCircle: {
     width: 56, height: 56, borderRadius: 28,
-    backgroundColor: '#3D52D5',
+    backgroundColor: '#55c49a',
     alignItems: 'center', justifyContent: 'center',
   },
   checkMark: { fontSize: 26, color: '#fff', fontFamily: 'Inter_700Bold' },

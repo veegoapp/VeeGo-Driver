@@ -9,6 +9,11 @@ import { ArrowRight } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Rect, G } from 'react-native-svg';
 import { useI18n } from '@/lib/i18nContext';
+import { Animation } from '@/constants/animations';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Radius } from '@/constants/radius';
+import { Shadows } from '@/constants/shadows';
 
 const { width } = Dimensions.get('window');
 
@@ -28,13 +33,13 @@ function IllustDrive() {
         <Circle cx="108" cy="170" r="6" fill="#f2f2f5" />
         <Circle cx="192" cy="170" r="14" fill="#1e1e28" />
         <Circle cx="192" cy="170" r="6" fill="#f2f2f5" />
-        <Rect x="224" y="128" width="12" height="8" fill="#D5B23D" opacity="0.85" rx="3" />
+        <Rect x="224" y="128" width="12" height="8" fill="#55c49a" opacity="0.85" rx="3" />
         <Rect x="64" y="128" width="12" height="8" fill="#e85454" opacity="0.5" rx="3" />
         <Rect x="208" y="46" width="68" height="30" fill="white" rx="12" />
-        <Rect x="218" y="56" width="18" height="10" fill="#D5B23D" rx="3" opacity="0.7" />
+        <Rect x="218" y="56" width="18" height="10" fill="#55c49a" rx="3" opacity="0.7" />
         <Rect x="240" y="56" width="28" height="10" fill="#1e1e28" rx="3" opacity="0.15" />
         <Rect x="28" y="66" width="58" height="28" fill="white" rx="10" />
-        <Rect x="38" y="76" width="12" height="8" fill="#D5B23D" rx="2" opacity="0.8" />
+        <Rect x="38" y="76" width="12" height="8" fill="#55c49a" rx="2" opacity="0.8" />
         <Rect x="54" y="76" width="24" height="8" fill="#1e1e28" rx="2" opacity="0.15" />
       </Svg>
     </View>
@@ -51,7 +56,7 @@ function IllustStats() {
         <Rect x="38" y="44" width="90" height="10" fill="#e8e8ee" rx="5" />
         <Rect x="38" y="60" width="56" height="18" fill="#1e1e28" rx="6" />
         <Rect x="196" y="38" width="66" height="38" fill="#f8f8fb" rx="12" />
-        <Rect x="206" y="50" width="12" height="14" fill="#D5B23D" rx="3" opacity="0.7" />
+        <Rect x="206" y="50" width="12" height="14" fill="#55c49a" rx="3" opacity="0.7" />
         <Rect x="222" y="50" width="32" height="6" fill="#1e1e28" rx="2" opacity="0.2" />
         <Rect x="222" y="60" width="22" height="6" fill="#1e1e28" rx="2" opacity="0.12" />
         {bars.map((h, i) => (
@@ -115,7 +120,7 @@ const ill = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.07,
     shadowRadius: 18,
-    elevation: 4,
+    elevation: Shadows.medium.elevation,
   },
 });
 
@@ -148,7 +153,7 @@ export default function OnboardingScreen() {
           <View style={s.logoIcon}>
             <Navigation size={32} color="#ffffff" />
           </View>
-          <Text style={s.logoText}>Vee<Text style={{ color: '#3D52D5' }}>Go</Text></Text>
+          <Text style={s.logoText}>Vee<Text style={{ color: '#55c49a' }}>Go</Text></Text>
           <View style={s.driverBadge}>
             <Text style={s.driverBadgeText}>DRIVER</Text>
           </View>
@@ -227,7 +232,7 @@ function Dot({ active, done }: { active: boolean; done: boolean }) {
   useEffect(() => {
     Animated.parallel([
       Animated.spring(dotWidth, { toValue: active ? 22 : 6, damping: 18, useNativeDriver: false }),
-      Animated.timing(dotOpacity, { toValue: active ? 1 : done ? 0.7 : 0.4, duration: 200, useNativeDriver: false }),
+      Animated.timing(dotOpacity, { toValue: active ? 1 : done ? 0.7 : 0.4, duration: Animation.duration.fast, useNativeDriver: false }),
     ]).start();
   }, [active, done]);
 
@@ -240,45 +245,45 @@ const s = StyleSheet.create({
   root: { flex: 1 },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 24, paddingBottom: 8,
+    paddingHorizontal: Spacing.xl, paddingBottom: Spacing.sm,
   },
-  logoRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  logoRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   logoIcon: {
-    width: 36, height: 36, borderRadius: 12, backgroundColor: '#1e1e28',
+    width: 36, height: 36, borderRadius: Radius.md, backgroundColor: '#1e1e28',
     alignItems: 'center', justifyContent: 'center',
   },
-  logoText: { fontSize: 20, fontWeight: '700', color: '#1e1e28', letterSpacing: -0.8, fontFamily: 'Inter_700Bold' },
+  logoText: { fontSize: 20, fontWeight: Typography.weight.bold, color: '#1e1e28', letterSpacing: -0.8, fontFamily: 'Inter_700Bold' },
   driverBadge: {
     backgroundColor: 'rgba(30,30,40,0.08)', borderRadius: 99,
-    paddingHorizontal: 8, paddingVertical: 3,
+    paddingHorizontal: Spacing.sm, paddingVertical: 3,
   },
-  driverBadgeText: { fontSize: 9, fontWeight: '700', color: '#1e1e28', letterSpacing: 1.5 },
-  skipBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.7)' },
-  skipText: { fontSize: 13, color: '#5e5e72', fontWeight: '500' },
-  slide: { width, flex: 1, paddingHorizontal: 28, paddingTop: 12, gap: 24 },
+  driverBadgeText: { fontSize: 9, fontWeight: Typography.weight.bold, color: '#1e1e28', letterSpacing: 1.5 },
+  skipBtn: { paddingHorizontal: 14, paddingVertical: Spacing.sm, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.7)' },
+  skipText: { fontSize: 13, color: '#5e5e72', fontWeight: Typography.weight.medium },
+  slide: { width, flex: 1, paddingHorizontal: 28, paddingTop: Spacing.md, gap: Spacing.xl },
   illustBox: {
     flex: 1, borderRadius: 32, overflow: 'hidden', maxHeight: 300,
-    shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.08, shadowRadius: 20, elevation: 4,
+    shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.08, shadowRadius: 20, elevation: Shadows.medium.elevation,
   },
   textBox: { gap: 10 },
   tagBox: {
     alignSelf: 'flex-start',
     backgroundColor: 'rgba(30,30,40,0.08)', borderRadius: 99,
-    paddingHorizontal: 12, paddingVertical: 5,
+    paddingHorizontal: Spacing.md, paddingVertical: 5,
   },
-  tagText: { fontSize: 10.5, fontWeight: '600', color: '#1e1e28', textTransform: 'uppercase', letterSpacing: 1.3 },
-  title: { fontSize: 32, fontWeight: '700', color: '#1e1e28', letterSpacing: -1.2, lineHeight: 38, fontFamily: 'Inter_700Bold' },
+  tagText: { fontSize: 10.5, fontWeight: Typography.weight.semibold, color: '#1e1e28', textTransform: 'uppercase', letterSpacing: 1.3 },
+  title: { fontSize: 32, fontWeight: Typography.weight.bold, color: '#1e1e28', letterSpacing: -1.2, lineHeight: 38, fontFamily: 'Inter_700Bold' },
   body: { fontSize: 15, color: '#5e5e72', lineHeight: 22, fontFamily: 'Inter_400Regular' },
   footer: {
-    paddingHorizontal: 28, paddingTop: 16,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16,
+    paddingHorizontal: 28, paddingTop: Spacing.lg,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.lg,
   },
   dots: { flexDirection: 'row', gap: 6, alignItems: 'center' },
   dot: { height: 6, borderRadius: 3 },
   nextBtn: {
     flex: 1, height: 56, borderRadius: 20, backgroundColor: '#1e1e28',
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.22, shadowRadius: 24, elevation: 8,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm,
+    shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.22, shadowRadius: 24, elevation: Shadows.large.elevation,
   },
-  nextText: { color: 'white', fontSize: 15, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  nextText: { color: 'white', fontSize: 15, fontWeight: Typography.weight.semibold, fontFamily: 'Inter_600SemiBold' },
 });

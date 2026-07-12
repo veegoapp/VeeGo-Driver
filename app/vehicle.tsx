@@ -17,6 +17,9 @@ import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
 import type { DriverProfileEnriched } from '@/lib/api';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Radius } from '@/constants/radius';
 
 type VehicleEndpointData = {
   id?: number | string;
@@ -195,25 +198,25 @@ export default function VehicleScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  headerRow: { alignItems: 'center', gap: 12, marginBottom: 24 },
+  headerRow: { alignItems: 'center', gap: Spacing.md, marginBottom: Spacing.xl },
   backBtn: {
     width: 40, height: 40, borderRadius: 20,
     alignItems: 'center', justifyContent: 'center', borderWidth: 1,
   },
-  pageTitle: { fontSize: 22, fontFamily: 'Inter_700Bold' },
+  pageTitle: { fontSize: Typography.size.xl, fontFamily: 'Inter_700Bold' },
   center: { alignItems: 'center', paddingVertical: 60 },
   emptyBox: {
-    alignItems: 'center', justifyContent: 'center', gap: 12,
-    borderRadius: 20, borderWidth: 1, paddingVertical: 48, marginTop: 8,
+    alignItems: 'center', justifyContent: 'center', gap: Spacing.md,
+    borderRadius: 20, borderWidth: 1, paddingVertical: 48, marginTop: Spacing.sm,
   },
-  emptyText: { fontSize: 14, fontFamily: 'Inter_400Regular' },
+  emptyText: { fontSize: Typography.size.sm, fontFamily: 'Inter_400Regular' },
   heroCard: {
     borderRadius: 20,
     padding: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
-    marginBottom: 24,
+    gap: Spacing.lg,
+    marginBottom: Spacing.xl,
   },
   heroIconWrap: {
     width: 72, height: 72, borderRadius: 18,
@@ -228,7 +231,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   heroModel: {
-    fontSize: 22,
+    fontSize: Typography.size.xl,
     color: '#fff',
     fontFamily: 'Inter_700Bold',
     marginTop: 2,
@@ -237,9 +240,9 @@ const styles = StyleSheet.create({
     marginTop: 10,
     alignSelf: 'flex-start',
     backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 8,
+    borderRadius: Radius.sm,
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: Spacing.xs,
   },
   plateText: {
     color: '#fff',
@@ -252,23 +255,23 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_500Medium',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
-    marginBottom: 8,
-    paddingHorizontal: 4,
+    marginBottom: Spacing.sm,
+    paddingHorizontal: Spacing.xs,
   },
   card: {
     backgroundColor: '#fff',
-    borderRadius: 16,
+    borderRadius: Radius.lg,
     borderWidth: 1,
     overflow: 'hidden',
   },
   detailRow: {
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    paddingHorizontal: Spacing.lg,
     paddingVertical: 14,
-    gap: 8,
+    gap: Spacing.sm,
   },
-  detailLabel: { fontSize: 14, fontFamily: 'Inter_400Regular' },
-  detailValue: { fontSize: 14, fontFamily: 'Inter_600SemiBold', flex: 1 },
-  divider: { height: 1, marginHorizontal: 16 },
+  detailLabel: { fontSize: Typography.size.sm, fontFamily: 'Inter_400Regular' },
+  detailValue: { fontSize: Typography.size.sm, fontFamily: 'Inter_600SemiBold', flex: 1 },
+  divider: { height: 1, marginHorizontal: Spacing.lg },
 });

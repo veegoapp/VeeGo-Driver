@@ -12,6 +12,10 @@ import { useI18n } from '@/lib/i18nContext';
 import { useSocket } from '@/lib/socketContext';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
 import { endpoints } from '@/lib/api';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Radius } from '@/constants/radius';
+import { Shadows } from '@/constants/shadows';
 
 export default function ShuttleBoardingScreen() {
   const colors = useColors();
@@ -119,7 +123,7 @@ export default function ShuttleBoardingScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
-        contentContainerStyle={{ paddingTop: topPad + 8, paddingBottom: 16, paddingHorizontal: 16 }}
+        contentContainerStyle={{ paddingTop: topPad + 8, paddingBottom: Spacing.lg, paddingHorizontal: Spacing.lg }}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
@@ -338,46 +342,46 @@ export default function ShuttleBoardingScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   pageTitle: { fontSize: 20 },
-  pageSub: { fontSize: 12, marginTop: 2 },
+  pageSub: { fontSize: Typography.size.xs, marginTop: 2 },
   timeoutBanner: {
-    marginTop: 12, borderRadius: 14, borderWidth: 1,
-    padding: 14, gap: 8,
+    marginTop: Spacing.md, borderRadius: 14, borderWidth: 1,
+    padding: 14, gap: Spacing.sm,
   },
   timeoutText: { fontSize: 13, lineHeight: 19 },
-  timeoutActions: { flexDirection: 'row', gap: 8, marginTop: 4 },
-  timeoutBtn: { flex: 1, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10, alignItems: 'center' },
-  timeoutBtnText: { fontSize: 12 },
-  progressCard: { marginTop: 16, padding: 16 },
+  timeoutActions: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.xs },
+  timeoutBtn: { flex: 1, paddingVertical: 10, paddingHorizontal: Spacing.md, borderRadius: 10, alignItems: 'center' },
+  timeoutBtnText: { fontSize: Typography.size.xs },
+  progressCard: { marginTop: Spacing.lg, padding: Spacing.lg },
   progressHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  progressLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  progressTitle: { fontSize: 14 },
-  progressSub: { fontSize: 12, marginTop: 2 },
+  progressLeft: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
+  progressTitle: { fontSize: Typography.size.sm },
+  progressSub: { fontSize: Typography.size.xs, marginTop: 2 },
   progressPct: { fontSize: 24 },
-  progressTrack: { height: 8, borderRadius: 4, marginTop: 12, overflow: 'hidden' },
+  progressTrack: { height: 8, borderRadius: 4, marginTop: Spacing.md, overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: 4 },
-  sectionTitle: { fontSize: 14, marginTop: 20, marginBottom: 12 },
-  passengerCard: { padding: 16 },
-  passengerContent: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  sectionTitle: { fontSize: Typography.size.sm, marginTop: 20, marginBottom: Spacing.md },
+  passengerCard: { padding: Spacing.lg },
+  passengerContent: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   avatarWrap: { position: 'relative' },
-  avatar: { width: 48, height: 48, borderRadius: 24, borderWidth: 2 },
+  avatar: { width: 48, height: 48, borderRadius: Radius.xl, borderWidth: 2 },
   checkBadge: { position: 'absolute', bottom: -2, right: -2, width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  passengerName: { fontSize: 14 },
-  passengerMeta: { flexDirection: 'row', gap: 12, marginTop: 4 },
-  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  passengerName: { fontSize: Typography.size.sm },
+  passengerMeta: { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.xs },
+  metaItem: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   metaText: { fontSize: 11 },
-  absentLabel: { fontSize: 11, marginTop: 4 },
+  absentLabel: { fontSize: 11, marginTop: Spacing.xs },
   actionBtns: { flexDirection: 'column', gap: 6 },
-  actionBtn: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5 },
+  actionBtn: { width: 40, height: 40, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5 },
   avatarFallback: { alignItems: 'center', justifyContent: 'center' },
-  avatarInitial: { fontSize: 18 },
-  bottomAction: { paddingHorizontal: 16, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth },
-  departBtn: { borderRadius: 16, overflow: 'hidden', elevation: 8, shadowColor: '#2d2d42', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 12 },
-  departBtnGrad: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  avatarInitial: { fontSize: Typography.size.lg },
+  bottomAction: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.md, borderTopWidth: StyleSheet.hairlineWidth },
+  departBtn: { borderRadius: Radius.lg, overflow: 'hidden', elevation: Shadows.large.elevation, shadowColor: '#2d2d42', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 12 },
+  departBtnGrad: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
   departBtnText: { fontSize: 15 },
-  waitingCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16 },
+  waitingCard: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, padding: Spacing.lg },
   waitingText: { fontSize: 13, flex: 1, lineHeight: 20 },
 });

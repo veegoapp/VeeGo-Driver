@@ -10,6 +10,9 @@ import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
 import { getToken, getUserIdFromToken } from '@/lib/auth';
 import { compressImage } from '@/lib/imageCompression';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Radius } from '@/constants/radius';
 
 type SupportCategory = 'payment' | 'safety' | 'quality' | 'refund' | 'lost_found' | 'other';
 type TopicKey = 'payments' | 'account' | 'trip' | 'vehicle' | 'safety' | 'app';
@@ -200,16 +203,16 @@ export default function SupportScreen() {
               <View style={[styles.selectedTopicChip, { backgroundColor: colors.primary + '18', borderColor: colors.primary + '40' }]}>
                 <Text style={[{ color: colors.primary, fontFamily: 'Inter_600SemiBold', fontSize: 13, flex: 1 }]}>{selectedTopic.label}</Text>
                 <Pressable onPress={() => setSelectedTopicKey(null)}>
-                  <Text style={[{ color: colors.mutedForeground, fontSize: 12 }]}>✕</Text>
+                  <Text style={[{ color: colors.mutedForeground, fontSize: Typography.size.xs }]}>✕</Text>
                 </Pressable>
               </View>
             ) : (
-              <Text style={[{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13, marginBottom: 12 }]}>
+              <Text style={[{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13, marginBottom: Spacing.md }]}>
                 {t.support_tap_topic}
               </Text>
             )}
 
-            <Text style={[styles.formLabel, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold', marginTop: 12, textAlign: TA }]}>
+            <Text style={[styles.formLabel, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold', marginTop: Spacing.md, textAlign: TA }]}>
               {t.support_description_label}
             </Text>
             <TextInput
@@ -222,7 +225,7 @@ export default function SupportScreen() {
               style={[styles.descInput, { color: colors.foreground, fontFamily: 'Inter_400Regular', borderColor: colors.border, textAlign: TA }]}
             />
 
-            <Text style={[styles.formLabel, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold', marginTop: 12, textAlign: TA }]}>
+            <Text style={[styles.formLabel, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold', marginTop: Spacing.md, textAlign: TA }]}>
               {t.support_attach_photo}
             </Text>
             <View style={[styles.attachmentsRow, { flexDirection: R }]}>
@@ -294,31 +297,31 @@ export default function SupportScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  pageTitle: { fontSize: 24, marginTop: 24, marginBottom: 16 },
-  searchBar: { alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 12 },
-  searchInput: { flex: 1, fontSize: 14 },
-  contactGrid: { gap: 12, marginTop: 20 },
-  contactCard: { padding: 16 },
-  contactIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  contactTitle: { fontSize: 14, marginTop: 12 },
-  contactSub: { fontSize: 12, marginTop: 4 },
-  sectionTitle: { fontSize: 12, letterSpacing: 2, textTransform: 'uppercase', marginTop: 28, marginBottom: 12 },
-  topicRow: { alignItems: 'center', padding: 16 },
-  topicText: { fontSize: 14 },
+  pageTitle: { fontSize: 24, marginTop: Spacing.xl, marginBottom: Spacing.lg },
+  searchBar: { alignItems: 'center', gap: Spacing.sm, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md },
+  searchInput: { flex: 1, fontSize: Typography.size.sm },
+  contactGrid: { gap: Spacing.md, marginTop: 20 },
+  contactCard: { padding: Spacing.lg },
+  contactIcon: { width: 40, height: 40, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
+  contactTitle: { fontSize: Typography.size.sm, marginTop: Spacing.md },
+  contactSub: { fontSize: Typography.size.xs, marginTop: Spacing.xs },
+  sectionTitle: { fontSize: Typography.size.xs, letterSpacing: 2, textTransform: 'uppercase', marginTop: 28, marginBottom: Spacing.md },
+  topicRow: { alignItems: 'center', padding: Spacing.lg },
+  topicText: { fontSize: Typography.size.sm },
   selectedDot: { width: 8, height: 8, borderRadius: 4 },
-  ticketForm: { padding: 16, gap: 4 },
-  formLabel: { fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 },
+  ticketForm: { padding: Spacing.lg, gap: Spacing.xs },
+  formLabel: { fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', marginBottom: Spacing.sm },
   selectedTopicChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 4,
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
+    borderWidth: 1, borderRadius: 10, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, marginBottom: Spacing.xs,
   },
   descInput: {
-    borderWidth: 1, borderRadius: 12, padding: 12,
-    fontSize: 14, minHeight: 100, textAlignVertical: 'top',
-    marginBottom: 4,
+    borderWidth: 1, borderRadius: Radius.md, padding: Spacing.md,
+    fontSize: Typography.size.sm, minHeight: 100, textAlignVertical: 'top',
+    marginBottom: Spacing.xs,
   },
-  attachmentsRow: { flexWrap: 'wrap', gap: 10, marginBottom: 8 },
-  attachmentThumb: { width: 64, height: 64, borderRadius: 12, borderWidth: 1, overflow: 'hidden' },
+  attachmentsRow: { flexWrap: 'wrap', gap: 10, marginBottom: Spacing.sm },
+  attachmentThumb: { width: 64, height: 64, borderRadius: Radius.md, borderWidth: 1, overflow: 'hidden' },
   attachmentImg: { width: '100%', height: '100%' },
   attachmentOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -334,17 +337,17 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.55)',
   },
   attachmentAddBtn: {
-    width: 64, height: 64, borderRadius: 12, borderWidth: 1, borderStyle: 'dashed',
+    width: 64, height: 64, borderRadius: Radius.md, borderWidth: 1, borderStyle: 'dashed',
     alignItems: 'center', justifyContent: 'center',
   },
   submitBtn: {
     height: 48, borderRadius: 14, flexDirection: 'row',
-    alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 8,
+    alignItems: 'center', justifyContent: 'center', gap: Spacing.sm, marginTop: Spacing.sm,
   },
-  submitBtnText: { fontSize: 14 },
-  successCard: { padding: 24, alignItems: 'center', gap: 12 },
+  submitBtnText: { fontSize: Typography.size.sm },
+  successCard: { padding: Spacing.xl, alignItems: 'center', gap: Spacing.md },
   successIcon: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
-  successTitle: { fontSize: 18 },
-  successSub: { fontSize: 14, lineHeight: 20 },
-  newTicketBtn: { marginTop: 4, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 },
+  successTitle: { fontSize: Typography.size.lg },
+  successSub: { fontSize: Typography.size.sm, lineHeight: 20 },
+  newTicketBtn: { marginTop: Spacing.xs, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 },
 });

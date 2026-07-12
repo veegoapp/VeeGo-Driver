@@ -19,6 +19,10 @@ import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints, type DriverPromotion } from '@/lib/api';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Radius } from '@/constants/radius';
+import { Shadows } from '@/constants/shadows';
 
 type WeekDay = { week_start: string; trip_count: number; total_earned: number; paid?: number; pending?: number; confirmed?: number };
 type EarningsSummary = {
@@ -100,7 +104,7 @@ export default function EarningsScreen() {
   if (isError) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' }]}>
-        <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 14 }}>Failed to load earnings. Please try again.</Text>
+        <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: Typography.size.sm }}>Failed to load earnings. Please try again.</Text>
       </View>
     );
   }
@@ -126,7 +130,7 @@ export default function EarningsScreen() {
         </View>
 
         <Animated.View style={[styles.heroCard, { opacity: heroAnim, transform: [{ translateY: heroAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
-          <LinearGradient colors={['#2d2d42', '#D5B23D']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroGrad}>
+          <LinearGradient colors={['#2d2d42', '#55c49a']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroGrad}>
             <View style={styles.heroBlobTop} />
             <View style={styles.heroContent}>
               <Text style={[styles.heroLabel, { color: colors.primaryForeground + 'CC', fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.total_this_week}</Text>
@@ -164,10 +168,10 @@ export default function EarningsScreen() {
         <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.active_promotions}</Text>
         {promotions.length === 0 ? (
           <GlassView style={{ padding: 20, alignItems: 'center' }} borderRadius={20}>
-            <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 14 }}>No active promotions</Text>
+            <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: Typography.size.sm }}>No active promotions</Text>
           </GlassView>
         ) : (
-          <View style={{ gap: 8 }}>
+          <View style={{ gap: Spacing.sm }}>
             {promotions.filter(p => p.isActive).map(promo => (
               <GlassView key={promo.id} style={styles.promoCard} borderRadius={20}>
                 <View style={[styles.promoIcon, { backgroundColor: colors.primary + '26' }]}>
@@ -195,7 +199,7 @@ export default function EarningsScreen() {
 
         <Pressable onPress={() => router.push('/ratings')} style={({ pressed }) => [{ transform: [{ scale: pressed ? 0.98 : 1 }], marginTop: 20 }]}>
           <GlassView style={[styles.levelCard, { flexDirection: R }]} borderRadius={20}>
-            <LinearGradient colors={['#2d2d42', '#D5B23D']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.levelIcon}>
+            <LinearGradient colors={['#2d2d42', '#55c49a']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.levelIcon}>
               <Zap size={24} color={colors.primaryForeground} strokeWidth={2} />
             </LinearGradient>
             <View style={{ flex: 1 }}>
@@ -231,37 +235,37 @@ const styles = StyleSheet.create({
   header: { alignItems: 'center', justifyContent: 'space-between' },
   sectionLabel: { fontSize: 10, letterSpacing: 2, textTransform: 'uppercase' },
   pageTitle: { fontSize: 24, marginTop: 2 },
-  cashOutBtn: { alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8 },
-  cashOutText: { fontSize: 12 },
-  heroCard: { marginTop: 20, borderRadius: 24, overflow: 'hidden', elevation: 8, shadowColor: '#2d2d42', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 16 },
+  cashOutBtn: { alignItems: 'center', gap: 6, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm },
+  cashOutText: { fontSize: Typography.size.xs },
+  heroCard: { marginTop: 20, borderRadius: Radius.xl, overflow: 'hidden', elevation: Shadows.large.elevation, shadowColor: '#2d2d42', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 16 },
   heroGrad: { padding: 20, position: 'relative', overflow: 'hidden' },
   heroBlobTop: { position: 'absolute', top: -32, right: -32, width: 128, height: 128, borderRadius: 64, backgroundColor: 'rgba(255,255,255,0.15)' },
   heroContent: {},
   heroLabel: { fontSize: 11, letterSpacing: 2, textTransform: 'uppercase' },
-  heroAmountRow: { alignItems: 'flex-end', gap: 8, marginTop: 4 },
+  heroAmountRow: { alignItems: 'flex-end', gap: Spacing.sm, marginTop: Spacing.xs },
   heroAmount: { fontSize: 48, lineHeight: 52 },
-  heroCurrency: { fontSize: 20, marginBottom: 4 },
-  heroChange: { fontSize: 12, marginTop: 4 },
-  barChart: { alignItems: 'flex-end', height: 96, marginTop: 24, gap: 4 },
+  heroCurrency: { fontSize: 20, marginBottom: Spacing.xs },
+  heroChange: { fontSize: Typography.size.xs, marginTop: Spacing.xs },
+  barChart: { alignItems: 'flex-end', height: 96, marginTop: Spacing.xl, gap: Spacing.xs },
   barWrapper: { flex: 1, alignItems: 'center', height: '100%', justifyContent: 'flex-end' },
   bar: { width: '100%', borderRadius: 4 },
   barDay: { fontSize: 10, marginTop: 6 },
-  sectionTitle: { fontSize: 12, letterSpacing: 2, textTransform: 'uppercase', marginTop: 24, marginBottom: 12 },
+  sectionTitle: { fontSize: Typography.size.xs, letterSpacing: 2, textTransform: 'uppercase', marginTop: Spacing.xl, marginBottom: Spacing.md },
   summaryCard: {},
-  summaryInner: { padding: 16, gap: 12 },
-  earningsRow: { alignItems: 'center', gap: 12 },
+  summaryInner: { padding: Spacing.lg, gap: Spacing.md },
+  earningsRow: { alignItems: 'center', gap: Spacing.md },
   rowIcon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  rowLabel: { fontSize: 14 },
-  rowValue: { fontSize: 14 },
-  divider: { height: 1, marginVertical: 4 },
-  levelCard: { alignItems: 'center', gap: 12, padding: 16 },
-  levelIcon: { width: 48, height: 48, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  levelTitle: { fontSize: 14 },
-  levelSub: { fontSize: 12, marginTop: 2 },
-  promoCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, padding: 16 },
-  promoIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
-  promoTitle: { fontSize: 14 },
-  promoDesc: { fontSize: 12, marginTop: 2 },
+  rowLabel: { fontSize: Typography.size.sm },
+  rowValue: { fontSize: Typography.size.sm },
+  divider: { height: 1, marginVertical: Spacing.xs },
+  levelCard: { alignItems: 'center', gap: Spacing.md, padding: Spacing.lg },
+  levelIcon: { width: 48, height: 48, borderRadius: Radius.lg, alignItems: 'center', justifyContent: 'center' },
+  levelTitle: { fontSize: Typography.size.sm },
+  levelSub: { fontSize: Typography.size.xs, marginTop: 2 },
+  promoCard: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.md, padding: Spacing.lg },
+  promoIcon: { width: 40, height: 40, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
+  promoTitle: { fontSize: Typography.size.sm },
+  promoDesc: { fontSize: Typography.size.xs, marginTop: 2 },
   promoBonus: { fontSize: 13, marginTop: 6 },
-  promoExpiry: { fontSize: 11, marginTop: 4 },
+  promoExpiry: { fontSize: 11, marginTop: Spacing.xs },
 });
