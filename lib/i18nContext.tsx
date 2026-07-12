@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
-import { Animated, I18nManager, StyleSheet, Text, View } from 'react-native';
+import { Animated, I18nManager, Platform, StyleSheet, Text, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setApiLanguage } from './api';
 
@@ -795,6 +795,20 @@ const en = {
   onboarding_step3_tag: 'Safe & supported',
   onboarding_step3_title: 'Never drive\nalone',
   onboarding_step3_body: '24/7 support, safety tools, and a reliable platform behind every trip.',
+  // ── Service blocked screen ────────────────────────────────────────────────────
+  service_blocked_maintenance_title: 'Under Maintenance',
+  service_blocked_coming_soon_title: 'Coming Soon',
+  service_blocked_unavailable_title: 'Service Unavailable',
+  service_blocked_disabled_title: 'Service Disabled',
+  service_blocked_maintenance_msg: 'This service is temporarily under maintenance.',
+  service_blocked_coming_soon_msg: 'This service will be available soon.',
+  service_blocked_unavailable_msg: 'This service is currently not available.',
+  service_blocked_back_online: 'Back online: {eta}',
+  service_blocked_redirecting: 'Redirecting in',
+  service_blocked_go_back: 'Go Back',
+  // ── Server status banner ──────────────────────────────────────────────────────
+  server_status_offline: "You're offline. Reconnecting…",
+  server_status_reconnected: 'Back online',
   // ── Forgot password screen ────────────────────────────────────────────────────
   forgot_password_title: 'Forgot password?',
   forgot_password_sub: "Enter the phone number linked to your account. We'll send you a reset code.",
@@ -1935,6 +1949,20 @@ const ar: typeof en = {
   onboarding_step3_tag: 'آمن ومدعوم',
   onboarding_step3_title: 'لا تقُد\nوحدك',
   onboarding_step3_body: 'دعم على مدار الساعة، أدوات أمان، ومنصة موثوقة في كل رحلة.',
+  // ── Service blocked screen ────────────────────────────────────────────────────
+  service_blocked_maintenance_title: 'تحت الصيانة',
+  service_blocked_coming_soon_title: 'قريباً',
+  service_blocked_unavailable_title: 'الخدمة غير متاحة',
+  service_blocked_disabled_title: 'الخدمة معطّلة',
+  service_blocked_maintenance_msg: 'هذه الخدمة تحت الصيانة مؤقتاً.',
+  service_blocked_coming_soon_msg: 'هذه الخدمة ستكون متاحة قريباً.',
+  service_blocked_unavailable_msg: 'هذه الخدمة غير متاحة حالياً.',
+  service_blocked_back_online: 'ستعود الخدمة: {eta}',
+  service_blocked_redirecting: 'جارٍ إعادة التوجيه خلال',
+  service_blocked_go_back: 'رجوع',
+  // ── Server status banner ──────────────────────────────────────────────────────
+  server_status_offline: 'أنت غير متصل. جارٍ إعادة الاتصال…',
+  server_status_reconnected: 'الاتصال عاد',
   // ── Forgot password screen ────────────────────────────────────────────────────
   forgot_password_title: 'نسيت كلمة المرور؟',
   forgot_password_sub: 'أدخل رقم الهاتف المرتبط بحسابك. سنرسل لك رمز إعادة التعيين.',
@@ -2424,6 +2452,16 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     setApiLanguage(lang);
     setLanguageState(lang);
     AsyncStorage.setItem(LANG_STORAGE_KEY, lang).catch(() => {});
+
+    // On Android, forceRTL() above already triggers an OS-level activity
+    // restart on its own (see app/language-select.tsx's androidRtlRestart
+    // handling) — calling triggerAppRestart() again here would race with
+    // that. iOS/web have no such automatic restart, so this is the only
+    // place the reload actually happens for them — without it, forceRTL()
+    // flips the native flag but the mounted layout never re-mirrors.
+    if (Platform.OS !== 'android') {
+      triggerAppRestart();
+    }
 
     if (switchTimerRef.current) clearTimeout(switchTimerRef.current);
     switchTimerRef.current = setTimeout(() => setIsSwitchingLanguage(false), 1400);

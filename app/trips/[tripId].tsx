@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
+import { useI18n, rtlIconStyle } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
@@ -54,6 +55,7 @@ type Station = {
 export default function TripDetailScreen() {
   const { tripId } = useLocalSearchParams<{ tripId: string }>();
   const colors = useColors();
+  const { isRTL } = useI18n();
   const insets = useSafeAreaInsets();
   const topPad = insets.top;
   const queryClient = useQueryClient();
@@ -187,7 +189,7 @@ export default function TripDetailScreen() {
           onPress={() => router.back()}
           style={[styles.backBtn, { backgroundColor: colors.glass, borderColor: colors.border }]}
         >
-          <ArrowLeft size={20} color={colors.foreground} strokeWidth={2} />
+          <ArrowLeft size={20} color={colors.foreground} strokeWidth={2} style={rtlIconStyle(isRTL)} />
         </Pressable>
 
         <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>Trip detail</Text>

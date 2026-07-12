@@ -1,9 +1,11 @@
 import { router } from 'expo-router';
-import { Clock, WifiOff, Wrench, ArrowLeft } from 'lucide-react-native';
+import { Clock, WifiOff, Wrench, ArrowLeft, ArrowRight } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ServiceStatus } from '@/lib/serviceControlContext';
+import { useI18n } from '@/lib/i18nContext';
+import { useColors } from '@/hooks/useColors';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 
@@ -23,6 +25,8 @@ function IconFor({ mode }: { mode: string }) {
 
 export function ServiceBlockedScreen({ status, serviceName }: Props) {
   const insets = useSafeAreaInsets();
+  const { t, isRTL } = useI18n();
+  const colors = useColors();
   const [countdown, setCountdown] = useState(REDIRECT_DELAY_S);
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
@@ -46,17 +50,17 @@ export function ServiceBlockedScreen({ status, serviceName }: Props) {
   }, [countdown]);
 
   const title =
-    status.displayMode === 'maintenance' ? 'Under Maintenance'
-    : status.displayMode === 'coming_soon' ? 'Coming Soon'
-    : status.displayMode === 'unavailable' ? 'Service Unavailable'
-    : 'Service Disabled';
+    status.displayMode === 'maintenance' ? t.service_blocked_maintenance_title
+    : status.displayMode === 'coming_soon' ? t.service_blocked_coming_soon_title
+    : status.displayMode === 'unavailable' ? t.service_blocked_unavailable_title
+    : t.service_blocked_disabled_title;
 
   const message = status.message ?? (
     status.displayMode === 'maintenance'
-      ? 'This service is temporarily under maintenance.'
+      ? t.service_blocked_maintenance_msg
       : status.displayMode === 'coming_soon'
-      ? 'This service will be available soon.'
-      : 'This service is currently not available.'
+      ? t.service_blocked_coming_soon_msg
+      : t.service_blocked_unavailable_msg
   );
 
   return (
@@ -77,25 +81,25 @@ export function ServiceBlockedScreen({ status, serviceName }: Props) {
         <Text style={s.message}>{message}</Text>
 
         {status.displayMode === 'maintenance' && status.eta && (
-          <View style={s.etaRow}>
+          <View style={[s.etaRow, isRTL && { flexDirection: 'row-reverse' }]}>
             <Clock size={14} color="rgba(255,255,255,0.6)" />
-            <Text style={s.eta}>Back online: {status.eta}</Text>
+            <Text style={s.eta}>{t.service_blocked_back_online.replace('{eta}', status.eta)}</Text>
           </View>
         )}
 
         <View style={s.divider} />
 
         <Text style={s.redirectLabel}>
-          Redirecting in{' '}
-          <Text style={s.redirectCount}>{countdown}s</Text>
+          {t.service_blocked_redirecting}{' '}
+          <Text style={[s.redirectCount, { color: colors.info }]}>{countdown}s</Text>
         </Text>
 
         <Pressable
-          style={({ pressed }) => [s.backBtn, pressed && { opacity: 0.75 }]}
+          style={({ pressed }) => [s.backBtn, isRTL && { flexDirection: 'row-reverse' }, pressed && { opacity: 0.75 }]}
           onPress={() => router.replace('/login')}
         >
-          <ArrowLeft size={16} color="#1e1e28" />
-          <Text style={s.backBtnText}>Go Back</Text>
+          {isRTL ? <ArrowRight size={16} color="#1e1e28" /> : <ArrowLeft size={16} color="#1e1e28" />}
+          <Text style={s.backBtnText}>{t.service_blocked_go_back}</Text>
         </Pressable>
       </View>
     </View>

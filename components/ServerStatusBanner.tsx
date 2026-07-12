@@ -3,6 +3,7 @@ import { Animated, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WifiOff, Wifi } from 'lucide-react-native';
 import { API_BASE_URL } from '@/lib/api';
+import { useI18n } from '@/lib/i18nContext';
 import { Animation } from '@/constants/animations';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
@@ -15,6 +16,7 @@ type BannerState = 'hidden' | 'offline' | 'reconnected';
 export function ServerStatusBanner() {
   const insets = useSafeAreaInsets();
   const topPad = insets.top;
+  const { t, isRTL } = useI18n();
 
   const [banner, setBanner] = useState<BannerState>('hidden');
   const wasOfflineRef = useRef(false);
@@ -78,15 +80,13 @@ export function ServerStatusBanner() {
       ]}
       pointerEvents="none"
     >
-      <View style={styles.inner}>
+      <View style={[styles.inner, isRTL && { flexDirection: 'row-reverse' }]}>
         {isOffline
           ? <WifiOff size={14} color="#fff" strokeWidth={2.5} />
           : <Wifi     size={14} color="#fff" strokeWidth={2.5} />
         }
         <Text style={styles.text}>
-          {isOffline
-            ? 'Server offline — check Replit is running'
-            : 'Server reconnected ✓'}
+          {isOffline ? t.server_status_offline : t.server_status_reconnected}
         </Text>
       </View>
     </Animated.View>

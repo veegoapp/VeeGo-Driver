@@ -14,7 +14,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { useColors } from '@/hooks/useColors';
-import { useI18n } from '@/lib/i18nContext';
+import { useI18n, rtlIconStyle } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
 import type { DriverProfileEnriched } from '@/lib/api';
 import { Typography } from '@/constants/typography';
@@ -128,7 +128,7 @@ export default function VehicleScreen() {
             onPress={() => router.back()}
             style={[styles.backBtn, { backgroundColor: colors.glass, borderColor: colors.border }]}
           >
-            <ArrowLeft size={20} color={colors.foreground} strokeWidth={2} />
+            <ArrowLeft size={20} color={colors.foreground} strokeWidth={2} style={rtlIconStyle(isRTL)} />
           </Pressable>
           <Text style={[styles.pageTitle, { color: colors.foreground, textAlign: TA, flex: 1 }]}>
             {t.vehicle_label}
