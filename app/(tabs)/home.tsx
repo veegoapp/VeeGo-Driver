@@ -13,6 +13,7 @@ import { Animation } from '@/constants/animations';
 import {
   ActivityIndicator,
   Animated,
+  Easing,
   Image,
   Platform,
   Pressable,
@@ -169,8 +170,8 @@ export default function HomeScreen() {
       const pulse = Animated.loop(
         Animated.sequence([
           Animated.parallel([
-            Animated.timing(pulseScale, { toValue: 2.4, duration: 2000, useNativeDriver: true }),
-            Animated.timing(pulseOpacity, { toValue: 0, duration: 2000, useNativeDriver: true }),
+            Animated.timing(pulseScale, { toValue: 2.4, duration: 2000, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+            Animated.timing(pulseOpacity, { toValue: 0, duration: 2000, easing: Easing.out(Easing.ease), useNativeDriver: true }),
           ]),
           Animated.parallel([
             Animated.timing(pulseScale, { toValue: 0.8, duration: 0, useNativeDriver: true }),

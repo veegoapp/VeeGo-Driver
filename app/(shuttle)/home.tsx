@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  Easing,
   Platform,
   Pressable,
   ScrollView,
@@ -220,8 +221,8 @@ export default function ShuttleHomeScreen() {
     const pulse = Animated.loop(
       Animated.sequence([
         Animated.parallel([
-          Animated.timing(pulseScale, { toValue: 2.2, duration: 2000, useNativeDriver: true }),
-          Animated.timing(pulseOpacity, { toValue: 0, duration: 2000, useNativeDriver: true }),
+          Animated.timing(pulseScale, { toValue: 2.2, duration: 2000, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+          Animated.timing(pulseOpacity, { toValue: 0, duration: 2000, easing: Easing.out(Easing.ease), useNativeDriver: true }),
         ]),
         Animated.parallel([
           Animated.timing(pulseScale, { toValue: 0.8, duration: 0, useNativeDriver: true }),
