@@ -1,5 +1,15 @@
-import { ReactNode } from 'react';
-import { ActivityIndicator, StyleProp, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
+import { cloneElement, isValidElement, ReactElement, ReactNode } from 'react';
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleProp,
+  StyleSheet,
+  Text,
+  TextStyle,
+  TouchableOpacity,
+  View,
+  ViewStyle,
+} from 'react-native';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { Typography } from '@/constants/typography';
@@ -19,6 +29,18 @@ export interface VeeGoButtonProps {
   variant?: VeeGoButtonVariant;
   size?: VeeGoButtonSize;
   style?: StyleProp<ViewStyle>;
+  /** Extra style merged onto the title text (added after the default/variant text style). */
+  textStyle?: StyleProp<TextStyle>;
+  /** Which side of the title the icon renders on. Defaults to 'left' (existing behavior). */
+  iconPosition?: 'left' | 'right';
+  /** Clones the passed icon element with this `size` prop, if provided. */
+  iconSize?: number;
+  /** Clones the passed icon element with this `color` prop, if provided. */
+  iconColor?: string;
+  /** Overrides the title's font family. Unset by default (existing behavior). */
+  fontFamily?: string;
+  /** Opt-in press feedback (a discrete scale-down while pressed, no animation library). Off by default. */
+  pressedScale?: boolean;
 }
 
 type Colors = ReturnType<typeof useColors>;
@@ -54,6 +76,17 @@ function getVariantStyle(variant: VeeGoButtonVariant, colors: Colors) {
   }
 }
 
+function renderIcon(icon: ReactNode, iconSize?: number, iconColor?: string) {
+  if (!icon) return null;
+  if ((iconSize !== undefined || iconColor !== undefined) && isValidElement(icon)) {
+    const extraProps: Record<string, unknown> = {};
+    if (iconSize !== undefined) extraProps.size = iconSize;
+    if (iconColor !== undefined) extraProps.color = iconColor;
+    return <View style={styles.icon}>{cloneElement(icon as ReactElement<any>, extraProps)}</View>;
+  }
+  return <View style={styles.icon}>{icon}</View>;
+}
+
 export function VeeGoButton({
   title,
   onPress,
@@ -63,6 +96,12 @@ export function VeeGoButton({
   variant = 'primary',
   size = 'medium',
   style,
+  textStyle,
+  iconPosition = 'left',
+  iconSize,
+  iconColor,
+  fontFamily,
+  pressedScale = false,
 }: VeeGoButtonProps) {
   const colors = useColors();
   const { isRTL } = useI18n();
@@ -70,40 +109,63 @@ export function VeeGoButton({
   const sizeConfig = SIZE_CONFIG[size];
   const variantStyle = getVariantStyle(variant, colors);
 
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      disabled={isDisabled}
-      activeOpacity={0.8}
+  const containerStyle: StyleProp<ViewStyle>[] = [
+    styles.base,
+    {
+      height: sizeConfig.height,
+      paddingHorizontal: sizeConfig.paddingHorizontal,
+      borderRadius: Radius.lg,
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      opacity: isDisabled ? 0.5 : 1,
+    },
+    variantStyle.container,
+    style,
+  ];
+
+  const iconElement = renderIcon(icon, iconSize, iconColor);
+  const titleElement = (
+    <Text
       style={[
-        styles.base,
-        {
-          height: sizeConfig.height,
-          paddingHorizontal: sizeConfig.paddingHorizontal,
-          borderRadius: Radius.lg,
-          flexDirection: isRTL ? 'row-reverse' : 'row',
-          opacity: isDisabled ? 0.5 : 1,
-        },
-        variantStyle.container,
-        style,
+        styles.text,
+        { fontSize: sizeConfig.fontSize, fontWeight: Typography.weight.semibold },
+        variantStyle.text,
+        fontFamily ? { fontFamily } : null,
+        textStyle,
       ]}
     >
-      {loading ? (
-        <ActivityIndicator size="small" color={variantStyle.text.color as string} />
-      ) : (
-        <>
-          {icon ? <View style={styles.icon}>{icon}</View> : null}
-          <Text
-            style={[
-              styles.text,
-              { fontSize: sizeConfig.fontSize, fontWeight: Typography.weight.semibold },
-              variantStyle.text,
-            ]}
-          >
-            {title}
-          </Text>
-        </>
-      )}
+      {title}
+    </Text>
+  );
+
+  const content = loading ? (
+    <ActivityIndicator size="small" color={variantStyle.text.color as string} />
+  ) : iconPosition === 'right' ? (
+    <>
+      {titleElement}
+      {iconElement}
+    </>
+  ) : (
+    <>
+      {iconElement}
+      {titleElement}
+    </>
+  );
+
+  if (pressedScale) {
+    return (
+      <Pressable
+        onPress={onPress}
+        disabled={isDisabled}
+        style={({ pressed }) => [...containerStyle, pressed ? styles.pressedScale : null]}
+      >
+        {content}
+      </Pressable>
+    );
+  }
+
+  return (
+    <TouchableOpacity onPress={onPress} disabled={isDisabled} activeOpacity={0.8} style={containerStyle}>
+      {content}
     </TouchableOpacity>
   );
 }
@@ -120,5 +182,8 @@ const styles = StyleSheet.create({
   },
   text: {
     textAlign: 'center',
+  },
+  pressedScale: {
+    transform: [{ scale: 0.96 }],
   },
 });

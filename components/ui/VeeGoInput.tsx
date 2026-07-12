@@ -1,5 +1,5 @@
 import { ReactNode, useState } from 'react';
-import { StyleProp, StyleSheet, Text, TextInput, TextInputProps, View, ViewStyle } from 'react-native';
+import { StyleProp, StyleSheet, Text, TextInput, TextInputProps, TextStyle, View, ViewStyle } from 'react-native';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { Typography } from '@/constants/typography';
@@ -18,6 +18,14 @@ export interface VeeGoInputProps {
   style?: StyleProp<ViewStyle>;
   secureTextEntry?: boolean;
   keyboardType?: TextInputProps['keyboardType'];
+  /** Extra style merged onto the TextInput itself. */
+  inputStyle?: StyleProp<TextStyle>;
+  /** Extra style merged onto the label text. */
+  labelStyle?: StyleProp<TextStyle>;
+  /** Extra style merged onto the error text. */
+  errorStyle?: StyleProp<TextStyle>;
+  /** Extra style merged onto the icon+input row container (distinct from the outer `style`). */
+  containerStyle?: StyleProp<ViewStyle>;
 }
 
 export function VeeGoInput({
@@ -32,6 +40,10 @@ export function VeeGoInput({
   style,
   secureTextEntry,
   keyboardType,
+  inputStyle,
+  labelStyle,
+  errorStyle,
+  containerStyle,
 }: VeeGoInputProps) {
   const colors = useColors();
   const { isRTL } = useI18n();
@@ -46,6 +58,7 @@ export function VeeGoInput({
           style={[
             styles.label,
             { color: colors.mutedForeground, textAlign: isRTL ? 'right' : 'left', fontWeight: Typography.weight.medium },
+            labelStyle,
           ]}
         >
           {label}
@@ -61,6 +74,7 @@ export function VeeGoInput({
             borderColor,
             opacity: disabled ? 0.5 : 1,
           },
+          containerStyle,
         ]}
       >
         {leftIcon ? <View style={styles.iconSlot}>{leftIcon}</View> : null}
@@ -75,13 +89,15 @@ export function VeeGoInput({
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           textAlign={isRTL ? 'right' : 'left'}
-          style={[styles.input, { color: colors.foreground, fontSize: Typography.size.sm }]}
+          style={[styles.input, { color: colors.foreground, fontSize: Typography.size.sm }, inputStyle]}
         />
         {rightIcon ? <View style={styles.iconSlot}>{rightIcon}</View> : null}
       </View>
 
       {error ? (
-        <Text style={[styles.error, { color: colors.error, textAlign: isRTL ? 'right' : 'left' }]}>{error}</Text>
+        <Text style={[styles.error, { color: colors.error, textAlign: isRTL ? 'right' : 'left' }, errorStyle]}>
+          {error}
+        </Text>
       ) : null}
     </View>
   );
