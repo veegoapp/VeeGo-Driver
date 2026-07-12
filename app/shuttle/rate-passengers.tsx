@@ -17,6 +17,10 @@ import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints, ApiError } from '@/lib/api';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Radius } from '@/constants/radius';
+import { Shadows } from '@/constants/shadows';
 
 type Passenger = {
   id: string;
@@ -135,7 +139,7 @@ export default function RatePassengersScreen() {
   return (
     <View style={[s.root, { backgroundColor: colors.background }]}>
       <ScrollView
-        contentContainerStyle={{ paddingTop: topPad + 8, paddingBottom: botPad + 100, paddingHorizontal: 16 }}
+        contentContainerStyle={{ paddingTop: topPad + 8, paddingBottom: botPad + 100, paddingHorizontal: Spacing.lg }}
         showsVerticalScrollIndicator={false}
       >
         <View style={s.header}>
@@ -157,7 +161,7 @@ export default function RatePassengersScreen() {
 
         {passengers.length === 0 ? (
           <View style={[s.center, { marginTop: 60 }]}>
-            <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 14, textAlign: 'center' }}>
+            <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: Typography.size.sm, textAlign: 'center' }}>
               {t.no_passengers_to_rate}
             </Text>
           </View>
@@ -170,7 +174,7 @@ export default function RatePassengersScreen() {
                     <Image source={{ uri: p.avatar }} style={[s.avatar, { borderColor: colors.border }]} />
                   ) : (
                     <View style={[s.avatarFallback, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
-                      <Text style={{ fontSize: 18 }}>👤</Text>
+                      <Text style={{ fontSize: Typography.size.lg }}>👤</Text>
                     </View>
                   )}
                   <View style={{ flex: 1 }}>
@@ -178,7 +182,7 @@ export default function RatePassengersScreen() {
                       {p.name}
                     </Text>
                     {p.rated && (
-                      <Text style={{ color: '#22c55e', fontSize: 12, fontFamily: 'Inter_600SemiBold' }}>
+                      <Text style={{ color: '#22c55e', fontSize: Typography.size.xs, fontFamily: 'Inter_600SemiBold' }}>
                         {t.rated_label}
                       </Text>
                     )}
@@ -230,19 +234,19 @@ export default function RatePassengersScreen() {
 
 const s = StyleSheet.create({
   root: { flex: 1 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.md },
+  header: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   pageTitle: { fontSize: 20 },
-  pageSub: { fontSize: 12, marginTop: 2 },
-  card: { padding: 16, gap: 14 },
-  cardRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  avatar: { width: 48, height: 48, borderRadius: 24, borderWidth: 2 },
-  avatarFallback: { width: 48, height: 48, borderRadius: 24, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  pageSub: { fontSize: Typography.size.xs, marginTop: 2 },
+  card: { padding: Spacing.lg, gap: 14 },
+  cardRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
+  avatar: { width: 48, height: 48, borderRadius: Radius.xl, borderWidth: 2 },
+  avatarFallback: { width: 48, height: 48, borderRadius: Radius.xl, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
   passengerName: { fontSize: 15 },
-  starsRow: { flexDirection: 'row', gap: 8, justifyContent: 'center' },
-  doneTitle: { fontSize: 20, textAlign: 'center', marginTop: 8 },
-  bottomAction: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 16, paddingTop: 8 },
+  starsRow: { flexDirection: 'row', gap: Spacing.sm, justifyContent: 'center' },
+  doneTitle: { fontSize: 20, textAlign: 'center', marginTop: Spacing.sm },
+  bottomAction: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: Spacing.lg, paddingTop: Spacing.sm },
   submitBtn: {
     height: 56,
     borderRadius: 20,
@@ -253,7 +257,7 @@ const s = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.2,
     shadowRadius: 20,
-    elevation: 8,
+    elevation: Shadows.large.elevation,
   },
   submitBtnText: { color: '#fff', fontSize: 15 },
 });

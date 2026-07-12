@@ -18,6 +18,10 @@ import { useAuth } from '@/lib/authContext';
 import { endpoints } from '@/lib/api';
 import { TermsModal } from '@/components/TermsModal';
 import { TAB_BAR_HEIGHT } from './home';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Radius } from '@/constants/radius';
+import { Shadows } from '@/constants/shadows';
 
 const TERMS_VERSION_KEY = 'driver_terms_accepted_version';
 type TermsData = { id: number; version: number; contentAr: string; contentEn: string; updatedAt: string };
@@ -140,7 +144,7 @@ export default function ProfileScreen() {
         <GlassView style={styles.profileCard} borderRadius={24}>
           <View style={styles.profileCardInner}>
             {isLoading ? (
-              <ActivityIndicator size="large" color={colors.primary} style={{ marginVertical: 32 }} />
+              <ActivityIndicator size="large" color={colors.primary} style={{ marginVertical: Spacing.xxl }} />
             ) : (
               <>
                 <View style={styles.avatarWrap}>
@@ -197,7 +201,7 @@ export default function ProfileScreen() {
           <MenuItem icon="shield" label={t.safety_toolkit} sub={t.safety_sub} onPress={() => router.push('/safety')} colors={colors} isRTL={isRTL} last />
         </GlassView>
 
-        <GlassView style={[styles.menuGroup, { marginTop: 12 }]} borderRadius={20}>
+        <GlassView style={[styles.menuGroup, { marginTop: Spacing.md }]} borderRadius={20}>
           <MenuItem icon="help-circle" label={t.help_support} onPress={() => router.push('/support')} colors={colors} isRTL={isRTL} />
           <MenuItem icon="message-square" label={t.messages_label} onPress={() => router.push('/messages')} colors={colors} isRTL={isRTL} />
           <MenuItem icon="file-text" label={t.terms_menu_label} onPress={handleOpenTerms} colors={colors} isRTL={isRTL} sub={termsLoading ? '...' : undefined} />
@@ -205,7 +209,7 @@ export default function ProfileScreen() {
           {/* Language inline toggle */}
           <View style={[styles.menuItem, { flexDirection: R, borderTopWidth: 1, borderTopColor: colors.border }]}>
             <View style={[styles.menuIcon, { backgroundColor: colors.secondary + 'B3' }]}>
-              <Text style={{ fontSize: 18 }}>🌐</Text>
+              <Text style={{ fontSize: Typography.size.lg }}>🌐</Text>
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.menuLabel, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.language}</Text>
@@ -254,7 +258,7 @@ export default function ProfileScreen() {
           </View>
         </GlassView>
 
-        <Pressable onPress={async () => { await logout(); router.replace('/login'); }} style={({ pressed }) => [{ transform: [{ scale: pressed ? 0.98 : 1 }], marginTop: 12 }]}>
+        <Pressable onPress={async () => { await logout(); router.replace('/login'); }} style={({ pressed }) => [{ transform: [{ scale: pressed ? 0.98 : 1 }], marginTop: Spacing.md }]}>
           <GlassView style={[styles.signOutBtn, { flexDirection: R }]} borderRadius={20}>
             <LogOut size={20} color={colors.destructive} strokeWidth={2} />
             <Text style={[styles.signOutText, { color: colors.destructive, fontFamily: 'Inter_700Bold' }]}>{t.sign_out}</Text>
@@ -319,27 +323,27 @@ const styles = StyleSheet.create({
   profileCardInner: { padding: 20, alignItems: 'center' },
   avatarWrap: { position: 'relative' },
   avatar: { width: 96, height: 96, borderRadius: 48, borderWidth: 4 },
-  awardBadge: { position: 'absolute', bottom: -4, right: -4, width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', elevation: 4, shadowColor: '#2d2d42', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.35, shadowRadius: 8 },
-  driverName: { fontSize: 20, marginTop: 12 },
-  driverMeta: { fontSize: 12, marginTop: 4 },
-  driverCodeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 12, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8, marginTop: 12 },
+  awardBadge: { position: 'absolute', bottom: -4, right: -4, width: 32, height: 32, borderRadius: Radius.lg, alignItems: 'center', justifyContent: 'center', elevation: Shadows.medium.elevation, shadowColor: '#2d2d42', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.35, shadowRadius: 8 },
+  driverName: { fontSize: 20, marginTop: Spacing.md },
+  driverMeta: { fontSize: Typography.size.xs, marginTop: Spacing.xs },
+  driverCodeRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, borderRadius: Radius.md, borderWidth: 1, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, marginTop: Spacing.md },
   driverCodeLabel: { fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5 },
-  driverCodeValue: { fontSize: 14, flex: 1 },
+  driverCodeValue: { fontSize: Typography.size.sm, flex: 1 },
   codeCopiedText: { fontSize: 11 },
-  statsGrid: { gap: 8, marginTop: 20, width: '100%' },
-  miniStat: { flex: 1, borderRadius: 16, paddingVertical: 10, paddingHorizontal: 4, alignItems: 'center' },
-  miniStatValue: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  miniStatValueText: { fontSize: 14 },
-  miniStatLabel: { fontSize: 10, letterSpacing: 1, textTransform: 'uppercase', marginTop: 4 },
+  statsGrid: { gap: Spacing.sm, marginTop: 20, width: '100%' },
+  miniStat: { flex: 1, borderRadius: Radius.lg, paddingVertical: 10, paddingHorizontal: Spacing.xs, alignItems: 'center' },
+  miniStatValue: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+  miniStatValueText: { fontSize: Typography.size.sm },
+  miniStatLabel: { fontSize: 10, letterSpacing: 1, textTransform: 'uppercase', marginTop: Spacing.xs },
   menuGroup: { marginTop: 20 },
-  menuItem: { alignItems: 'center', gap: 12, padding: 16 },
-  menuIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  menuLabel: { fontSize: 14 },
-  menuSub: { fontSize: 12, marginTop: 2 },
-  langRow: { gap: 8, marginTop: 8, flexWrap: 'wrap' },
+  menuItem: { alignItems: 'center', gap: Spacing.md, padding: Spacing.lg },
+  menuIcon: { width: 40, height: 40, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
+  menuLabel: { fontSize: Typography.size.sm },
+  menuSub: { fontSize: Typography.size.xs, marginTop: 2 },
+  langRow: { gap: Spacing.sm, marginTop: Spacing.sm, flexWrap: 'wrap' },
   langChip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1 },
   langChipText: { fontSize: 13 },
-  signOutBtn: { alignItems: 'center', gap: 12, padding: 16 },
-  signOutText: { fontSize: 14 },
-  version: { fontSize: 12, textAlign: 'center', marginTop: 16 },
+  signOutBtn: { alignItems: 'center', gap: Spacing.md, padding: Spacing.lg },
+  signOutText: { fontSize: Typography.size.sm },
+  version: { fontSize: Typography.size.xs, textAlign: 'center', marginTop: Spacing.lg },
 });

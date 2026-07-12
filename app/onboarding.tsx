@@ -10,6 +10,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Rect, G } from 'react-native-svg';
 import { useI18n } from '@/lib/i18nContext';
 import { Animation } from '@/constants/animations';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Radius } from '@/constants/radius';
+import { Shadows } from '@/constants/shadows';
 
 const { width } = Dimensions.get('window');
 
@@ -116,7 +120,7 @@ const ill = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.07,
     shadowRadius: 18,
-    elevation: 4,
+    elevation: Shadows.medium.elevation,
   },
 });
 
@@ -241,45 +245,45 @@ const s = StyleSheet.create({
   root: { flex: 1 },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 24, paddingBottom: 8,
+    paddingHorizontal: Spacing.xl, paddingBottom: Spacing.sm,
   },
-  logoRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  logoRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   logoIcon: {
-    width: 36, height: 36, borderRadius: 12, backgroundColor: '#1e1e28',
+    width: 36, height: 36, borderRadius: Radius.md, backgroundColor: '#1e1e28',
     alignItems: 'center', justifyContent: 'center',
   },
-  logoText: { fontSize: 20, fontWeight: '700', color: '#1e1e28', letterSpacing: -0.8, fontFamily: 'Inter_700Bold' },
+  logoText: { fontSize: 20, fontWeight: Typography.weight.bold, color: '#1e1e28', letterSpacing: -0.8, fontFamily: 'Inter_700Bold' },
   driverBadge: {
     backgroundColor: 'rgba(30,30,40,0.08)', borderRadius: 99,
-    paddingHorizontal: 8, paddingVertical: 3,
+    paddingHorizontal: Spacing.sm, paddingVertical: 3,
   },
-  driverBadgeText: { fontSize: 9, fontWeight: '700', color: '#1e1e28', letterSpacing: 1.5 },
-  skipBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.7)' },
-  skipText: { fontSize: 13, color: '#5e5e72', fontWeight: '500' },
-  slide: { width, flex: 1, paddingHorizontal: 28, paddingTop: 12, gap: 24 },
+  driverBadgeText: { fontSize: 9, fontWeight: Typography.weight.bold, color: '#1e1e28', letterSpacing: 1.5 },
+  skipBtn: { paddingHorizontal: 14, paddingVertical: Spacing.sm, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.7)' },
+  skipText: { fontSize: 13, color: '#5e5e72', fontWeight: Typography.weight.medium },
+  slide: { width, flex: 1, paddingHorizontal: 28, paddingTop: Spacing.md, gap: Spacing.xl },
   illustBox: {
     flex: 1, borderRadius: 32, overflow: 'hidden', maxHeight: 300,
-    shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.08, shadowRadius: 20, elevation: 4,
+    shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.08, shadowRadius: 20, elevation: Shadows.medium.elevation,
   },
   textBox: { gap: 10 },
   tagBox: {
     alignSelf: 'flex-start',
     backgroundColor: 'rgba(30,30,40,0.08)', borderRadius: 99,
-    paddingHorizontal: 12, paddingVertical: 5,
+    paddingHorizontal: Spacing.md, paddingVertical: 5,
   },
-  tagText: { fontSize: 10.5, fontWeight: '600', color: '#1e1e28', textTransform: 'uppercase', letterSpacing: 1.3 },
-  title: { fontSize: 32, fontWeight: '700', color: '#1e1e28', letterSpacing: -1.2, lineHeight: 38, fontFamily: 'Inter_700Bold' },
+  tagText: { fontSize: 10.5, fontWeight: Typography.weight.semibold, color: '#1e1e28', textTransform: 'uppercase', letterSpacing: 1.3 },
+  title: { fontSize: 32, fontWeight: Typography.weight.bold, color: '#1e1e28', letterSpacing: -1.2, lineHeight: 38, fontFamily: 'Inter_700Bold' },
   body: { fontSize: 15, color: '#5e5e72', lineHeight: 22, fontFamily: 'Inter_400Regular' },
   footer: {
-    paddingHorizontal: 28, paddingTop: 16,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16,
+    paddingHorizontal: 28, paddingTop: Spacing.lg,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.lg,
   },
   dots: { flexDirection: 'row', gap: 6, alignItems: 'center' },
   dot: { height: 6, borderRadius: 3 },
   nextBtn: {
     flex: 1, height: 56, borderRadius: 20, backgroundColor: '#1e1e28',
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.22, shadowRadius: 24, elevation: 8,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm,
+    shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.22, shadowRadius: 24, elevation: Shadows.large.elevation,
   },
-  nextText: { color: 'white', fontSize: 15, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  nextText: { color: 'white', fontSize: 15, fontWeight: Typography.weight.semibold, fontFamily: 'Inter_600SemiBold' },
 });

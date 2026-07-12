@@ -13,6 +13,9 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useColors } from "@/hooks/useColors";
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Radius } from '@/constants/radius';
 
 export type ErrorFallbackProps = {
   error: Error;
@@ -178,23 +181,23 @@ const styles = StyleSheet.create({
     height: "100%",
     justifyContent: "center",
     alignItems: "center",
-    padding: 24,
+    padding: Spacing.xl,
   },
   content: {
     alignItems: "center",
     justifyContent: "center",
-    gap: 16,
+    gap: Spacing.lg,
     width: "100%",
     maxWidth: 600,
   },
   title: {
-    fontSize: 28,
+    fontSize: Typography.size.xxl,
     fontWeight: "700",
     textAlign: "center",
     lineHeight: 40,
   },
   message: {
-    fontSize: 16,
+    fontSize: Typography.size.md,
     textAlign: "center",
     lineHeight: 24,
   },
@@ -203,16 +206,16 @@ const styles = StyleSheet.create({
     right: 16,
     width: 44,
     height: 44,
-    borderRadius: 8,
+    borderRadius: Radius.sm,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     zIndex: 10,
   },
   button: {
-    paddingVertical: 16,
-    borderRadius: 8,
-    paddingHorizontal: 24,
+    paddingVertical: Spacing.lg,
+    borderRadius: Radius.sm,
+    paddingHorizontal: Spacing.xl,
     minWidth: 200,
     shadowColor: "#000",
     shadowOffset: {
@@ -226,7 +229,7 @@ const styles = StyleSheet.create({
   buttonText: {
     fontWeight: "600",
     textAlign: "center",
-    fontSize: 16,
+    fontSize: Typography.size.md,
   },
   modalOverlay: {
     flex: 1,
@@ -236,16 +239,16 @@ const styles = StyleSheet.create({
   modalContainer: {
     width: "100%",
     height: "90%",
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
+    borderTopLeftRadius: Radius.lg,
+    borderTopRightRadius: Radius.lg,
   },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 12,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.md,
     borderBottomWidth: 1,
   },
   modalTitle: {
@@ -262,16 +265,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   modalScrollContent: {
-    padding: 16,
+    padding: Spacing.lg,
   },
   errorContainer: {
     width: "100%",
-    borderRadius: 8,
+    borderRadius: Radius.sm,
     overflow: "hidden",
-    padding: 16,
+    padding: Spacing.lg,
   },
   errorText: {
-    fontSize: 12,
+    fontSize: Typography.size.xs,
     lineHeight: 18,
     width: "100%",
   },

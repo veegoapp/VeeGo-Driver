@@ -9,6 +9,8 @@ import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
 import { Animation } from '@/constants/animations';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
 
 type RatingEntry = {
   id: number;
@@ -79,7 +81,7 @@ export default function RatingsScreen() {
   if (isError) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' }]}>
-        <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 14 }}>Failed to load ratings. Please try again.</Text>
+        <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: Typography.size.sm }}>Failed to load ratings. Please try again.</Text>
       </View>
     );
   }
@@ -96,7 +98,7 @@ export default function RatingsScreen() {
         </Pressable>
 
         {/* Average rating hero */}
-        <View style={{ alignItems: 'center', marginTop: 24 }}>
+        <View style={{ alignItems: 'center', marginTop: Spacing.xl }}>
           <Text style={[styles.bigRating, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
             {avgRating ? avgRating.toFixed(2) : '—'}
           </Text>
@@ -135,7 +137,7 @@ export default function RatingsScreen() {
         {ratings.length > 0 && (
           <>
             <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>Recent reviews</Text>
-            <View style={{ gap: 8 }}>
+            <View style={{ gap: Spacing.sm }}>
               {ratings.slice(0, 20).map(r => (
                 <GlassView key={r.id} style={styles.reviewCard} borderRadius={20}>
                   <View style={styles.reviewHeader}>
@@ -168,7 +170,7 @@ export default function RatingsScreen() {
 
         {ratings.length === 0 && !isLoading && (
           <View style={{ alignItems: 'center', marginTop: 40 }}>
-            <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 14 }}>No reviews yet.</Text>
+            <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: Typography.size.sm }}>No reviews yet.</Text>
           </View>
         )}
       </ScrollView>
@@ -180,19 +182,19 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   bigRating: { fontSize: 64, lineHeight: 68 },
-  starsRow: { flexDirection: 'row', gap: 4, marginTop: 8 },
-  tripCount: { fontSize: 12, marginTop: 4 },
-  breakdownCard: { padding: 16, marginTop: 32, gap: 10 },
+  starsRow: { flexDirection: 'row', gap: Spacing.xs, marginTop: Spacing.sm },
+  tripCount: { fontSize: Typography.size.xs, marginTop: Spacing.xs },
+  breakdownCard: { padding: Spacing.lg, marginTop: Spacing.xxl, gap: 10 },
   breakdownRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  starNum: { width: 12, fontSize: 12 },
+  starNum: { width: 12, fontSize: Typography.size.xs },
   barTrack: { height: 8, borderRadius: 4, overflow: 'hidden' },
   barFill: { height: '100%', borderRadius: 4 },
-  countText: { width: 48, textAlign: 'right', fontSize: 12 },
-  sectionTitle: { fontSize: 12, letterSpacing: 2, textTransform: 'uppercase', marginTop: 32, marginBottom: 12 },
-  reviewCard: { padding: 16, gap: 6 },
+  countText: { width: 48, textAlign: 'right', fontSize: Typography.size.xs },
+  sectionTitle: { fontSize: Typography.size.xs, letterSpacing: 2, textTransform: 'uppercase', marginTop: Spacing.xxl, marginBottom: Spacing.md },
+  reviewCard: { padding: Spacing.lg, gap: 6 },
   reviewHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   reviewStars: { flexDirection: 'row', gap: 2 },
   reviewContext: { fontSize: 11, textTransform: 'uppercase', letterSpacing: 1 },
-  reviewText: { fontSize: 14, lineHeight: 22 },
+  reviewText: { fontSize: Typography.size.sm, lineHeight: 22 },
   reviewDate: { fontSize: 10, letterSpacing: 1, textTransform: 'uppercase' },
 });

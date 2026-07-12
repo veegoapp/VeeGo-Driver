@@ -18,6 +18,9 @@ import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints, type RideHistoryItem } from '@/lib/api';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Radius } from '@/constants/radius';
 
 type FilterKey = 'all' | 'completed' | 'cancelled';
 const FILTER_KEYS: FilterKey[] = ['all', 'completed', 'cancelled'];
@@ -100,8 +103,8 @@ export default function RideHistoryScreen() {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          style={{ marginTop: 16 }}
-          contentContainerStyle={{ gap: 8, paddingRight: 4 }}
+          style={{ marginTop: Spacing.lg }}
+          contentContainerStyle={{ gap: Spacing.sm, paddingRight: Spacing.xs }}
         >
           {FILTER_KEYS.map(key => (
             <Pressable key={key} onPress={() => setFilter(key)}>
@@ -132,16 +135,16 @@ export default function RideHistoryScreen() {
             <ActivityIndicator size="large" color={colors.primary} />
           </View>
         ) : isError ? (
-          <View style={{ marginTop: 60, alignItems: 'center', gap: 8 }}>
-            <Text style={{ fontSize: 28 }}>⚠️</Text>
-            <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 14, textAlign: 'center' }}>
+          <View style={{ marginTop: 60, alignItems: 'center', gap: Spacing.sm }}>
+            <Text style={{ fontSize: Typography.size.xxl }}>⚠️</Text>
+            <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: Typography.size.sm, textAlign: 'center' }}>
               Failed to load ride history.{'\n'}Please try again.
             </Text>
           </View>
         ) : allRides.length === 0 ? (
-          <View style={{ marginTop: 60, alignItems: 'center', gap: 8 }}>
+          <View style={{ marginTop: 60, alignItems: 'center', gap: Spacing.sm }}>
             <Text style={{ fontSize: 36 }}>🚗</Text>
-            <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: 16 }}>
+            <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: Typography.size.md }}>
               No rides yet
             </Text>
             <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13, textAlign: 'center' }}>
@@ -151,7 +154,7 @@ export default function RideHistoryScreen() {
             </Text>
           </View>
         ) : (
-          <View style={{ marginTop: 16, gap: 10 }}>
+          <View style={{ marginTop: Spacing.lg, gap: 10 }}>
             {allRides.map((ride, i) => (
               <Animated.View
                 key={ride.id}
@@ -172,12 +175,12 @@ export default function RideHistoryScreen() {
               <Pressable
                 onPress={() => setPage(p => p + 1)}
                 style={{
-                  marginTop: 4, marginBottom: 8, alignItems: 'center',
-                  paddingVertical: 14, borderRadius: 16,
+                  marginTop: Spacing.xs, marginBottom: Spacing.sm, alignItems: 'center',
+                  paddingVertical: 14, borderRadius: Radius.lg,
                   backgroundColor: 'rgba(61,82,213,0.08)',
                 }}
               >
-                <Text style={{ color: '#55c49a', fontFamily: 'Inter_600SemiBold', fontSize: 14 }}>
+                <Text style={{ color: '#55c49a', fontFamily: 'Inter_600SemiBold', fontSize: Typography.size.sm }}>
                   Load more
                 </Text>
               </Pressable>
@@ -230,7 +233,7 @@ function RideCard({
   return (
     <GlassView style={styles.card} borderRadius={20}>
       {/* Top row: date + status badge */}
-      <View style={[{ flexDirection: R, alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }]}>
+      <View style={[{ flexDirection: R, alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.md }]}>
         <View style={[{ flexDirection: R, alignItems: 'center', gap: 6 }]}>
           <Clock size={12} color={colors.mutedForeground} strokeWidth={2} />
           <Text style={[{ fontSize: 11, color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>
@@ -288,9 +291,9 @@ function RideCard({
 
       {/* Rider name */}
       {ride.riderName ? (
-        <View style={[{ flexDirection: R, alignItems: 'center', gap: 6, marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.border + '66' }]}>
+        <View style={[{ flexDirection: R, alignItems: 'center', gap: 6, marginTop: Spacing.md, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.border + '66' }]}>
           <MapPin size={12} color={colors.mutedForeground} strokeWidth={2} />
-          <Text style={[{ fontSize: 12, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', flex: 1, textAlign: TA }]} numberOfLines={1}>
+          <Text style={[{ fontSize: Typography.size.xs, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', flex: 1, textAlign: TA }]} numberOfLines={1}>
             {ride.riderName}
           </Text>
           {ride.riderRating != null && (
@@ -313,22 +316,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.md,
     borderBottomWidth: 1,
   },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { fontSize: 17 },
-  chip: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
-  chipText: { fontSize: 12 },
-  card: { padding: 16 },
-  statusBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20 },
+  chip: { paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm, borderRadius: 20 },
+  chipText: { fontSize: Typography.size.xs },
+  card: { padding: Spacing.lg },
+  statusBadge: { paddingHorizontal: Spacing.sm, paddingVertical: 2, borderRadius: 20 },
   statusText: { fontSize: 9, letterSpacing: 0.8, textTransform: 'uppercase' },
-  routeDots: { alignItems: 'center', paddingTop: 4 },
+  routeDots: { alignItems: 'center', paddingTop: Spacing.xs },
   dotTop: { width: 8, height: 8, borderRadius: 4 },
   routeLine: { width: 1, flex: 1, marginVertical: 3, minHeight: 8 },
   dotBottom: { width: 8, height: 8, borderRadius: 2 },
-  addressText: { fontSize: 14 },
-  fareText: { fontSize: 16 },
-  starsRow: { gap: 2, marginTop: 4 },
+  addressText: { fontSize: Typography.size.sm },
+  fareText: { fontSize: Typography.size.md },
+  starsRow: { gap: 2, marginTop: Spacing.xs },
 });

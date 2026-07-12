@@ -18,6 +18,9 @@ import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints, ApiError } from '@/lib/api';
 import { useShuttle } from '@/lib/shuttleContext';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Radius } from '@/constants/radius';
 
 type Params = {
   bookingId: string;
@@ -127,15 +130,15 @@ export default function DirectCancelScreen() {
         </Text>
         {hasPenalty && (
           <View style={[styles.penaltyBadge, { backgroundColor: '#FEF2F2', borderColor: '#FCA5A5' }]}>
-            <Text style={{ fontSize: 18, color: '#DC2626', fontFamily: 'Inter_700Bold', textAlign: 'center' }}>
+            <Text style={{ fontSize: Typography.size.lg, color: '#DC2626', fontFamily: 'Inter_700Bold', textAlign: 'center' }}>
               {penaltyAmount} {t.egp}
             </Text>
-            <Text style={{ fontSize: 12, color: '#991B1B', fontFamily: 'Inter_400Regular', textAlign: 'center', marginTop: 2 }}>
+            <Text style={{ fontSize: Typography.size.xs, color: '#991B1B', fontFamily: 'Inter_400Regular', textAlign: 'center', marginTop: 2 }}>
               {t.cancellation_penalty_label}
             </Text>
           </View>
         )}
-        <Text style={[{ fontSize: 14, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: 'center', lineHeight: 22 }]}>
+        <Text style={[{ fontSize: Typography.size.sm, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: 'center', lineHeight: 22 }]}>
           {penaltyLine}
         </Text>
         <Pressable
@@ -169,28 +172,28 @@ export default function DirectCancelScreen() {
         <GlassView style={[styles.warningBanner, { backgroundColor: '#FEF2F2', borderColor: '#FCA5A5' }]} borderRadius={16}>
           <AlertTriangle size={20} color="#DC2626" strokeWidth={2} />
           <View style={{ flex: 1 }}>
-            <Text style={[{ fontSize: 14, color: '#DC2626', fontFamily: 'Inter_700Bold', textAlign: TA }]}>
+            <Text style={[{ fontSize: Typography.size.sm, color: '#DC2626', fontFamily: 'Inter_700Bold', textAlign: TA }]}>
               {t.final_cancel_banner}
             </Text>
             {previewData != null ? (
-              <Text style={[{ fontSize: 12, color: '#991B1B', fontFamily: 'Inter_700Bold', marginTop: 3, textAlign: TA }]}>
+              <Text style={[{ fontSize: Typography.size.xs, color: '#991B1B', fontFamily: 'Inter_700Bold', marginTop: 3, textAlign: TA }]}>
                 {previewData.penaltyAmount > 0
                   ? t.cancel_penalty_preview.replace('{n}', String(previewData.penaltyAmount))
                   : t.no_penalty_preview}
               </Text>
             ) : null}
-            <Text style={[{ fontSize: 12, color: '#991B1B', fontFamily: 'Inter_400Regular', marginTop: 3, textAlign: TA }]}>
+            <Text style={[{ fontSize: Typography.size.xs, color: '#991B1B', fontFamily: 'Inter_400Regular', marginTop: 3, textAlign: TA }]}>
               {t.passengers_admin_reassign}
             </Text>
           </View>
         </GlassView>
 
         {/* Trip summary */}
-        <GlassView style={[styles.tripSummary, { marginTop: 16 }]} borderRadius={16}>
+        <GlassView style={[styles.tripSummary, { marginTop: Spacing.lg }]} borderRadius={16}>
           <Text style={[{ fontSize: 15, color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
             {displayRouteName}
           </Text>
-          <Text style={[{ fontSize: 13, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', marginTop: 4, textAlign: TA }]}>
+          <Text style={[{ fontSize: 13, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', marginTop: Spacing.xs, textAlign: TA }]}>
             {departureTime ?? '—'}
           </Text>
         </GlassView>
@@ -199,7 +202,7 @@ export default function DirectCancelScreen() {
         <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA, marginTop: 28 }]}>
           {t.cancel_reasons_title}
         </Text>
-        <Text style={[{ fontSize: 13, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA, marginTop: 4, marginBottom: 14 }]}>
+        <Text style={[{ fontSize: 13, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA, marginTop: Spacing.xs, marginBottom: 14 }]}>
           {t.choose_cancel_reason}
         </Text>
 
@@ -263,8 +266,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.md,
     borderBottomWidth: 1,
   },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
@@ -277,13 +280,13 @@ const styles = StyleSheet.create({
     marginTop: 20,
     borderWidth: 1,
   },
-  tripSummary: { padding: 16 },
-  sectionTitle: { fontSize: 16 },
+  tripSummary: { padding: Spacing.lg },
+  sectionTitle: { fontSize: Typography.size.md },
   reasonRow: {
     alignItems: 'center',
     gap: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.lg,
   },
   radio: {
     width: 22,
@@ -294,28 +297,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   radioDot: { width: 10, height: 10, borderRadius: 5 },
-  reasonText: { fontSize: 14 },
+  reasonText: { fontSize: Typography.size.sm },
   bottomBar: {
-    paddingHorizontal: 16,
+    paddingHorizontal: Spacing.lg,
     paddingTop: 14,
     borderTopWidth: 1,
   },
   confirmBtn: {
     height: 54,
-    borderRadius: 16,
+    borderRadius: Radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
   },
   confirmBtnText: { fontSize: 15 },
-  successWrap: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, gap: 16 },
+  successWrap: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xxl, gap: Spacing.lg },
   successIcon: { width: 96, height: 96, borderRadius: 48, alignItems: 'center', justifyContent: 'center' },
   penaltyBadge: {
     alignItems: 'center',
     paddingHorizontal: 28,
     paddingVertical: 14,
-    borderRadius: 16,
+    borderRadius: Radius.lg,
     borderWidth: 1,
   },
-  doneBtn: { marginTop: 8, height: 50, paddingHorizontal: 36, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  doneBtnText: { color: '#fff', fontSize: 14 },
+  doneBtn: { marginTop: Spacing.sm, height: 50, paddingHorizontal: 36, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  doneBtnText: { color: '#fff', fontSize: Typography.size.sm },
 });

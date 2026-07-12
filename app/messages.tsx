@@ -9,6 +9,9 @@ import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Radius } from '@/constants/radius';
 
 type Notification = {
   id: string;
@@ -181,19 +184,19 @@ export default function MessagesScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 24, marginBottom: 0 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: Spacing.xl, marginBottom: 0 },
   pageTitle: { fontSize: 24 },
-  markAllBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, borderWidth: 1 },
-  markAllText: { fontSize: 12 },
-  centeredState: { marginTop: 40, alignItems: 'center', padding: 32, gap: 12 },
-  stateTitle: { fontSize: 16, textAlign: 'center' },
+  markAllBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: Radius.md, borderWidth: 1 },
+  markAllText: { fontSize: Typography.size.xs },
+  centeredState: { marginTop: 40, alignItems: 'center', padding: Spacing.xxl, gap: Spacing.md },
+  stateTitle: { fontSize: Typography.size.md, textAlign: 'center' },
   stateSub: { fontSize: 13, textAlign: 'center', lineHeight: 20 },
-  msgRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, padding: 16 },
+  msgRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.md, padding: Spacing.lg },
   avatarCircle: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  avatarLetter: { fontSize: 14 },
+  avatarLetter: { fontSize: Typography.size.sm },
   msgHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  msgFrom: { fontSize: 14, flex: 1 },
+  msgFrom: { fontSize: Typography.size.sm, flex: 1 },
   msgTime: { fontSize: 10 },
-  msgPreview: { fontSize: 12, marginTop: 2, lineHeight: 18 },
-  unreadDot: { width: 8, height: 8, borderRadius: 4, marginTop: 8 },
+  msgPreview: { fontSize: Typography.size.xs, marginTop: 2, lineHeight: 18 },
+  unreadDot: { width: 8, height: 8, borderRadius: 4, marginTop: Spacing.sm },
 });

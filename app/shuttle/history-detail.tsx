@@ -16,6 +16,8 @@ import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
 
 type Params = {
   tripId: string;
@@ -97,15 +99,15 @@ export default function HistoryDetailScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* ── Route name ───────────────────────────────────────────── */}
-        <View style={{ marginTop: 24 }}>
+        <View style={{ marginTop: Spacing.xl }}>
           <View style={[styles.completedBadge, { flexDirection: R }]}>
             <CheckCircle2 size={14} color="#16a34a" strokeWidth={2} />
             <Text style={[styles.completedText, { fontFamily: 'Inter_700Bold' }]}>{t.completed_label}</Text>
           </View>
-          <Text style={[styles.routeName, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA, marginTop: 8 }]}>
+          <Text style={[styles.routeName, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA, marginTop: Spacing.sm }]}>
             {routeName ?? '—'}
           </Text>
-          <Text style={[styles.routeDate, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA, marginTop: 4 }]}>
+          <Text style={[styles.routeDate, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA, marginTop: Spacing.xs }]}>
             {formattedDate}{formattedTime ? ` · ${formattedTime}` : ''}
           </Text>
         </View>
@@ -118,7 +120,7 @@ export default function HistoryDetailScreen() {
               {t.history_earned}
             </Text>
             {earned != null ? (
-              <View style={[{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'baseline', gap: 4 }]}>
+              <View style={[{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'baseline', gap: Spacing.xs }]}>
                 <Text style={[styles.statValue, { color: '#16a34a', fontFamily: 'Inter_700Bold' }]}>
                   +{earned.toLocaleString('ar-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </Text>
@@ -166,7 +168,7 @@ export default function HistoryDetailScreen() {
             <ActivityIndicator size="small" color={colors.primary} />
           </View>
         ) : stations.length > 0 ? (
-          <GlassView style={{ marginTop: 12, paddingVertical: 8, paddingHorizontal: 16 }} borderRadius={16}>
+          <GlassView style={{ marginTop: Spacing.md, paddingVertical: Spacing.sm, paddingHorizontal: Spacing.lg }} borderRadius={16}>
             {stations.map((st, idx) => (
               <View
                 key={st.id}
@@ -191,12 +193,12 @@ export default function HistoryDetailScreen() {
                 </View>
 
                 {/* Station name + ETA */}
-                <View style={{ flex: 1, paddingVertical: 12 }}>
-                  <Text style={[{ fontSize: 14, color: colors.foreground, fontFamily: 'Inter_600SemiBold', textAlign: TA }]}>
+                <View style={{ flex: 1, paddingVertical: Spacing.md }}>
+                  <Text style={[{ fontSize: Typography.size.sm, color: colors.foreground, fontFamily: 'Inter_600SemiBold', textAlign: TA }]}>
                     {st.name}
                   </Text>
                   {st.eta ? (
-                    <Text style={[{ fontSize: 12, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', marginTop: 2, textAlign: TA }]}>
+                    <Text style={[{ fontSize: Typography.size.xs, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', marginTop: 2, textAlign: TA }]}>
                       {st.eta}
                     </Text>
                   ) : null}
@@ -220,16 +222,16 @@ export default function HistoryDetailScreen() {
             ))}
           </GlassView>
         ) : !hasBookingId ? (
-          <GlassView style={[styles.emptyStations, { marginTop: 12 }]} borderRadius={16}>
+          <GlassView style={[styles.emptyStations, { marginTop: Spacing.md }]} borderRadius={16}>
             <MapPin size={24} color={colors.mutedForeground} strokeWidth={1.5} />
-            <Text style={[{ fontSize: 13, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: 'center', marginTop: 8 }]}>
+            <Text style={[{ fontSize: 13, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: 'center', marginTop: Spacing.sm }]}>
               {t.no_station_details}
             </Text>
           </GlassView>
         ) : (
-          <GlassView style={[styles.emptyStations, { marginTop: 12 }]} borderRadius={16}>
+          <GlassView style={[styles.emptyStations, { marginTop: Spacing.md }]} borderRadius={16}>
             <MapPin size={24} color={colors.mutedForeground} strokeWidth={1.5} />
-            <Text style={[{ fontSize: 13, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: 'center', marginTop: 8 }]}>
+            <Text style={[{ fontSize: 13, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: 'center', marginTop: Spacing.sm }]}>
               {t.no_trip_history_sub}
             </Text>
           </GlassView>
@@ -245,8 +247,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.md,
     borderBottomWidth: 1,
   },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
@@ -256,39 +258,39 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 5,
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: Spacing.xs,
     borderRadius: 99,
     backgroundColor: '#dcfce7',
     borderWidth: 1,
     borderColor: '#86efac',
   },
   completedText: { fontSize: 11, color: '#16a34a' },
-  routeName: { fontSize: 22, lineHeight: 30 },
+  routeName: { fontSize: Typography.size.xl, lineHeight: 30 },
   routeDate: { fontSize: 13, lineHeight: 20 },
   statsRow: { gap: 10 },
   statCard: {
     flex: 1,
     alignItems: 'center',
     padding: 14,
-    gap: 4,
+    gap: Spacing.xs,
   },
   statLabel: { fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, textAlign: 'center' },
   statValue: { fontSize: 15, textAlign: 'center' },
-  sectionTitle: { fontSize: 16 },
+  sectionTitle: { fontSize: Typography.size.md },
   loadingWrap: { height: 80, alignItems: 'center', justifyContent: 'center' },
-  stationRow: { gap: 12, alignItems: 'flex-start' },
+  stationRow: { gap: Spacing.md, alignItems: 'flex-start' },
   stationIndicator: { width: 20, alignItems: 'center', paddingTop: 14 },
   stationDot: { width: 12, height: 12, borderRadius: 6, borderWidth: 2 },
-  stationLine: { width: 2, flex: 1, minHeight: 16, marginTop: 4 },
+  stationLine: { width: 2, flex: 1, minHeight: 16, marginTop: Spacing.xs },
   terminalBadge: {
-    paddingHorizontal: 8,
+    paddingHorizontal: Spacing.sm,
     paddingVertical: 3,
     borderRadius: 6,
     borderWidth: 1,
     alignSelf: 'center',
   },
   emptyStations: {
-    padding: 32,
+    padding: Spacing.xxl,
     alignItems: 'center',
     justifyContent: 'center',
   },

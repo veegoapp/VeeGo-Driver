@@ -19,6 +19,9 @@ import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { endpoints } from '@/lib/api';
 import { useI18n } from '@/lib/i18nContext';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Radius } from '@/constants/radius';
 
 type DriverMe = {
   id: string;
@@ -124,7 +127,7 @@ export default function PersonalInfoScreen() {
               <ActivityIndicator size="large" color={colors.primary} />
             </View>
           ) : (
-            <GlassView style={{ marginTop: 24 }} borderRadius={20}>
+            <GlassView style={{ marginTop: Spacing.xl }} borderRadius={20}>
               {FIELDS.map((field, i) => {
                 const isEditable = editing && field.editable !== false;
                 const value = form[field.key] ?? '';
@@ -198,16 +201,16 @@ export default function PersonalInfoScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  pageTitle: { fontSize: 22, flex: 1 },
+  pageTitle: { fontSize: Typography.size.xl, flex: 1 },
   editBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  fieldRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 14 },
-  fieldIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  fieldRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingHorizontal: Spacing.lg, paddingVertical: 14 },
+  fieldIcon: { width: 40, height: 40, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
   fieldLabel: { fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5 },
   fieldValue: { fontSize: 15, marginTop: 2 },
-  fieldInput: { fontSize: 15, marginTop: 2, paddingVertical: 4, borderBottomWidth: 1.5 },
-  lockedBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  fieldInput: { fontSize: 15, marginTop: 2, paddingVertical: Spacing.xs, borderBottomWidth: 1.5 },
+  lockedBadge: { paddingHorizontal: Spacing.sm, paddingVertical: 3, borderRadius: Radius.sm },
   lockedText: { fontSize: 10 },
-  editHint: { fontSize: 12, textAlign: 'center', marginTop: 16, lineHeight: 18 },
+  editHint: { fontSize: Typography.size.xs, textAlign: 'center', marginTop: Spacing.lg, lineHeight: 18 },
 });

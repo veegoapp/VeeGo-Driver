@@ -18,6 +18,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
 import { useQuery } from '@tanstack/react-query';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Shadows } from '@/constants/shadows';
 
 // ── API-driven vehicle data types ──────────────────────────────────────────────
 
@@ -152,7 +155,7 @@ function SearchableDropdown({
             keyExtractor={(item) => item.id}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 16 }}
+            contentContainerStyle={{ paddingHorizontal: Spacing.lg }}
             ListEmptyComponent={
               <View style={dd.empty}>
                 <Text style={dd.emptyText}>{t.no_results_dropdown}</Text>
@@ -256,7 +259,7 @@ export default function VehicleSpecsScreen() {
       <LinearGradient colors={['#f4f4fb', 'transparent']} style={StyleSheet.absoluteFill} pointerEvents="none" />
 
       <ScrollView
-        contentContainerStyle={{ paddingTop: topPad + 20, paddingBottom: botPad + 120, paddingHorizontal: 24 }}
+        contentContainerStyle={{ paddingTop: topPad + 20, paddingBottom: botPad + 120, paddingHorizontal: Spacing.xl }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
@@ -395,7 +398,7 @@ const dd = StyleSheet.create({
     backgroundColor: '#f2f2f5',
     borderRadius: 18,
     height: 54,
-    paddingHorizontal: 16,
+    paddingHorizontal: Spacing.lg,
     justifyContent: 'center',
     borderWidth: 1.5,
     borderColor: 'transparent',
@@ -407,19 +410,19 @@ const dd = StyleSheet.create({
   },
   triggerRow: {
     alignItems: 'center',
-    gap: 8,
+    gap: Spacing.sm,
     justifyContent: 'space-between',
   },
   triggerValue: {
     flex: 1,
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: Typography.size.sm,
+    fontWeight: Typography.weight.semibold,
     color: '#1e1e28',
     fontFamily: 'Inter_600SemiBold',
   },
   triggerPlaceholder: {
     flex: 1,
-    fontSize: 14,
+    fontSize: Typography.size.sm,
     color: '#c3c3cc',
     fontFamily: 'Inter_400Regular',
   },
@@ -436,7 +439,7 @@ const dd = StyleSheet.create({
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     maxHeight: '80%',
-    paddingTop: 12,
+    paddingTop: Spacing.md,
   },
   handle: {
     alignSelf: 'center',
@@ -444,17 +447,17 @@ const dd = StyleSheet.create({
     height: 4,
     borderRadius: 99,
     backgroundColor: '#e5e5ea',
-    marginBottom: 12,
+    marginBottom: Spacing.md,
   },
   sheetHeader: {
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingBottom: 12,
-    gap: 8,
+    paddingBottom: Spacing.md,
+    gap: Spacing.sm,
   },
   sheetTitle: {
     fontSize: 17,
-    fontWeight: '700',
+    fontWeight: Typography.weight.bold,
     color: '#1e1e28',
     fontFamily: 'Inter_700Bold',
   },
@@ -470,27 +473,27 @@ const dd = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#f2f2f5',
     borderRadius: 14,
-    marginHorizontal: 16,
-    marginBottom: 8,
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.sm,
     paddingHorizontal: 14,
     height: 46,
-    gap: 8,
+    gap: Spacing.sm,
   },
   searchInput: {
     flex: 1,
-    fontSize: 14,
+    fontSize: Typography.size.sm,
     color: '#1e1e28',
     fontFamily: 'Inter_400Regular',
   },
   empty: { alignItems: 'center', paddingVertical: 40 },
-  emptyText: { fontSize: 14, color: '#5e5e72', fontFamily: 'Inter_400Regular' },
+  emptyText: { fontSize: Typography.size.sm, color: '#5e5e72', fontFamily: 'Inter_400Regular' },
   listItem: {
     alignItems: 'center',
     paddingVertical: 14,
-    paddingHorizontal: 4,
+    paddingHorizontal: Spacing.xs,
     borderBottomWidth: 1,
     borderBottomColor: '#f2f2f5',
-    gap: 12,
+    gap: Spacing.md,
   },
   listItemSelected: { backgroundColor: '#fafafd' },
   listItemText: {
@@ -499,7 +502,7 @@ const dd = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
   },
   listItemTextSelected: {
-    fontWeight: '700',
+    fontWeight: Typography.weight.bold,
     fontFamily: 'Inter_700Bold',
   },
   colorSwatch: {
@@ -514,58 +517,58 @@ const dd = StyleSheet.create({
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#fafafd' },
-  logoRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 32 },
+  logoRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.xxl },
   logoIcon: {
     width: 34, height: 34, borderRadius: 11, backgroundColor: '#1e1e28',
     alignItems: 'center', justifyContent: 'center',
   },
-  logoText: { fontSize: 19, fontWeight: '700', color: '#1e1e28', letterSpacing: -0.7, fontFamily: 'Inter_700Bold' },
-  header: { gap: 10, marginBottom: 32 },
-  title: { fontSize: 34, fontWeight: '700', color: '#1e1e28', letterSpacing: -1.2, lineHeight: 40, fontFamily: 'Inter_700Bold' },
-  sub: { fontSize: 14, color: '#5e5e72', lineHeight: 20, fontFamily: 'Inter_400Regular' },
+  logoText: { fontSize: 19, fontWeight: Typography.weight.bold, color: '#1e1e28', letterSpacing: -0.7, fontFamily: 'Inter_700Bold' },
+  header: { gap: 10, marginBottom: Spacing.xxl },
+  title: { fontSize: 34, fontWeight: Typography.weight.bold, color: '#1e1e28', letterSpacing: -1.2, lineHeight: 40, fontFamily: 'Inter_700Bold' },
+  sub: { fontSize: Typography.size.sm, color: '#5e5e72', lineHeight: 20, fontFamily: 'Inter_400Regular' },
   fields: { gap: 20 },
-  fieldBlock: { gap: 8 },
+  fieldBlock: { gap: Spacing.sm },
   label: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: Typography.weight.semibold,
     color: '#1e1e28',
     fontFamily: 'Inter_600SemiBold',
-    paddingHorizontal: 4,
+    paddingHorizontal: Spacing.xs,
   },
   summaryCard: {
-    marginTop: 24,
+    marginTop: Spacing.xl,
     backgroundColor: 'white',
     borderRadius: 18,
-    padding: 16,
+    padding: Spacing.lg,
     borderWidth: 1.5,
     borderColor: '#1e1e28',
     shadowColor: '#1e1e28',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
-    elevation: 2,
+    elevation: Shadows.small.elevation,
   },
   summaryRow: { alignItems: 'center', gap: 10 },
   colorDot: { width: 18, height: 18, borderRadius: 99, flexShrink: 0 },
-  summaryText: { fontSize: 14, color: '#1e1e28', fontFamily: 'Inter_400Regular', flex: 1 },
+  summaryText: { fontSize: Typography.size.sm, color: '#1e1e28', fontFamily: 'Inter_400Regular', flex: 1 },
   errorText: {
-    marginTop: 12,
+    marginTop: Spacing.md,
     fontSize: 13,
     color: '#e53935',
     fontFamily: 'Inter_400Regular',
-    paddingHorizontal: 4,
+    paddingHorizontal: Spacing.xs,
   },
   footer: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
-    paddingHorizontal: 24, paddingTop: 16,
+    paddingHorizontal: Spacing.xl, paddingTop: Spacing.lg,
     backgroundColor: 'rgba(250,250,253,0.95)',
     borderTopWidth: 1, borderTopColor: '#e5e5ea',
   },
   continueBtn: {
     height: 56, borderRadius: 20, backgroundColor: '#1e1e28',
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 20, elevation: 8,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm,
+    shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 20, elevation: Shadows.large.elevation,
   },
   continueBtnDisabled: { opacity: 0.35 },
-  continueBtnText: { color: 'white', fontSize: 16, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  continueBtnText: { color: 'white', fontSize: Typography.size.md, fontWeight: Typography.weight.semibold, fontFamily: 'Inter_600SemiBold' },
 });

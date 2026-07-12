@@ -14,6 +14,10 @@ import { useAuth } from '@/lib/authContext';
 import { useSocket } from '@/lib/socketContext';
 import { endpoints } from '@/lib/api';
 import { navigateToHome } from '@/lib/postAuthRouter';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Radius } from '@/constants/radius';
+import { Shadows } from '@/constants/shadows';
 
 type OnboardingStatus = 'pending' | 'pending_review' | 'approved' | 'rejected';
 
@@ -212,7 +216,7 @@ export default function PendingApprovalScreen() {
                 <StatusIcon color="#27ae60" Icon={CheckCircle2} />
                 <Text style={[s.title, { color: '#27ae60' }]}>Account approved!</Text>
                 <Text style={s.sub}>Redirecting you to the dashboard…</Text>
-                <ActivityIndicator color="#27ae60" style={{ marginTop: 8 }} />
+                <ActivityIndicator color="#27ae60" style={{ marginTop: Spacing.sm }} />
               </>
             )}
 
@@ -289,31 +293,31 @@ const s = StyleSheet.create({
   root: { flex: 1 },
   logoRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 28 },
   logoIcon: { width: 42, height: 42, borderRadius: 14, backgroundColor: '#1e1e28', alignItems: 'center', justifyContent: 'center' },
-  wordmark: { fontSize: 24, fontWeight: '700', color: '#1e1e28', letterSpacing: -0.8, fontFamily: 'Inter_700Bold' },
+  wordmark: { fontSize: 24, fontWeight: Typography.weight.bold, color: '#1e1e28', letterSpacing: -0.8, fontFamily: 'Inter_700Bold' },
   loadingCard: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
   card: {
     backgroundColor: 'rgba(255,255,255,0.92)', borderRadius: 32,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.7)',
-    padding: 28, gap: 16,
-    shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.07, shadowRadius: 20, elevation: 4,
+    padding: 28, gap: Spacing.lg,
+    shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.07, shadowRadius: 20, elevation: Shadows.medium.elevation,
   },
-  iconWrap: { alignItems: 'center', marginBottom: 4 },
+  iconWrap: { alignItems: 'center', marginBottom: Spacing.xs },
   iconCircle: { width: 88, height: 88, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 26, fontWeight: '700', color: '#1e1e28', letterSpacing: -0.6, lineHeight: 32, textAlign: 'center', fontFamily: 'Inter_700Bold' },
-  sub: { fontSize: 14, color: '#5e5e72', lineHeight: 22, textAlign: 'center', fontFamily: 'Inter_400Regular' },
+  title: { fontSize: 26, fontWeight: Typography.weight.bold, color: '#1e1e28', letterSpacing: -0.6, lineHeight: 32, textAlign: 'center', fontFamily: 'Inter_700Bold' },
+  sub: { fontSize: Typography.size.sm, color: '#5e5e72', lineHeight: 22, textAlign: 'center', fontFamily: 'Inter_400Regular' },
   rejectionBox: {
-    backgroundColor: '#fff5f5', borderRadius: 16, borderWidth: 1, borderColor: '#fca5a5', padding: 14, gap: 6,
+    backgroundColor: '#fff5f5', borderRadius: Radius.lg, borderWidth: 1, borderColor: '#fca5a5', padding: 14, gap: 6,
   },
-  rejectionLabel: { fontSize: 11, fontWeight: '700', color: '#e53935', letterSpacing: 0.5, textTransform: 'uppercase', fontFamily: 'Inter_700Bold' },
-  rejectionText: { fontSize: 14, color: '#1e1e28', lineHeight: 20, fontFamily: 'Inter_400Regular' },
+  rejectionLabel: { fontSize: 11, fontWeight: Typography.weight.bold, color: '#e53935', letterSpacing: 0.5, textTransform: 'uppercase', fontFamily: 'Inter_700Bold' },
+  rejectionText: { fontSize: Typography.size.sm, color: '#1e1e28', lineHeight: 20, fontFamily: 'Inter_400Regular' },
   pollingRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: '#f2f4fe', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 8,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm,
+    backgroundColor: '#f2f4fe', borderRadius: Radius.md, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm,
   },
   pollingDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#55c49a' },
-  pollingText: { fontSize: 12, color: '#55c49a', fontFamily: 'Inter_500Medium' },
-  stepsBlock: { gap: 0, marginTop: 4 },
-  stepRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, minHeight: 40 },
+  pollingText: { fontSize: Typography.size.xs, color: '#55c49a', fontFamily: 'Inter_500Medium' },
+  stepsBlock: { gap: 0, marginTop: Spacing.xs },
+  stepRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.md, minHeight: 40 },
   stepLeft: { alignItems: 'center', width: 20 },
   stepDot: {
     width: 20, height: 20, borderRadius: 10,
@@ -324,28 +328,28 @@ const s = StyleSheet.create({
   stepDotActive: { backgroundColor: '#f59e0b', borderColor: '#f59e0b' },
   stepLine: { width: 2, flex: 1, minHeight: 20, backgroundColor: '#e5e5ea', marginVertical: 2 },
   stepLineDone: { backgroundColor: '#27ae60' },
-  stepLabel: { fontSize: 14, color: '#5e5e72', fontFamily: 'Inter_400Regular', paddingTop: 1, flex: 1 },
-  stepLabelDone: { color: '#1e1e28', fontWeight: '500' },
-  stepLabelActive: { color: '#f59e0b', fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  stepLabel: { fontSize: Typography.size.sm, color: '#5e5e72', fontFamily: 'Inter_400Regular', paddingTop: 1, flex: 1 },
+  stepLabelDone: { color: '#1e1e28', fontWeight: Typography.weight.medium },
+  stepLabelActive: { color: '#f59e0b', fontWeight: Typography.weight.semibold, fontFamily: 'Inter_600SemiBold' },
   actionBtn: {
     height: 52, borderRadius: 18, backgroundColor: '#1e1e28',
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm,
     shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.18, shadowRadius: 16, elevation: 6,
   },
-  actionBtnText: { color: 'white', fontSize: 14, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
-  refreshBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 4 },
+  actionBtnText: { color: 'white', fontSize: Typography.size.sm, fontWeight: Typography.weight.semibold, fontFamily: 'Inter_600SemiBold' },
+  refreshBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: Spacing.xs },
   refreshText: { fontSize: 13, color: '#5e5e72', fontFamily: 'Inter_400Regular' },
   divider: { height: 1, backgroundColor: '#e5e5ea' },
-  contactTitle: { fontSize: 14, fontWeight: '700', color: '#1e1e28', textAlign: 'center', fontFamily: 'Inter_700Bold' },
-  contactRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' },
+  contactTitle: { fontSize: Typography.size.sm, fontWeight: Typography.weight.bold, color: '#1e1e28', textAlign: 'center', fontFamily: 'Inter_700Bold' },
+  contactRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, justifyContent: 'center' },
   contactChip: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: '#eef0fc', borderRadius: 99, paddingHorizontal: 14, paddingVertical: 8,
+    backgroundColor: '#eef0fc', borderRadius: 99, paddingHorizontal: 14, paddingVertical: Spacing.sm,
   },
-  contactText: { fontSize: 12, color: '#55c49a', fontWeight: '500', fontFamily: 'Inter_500Medium' },
+  contactText: { fontSize: Typography.size.xs, color: '#55c49a', fontWeight: Typography.weight.medium, fontFamily: 'Inter_500Medium' },
   logoutBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 6, marginTop: 24, paddingVertical: 8,
+    gap: 6, marginTop: Spacing.xl, paddingVertical: Spacing.sm,
   },
-  logoutText: { fontSize: 14, color: '#5e5e72', fontFamily: 'Inter_400Regular' },
+  logoutText: { fontSize: Typography.size.sm, color: '#5e5e72', fontFamily: 'Inter_400Regular' },
 });

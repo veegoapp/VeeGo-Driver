@@ -27,6 +27,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Radius } from '@/constants/radius';
 
 type DriverMe = {
   id: string;
@@ -162,7 +165,7 @@ export default function ShuttleProfileInfoScreen() {
               </Text>
 
               {/* ── Email — editable ──────────────────────────── */}
-              <Text style={[styles.sectionLabel, { color: colors.mutedForeground, textAlign: TA, marginTop: 24 }]}>
+              <Text style={[styles.sectionLabel, { color: colors.mutedForeground, textAlign: TA, marginTop: Spacing.xl }]}>
                 {t.field_email}
               </Text>
               <View style={[styles.card, { borderColor: BORDER_COLOR }]}>
@@ -231,7 +234,7 @@ export default function ShuttleProfileInfoScreen() {
               )}
 
               {/* ── Change Password ───────────────────────────── */}
-              <Text style={[styles.sectionLabel, { color: colors.mutedForeground, textAlign: TA, marginTop: 24 }]}>
+              <Text style={[styles.sectionLabel, { color: colors.mutedForeground, textAlign: TA, marginTop: Spacing.xl }]}>
                 {t.change_password}
               </Text>
               <Pressable
@@ -276,8 +279,8 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   headerRow: {
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 24,
+    gap: Spacing.md,
+    marginBottom: Spacing.xl,
   },
   backBtn: {
     width: 40,
@@ -287,31 +290,31 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
   },
-  pageTitle: { fontSize: 22, fontFamily: 'Inter_700Bold' },
+  pageTitle: { fontSize: Typography.size.xl, fontFamily: 'Inter_700Bold' },
   sectionLabel: {
     fontSize: 11,
     fontFamily: 'Inter_500Medium',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
-    marginBottom: 8,
-    paddingHorizontal: 4,
+    marginBottom: Spacing.sm,
+    paddingHorizontal: Spacing.xs,
   },
   card: {
     backgroundColor: '#fff',
-    borderRadius: 16,
+    borderRadius: Radius.lg,
     borderWidth: 1,
     overflow: 'hidden',
   },
   fieldRow: {
     alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 16,
+    gap: Spacing.md,
+    paddingHorizontal: Spacing.lg,
     paddingVertical: 14,
   },
   iconWrap: {
     width: 38,
     height: 38,
-    borderRadius: 12,
+    borderRadius: Radius.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -332,12 +335,12 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderBottomWidth: 1.5,
   },
-  divider: { height: 1, marginHorizontal: 16 },
+  divider: { height: 1, marginHorizontal: Spacing.lg },
   lockedHint: {
-    fontSize: 12,
+    fontSize: Typography.size.xs,
     fontFamily: 'Inter_400Regular',
     marginTop: 6,
-    paddingHorizontal: 4,
+    paddingHorizontal: Spacing.xs,
     lineHeight: 17,
   },
   actionBtn: {
@@ -355,7 +358,7 @@ const styles = StyleSheet.create({
   savedMsg: {
     fontSize: 13,
     fontFamily: 'Inter_500Medium',
-    marginTop: 8,
-    paddingHorizontal: 4,
+    marginTop: Spacing.sm,
+    paddingHorizontal: Spacing.xs,
   },
 });

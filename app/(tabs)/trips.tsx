@@ -21,6 +21,10 @@ import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Radius } from '@/constants/radius';
+import { Shadows } from '@/constants/shadows';
 
 // Task 2: status field added — drives which action buttons are shown
 type Trip = {
@@ -208,7 +212,7 @@ export default function TripsScreen() {
           </GlassView>
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 16 }} contentContainerStyle={{ gap: 8, paddingRight: 4 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: Spacing.lg }} contentContainerStyle={{ gap: Spacing.sm, paddingRight: Spacing.xs }}>
           {FILTER_KEYS.map(key => (
             <Pressable key={key} onPress={() => setFilter(key)}>
               {key === filter ? (
@@ -230,12 +234,12 @@ export default function TripsScreen() {
           </View>
         ) : isError ? (
           <View style={{ marginTop: 60, alignItems: 'center' }}>
-            <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 14 }}>{t.trips_load_fail}</Text>
+            <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: Typography.size.sm }}>{t.trips_load_fail}</Text>
           </View>
         ) : tripsData.length === 0 ? (
-          <View style={{ marginTop: 60, alignItems: 'center', gap: 8 }}>
+          <View style={{ marginTop: 60, alignItems: 'center', gap: Spacing.sm }}>
             <Text style={{ fontSize: 32 }}>🚗</Text>
-            <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: 16 }}>{t.trips_empty_title}</Text>
+            <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: Typography.size.md }}>{t.trips_empty_title}</Text>
             <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13 }}>
               {filter === 'all' ? t.no_trip_history_sub : `${filterLabels[filter]}`}
             </Text>
@@ -271,7 +275,7 @@ export default function TripsScreen() {
                           ))}
                         </View>
                         <StatusBadge status={trip.status} colors={colors} />
-                        <ChevronRight size={14} color={colors.mutedForeground} style={{ marginTop: 4, transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
+                        <ChevronRight size={14} color={colors.mutedForeground} style={{ marginTop: Spacing.xs, transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
                       </View>
                     </View>
 
@@ -293,9 +297,9 @@ export default function TripsScreen() {
             {hasMore && !isLoading && (
               <Pressable
                 onPress={() => setPage(p => p + 1)}
-                style={{ marginTop: 8, marginBottom: 16, alignItems: 'center', paddingVertical: 14, borderRadius: 16, backgroundColor: 'rgba(61,82,213,0.08)' }}
+                style={{ marginTop: Spacing.sm, marginBottom: Spacing.lg, alignItems: 'center', paddingVertical: 14, borderRadius: Radius.lg, backgroundColor: 'rgba(61,82,213,0.08)' }}
               >
-                <Text style={{ color: '#55c49a', fontFamily: 'Inter_600SemiBold', fontSize: 14 }}>{t.load_more_label}</Text>
+                <Text style={{ color: '#55c49a', fontFamily: 'Inter_600SemiBold', fontSize: Typography.size.sm }}>{t.load_more_label}</Text>
               </Pressable>
             )}
             {isLoading && page > 1 && (
@@ -321,7 +325,7 @@ function StatusBadge({ status, colors }: { status: Trip['status']; colors: Retur
   };
   const s = map[status] ?? map.completed;
   return (
-    <View style={[styles.statusBadge, { backgroundColor: s.bg, marginTop: 4 }]}>
+    <View style={[styles.statusBadge, { backgroundColor: s.bg, marginTop: Spacing.xs }]}>
       <Text style={[styles.statusText, { color: s.fg, fontFamily: 'Inter_700Bold' }]}>{s.label}</Text>
     </View>
   );
@@ -412,34 +416,34 @@ const styles = StyleSheet.create({
   sectionLabel: { fontSize: 10, letterSpacing: 2, textTransform: 'uppercase' },
   pageTitle: { fontSize: 24, marginTop: 2 },
   filterBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  chip: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
-  chipText: { fontSize: 12 },
-  tripCard: { padding: 16 },
+  chip: { paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm, borderRadius: 20 },
+  chipText: { fontSize: Typography.size.xs },
+  tripCard: { padding: Spacing.lg },
   tripRow: { alignItems: 'flex-start' },
-  tripMeta: { fontSize: 11, marginBottom: 8 },
-  tripRoute: { gap: 8 },
-  routeDots: { alignItems: 'center', paddingTop: 4 },
+  tripMeta: { fontSize: 11, marginBottom: Spacing.sm },
+  tripRoute: { gap: Spacing.sm },
+  routeDots: { alignItems: 'center', paddingTop: Spacing.xs },
   dotTop: { width: 8, height: 8, borderRadius: 4 },
   routeLine: { width: 1, flex: 1, marginVertical: 3 },
   dotBottom: { width: 8, height: 8, borderRadius: 2 },
-  routeText: { fontSize: 14 },
-  fareText: { fontSize: 16 },
-  starsRow: { gap: 2, marginTop: 4 },
-  statusBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20 },
+  routeText: { fontSize: Typography.size.sm },
+  fareText: { fontSize: Typography.size.md },
+  starsRow: { gap: 2, marginTop: Spacing.xs },
+  statusBadge: { paddingHorizontal: Spacing.sm, paddingVertical: 2, borderRadius: 20 },
   statusText: { fontSize: 9, letterSpacing: 0.8, textTransform: 'uppercase' },
   // Task 2: action bar styles
-  actionBar: { flexDirection: 'row', gap: 8, marginTop: 14, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.06)', paddingTop: 14 },
-  actionBtnPrimary: { borderRadius: 14, overflow: 'hidden', elevation: 4, shadowColor: '#2d2d42', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 6 },
+  actionBar: { flexDirection: 'row', gap: Spacing.sm, marginTop: 14, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.06)', paddingTop: 14 },
+  actionBtnPrimary: { borderRadius: 14, overflow: 'hidden', elevation: Shadows.medium.elevation, shadowColor: '#2d2d42', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 6 },
   actionBtnSecondary: { height: 44, borderRadius: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   actionBtnGrad: { height: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   actionBtnText: { fontSize: 13 },
   // Cancel modal
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: 24 },
-  modalCard: { width: '100%', padding: 24, gap: 12 },
-  modalTitle: { fontSize: 18 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: Spacing.xl },
+  modalCard: { width: '100%', padding: Spacing.xl, gap: Spacing.md },
+  modalTitle: { fontSize: Typography.size.lg },
   modalSub: { fontSize: 13 },
-  modalInput: { borderWidth: 1, borderRadius: 12, padding: 12, fontSize: 14, minHeight: 80, textAlignVertical: 'top' },
-  modalActions: { flexDirection: 'row', gap: 10, marginTop: 4 },
+  modalInput: { borderWidth: 1, borderRadius: Radius.md, padding: Spacing.md, fontSize: Typography.size.sm, minHeight: 80, textAlignVertical: 'top' },
+  modalActions: { flexDirection: 'row', gap: 10, marginTop: Spacing.xs },
   modalBtn: { flex: 1, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  modalBtnText: { fontSize: 14 },
+  modalBtnText: { fontSize: Typography.size.sm },
 });

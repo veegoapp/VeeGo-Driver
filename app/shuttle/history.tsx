@@ -19,6 +19,9 @@ import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { endpoints } from '@/lib/api';
 import { useI18n } from '@/lib/i18nContext';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Radius } from '@/constants/radius';
 
 const PAGE_LIMIT = 20;
 
@@ -190,7 +193,7 @@ export default function TripHistoryScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* ── Header ──────────────────────────────────────────────────── */}
-        <View style={[styles.headerRow, { flexDirection: R, marginBottom: 4 }]}>
+        <View style={[styles.headerRow, { flexDirection: R, marginBottom: Spacing.xs }]}>
           <Pressable
             onPress={() => router.back()}
             hitSlop={12}
@@ -268,7 +271,7 @@ export default function TripHistoryScreen() {
         {!isLoading && !isError && allTrips.length === 0 && (
           <GlassView style={styles.emptyCard} borderRadius={20}>
             <Clock size={40} color={colors.mutedForeground} strokeWidth={1.5} />
-            <Text style={[styles.emptyTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: 'center', marginTop: 16 }]}>
+            <Text style={[styles.emptyTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: 'center', marginTop: Spacing.lg }]}>
               {t.no_trip_history}
             </Text>
             <Text style={[styles.emptySub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: 'center', marginTop: 6 }]}>
@@ -422,7 +425,7 @@ function TripCard({
             ) : (
               <Text style={[styles.earnedDash, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>—</Text>
             )}
-            <ChevronRight size={14} color={colors.mutedForeground} strokeWidth={2} style={{ marginTop: 4, transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
+            <ChevronRight size={14} color={colors.mutedForeground} strokeWidth={2} style={{ marginTop: Spacing.xs, transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
           </View>
 
         </GlassView>
@@ -435,29 +438,29 @@ function TripCard({
 const styles = StyleSheet.create({
   container: { flex: 1 },
   headerRow: { alignItems: 'flex-start', gap: 14, marginBottom: 20 },
-  backBtn: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
+  backBtn: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginTop: Spacing.xs },
   pageTitle: { fontSize: 24, lineHeight: 30 },
   pageSubtitle: { fontSize: 13, marginTop: 2 },
   summaryCard: { borderRadius: 20, padding: 20 },
   summaryRow: { alignItems: 'center', gap: 14 },
   summaryIconWrap: { width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
-  summaryLabel: { fontSize: 12, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: 0.6 },
-  summaryAmount: { fontSize: 28, color: '#fff' },
-  summaryCurrency: { fontSize: 14, color: 'rgba(255,255,255,0.65)', marginBottom: 2 },
+  summaryLabel: { fontSize: Typography.size.xs, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: 0.6 },
+  summaryAmount: { fontSize: Typography.size.xxl, color: '#fff' },
+  summaryCurrency: { fontSize: Typography.size.sm, color: 'rgba(255,255,255,0.65)', marginBottom: 2 },
   centered: { flex: 1, minHeight: 240, alignItems: 'center', justifyContent: 'center' },
   emptyCard: { alignItems: 'center', padding: 40, gap: 0 },
-  emptyTitle: { fontSize: 16 },
+  emptyTitle: { fontSize: Typography.size.md },
   emptySub: { fontSize: 13, lineHeight: 20 },
-  retryBtn: { marginTop: 16, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12, borderWidth: 1 },
-  card: { alignItems: 'center', padding: 16, gap: 14 },
+  retryBtn: { marginTop: Spacing.lg, paddingHorizontal: 20, paddingVertical: 10, borderRadius: Radius.md, borderWidth: 1 },
+  card: { alignItems: 'center', padding: Spacing.lg, gap: 14 },
   cardIconWrap: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#dcfce7', alignItems: 'center', justifyContent: 'center' },
-  cardRoute: { fontSize: 14 },
-  cardDate: { fontSize: 12, lineHeight: 18 },
+  cardRoute: { fontSize: Typography.size.sm },
+  cardDate: { fontSize: Typography.size.xs, lineHeight: 18 },
   cardTime: { fontSize: 11 },
   earnedWrap: { minWidth: 80 },
   earnedAmount: { fontSize: 17 },
   earnedCurrency: { fontSize: 10, marginTop: 2 },
-  earnedDash: { fontSize: 18 },
+  earnedDash: { fontSize: Typography.size.lg },
   loadMoreBtn: {
     height: 48,
     borderRadius: 14,
@@ -465,9 +468,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    marginTop: 4,
+    gap: Spacing.sm,
+    marginTop: Spacing.xs,
   },
   loadMoreText: { fontSize: 13 },
-  endLabel: { fontSize: 12, textAlign: 'center', marginTop: 8, marginBottom: 4 },
+  endLabel: { fontSize: Typography.size.xs, textAlign: 'center', marginTop: Spacing.sm, marginBottom: Spacing.xs },
 });

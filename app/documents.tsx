@@ -23,6 +23,9 @@ import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
 import type { DriverProfileEnriched } from '@/lib/api';
 import { compressImage } from '@/lib/imageCompression';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Radius } from '@/constants/radius';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -477,15 +480,15 @@ const styles = StyleSheet.create({
     width: 40, height: 40, borderRadius: 20,
     alignItems: 'center', justifyContent: 'center', borderWidth: 1,
   },
-  pageTitle: { fontSize: 24, marginTop: 24 },
-  pageSub: { fontSize: 13, marginTop: 4, marginBottom: 24, lineHeight: 20 },
+  pageTitle: { fontSize: 24, marginTop: Spacing.xl },
+  pageSub: { fontSize: 13, marginTop: Spacing.xs, marginBottom: Spacing.xl, lineHeight: 20 },
   center: { alignItems: 'center', paddingVertical: 40 },
   errorBox: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 8,
-    borderWidth: 1, borderRadius: 12, padding: 14, marginBottom: 16,
+    flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm,
+    borderWidth: 1, borderRadius: Radius.md, padding: 14, marginBottom: Spacing.lg,
   },
   errorText: { flex: 1, fontSize: 13, color: '#dc2626', lineHeight: 18 },
-  sections: { gap: 24 },
+  sections: { gap: Spacing.xl },
   section: { gap: 10 },
   sectionHeader: {
     fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.8, paddingHorizontal: 2,
@@ -494,13 +497,13 @@ const styles = StyleSheet.create({
 
   // Card
   card: {
-    borderRadius: 16, borderWidth: 1, overflow: 'hidden',
+    borderRadius: Radius.lg, borderWidth: 1, overflow: 'hidden',
   },
   cardInner: {
-    gap: 12, padding: 14, alignItems: 'center',
+    gap: Spacing.md, padding: 14, alignItems: 'center',
   },
   thumbWrap: {
-    width: 72, height: 72, borderRadius: 12,
+    width: 72, height: 72, borderRadius: Radius.md,
     alignItems: 'center', justifyContent: 'center',
     flexShrink: 0, overflow: 'hidden',
   },
@@ -511,21 +514,21 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   cardContent: { flex: 1, gap: 6 },
-  nameBadgeRow: { alignItems: 'flex-start', gap: 8, flexWrap: 'wrap' },
-  cardLabel: { fontSize: 14, lineHeight: 20 },
-  adminNotes: { fontSize: 12, lineHeight: 17 },
-  urgentText: { fontSize: 12 },
-  notUploaded: { fontSize: 12 },
+  nameBadgeRow: { alignItems: 'flex-start', gap: Spacing.sm, flexWrap: 'wrap' },
+  cardLabel: { fontSize: Typography.size.sm, lineHeight: 20 },
+  adminNotes: { fontSize: Typography.size.xs, lineHeight: 17 },
+  urgentText: { fontSize: Typography.size.xs },
+  notUploaded: { fontSize: Typography.size.xs },
   uploadBtn: {
     alignSelf: 'flex-start', alignItems: 'center', gap: 5,
-    paddingHorizontal: 12, paddingVertical: 7,
+    paddingHorizontal: Spacing.md, paddingVertical: 7,
     borderRadius: 10,
   },
-  uploadBtnText: { color: '#fff', fontSize: 12 },
+  uploadBtnText: { color: '#fff', fontSize: Typography.size.xs },
 
   // Grace period
   graceWrap: {
-    borderTopWidth: 1, paddingHorizontal: 14, paddingBottom: 12, paddingTop: 10, gap: 6,
+    borderTopWidth: 1, paddingHorizontal: 14, paddingBottom: Spacing.md, paddingTop: 10, gap: 6,
   },
   graceBar: { height: 5, borderRadius: 4, overflow: 'hidden' },
   graceFill: { height: 5, borderRadius: 4 },
@@ -533,15 +536,15 @@ const styles = StyleSheet.create({
 
   // Badge
   badge: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99,
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.xs,
+    paddingHorizontal: Spacing.sm, paddingVertical: 3, borderRadius: 99,
   },
   badgeText: { fontSize: 10, letterSpacing: 0.3 },
 
   // Toast
   toast: {
     position: 'absolute', left: 20, right: 20, zIndex: 100,
-    borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12,
+    borderRadius: Radius.md, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md,
   },
   toastText: {
     color: '#fff', fontSize: 13, fontFamily: 'Inter_600SemiBold', textAlign: 'center',

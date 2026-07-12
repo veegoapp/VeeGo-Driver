@@ -4,6 +4,9 @@ import React from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '@/lib/i18nContext';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Shadows } from '@/constants/shadows';
 
 export default function SuspendedScreen() {
   const insets = useSafeAreaInsets();
@@ -36,8 +39,8 @@ const s = StyleSheet.create({
     backgroundColor: '#fff5f5',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 32,
-    gap: 16,
+    paddingHorizontal: Spacing.xxl,
+    gap: Spacing.lg,
   },
   iconWrap: {
     width: 120,
@@ -46,11 +49,11 @@ const s = StyleSheet.create({
     backgroundColor: '#fee2e2',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
   title: {
     fontSize: 26,
-    fontWeight: '700',
+    fontWeight: Typography.weight.bold,
     color: '#1e1e28',
     fontFamily: 'Inter_700Bold',
     textAlign: 'center',
@@ -63,25 +66,25 @@ const s = StyleSheet.create({
     textAlign: 'center',
   },
   btn: {
-    marginTop: 16,
+    marginTop: Spacing.lg,
     height: 56,
     borderRadius: 20,
     backgroundColor: '#ef4444',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingHorizontal: 32,
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.xxl,
     shadowColor: '#ef4444',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.25,
     shadowRadius: 16,
-    elevation: 8,
+    elevation: Shadows.large.elevation,
   },
   btnText: {
     color: '#fff',
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: Typography.weight.bold,
     fontFamily: 'Inter_700Bold',
   },
 });

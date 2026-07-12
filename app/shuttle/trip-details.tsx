@@ -19,6 +19,9 @@ import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { useShuttle } from '@/lib/shuttleContext';
 import { endpoints } from '@/lib/api';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Radius } from '@/constants/radius';
 
 type Params = {
   bookingId: string;
@@ -166,7 +169,7 @@ export default function TripDetailsScreen() {
           <View style={{ width: 40 }} />
         </View>
         <View style={styles.emptyState}>
-          <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 14 }}>
+          <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: Typography.size.sm }}>
             Trip not found
           </Text>
         </View>
@@ -210,7 +213,7 @@ export default function TripDetailsScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Route name */}
-        <View style={{ marginTop: 24 }}>
+        <View style={{ marginTop: Spacing.xl }}>
           <Text style={[styles.routeName, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
             {routeName}
           </Text>
@@ -220,7 +223,7 @@ export default function TripDetailsScreen() {
         </View>
 
         {/* Status badge */}
-        <View style={[{ flexDirection: R, marginTop: 12 }]}>
+        <View style={[{ flexDirection: R, marginTop: Spacing.md }]}>
           <View style={[styles.statusBadge, { backgroundColor: '#1e1e2812', borderColor: '#1e1e2825' }]}>
             <View style={[styles.statusDot, { backgroundColor: '#1e1e28' }]} />
             <Text style={[styles.statusText, { color: '#2d2d42', fontFamily: 'Inter_700Bold' }]}>
@@ -261,16 +264,16 @@ export default function TripDetailsScreen() {
         </View>
 
         {/* Vehicle & Line info card */}
-        <GlassView style={[styles.vehicleCard, { marginTop: 12 }]} borderRadius={16}>
+        <GlassView style={[styles.vehicleCard, { marginTop: Spacing.md }]} borderRadius={16}>
           <View style={[{ flexDirection: R, alignItems: 'center', gap: 14 }]}>
             <View style={[styles.vehicleIconWrap, { backgroundColor: '#1e1e2810' }]}>
-              <Text style={{ fontSize: 22 }}>🚐</Text>
+              <Text style={{ fontSize: Typography.size.xl }}>🚐</Text>
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[{ fontSize: 11, color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textTransform: 'uppercase', letterSpacing: 0.8, textAlign: TA }]}>
                 {t.vehicle_line_label}
               </Text>
-              <Text style={[{ fontSize: 16, color: colors.foreground, fontFamily: 'Inter_700Bold', marginTop: 3, textAlign: TA }]}>
+              <Text style={[{ fontSize: Typography.size.md, color: colors.foreground, fontFamily: 'Inter_700Bold', marginTop: 3, textAlign: TA }]}>
                 {vehicleType} · {lineNumber}
               </Text>
             </View>
@@ -283,9 +286,9 @@ export default function TripDetailsScreen() {
         </Text>
 
         {stationsLoading ? (
-          <ActivityIndicator size="small" color="#1e1e28" style={{ marginTop: 16 }} />
+          <ActivityIndicator size="small" color="#1e1e28" style={{ marginTop: Spacing.lg }} />
         ) : stations.length > 0 ? (
-          <GlassView style={{ marginTop: 12, paddingVertical: 8, paddingHorizontal: 16 }} borderRadius={16}>
+          <GlassView style={{ marginTop: Spacing.md, paddingVertical: Spacing.sm, paddingHorizontal: Spacing.lg }} borderRadius={16}>
             {stations.map((st, idx) => (
               <View
                 key={String(st.id)}
@@ -307,12 +310,12 @@ export default function TripDetailsScreen() {
                     <View style={[styles.stationLine, { backgroundColor: colors.border }]} />
                   )}
                 </View>
-                <View style={{ flex: 1, paddingVertical: 12 }}>
-                  <Text style={[{ fontSize: 14, color: colors.foreground, fontFamily: 'Inter_600SemiBold', textAlign: TA }]}>
+                <View style={{ flex: 1, paddingVertical: Spacing.md }}>
+                  <Text style={[{ fontSize: Typography.size.sm, color: colors.foreground, fontFamily: 'Inter_600SemiBold', textAlign: TA }]}>
                     {st.name}
                   </Text>
                   {st.eta ? (
-                    <Text style={[{ fontSize: 12, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', marginTop: 2, textAlign: TA }]}>
+                    <Text style={[{ fontSize: Typography.size.xs, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', marginTop: 2, textAlign: TA }]}>
                       {st.eta}
                     </Text>
                   ) : null}
@@ -334,7 +337,7 @@ export default function TripDetailsScreen() {
             ))}
           </GlassView>
         ) : (
-          <GlassView style={{ marginTop: 12, padding: 24, alignItems: 'center', gap: 10 }} borderRadius={16}>
+          <GlassView style={{ marginTop: Spacing.md, padding: Spacing.xl, alignItems: 'center', gap: 10 }} borderRadius={16}>
             <MapPin size={24} color={colors.mutedForeground} strokeWidth={2} />
             <Text style={[{ fontSize: 13, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: 'center' }]}>
               {from} → {to}
@@ -366,7 +369,7 @@ export default function TripDetailsScreen() {
                 setStarting(false);
               }
             }}
-            style={({ pressed }) => [{ borderRadius: 16, overflow: 'hidden', opacity: !isStartEnabled ? 1 : starting ? 0.7 : pressed ? 0.88 : 1 }]}
+            style={({ pressed }) => [{ borderRadius: Radius.lg, overflow: 'hidden', opacity: !isStartEnabled ? 1 : starting ? 0.7 : pressed ? 0.88 : 1 }]}
           >
             {isStartEnabled ? (
               <LinearGradient
@@ -415,44 +418,44 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.md,
     borderBottomWidth: 1,
   },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { fontSize: 17 },
   emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   routeName: { fontSize: 24, lineHeight: 32 },
-  routeSubtitle: { fontSize: 14, marginTop: 4 },
+  routeSubtitle: { fontSize: Typography.size.sm, marginTop: Spacing.xs },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 12,
+    paddingHorizontal: Spacing.md,
     paddingVertical: 5,
     borderRadius: 99,
     borderWidth: 1,
   },
   statusDot: { width: 7, height: 7, borderRadius: 4 },
-  statusText: { fontSize: 12 },
+  statusText: { fontSize: Typography.size.xs },
   infoRow: { gap: 10 },
   infoCard: {
     flex: 1,
     alignItems: 'center',
     padding: 14,
-    gap: 4,
+    gap: Spacing.xs,
   },
   infoCardLabel: { fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, textAlign: 'center' },
   infoCardValue: { fontSize: 15, textAlign: 'center' },
-  vehicleCard: { padding: 16 },
+  vehicleCard: { padding: Spacing.lg },
   vehicleIconWrap: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  sectionTitle: { fontSize: 16 },
-  stationRow: { gap: 12, alignItems: 'flex-start' },
+  sectionTitle: { fontSize: Typography.size.md },
+  stationRow: { gap: Spacing.md, alignItems: 'flex-start' },
   stationIndicator: { width: 20, alignItems: 'center', paddingTop: 14 },
   stationDot: { width: 12, height: 12, borderRadius: 6, borderWidth: 2 },
-  stationLine: { width: 2, flex: 1, minHeight: 16, marginTop: 4 },
+  stationLine: { width: 2, flex: 1, minHeight: 16, marginTop: Spacing.xs },
   terminalBadge: {
-    paddingHorizontal: 8,
+    paddingHorizontal: Spacing.sm,
     paddingVertical: 3,
     borderRadius: 6,
     borderWidth: 1,
@@ -461,7 +464,7 @@ const styles = StyleSheet.create({
   bottomBar: {
     flexDirection: 'row',
     gap: 10,
-    paddingHorizontal: 16,
+    paddingHorizontal: Spacing.lg,
     paddingTop: 14,
     borderTopWidth: 1,
   },
@@ -469,14 +472,14 @@ const styles = StyleSheet.create({
     height: 54,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 16,
+    borderRadius: Radius.lg,
   },
   startBtnText: { color: '#fff', fontSize: 15 },
   startBtnDisabled: {
     height: 54,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 16,
+    borderRadius: Radius.lg,
     borderWidth: 1.5,
   },
   cancelBtn: {
@@ -484,8 +487,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 16,
+    borderRadius: Radius.lg,
     borderWidth: 1.5,
   },
-  cancelBtnText: { fontSize: 14 },
+  cancelBtnText: { fontSize: Typography.size.sm },
 });

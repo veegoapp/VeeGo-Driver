@@ -16,6 +16,9 @@ import { useColors } from '@/hooks/useColors';
 import { type ShuttleRoute, type ShuttleTimeslot, type ShuttleBooking, useShuttle } from '@/lib/shuttleContext';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints, ApiError } from '@/lib/api';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Radius } from '@/constants/radius';
 
 const TAB_BAR_HEIGHT = 96;
 
@@ -270,7 +273,7 @@ export default function ShuttleLinesScreen() {
         contentContainerStyle={{
           paddingTop: topPad + 8,
           paddingBottom: TAB_BAR_HEIGHT + 24,
-          paddingHorizontal: 16,
+          paddingHorizontal: Spacing.lg,
         }}
         showsVerticalScrollIndicator={false}
         style={{ flex: 1 }}
@@ -314,7 +317,7 @@ export default function ShuttleLinesScreen() {
         </View>
 
         {/* Stats chips */}
-        <View style={[styles.chips, { marginTop: 16 }]}>
+        <View style={[styles.chips, { marginTop: Spacing.lg }]}>
           <View style={[styles.chip, { backgroundColor: '#1e1e2820', borderColor: '#1e1e2833' }]}>
             <GitBranch size={12} color="#2d2d42" strokeWidth={2} />
             <Text style={[styles.chipText, { color: '#2d2d42', fontFamily: 'Inter_700Bold' }]}>
@@ -343,16 +346,16 @@ export default function ShuttleLinesScreen() {
 
         {!!contextError && !contextLoading && (
           <View style={{ alignItems: 'center', marginTop: 48 }}>
-            <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 14 }}>
+            <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: Typography.size.sm }}>
               {t.lines_load_failed}
             </Text>
           </View>
         )}
 
         {!contextLoading && !contextError && filteredRoutes.length === 0 && (
-          <View style={{ alignItems: 'center', marginTop: 60, gap: 8 }}>
+          <View style={{ alignItems: 'center', marginTop: 60, gap: Spacing.sm }}>
             <Text style={{ fontSize: 32 }}>🔍</Text>
-            <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: 16 }}>
+            <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: Typography.size.md }}>
               {t.lines_no_routes}
             </Text>
             <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13 }}>
@@ -420,7 +423,7 @@ export default function ShuttleLinesScreen() {
               showsVerticalScrollIndicator={false}
               nestedScrollEnabled
               style={styles.sheetScroll}
-              contentContainerStyle={{ paddingBottom: 8 }}
+              contentContainerStyle={{ paddingBottom: Spacing.sm }}
             >
               {/* Stations */}
               <Text style={[styles.sheetSection, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
@@ -431,7 +434,7 @@ export default function ShuttleLinesScreen() {
                   <ActivityIndicator size="small" color={colors.primary} />
                 </View>
               ) : stations.length === 0 ? (
-                <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13, paddingBottom: 12 }}>
+                <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13, paddingBottom: Spacing.md }}>
                   {t.lines_no_station}
                 </Text>
               ) : (
@@ -469,19 +472,19 @@ export default function ShuttleLinesScreen() {
                   <ActivityIndicator size="small" color={colors.primary} />
                 </View>
               ) : weeksError ? (
-                <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13, paddingBottom: 12 }}>
+                <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13, paddingBottom: Spacing.md }}>
                   {t.lines_weeks_load_failed}
                 </Text>
               ) : serverWeeks.length === 0 ? (
-                <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13, paddingBottom: 12 }}>
+                <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13, paddingBottom: Spacing.md }}>
                   {t.lines_no_weeks}
                 </Text>
               ) : (
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
-                  style={{ marginHorizontal: -16, paddingLeft: 16 }}
-                  contentContainerStyle={{ paddingRight: 16, gap: 10, flexDirection: 'row', paddingBottom: 4 }}
+                  style={{ marginHorizontal: -16, paddingLeft: Spacing.lg }}
+                  contentContainerStyle={{ paddingRight: Spacing.lg, gap: 10, flexDirection: 'row', paddingBottom: Spacing.xs }}
                 >
                   {serverWeeks.map((week, idx) => {
                     const active = selectedWeek?.weekStart === week.weekStart;
@@ -524,7 +527,7 @@ export default function ShuttleLinesScreen() {
                     {t.departure_time_label}
                   </Text>
                   {currentSlots.length === 0 ? (
-                    <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13, paddingBottom: 12 }}>
+                    <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13, paddingBottom: Spacing.md }}>
                       {t.lines_no_slots}
                     </Text>
                   ) : (
@@ -670,7 +673,7 @@ export default function ShuttleLinesScreen() {
                 </>
               )}
               <View style={[styles.dialogNote, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
-                <Text style={[{ fontSize: 12, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', lineHeight: 18, textAlign: 'center' }]}>
+                <Text style={[{ fontSize: Typography.size.xs, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', lineHeight: 18, textAlign: 'center' }]}>
                   {t.lines_dialog_note}
                 </Text>
               </View>
@@ -717,7 +720,7 @@ export default function ShuttleLinesScreen() {
               </Text>
               <View style={[styles.dialogNoteRow, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
                 <Clock size={13} color={colors.mutedForeground} strokeWidth={2} />
-                <Text style={[{ fontSize: 12, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', flex: 1 }]}>
+                <Text style={[{ fontSize: Typography.size.xs, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', flex: 1 }]}>
                   {t.lines_renewal_note}
                 </Text>
               </View>
@@ -857,20 +860,20 @@ function RouteCard({
 const styles = StyleSheet.create({
   container: { flex: 1 },
   pageTitle: { fontSize: 24 },
-  pageSub: { fontSize: 13, marginTop: 4 },
+  pageSub: { fontSize: 13, marginTop: Spacing.xs },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    borderRadius: 16,
+    borderRadius: Radius.lg,
     borderWidth: 1,
     paddingHorizontal: 14,
     paddingVertical: 11,
-    marginTop: 16,
+    marginTop: Spacing.lg,
   },
-  searchInput: { flex: 1, fontSize: 14, padding: 0, margin: 0 },
-  sectionTitle: { fontSize: 14, marginTop: 16, marginBottom: 10 },
-  chips: { flexDirection: 'row', gap: 8 },
+  searchInput: { flex: 1, fontSize: Typography.size.sm, padding: 0, margin: 0 },
+  sectionTitle: { fontSize: Typography.size.sm, marginTop: Spacing.lg, marginBottom: 10 },
+  chips: { flexDirection: 'row', gap: Spacing.sm },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -880,45 +883,45 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
   },
-  chipText: { fontSize: 12 },
-  lineCard: { padding: 16 },
+  chipText: { fontSize: Typography.size.xs },
+  lineCard: { padding: Spacing.lg },
   lineCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  lineNumberBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  lineNumberText: { fontSize: 12, letterSpacing: 1 },
-  lineName: { fontSize: 14 },
-  lineRoute: { fontSize: 12, marginTop: 2 },
-  statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  lineNumberBadge: { paddingHorizontal: 10, paddingVertical: Spacing.xs, borderRadius: Radius.sm },
+  lineNumberText: { fontSize: Typography.size.xs, letterSpacing: 1 },
+  lineName: { fontSize: Typography.size.sm },
+  lineRoute: { fontSize: Typography.size.xs, marginTop: 2 },
+  statusBadge: { paddingHorizontal: Spacing.sm, paddingVertical: 3, borderRadius: 6 },
   statusText: { fontSize: 11 },
-  lineStats: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 12 },
-  lineStat: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  lineStatText: { fontSize: 12 },
+  lineStats: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, marginTop: Spacing.md },
+  lineStat: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+  lineStatText: { fontSize: Typography.size.xs },
   sheetOverlay: { flex: 1, backgroundColor: '#00000060', justifyContent: 'flex-end' },
   sheet: {
     height: '88%',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
-    paddingTop: 12,
+    paddingTop: Spacing.md,
     paddingHorizontal: 20,
     overflow: 'hidden',
   },
   sheetScroll: { flex: 1 },
-  sheetHandle: { width: 36, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
-  sheetHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 16 },
-  sheetTitle: { fontSize: 18 },
+  sheetHandle: { width: 36, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: Spacing.lg },
+  sheetHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.md, marginBottom: Spacing.lg },
+  sheetTitle: { fontSize: Typography.size.lg },
   sheetSub: { fontSize: 13, marginTop: 2 },
-  closeBtn: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  sheetSection: { fontSize: 12, letterSpacing: 1, textTransform: 'uppercase', marginTop: 20, marginBottom: 12 },
-  stationRow: { flexDirection: 'row', gap: 12, marginBottom: 4 },
+  closeBtn: { width: 32, height: 32, borderRadius: Radius.lg, alignItems: 'center', justifyContent: 'center' },
+  sheetSection: { fontSize: Typography.size.xs, letterSpacing: 1, textTransform: 'uppercase', marginTop: 20, marginBottom: Spacing.md },
+  stationRow: { flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.xs },
   stationDotCol: { alignItems: 'center', width: 16 },
   stationDot: { width: 14, height: 14, borderRadius: 7, borderWidth: 1, zIndex: 1 },
   stationConnector: { flex: 1, width: 2, marginVertical: 2, minHeight: 20 },
-  stationInfo: { flex: 1, paddingBottom: 16 },
+  stationInfo: { flex: 1, paddingBottom: Spacing.lg },
   stationName: { fontSize: 13 },
   stationTime: { fontSize: 11, marginTop: 2 },
   weekChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: Spacing.sm,
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 14,
@@ -926,21 +929,21 @@ const styles = StyleSheet.create({
   },
   weekChipLabel: { fontSize: 13 },
   weekChipSub: { fontSize: 11, marginTop: 2 },
-  timesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  timesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
   timeChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    borderRadius: 12,
+    borderRadius: Radius.md,
     borderWidth: 1,
   },
   timeChipText: { fontSize: 13 },
   timeChipTaken: { fontSize: 10 },
-  bookBtn: { marginTop: 12, borderRadius: 16, overflow: 'hidden' },
+  bookBtn: { marginTop: Spacing.md, borderRadius: Radius.lg, overflow: 'hidden' },
   bookBtnGrad: { height: 52, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
-  bookBtnText: { fontSize: 14, color: '#fff' },
+  bookBtnText: { fontSize: Typography.size.sm, color: '#fff' },
 
   // ── Dialog styles ──────────────────────────────────────────────────
   dialogOverlay: {
@@ -948,7 +951,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.55)',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: Spacing.xl,
   },
   dialogCard: {
     width: '100%',
@@ -966,45 +969,45 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: Spacing.lg,
   },
-  dialogHeaderTitle: { fontSize: 16 },
-  dialogBody: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
-  dialogInfoRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: 10 },
+  dialogHeaderTitle: { fontSize: Typography.size.md },
+  dialogBody: { paddingHorizontal: 20, paddingTop: Spacing.lg, paddingBottom: Spacing.sm },
+  dialogInfoRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.md, paddingVertical: 10 },
   dialogInfoLabel: { fontSize: 11, letterSpacing: 0.3, marginBottom: 2 },
-  dialogInfoValue: { fontSize: 14 },
+  dialogInfoValue: { fontSize: Typography.size.sm },
   dialogSep: { height: 1 },
   dialogNote: {
-    borderRadius: 12,
+    borderRadius: Radius.md,
     borderWidth: 1,
     paddingHorizontal: 14,
     paddingVertical: 10,
     marginTop: 14,
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
     alignItems: 'center',
   },
   dialogNoteRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    borderRadius: 12,
+    gap: Spacing.sm,
+    borderRadius: Radius.md,
     borderWidth: 1,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    marginTop: 12,
-    marginBottom: 8,
+    marginTop: Spacing.md,
+    marginBottom: Spacing.sm,
   },
   dialogButtons: {
     flexDirection: 'row',
     borderTopWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
     gap: 10,
   },
   dialogBtnSecondary: {
     flex: 1,
     height: 46,
-    borderRadius: 12,
+    borderRadius: Radius.md,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1012,7 +1015,7 @@ const styles = StyleSheet.create({
   dialogBtnPrimary: {
     flex: 1,
     height: 46,
-    borderRadius: 12,
+    borderRadius: Radius.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1021,8 +1024,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingTop: 28,
-    paddingBottom: 8,
+    paddingBottom: Spacing.sm,
   },
   dialogSuccessTitle: { fontSize: 20, textAlign: 'center', marginBottom: 10 },
-  dialogSuccessBody: { fontSize: 14, lineHeight: 22, textAlign: 'center' },
+  dialogSuccessBody: { fontSize: Typography.size.sm, lineHeight: 22, textAlign: 'center' },
 });

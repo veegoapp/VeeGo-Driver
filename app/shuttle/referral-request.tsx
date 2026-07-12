@@ -19,6 +19,9 @@ import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
 import { useSocket } from '@/lib/socketContext';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Radius } from '@/constants/radius';
 
 type Params = {
   bookingId: string;
@@ -114,11 +117,11 @@ export default function ReferralRequestScreen() {
 
         <View style={{ flex: 1, paddingHorizontal: 20 }}>
           {/* Trip summary */}
-          <GlassView style={[styles.tripSummary, { marginTop: 24 }]} borderRadius={16}>
+          <GlassView style={[styles.tripSummary, { marginTop: Spacing.xl }]} borderRadius={16}>
             <Text style={[{ fontSize: 15, color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
               {routeName}
             </Text>
-            <Text style={[{ fontSize: 13, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', marginTop: 4, textAlign: TA }]}>
+            <Text style={[{ fontSize: 13, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', marginTop: Spacing.xs, textAlign: TA }]}>
               {departureTime ?? '—'} · {fromStation ?? '—'} → {toStation ?? '—'}
             </Text>
           </GlassView>
@@ -184,7 +187,7 @@ export default function ReferralRequestScreen() {
               <Text style={[styles.inputLabel, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
                 {t.referral_code_label}
               </Text>
-              <Text style={[{ fontSize: 13, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA, marginTop: 4, marginBottom: 12 }]}>
+              <Text style={[{ fontSize: 13, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA, marginTop: Spacing.xs, marginBottom: Spacing.md }]}>
                 {t.driver_code_hint}
               </Text>
               <GlassView style={[styles.inputWrap, { borderColor: colors.border }]} borderRadius={14}>
@@ -241,29 +244,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.md,
     borderBottomWidth: 1,
   },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { fontSize: 17 },
-  tripSummary: { padding: 16 },
-  inputLabel: { fontSize: 14 },
+  tripSummary: { padding: Spacing.lg },
+  inputLabel: { fontSize: Typography.size.sm },
   inputWrap: { borderWidth: 1.5, paddingHorizontal: 14 },
-  input: { height: 52, fontSize: 16 },
+  input: { height: 52, fontSize: Typography.size.md },
   submitBtn: {
     height: 54,
-    borderRadius: 16,
+    borderRadius: Radius.lg,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    marginTop: 16,
+    gap: Spacing.sm,
+    marginTop: Spacing.lg,
   },
   submitBtnText: { fontSize: 15 },
-  pendingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 40, gap: 16 },
+  pendingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 40, gap: Spacing.lg },
   pendingIcon: { width: 88, height: 88, borderRadius: 44, alignItems: 'center', justifyContent: 'center' },
-  pendingTitle: { fontSize: 16, textAlign: 'center' },
-  doneBtn: { marginTop: 8, height: 50, paddingHorizontal: 32, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  doneBtnText: { color: '#fff', fontSize: 14 },
+  pendingTitle: { fontSize: Typography.size.md, textAlign: 'center' },
+  doneBtn: { marginTop: Spacing.sm, height: 50, paddingHorizontal: Spacing.xxl, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  doneBtnText: { color: '#fff', fontSize: Typography.size.sm },
 });

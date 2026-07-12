@@ -15,6 +15,9 @@ import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Radius } from '@/constants/radius';
 
 type Params = {
   bookingId: string;
@@ -73,7 +76,7 @@ export default function TripCancelScreen() {
 
       <View style={{ flex: 1, paddingHorizontal: 20 }}>
         {/* Trip summary */}
-        <GlassView style={[styles.tripSummary, { marginTop: 24 }]} borderRadius={16}>
+        <GlassView style={[styles.tripSummary, { marginTop: Spacing.xl }]} borderRadius={16}>
           <View style={[{ flexDirection: R, alignItems: 'center', gap: 10 }]}>
             <View style={[styles.summaryDot, { backgroundColor: '#1e1e28' }]} />
             <View style={{ flex: 1 }}>
@@ -124,7 +127,7 @@ export default function TripCancelScreen() {
           {t.cancel_options_title}
         </Text>
 
-        <View style={{ gap: 12, marginTop: 16 }}>
+        <View style={{ gap: Spacing.md, marginTop: Spacing.lg }}>
           {/* Option A: Refer to another driver */}
           <Pressable
             onPress={handleRefer}
@@ -179,7 +182,7 @@ export default function TripCancelScreen() {
                 )}
                 {!previewLoading && hasPenalty && (
                   <View style={[styles.penaltyTag, { backgroundColor: '#FEE2E2' }]}>
-                    <Text style={{ fontSize: 12, color: '#DC2626', fontFamily: 'Inter_700Bold' }}>
+                    <Text style={{ fontSize: Typography.size.xs, color: '#DC2626', fontFamily: 'Inter_700Bold' }}>
                       {previewData!.penaltyAmount} EGP penalty
                     </Text>
                   </View>
@@ -205,26 +208,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.md,
     borderBottomWidth: 1,
   },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { fontSize: 17 },
-  tripSummary: { padding: 16 },
+  tripSummary: { padding: Spacing.lg },
   summaryDot: { width: 10, height: 10, borderRadius: 5 },
   penaltyBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: Spacing.sm,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    borderRadius: 12,
+    borderRadius: Radius.md,
     borderWidth: 1,
     marginTop: 14,
     minHeight: 40,
   },
-  choiceTitle: { fontSize: 18 },
+  choiceTitle: { fontSize: Typography.size.lg },
   optionCard: {
     alignItems: 'center',
     gap: 14,
@@ -233,17 +236,17 @@ const styles = StyleSheet.create({
   optionIcon: {
     width: 52,
     height: 52,
-    borderRadius: 16,
+    borderRadius: Radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  optionTitle: { fontSize: 16 },
+  optionTitle: { fontSize: Typography.size.md },
   optionSub: { fontSize: 13, marginTop: 3, lineHeight: 18 },
   penaltyTag: {
     alignSelf: 'flex-start',
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingVertical: Spacing.xs,
+    borderRadius: Radius.sm,
     marginTop: 6,
   },
 });

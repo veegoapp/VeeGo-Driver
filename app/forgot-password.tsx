@@ -21,6 +21,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { endpoints, ApiError } from '@/lib/api';
 import { useI18n } from '@/lib/i18nContext';
 import { useCodeLockout, formatLockoutCountdown } from '@/hooks/useCodeLockout';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Radius } from '@/constants/radius';
+import { Shadows } from '@/constants/shadows';
 
 type Step = 'request' | 'reset' | 'done';
 type TDict = ReturnType<typeof useI18n>['t'];
@@ -264,7 +268,7 @@ function ResetStep({
       <View style={[s.inputWrap, locked && s.inputWrapLocked]}>
         <View style={s.inputIcon}><Mail size={16} color="#5e5e72" /></View>
         <TextInput
-          style={[s.inputField, { letterSpacing: 4, fontSize: 16 }]}
+          style={[s.inputField, { letterSpacing: 4, fontSize: Typography.size.md }]}
           placeholder={t.reset_code_placeholder}
           placeholderTextColor="#c3c3cc"
           value={code}
@@ -299,7 +303,7 @@ function ResetStep({
           returnKeyType="next"
           onSubmitEditing={() => confirmRef.current?.focus()}
         />
-        <TouchableOpacity onPress={() => setShowPass((p) => !p)} style={{ padding: 4 }}>
+        <TouchableOpacity onPress={() => setShowPass((p) => !p)} style={{ padding: Spacing.xs }}>
           {showPass ? <EyeOff size={16} color="#5e5e72" /> : <Eye size={16} color="#5e5e72" />}
         </TouchableOpacity>
       </View>
@@ -319,7 +323,7 @@ function ResetStep({
           returnKeyType="done"
           onSubmitEditing={handle}
         />
-        <TouchableOpacity onPress={() => setShowConfirm((p) => !p)} style={{ padding: 4 }}>
+        <TouchableOpacity onPress={() => setShowConfirm((p) => !p)} style={{ padding: Spacing.xs }}>
           {showConfirm ? <EyeOff size={16} color="#5e5e72" /> : <Eye size={16} color="#5e5e72" />}
         </TouchableOpacity>
       </View>
@@ -399,13 +403,13 @@ const s = StyleSheet.create({
     elevation: 3,
   },
   scroll: { flexGrow: 1, paddingHorizontal: 20, gap: 20, justifyContent: 'center' },
-  logoBlock: { alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 10, paddingBottom: 4 },
+  logoBlock: { alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 10, paddingBottom: Spacing.xs },
   logoIcon: {
-    width: 48, height: 48, borderRadius: 16, backgroundColor: '#1e1e28',
+    width: 48, height: 48, borderRadius: Radius.lg, backgroundColor: '#1e1e28',
     alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.2, shadowRadius: 20, elevation: 8,
+    shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.2, shadowRadius: 20, elevation: Shadows.large.elevation,
   },
-  wordmark: { fontSize: 26, fontWeight: '700', color: '#1e1e28', letterSpacing: -1, fontFamily: 'Inter_700Bold' },
+  wordmark: { fontSize: 26, fontWeight: Typography.weight.bold, color: '#1e1e28', letterSpacing: -1, fontFamily: 'Inter_700Bold' },
   card: {
     backgroundColor: 'rgba(255,255,255,0.92)',
     borderRadius: 32,
@@ -416,11 +420,11 @@ const s = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
     shadowRadius: 18,
-    elevation: 4,
+    elevation: Shadows.medium.elevation,
   },
-  form: { padding: 24, gap: 12 },
-  formHeader: { gap: 6, marginBottom: 4 },
-  formTitle: { fontSize: 22, fontWeight: '700', color: '#1e1e28', letterSpacing: -0.5, fontFamily: 'Inter_700Bold' },
+  form: { padding: Spacing.xl, gap: Spacing.md },
+  formHeader: { gap: 6, marginBottom: Spacing.xs },
+  formTitle: { fontSize: Typography.size.xl, fontWeight: Typography.weight.bold, color: '#1e1e28', letterSpacing: -0.5, fontFamily: 'Inter_700Bold' },
   formSub: { fontSize: 13, color: '#5e5e72', fontFamily: 'Inter_400Regular', lineHeight: 19 },
   inputWrap: {
     flexDirection: 'row',
@@ -428,7 +432,7 @@ const s = StyleSheet.create({
     backgroundColor: '#f2f2f5',
     borderRadius: 18,
     height: 54,
-    paddingHorizontal: 16,
+    paddingHorizontal: Spacing.lg,
     gap: 10,
   },
   inputWrapError: {
@@ -440,13 +444,13 @@ const s = StyleSheet.create({
     opacity: 0.5,
   },
   inputIcon: { width: 28, alignItems: 'center' },
-  inputField: { flex: 1, fontSize: 14, color: '#1e1e28', fontFamily: 'Inter_400Regular' },
-  divider: { flexDirection: 'row', alignItems: 'center', gap: 8, marginVertical: 2 },
+  inputField: { flex: 1, fontSize: Typography.size.sm, color: '#1e1e28', fontFamily: 'Inter_400Regular' },
+  divider: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginVertical: 2 },
   dividerLine: { flex: 1, height: 1, backgroundColor: '#e5e5ea' },
   dividerText: { fontSize: 11, color: '#a0a0b8', fontFamily: 'Inter_500Medium', letterSpacing: 0.5 },
-  errorRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 4 },
-  errorText: { fontSize: 12, color: '#e53935', fontFamily: 'Inter_400Regular', flex: 1 },
-  cooldownText: { fontSize: 12, color: '#5e5e72', fontFamily: 'Inter_400Regular', paddingHorizontal: 4 },
+  errorRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: Spacing.xs },
+  errorText: { fontSize: Typography.size.xs, color: '#e53935', fontFamily: 'Inter_400Regular', flex: 1 },
+  cooldownText: { fontSize: Typography.size.xs, color: '#5e5e72', fontFamily: 'Inter_400Regular', paddingHorizontal: Spacing.xs },
   primaryBtn: {
     height: 56,
     borderRadius: 20,
@@ -454,19 +458,19 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    marginTop: 4,
+    gap: Spacing.sm,
+    marginTop: Spacing.xs,
     shadowColor: '#1e1e28',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.18,
     shadowRadius: 18,
     elevation: 6,
   },
-  primaryBtnText: { color: 'white', fontSize: 15, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
-  resendRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingTop: 4 },
+  primaryBtnText: { color: 'white', fontSize: 15, fontWeight: Typography.weight.semibold, fontFamily: 'Inter_600SemiBold' },
+  resendRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingTop: Spacing.xs },
   resendText: { fontSize: 13, color: '#5e5e72', fontFamily: 'Inter_400Regular' },
-  resendLink: { fontSize: 13, color: '#1e1e28', fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
-  doneForm: { alignItems: 'center', paddingVertical: 32 },
+  resendLink: { fontSize: 13, color: '#1e1e28', fontWeight: Typography.weight.semibold, fontFamily: 'Inter_600SemiBold' },
+  doneForm: { alignItems: 'center', paddingVertical: Spacing.xxl },
   doneIcon: {
     width: 80,
     height: 80,
@@ -474,8 +478,8 @@ const s = StyleSheet.create({
     backgroundColor: '#f0f0fa',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
-  doneTitle: { fontSize: 24, fontWeight: '700', color: '#1e1e28', fontFamily: 'Inter_700Bold', letterSpacing: -0.5 },
-  doneSub: { fontSize: 14, color: '#5e5e72', fontFamily: 'Inter_400Regular', textAlign: 'center', lineHeight: 21, paddingHorizontal: 8, marginBottom: 8 },
+  doneTitle: { fontSize: 24, fontWeight: Typography.weight.bold, color: '#1e1e28', fontFamily: 'Inter_700Bold', letterSpacing: -0.5 },
+  doneSub: { fontSize: Typography.size.sm, color: '#5e5e72', fontFamily: 'Inter_400Regular', textAlign: 'center', lineHeight: 21, paddingHorizontal: Spacing.sm, marginBottom: Spacing.sm },
 });

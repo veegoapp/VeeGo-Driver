@@ -21,6 +21,10 @@ import { endpoints } from '@/lib/api';
 import { compressImage } from '@/lib/imageCompression';
 import { useSocket } from '@/lib/socketContext';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Radius } from '@/constants/radius';
+import { Shadows } from '@/constants/shadows';
 
 export default function SelfieScreen() {
   const insets = useSafeAreaInsets();
@@ -217,7 +221,7 @@ export default function SelfieScreen() {
 
   return (
     <View style={[s.root, { backgroundColor: '#fafafd' }]}>
-      <View style={{ paddingTop: topPad + 16, paddingHorizontal: 24 }}>
+      <View style={{ paddingTop: topPad + 16, paddingHorizontal: Spacing.xl }}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn} activeOpacity={0.7}>
           <ArrowLeft size={20} color="#1e1e28" strokeWidth={2} />
         </TouchableOpacity>
@@ -307,7 +311,7 @@ export default function SelfieScreen() {
         )}
       </View>
 
-      <View style={[s.footer, { paddingBottom: botPad + 28, paddingHorizontal: 24 }]}>
+      <View style={[s.footer, { paddingBottom: botPad + 28, paddingHorizontal: Spacing.xl }]}>
         {photo ? (
           <View style={s.actionRow}>
             <TouchableOpacity
@@ -366,77 +370,77 @@ export default function SelfieScreen() {
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#fafafd' },
-  blockedRoot: { alignItems: 'center', justifyContent: 'center', padding: 32 },
+  blockedRoot: { alignItems: 'center', justifyContent: 'center', padding: Spacing.xxl },
   blockedCard: {
     backgroundColor: 'white', borderRadius: 28, padding: 28,
-    alignItems: 'center', gap: 12,
+    alignItems: 'center', gap: Spacing.md,
     borderWidth: 1, borderColor: '#e5e5ea',
-    shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.07, shadowRadius: 16, elevation: 4,
+    shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.07, shadowRadius: 16, elevation: Shadows.medium.elevation,
     width: '100%',
   },
   blockedIconBox: {
-    width: 80, height: 80, borderRadius: 24, backgroundColor: '#f2f2f5',
-    alignItems: 'center', justifyContent: 'center', marginBottom: 4,
+    width: 80, height: 80, borderRadius: Radius.xl, backgroundColor: '#f2f2f5',
+    alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.xs,
   },
-  blockedTitle: { fontSize: 20, fontWeight: '700', color: '#1e1e28', textAlign: 'center', fontFamily: 'Inter_700Bold' },
-  blockedSub: { fontSize: 14, color: '#5e5e72', lineHeight: 21, textAlign: 'center', fontFamily: 'Inter_400Regular' },
+  blockedTitle: { fontSize: 20, fontWeight: Typography.weight.bold, color: '#1e1e28', textAlign: 'center', fontFamily: 'Inter_700Bold' },
+  blockedSub: { fontSize: Typography.size.sm, color: '#5e5e72', lineHeight: 21, textAlign: 'center', fontFamily: 'Inter_400Regular' },
   settingsBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#1e1e28', borderRadius: 16, height: 48,
-    paddingHorizontal: 24, marginTop: 8,
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
+    backgroundColor: '#1e1e28', borderRadius: Radius.lg, height: 48,
+    paddingHorizontal: Spacing.xl, marginTop: Spacing.sm,
   },
-  settingsBtnText: { color: 'white', fontSize: 14, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
-  retryPermBtn: { paddingVertical: 8 },
+  settingsBtnText: { color: 'white', fontSize: Typography.size.sm, fontWeight: Typography.weight.semibold, fontFamily: 'Inter_600SemiBold' },
+  retryPermBtn: { paddingVertical: Spacing.sm },
   retryPermText: { fontSize: 13, color: '#5e5e72', fontFamily: 'Inter_400Regular', textDecorationLine: 'underline' },
-  successRoot: { alignItems: 'center', justifyContent: 'center', gap: 16, paddingHorizontal: 40 },
+  successRoot: { alignItems: 'center', justifyContent: 'center', gap: Spacing.lg, paddingHorizontal: 40 },
   successIcon: {
     width: 120, height: 120, borderRadius: 60, backgroundColor: '#f2f2f5',
     alignItems: 'center', justifyContent: 'center',
     shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 6,
   },
-  successTitle: { fontSize: 32, fontWeight: '700', color: '#1e1e28', letterSpacing: -1, fontFamily: 'Inter_700Bold', textAlign: 'center' },
+  successTitle: { fontSize: 32, fontWeight: Typography.weight.bold, color: '#1e1e28', letterSpacing: -1, fontFamily: 'Inter_700Bold', textAlign: 'center' },
   successSub: { fontSize: 15, color: '#5e5e72', lineHeight: 22, fontFamily: 'Inter_400Regular', textAlign: 'center' },
   backBtn: {
     width: 42, height: 42, borderRadius: 14, backgroundColor: 'white',
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 1, borderColor: '#e5e5ea',
   },
-  header: { marginTop: 20, gap: 8 },
-  step: { fontSize: 12, fontWeight: '600', color: '#5e5e72', letterSpacing: 1, textTransform: 'uppercase', fontFamily: 'Inter_600SemiBold' },
-  title: { fontSize: 34, fontWeight: '700', color: '#1e1e28', letterSpacing: -1.2, lineHeight: 40, fontFamily: 'Inter_700Bold' },
-  sub: { fontSize: 14, color: '#5e5e72', lineHeight: 20, fontFamily: 'Inter_400Regular' },
+  header: { marginTop: 20, gap: Spacing.sm },
+  step: { fontSize: Typography.size.xs, fontWeight: Typography.weight.semibold, color: '#5e5e72', letterSpacing: 1, textTransform: 'uppercase', fontFamily: 'Inter_600SemiBold' },
+  title: { fontSize: 34, fontWeight: Typography.weight.bold, color: '#1e1e28', letterSpacing: -1.2, lineHeight: 40, fontFamily: 'Inter_700Bold' },
+  sub: { fontSize: Typography.size.sm, color: '#5e5e72', lineHeight: 20, fontFamily: 'Inter_400Regular' },
   timerBox: {
-    marginTop: 12, borderRadius: 12, borderWidth: 1,
-    paddingHorizontal: 16, paddingVertical: 10, alignItems: 'center',
+    marginTop: Spacing.md, borderRadius: Radius.md, borderWidth: 1,
+    paddingHorizontal: Spacing.lg, paddingVertical: 10, alignItems: 'center',
   },
   timerLabel: { fontSize: 11, letterSpacing: 0.5 },
-  timerCount: { fontSize: 28, letterSpacing: 2, marginTop: 2 },
+  timerCount: { fontSize: Typography.size.xxl, letterSpacing: 2, marginTop: 2 },
   timerText: { fontSize: 13, lineHeight: 20, textAlign: 'center' },
   faceArea: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  ovalGuide: { alignItems: 'center', gap: 16 },
+  ovalGuide: { alignItems: 'center', gap: Spacing.lg },
   ovalHint: {
     backgroundColor: 'rgba(30,30,40,0.06)', borderRadius: 99,
-    paddingHorizontal: 16, paddingVertical: 8,
+    paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm,
   },
-  ovalHintText: { fontSize: 13, color: '#1e1e28', fontWeight: '500', fontFamily: 'Inter_500Medium' },
+  ovalHintText: { fontSize: 13, color: '#1e1e28', fontWeight: Typography.weight.medium, fontFamily: 'Inter_500Medium' },
   previewBox: { width: 240, height: 300, borderRadius: 120, overflow: 'hidden', position: 'relative' },
   previewImg: { width: '100%', height: '100%', resizeMode: 'cover' },
   previewOverlay: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
-  footer: { paddingTop: 16, gap: 14 },
+  footer: { paddingTop: Spacing.lg, gap: 14 },
   actionRow: { flexDirection: 'row', gap: 10 },
   retakeBtn: {
     flex: 1, height: 56, borderRadius: 20,
     backgroundColor: '#f2f2f5', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     borderWidth: 1, borderColor: '#e5e5ea',
   },
-  retakeBtnText: { fontSize: 14, fontWeight: '600', color: '#1e1e28', fontFamily: 'Inter_600SemiBold' },
+  retakeBtnText: { fontSize: Typography.size.sm, fontWeight: Typography.weight.semibold, color: '#1e1e28', fontFamily: 'Inter_600SemiBold' },
   confirmBtn: {
     height: 56, borderRadius: 20, backgroundColor: '#1e1e28',
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 20, elevation: 8,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm,
+    shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 20, elevation: Shadows.large.elevation,
   },
-  confirmBtnText: { color: 'white', fontSize: 15, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
-  tipsRow: { flexDirection: 'row', justifyContent: 'center', gap: 16 },
-  tip: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  confirmBtnText: { color: 'white', fontSize: 15, fontWeight: Typography.weight.semibold, fontFamily: 'Inter_600SemiBold' },
+  tipsRow: { flexDirection: 'row', justifyContent: 'center', gap: Spacing.lg },
+  tip: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   tipText: { fontSize: 11, color: '#5e5e72', fontFamily: 'Inter_400Regular' },
 });

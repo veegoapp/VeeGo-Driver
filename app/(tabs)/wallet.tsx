@@ -9,6 +9,10 @@ import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Radius } from '@/constants/radius';
+import { Shadows } from '@/constants/shadows';
 
 type WalletBalance = { balance: number };
 type Transaction = { id: string; title: string; sub: string; amount: number; incoming: boolean };
@@ -159,7 +163,7 @@ export default function WalletScreen() {
   if (isError) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' }]}>
-        <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 14 }}>{t.wallet_load_fail}</Text>
+        <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: Typography.size.sm }}>{t.wallet_load_fail}</Text>
       </View>
     );
   }
@@ -195,7 +199,7 @@ export default function WalletScreen() {
                     style={[styles.payoutTextInput, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}
                     autoFocus
                   />
-                  <Text style={[{ color: colors.mutedForeground, fontFamily: 'Inter_700Bold', fontSize: 14 }]}>{t.egp}</Text>
+                  <Text style={[{ color: colors.mutedForeground, fontFamily: 'Inter_700Bold', fontSize: Typography.size.sm }]}>{t.egp}</Text>
                 </View>
                 <View style={[styles.actionRow, { flexDirection: R }]}>
                   <Pressable onPress={() => setPayoutVisible(false)} style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.8 : 1 }]}>
@@ -234,7 +238,7 @@ export default function WalletScreen() {
             <Text style={[styles.addBtn, { color: colors.primary, fontFamily: 'Inter_700Bold' }]}>{t.manage}</Text>
           </Pressable>
         </View>
-        <View style={{ gap: 8 }}>
+        <View style={{ gap: Spacing.sm }}>
           {payoutAccounts.length > 0 ? payoutAccounts.map((account) => (
             <GlassView key={account.id} style={[styles.methodCard, { flexDirection: R }]} borderRadius={16}>
               <View style={[styles.methodIcon, { backgroundColor: account.isDefault ? colors.primary + '26' : colors.secondary }]}>
@@ -272,17 +276,17 @@ export default function WalletScreen() {
           )}
         </View>
 
-        <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', marginTop: 24, marginBottom: 12, textAlign: TA }]}>{t.payout_history_label}</Text>
+        <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', marginTop: Spacing.xl, marginBottom: Spacing.md, textAlign: TA }]}>{t.payout_history_label}</Text>
         {historyLoading ? (
-          <GlassView borderRadius={16} style={{ padding: 24, alignItems: 'center' }}>
+          <GlassView borderRadius={16} style={{ padding: Spacing.xl, alignItems: 'center' }}>
             <ActivityIndicator color={colors.primary} />
           </GlassView>
         ) : historyError ? (
-          <GlassView borderRadius={16} style={{ padding: 24, alignItems: 'center' }}>
+          <GlassView borderRadius={16} style={{ padding: Spacing.xl, alignItems: 'center' }}>
             <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13 }}>{t.payout_history_load_err}</Text>
           </GlassView>
         ) : payoutHistory.length === 0 ? (
-          <GlassView borderRadius={16} style={{ padding: 24, alignItems: 'center' }}>
+          <GlassView borderRadius={16} style={{ padding: Spacing.xl, alignItems: 'center' }}>
             <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13 }}>{t.payout_history_empty}</Text>
           </GlassView>
         ) : (
@@ -302,7 +306,7 @@ export default function WalletScreen() {
                       {new Date(item.createdAt).toLocaleDateString()}
                     </Text>
                   </View>
-                  <View style={{ alignItems: isRTL ? 'flex-start' : 'flex-end', gap: 4 }}>
+                  <View style={{ alignItems: isRTL ? 'flex-start' : 'flex-end', gap: Spacing.xs }}>
                     <Text style={[styles.txAmount, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
                       {item.amount.toFixed(2)} {t.egp}
                     </Text>
@@ -314,7 +318,7 @@ export default function WalletScreen() {
           </GlassView>
         )}
 
-        <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', marginTop: 24, marginBottom: 12, textAlign: TA }]}>{t.transactions_label}</Text>
+        <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', marginTop: Spacing.xl, marginBottom: Spacing.md, textAlign: TA }]}>{t.transactions_label}</Text>
         <GlassView borderRadius={16}>
           {txs.map((tx, i) => (
             <View key={tx.id} style={[styles.txItem, { flexDirection: R }, i > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}>
@@ -343,43 +347,43 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   sectionLabel: { fontSize: 10, letterSpacing: 2, textTransform: 'uppercase' },
   pageTitle: { fontSize: 24, marginTop: 2 },
-  balanceCard: { borderRadius: 24, padding: 20, borderWidth: 1, overflow: 'hidden', elevation: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 16 },
+  balanceCard: { borderRadius: Radius.xl, padding: 20, borderWidth: 1, overflow: 'hidden', elevation: Shadows.large.elevation, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 16 },
   balanceBlob: { position: 'absolute', top: -24, right: -24, width: 128, height: 128, borderRadius: 64 },
   availableLabel: { fontSize: 10, letterSpacing: 2, textTransform: 'uppercase' },
-  balanceRow: { alignItems: 'flex-end', gap: 8, marginTop: 4 },
+  balanceRow: { alignItems: 'flex-end', gap: Spacing.sm, marginTop: Spacing.xs },
   balanceAmount: { fontSize: 48, lineHeight: 52 },
-  balanceCurrency: { fontSize: 20, marginBottom: 4 },
-  payoutInput: { marginTop: 16, gap: 10 },
-  payoutRow: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10 },
+  balanceCurrency: { fontSize: 20, marginBottom: Spacing.xs },
+  payoutInput: { marginTop: Spacing.lg, gap: 10 },
+  payoutRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10 },
   payoutTextInput: { flex: 1, fontSize: 20, height: 36 },
-  actionRow: { gap: 8, marginTop: 20 },
-  primaryAction: { flex: 1, height: 48, borderRadius: 16, overflow: 'hidden', elevation: 8, shadowColor: '#2d2d42', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.35, shadowRadius: 8 },
-  actionGrad: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
-  secondaryAction: { height: 48, alignItems: 'center', justifyContent: 'center', gap: 8 },
-  actionText: { fontSize: 14 },
-  sectionHeader: { alignItems: 'center', justifyContent: 'space-between', marginTop: 24, marginBottom: 12 },
-  sectionTitle: { fontSize: 12, letterSpacing: 2, textTransform: 'uppercase' },
-  addBtn: { fontSize: 12 },
-  methodCard: { alignItems: 'center', gap: 12, padding: 12 },
-  methodIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  methodName: { fontSize: 14 },
-  methodSub: { fontSize: 12, marginTop: 2 },
+  actionRow: { gap: Spacing.sm, marginTop: 20 },
+  primaryAction: { flex: 1, height: 48, borderRadius: Radius.lg, overflow: 'hidden', elevation: Shadows.large.elevation, shadowColor: '#2d2d42', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.35, shadowRadius: 8 },
+  actionGrad: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
+  secondaryAction: { height: 48, alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
+  actionText: { fontSize: Typography.size.sm },
+  sectionHeader: { alignItems: 'center', justifyContent: 'space-between', marginTop: Spacing.xl, marginBottom: Spacing.md },
+  sectionTitle: { fontSize: Typography.size.xs, letterSpacing: 2, textTransform: 'uppercase' },
+  addBtn: { fontSize: Typography.size.xs },
+  methodCard: { alignItems: 'center', gap: Spacing.md, padding: Spacing.md },
+  methodIcon: { width: 40, height: 40, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
+  methodName: { fontSize: Typography.size.sm },
+  methodSub: { fontSize: Typography.size.xs, marginTop: 2 },
   defaultBadge: { fontSize: 10, letterSpacing: 1, textTransform: 'uppercase' },
   trashBtn: { padding: 6 },
-  txItem: { alignItems: 'center', gap: 12, padding: 16 },
-  txIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  txTitle: { fontSize: 14 },
-  txSub: { fontSize: 12, marginTop: 2 },
-  txAmount: { fontSize: 14 },
+  txItem: { alignItems: 'center', gap: Spacing.md, padding: Spacing.lg },
+  txIcon: { width: 40, height: 40, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
+  txTitle: { fontSize: Typography.size.sm },
+  txSub: { fontSize: Typography.size.xs, marginTop: 2 },
+  txAmount: { fontSize: Typography.size.sm },
   modalOverlay: { flex: 1, justifyContent: 'flex-end' },
-  modalSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40, elevation: 24, shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.2, shadowRadius: 16 },
+  modalSheet: { borderTopLeftRadius: Radius.xl, borderTopRightRadius: Radius.xl, padding: Spacing.xl, paddingBottom: 40, elevation: 24, shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.2, shadowRadius: 16 },
   modalHeader: { alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
-  modalTitle: { fontSize: 16 },
+  modalTitle: { fontSize: Typography.size.md },
   fieldLabel: { fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase', marginTop: 14, marginBottom: 6 },
-  fieldInput: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, fontSize: 15, marginBottom: 2 },
-  typeRow: { gap: 6, marginBottom: 4 },
-  typeChip: { paddingVertical: 8, paddingHorizontal: 4, borderRadius: 10, borderWidth: 1 },
-  typeChipText: { fontSize: 12 },
-  submitBtn: { height: 48, borderRadius: 16, overflow: 'hidden', marginTop: 20, elevation: 6, shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 8 },
+  fieldInput: { borderWidth: 1, borderRadius: Radius.md, paddingHorizontal: 14, paddingVertical: 10, fontSize: 15, marginBottom: 2 },
+  typeRow: { gap: 6, marginBottom: Spacing.xs },
+  typeChip: { paddingVertical: Spacing.sm, paddingHorizontal: Spacing.xs, borderRadius: 10, borderWidth: 1 },
+  typeChipText: { fontSize: Typography.size.xs },
+  submitBtn: { height: 48, borderRadius: Radius.lg, overflow: 'hidden', marginTop: 20, elevation: 6, shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 8 },
   submitGrad: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 });
