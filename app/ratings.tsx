@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { ArrowLeft, Star } from 'lucide-react-native';
-import React, { useRef, useEffect } from 'react';
-import { ActivityIndicator, Animated, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useRef, useEffect, useState } from 'react';
+import { ActivityIndicator, Animated, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { GlassView } from '@/components/GlassView';
@@ -54,10 +54,17 @@ export default function RatingsScreen() {
   const { isRTL } = useI18n();
   const TA = isRTL ? 'right' as const : 'left' as const;
 
-  const { data: rawData, isLoading, isError } = useQuery<RatingsResponse>({
+  const [refreshing, setRefreshing] = useState(false);
+  const { data: rawData, isLoading, isError, refetch } = useQuery<RatingsResponse>({
     queryKey: ['ratings'],
     queryFn: endpoints.driver.ratings as () => Promise<RatingsResponse>,
   });
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  };
 
   const ratings = rawData?.ratings ?? [];
   const breakdown = buildBreakdown(ratings);
@@ -92,7 +99,7 @@ export default function RatingsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <ScrollView contentContainerStyle={{ paddingTop: topPad + 8, paddingBottom: 40, paddingHorizontal: 20 }} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={{ paddingTop: topPad + 8, paddingBottom: 40, paddingHorizontal: 20 }} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}>
         <Pressable onPress={() => router.back()} style={[styles.backBtn, { backgroundColor: colors.glass, borderColor: colors.border }]}>
           <ArrowLeft size={20} color={colors.foreground} strokeWidth={2} style={rtlIconStyle(isRTL)} />
         </Pressable>

@@ -48,11 +48,11 @@ export default function EarningsScreen() {
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
   const TA = isRTL ? 'right' as const : 'left' as const;
 
-  const { data: weeklyRaw, isLoading: weeklyLoading, isError: weeklyError } = useQuery({
+  const { data: weeklyRaw, isLoading: weeklyLoading, isError: weeklyError, refetch: refetchWeekly } = useQuery({
     queryKey: ['earnings-weekly'],
     queryFn: () => endpoints.earnings.weekly(),
   });
-  const { data: summaryRaw, isLoading: summaryLoading, isError: summaryError } = useQuery({
+  const { data: summaryRaw, isLoading: summaryLoading, isError: summaryError, refetch: refetchSummary } = useQuery({
     queryKey: ['earnings-summary'],
     queryFn: () => endpoints.earnings.summary(),
   });
@@ -103,8 +103,11 @@ export default function EarningsScreen() {
 
   if (isError) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' }]}>
+      <View style={[styles.container, { backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center', gap: 16 }]}>
         <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: Typography.size.sm }}>Failed to load earnings. Please try again.</Text>
+        <Pressable onPress={() => { refetchWeekly(); refetchSummary(); }} style={{ paddingHorizontal: 24, paddingVertical: 10, borderRadius: 20, backgroundColor: colors.secondary }}>
+          <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: Typography.size.sm }}>Retry</Text>
+        </Pressable>
       </View>
     );
   }

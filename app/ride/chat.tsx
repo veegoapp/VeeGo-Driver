@@ -3,6 +3,7 @@ import { ArrowLeft, Send } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -74,6 +75,7 @@ export default function RideChatScreen() {
       await endpoints.rides.sendMessage(rideId, msgText);
     } catch {
       setText(msgText);
+      Alert.alert(t.error ?? 'Error', (t as any).message_send_error ?? 'Failed to send message. Please try again.');
     } finally {
       setSending(false);
     }

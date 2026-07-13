@@ -44,6 +44,7 @@ export default function HomeScreen() {
   const { t, isRTL } = useI18n();
   const [online, setOnline] = useState(false);
   const [togglingOnline, setTogglingOnline] = useState(false);
+  const [acceptingRide, setAcceptingRide] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [request, setRequest] = useState<RideRequest | null>(null);
   const [surgeZones, setSurgeZones] = useState<SurgeZone[]>([]);
@@ -67,11 +68,11 @@ export default function HomeScreen() {
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
   const TA = isRTL ? 'right' as const : 'left' as const;
 
-  const { data: driverRaw, isLoading: driverLoading } = useQuery({
+  const { data: driverRaw, isLoading: driverLoading, isError: driverError, refetch: refetchDriver } = useQuery({
     queryKey: ['driver'],
     queryFn: endpoints.driver.me,
   });
-  const { data: earningsRaw, isLoading: earningsLoading } = useQuery({
+  const { data: earningsRaw, isLoading: earningsLoading, isError: earningsError, refetch: refetchEarnings } = useQuery({
     queryKey: ['earnings-summary'],
     queryFn: endpoints.earnings.summary,
   });
@@ -98,6 +99,7 @@ export default function HomeScreen() {
   const earningsData = earningsRaw as any;
   const activeRide = activeRideRaw as any;
   const statsLoading = driverLoading || earningsLoading;
+  const statsError = driverError || earningsError;
 
   // Resume active ride if one exists on mount
   useEffect(() => {
@@ -402,7 +404,8 @@ export default function HomeScreen() {
       setOnline(next);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     } catch {
-      // If API fails, keep previous state
+      // API failed — revert to previous state and notify driver
+      showToastRef.current?.('Failed to update status. Please try again.', 'warning');
     } finally {
       setTogglingOnline(false);
     }
@@ -438,20 +441,23 @@ export default function HomeScreen() {
   dismissRequestRef.current = dismissRequest;
 
   const acceptRequest = async () => {
-    if (!request) return;
+    if (!request || acceptingRide) return;
     const rideId = request.id;
+    setAcceptingRide(true);
     timerRef.current?.stop();
     if (countdownRef.current) clearInterval(countdownRef.current);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     try {
       await endpoints.rides.accept(rideId);
+      Animated.timing(sheetAnim, { toValue: 300, duration: 250, useNativeDriver: true }).start(() => {
+        setRequest(null);
+        setAcceptingRide(false);
+        router.push(`/ride/${rideId}`);
+      });
     } catch {
-      // best-effort
+      setAcceptingRide(false);
+      showToastRef.current?.('Failed to accept ride. Please try again.', 'warning');
     }
-    Animated.timing(sheetAnim, { toValue: 300, duration: 250, useNativeDriver: true }).start(() => {
-      setRequest(null);
-      router.push(`/ride/${rideId}`);
-    });
   };
 
   return (
@@ -559,6 +565,10 @@ export default function HomeScreen() {
               <View style={{ paddingVertical: 14, alignItems: 'center' }}>
                 <ActivityIndicator size="small" color={colors.primary} />
               </View>
+            ) : statsError ? (
+              <Pressable onPress={() => { refetchDriver(); refetchEarnings(); }} style={{ paddingVertical: 14, alignItems: 'center' }}>
+                <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 12 }}>Failed to load. Tap to retry.</Text>
+              </Pressable>
             ) : (
               <View style={[styles.statsPillInner, { flexDirection: R }]}>
                 {/* backend returns totalEarnings as a string — parseFloat for numeric formatting */}
@@ -715,11 +725,15 @@ export default function HomeScreen() {
               </Pressable>
               <Pressable
                 onPress={acceptRequest}
-                style={styles.acceptBtn}
+                disabled={acceptingRide}
+                style={[styles.acceptBtn, { opacity: acceptingRide ? 0.7 : 1 }]}
                 accessibilityLabel="Accept ride"
               >
                 <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[styles.acceptBtnGrad, { flexDirection: R }]}>
-                  <Check size={20} color={colors.primaryForeground} strokeWidth={2} />
+                  {acceptingRide
+                    ? <ActivityIndicator size="small" color={colors.primaryForeground} />
+                    : <Check size={20} color={colors.primaryForeground} strokeWidth={2} />
+                  }
                   <Text style={[styles.acceptBtnText, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>{t.accept_trip}</Text>
                 </LinearGradient>
               </Pressable>

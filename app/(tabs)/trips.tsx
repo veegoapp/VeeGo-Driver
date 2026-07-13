@@ -9,6 +9,7 @@ import {
   Modal,
   Platform,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -69,10 +70,20 @@ export default function TripsScreen() {
     completed: t.completed_label,
   };
 
-  const { data: rawData, isLoading, isError } = useQuery({
+  const [refreshing, setRefreshing] = useState(false);
+
+  const { data: rawData, isLoading, isError, refetch } = useQuery({
     queryKey: ['trips', filter, page],
     queryFn: () => endpoints.trips.list(filter === 'all' ? undefined : filter, page, PAGE_LIMIT),
   });
+
+  const handleRefresh = async () => {
+    setPage(1);
+    setAllTrips([]);
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  };
 
   const _raw = rawData as Trip[] | { trips?: Trip[]; data?: Trip[] } | undefined;
   const newTrips: Trip[] = Array.isArray(_raw) ? _raw : ((_raw as { trips?: Trip[] })?.trips ?? ((_raw as { data?: Trip[] })?.data ?? []));
@@ -201,6 +212,7 @@ export default function TripsScreen() {
       <ScrollView
         contentContainerStyle={{ paddingTop: topPad + 8, paddingBottom: TAB_BAR_HEIGHT + 24, paddingHorizontal: 20 }}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
       >
         <View style={[styles.header, { flexDirection: R }]}>
           <View>

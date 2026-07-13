@@ -273,6 +273,7 @@ export default function ShuttleHomeScreen() {
       setOnline(next);
     } catch {
       // API failed — keep current state so UI stays in sync with backend
+      Alert.alert(t.error, 'Failed to update status. Please try again.');
     } finally {
       setOnlineLoading(false);
     }

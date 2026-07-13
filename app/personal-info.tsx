@@ -7,6 +7,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -46,10 +47,17 @@ export default function PersonalInfoScreen() {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<Partial<DriverMe>>({});
 
-  const { data: raw, isLoading } = useQuery<DriverMe>({
+  const [refreshing, setRefreshing] = useState(false);
+  const { data: raw, isLoading, refetch } = useQuery<DriverMe>({
     queryKey: ['driver'],
     queryFn: endpoints.driver.me as () => Promise<DriverMe>,
   });
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  };
 
   useEffect(() => {
     if (raw) {
@@ -97,6 +105,7 @@ export default function PersonalInfoScreen() {
           contentContainerStyle={{ paddingTop: topPad + 8, paddingBottom: 60, paddingHorizontal: 20 }}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
         >
           <View style={styles.headerRow}>
             <Pressable

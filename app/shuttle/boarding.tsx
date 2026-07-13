@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { safeBack } from '@/lib/navUtils';
 import { AlertCircle, Check, ChevronLeft, Package, Phone, Tag, Users, X } from 'lucide-react-native';
 import React, { useRef, useEffect, useState } from 'react';
-import { Alert, Animated, Image, Platform, Pressable, ScrollView, StyleSheet, Text, View, ImageErrorEventData, NativeSyntheticEvent } from 'react-native';
+import { ActivityIndicator, Alert, Animated, Image, Platform, Pressable, ScrollView, StyleSheet, Text, View, ImageErrorEventData, NativeSyntheticEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
@@ -32,6 +32,7 @@ export default function ShuttleBoardingScreen() {
 
   const [stationTimeoutVisible, setStationTimeoutVisible] = useState(false);
   const [avatarErrors, setAvatarErrors] = useState<Record<string, boolean>>({});
+  const [isDeparting, setIsDeparting] = useState(false);
 
   // Task 1: per-passenger action state ('boarded' | 'absent' | null) and loading id
   const [actionState, setActionState] = useState<Record<string, 'boarded' | 'absent'>>({});
@@ -105,19 +106,25 @@ export default function ShuttleBoardingScreen() {
   };
 
   const handleDepart = async () => {
+    if (isDeparting) return;
     const stationId = currentStop?.id;
     if (!stationId) {
       Alert.alert(t.error, t.station_action_error);
       return;
     }
-    const boardedIds = passengers.filter(p => p.checkedIn).map(p => p.id);
-    await Promise.allSettled(
-      boardedIds.map(bookingId =>
-        endpoints.shuttle.boardBooking(bookingId, stationId)
-      )
-    );
-    nextStop();
-    router.back();
+    setIsDeparting(true);
+    try {
+      const boardedIds = passengers.filter(p => p.checkedIn).map(p => p.id);
+      await Promise.allSettled(
+        boardedIds.map(bookingId =>
+          endpoints.shuttle.boardBooking(bookingId, stationId)
+        )
+      );
+      nextStop();
+      router.back();
+    } finally {
+      setIsDeparting(false);
+    }
   };
 
   return (
@@ -320,9 +327,12 @@ export default function ShuttleBoardingScreen() {
 
       <View style={[styles.bottomAction, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: botPad + 12 }]}>
         {total > 0 && checkedIn === total ? (
-          <Pressable onPress={handleDepart} style={styles.departBtn}>
+          <Pressable onPress={handleDepart} disabled={isDeparting} style={[styles.departBtn, { opacity: isDeparting ? 0.7 : 1 }]}>
             <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.departBtnGrad}>
-              <Check size={20} color={colors.primaryForeground} strokeWidth={2} />
+              {isDeparting
+                ? <ActivityIndicator size="small" color={colors.primaryForeground} />
+                : <Check size={20} color={colors.primaryForeground} strokeWidth={2} />
+              }
               <Text style={[styles.departBtnText, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>{t.all_aboard}</Text>
             </LinearGradient>
           </Pressable>

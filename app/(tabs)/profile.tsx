@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { Award, ChevronRight, Copy, LogOut, Moon, Star, Sun } from 'lucide-react-native';
 import { FeatherIcon } from '@/lib/iconMap';
 import React, { useState, useCallback } from 'react';
-import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
@@ -86,19 +86,26 @@ export default function ProfileScreen() {
       setAcceptedVersion(termsData.version);
       setTermsModalVisible(false);
     } catch {
-      // fail silently, user can try again
+      Alert.alert(t.error, 'Failed to accept terms. Please try again.');
     } finally {
       setTermsAcceptLoading(false);
     }
-  }, [termsData]);
+  }, [termsData, t]);
 
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
   const TA = isRTL ? 'right' as const : 'left' as const;
 
-  const { data: driverRaw, isLoading } = useQuery<DriverProfile>({
+  const [refreshing, setRefreshing] = useState(false);
+  const { data: driverRaw, isLoading, refetch: refetchDriver } = useQuery<DriverProfile>({
     queryKey: ['driver'],
     queryFn: endpoints.driver.me as () => Promise<DriverProfile>,
   });
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await refetchDriver();
+    setRefreshing(false);
+  };
 
   const { data: driverReferralInfo } = useQuery({
     queryKey: ['driver-referral-info'],
@@ -138,6 +145,7 @@ export default function ProfileScreen() {
       <ScrollView
         contentContainerStyle={{ paddingTop: topPad + 8, paddingBottom: TAB_BAR_HEIGHT + 24, paddingHorizontal: 20 }}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
       >
         <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.profile_title}</Text>
 

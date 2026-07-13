@@ -52,7 +52,19 @@ export function usePushNotifications(onRideRequest?: () => void) {
       if (!cancelled) {
         setToken(t ?? null);
         if (t) {
-          endpoints.pushTokens.register(t).catch(() => {});
+          // Retry up to 2 times with a short delay before giving up silently.
+          const registerWithRetry = async (attempt = 0): Promise<void> => {
+            try {
+              await endpoints.pushTokens.register(t);
+            } catch {
+              if (attempt < 2) {
+                await new Promise(res => setTimeout(res, 3000 * (attempt + 1)));
+                if (!cancelled) return registerWithRetry(attempt + 1);
+              }
+              // All retries exhausted — app continues to function without push notifications
+            }
+          };
+          registerWithRetry();
         }
       }
     });

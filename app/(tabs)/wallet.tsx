@@ -2,7 +2,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { ArrowDownLeft, ArrowUpRight, Briefcase, CreditCard, Phone, Plus, X } from 'lucide-react-native';
 import React, { useRef, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Animated, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Animated, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { GlassView } from '@/components/GlassView';
@@ -69,11 +69,11 @@ export default function WalletScreen() {
   const [payoutAmount, setPayoutAmount] = useState('');
   const [isPayingOut, setIsPayingOut] = useState(false);
 
-  const { data: balanceRaw, isLoading: balanceLoading, isError: balanceError } = useQuery({
+  const { data: balanceRaw, isLoading: balanceLoading, isError: balanceError, refetch: refetchBalance } = useQuery({
     queryKey: ['wallet-balance'],
     queryFn: endpoints.wallet.balance,
   });
-  const { data: txRaw, isLoading: txLoading, isError: txError } = useQuery({
+  const { data: txRaw, isLoading: txLoading, isError: txError, refetch: refetchTx } = useQuery({
     queryKey: ['wallet-transactions'],
     queryFn: endpoints.wallet.transactions,
   });
@@ -105,6 +105,13 @@ export default function WalletScreen() {
 
   const isLoading = balanceLoading || txLoading;
   const isError = balanceError || txError;
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await Promise.allSettled([refetchBalance(), refetchTx()]);
+    setRefreshing(false);
+  };
 
   const heroAnim = useRef(new Animated.Value(0)).current;
 
@@ -162,8 +169,11 @@ export default function WalletScreen() {
 
   if (isError) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' }]}>
+      <View style={[styles.container, { backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center', gap: 16 }]}>
         <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: Typography.size.sm }}>{t.wallet_load_fail}</Text>
+        <Pressable onPress={() => { refetchBalance(); refetchTx(); }} style={{ paddingHorizontal: 24, paddingVertical: 10, borderRadius: 20, backgroundColor: colors.secondary }}>
+          <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: Typography.size.sm }}>Retry</Text>
+        </Pressable>
       </View>
     );
   }
@@ -174,6 +184,7 @@ export default function WalletScreen() {
         contentContainerStyle={{ paddingTop: topPad + 8, paddingBottom: TAB_BAR_HEIGHT + 24, paddingHorizontal: 20 }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
       >
         <Text style={[styles.sectionLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.wallet}</Text>
         <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.your_balance}</Text>
