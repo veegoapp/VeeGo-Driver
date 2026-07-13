@@ -1,0 +1,138 @@
+VeeGo Driver App — Production UX State Hardening Task
+
+You are working on the Driver mobile app only.
+
+Goal:
+Fix missing production UX states (Loading, Error, Retry, Disabled actions, Refresh behavior) based on the audit report.
+
+IMPORTANT RULES:
+- Do NOT refactor architecture.
+- Do NOT change API contracts.
+- Do NOT modify backend code.
+- Do NOT change database, navigation structure, authentication flow, or business logic.
+- Do NOT rename existing functions/components unless required.
+- Keep changes minimal and isolated.
+- Reuse existing patterns/components/styles already used in the app.
+- If something is already correct, leave it untouched.
+
+Implement only these fixes:
+
+1) Online / Offline Toggle
+File:
+app/(tabs)/home.tsx
+
+Requirements:
+- When goOnline/goOffline API fails:
+  - Restore the previous online state.
+  - Show a clear user-facing error message.
+  - Keep loading state handling.
+- Do not change successful flow.
+
+2) Accept Ride Flow
+File:
+app/(tabs)/home.tsx
+
+Requirements:
+- The app must NOT navigate to active ride screen until accept API succeeds.
+- Add a proper submitting/busy state.
+- Prevent double tapping.
+- If API fails:
+  - Keep user on current screen.
+  - Show error feedback.
+
+3) Terms Acceptance
+File:
+app/(tabs)/home.tsx
+
+Requirements:
+- If terms.accept fails:
+  - Do not silently ignore.
+  - Keep modal open.
+  - Show error message.
+- Keep existing success behavior.
+
+4) Push Notification Registration
+File:
+hooks/usePushNotifications.ts
+
+Requirements:
+- Do not silently swallow registration failures.
+- Add safe retry behavior.
+- Avoid breaking app startup if registration fails.
+- Do not change notification architecture.
+
+5) Wallet and Earnings Error UI
+Files:
+app/(tabs)/wallet.tsx
+app/earnings.tsx
+
+Requirements:
+- Existing error variables already exist.
+- Add UI states for:
+  - Loading
+  - Error
+  - Retry action
+  - Empty state where needed.
+- Do not change fetching logic.
+
+6) Chat Send Failure
+File:
+app/ride/chat.tsx
+
+Requirements:
+- When sending message fails:
+  - Keep current text restore behavior.
+  - Add visible error feedback.
+- Do not change chat API logic.
+
+7) Shuttle Online Toggle
+File:
+app/(shuttle)/home.tsx
+
+Requirements:
+- Add same error handling as normal driver online toggle.
+- Restore previous state on failure.
+
+8) Shuttle Depart Button
+File:
+app/shuttle/boarding.tsx
+
+Requirements:
+- Add submitting state.
+- Disable button during request.
+- Prevent duplicate requests.
+- Keep existing API flow.
+
+9) Home Stats / Earnings Errors
+File:
+app/(tabs)/home.tsx
+
+Requirements:
+- If driver stats or earnings queries fail:
+  - Show proper error UI.
+  - Add retry option if existing query mechanism supports it.
+
+10) Pull To Refresh Improvements
+Add RefreshControl where missing:
+- app/trips.tsx
+- app/ratings.tsx
+- app/(tabs)/profile.tsx
+- app/personal-info.tsx
+- app/(tabs)/wallet.tsx
+
+Use existing refresh patterns from other screens.
+
+Validation:
+After implementation:
+1. Run TypeScript checks.
+2. Run existing tests if available.
+3. Verify no unrelated files changed.
+4. Report:
+   - Files changed.
+   - Exact fixes.
+   - Any skipped items and why.
+
+After everything is verified:
+Commit changes and push directly to origin/main.
+
+Do not make any additional improvements outside this scope.
