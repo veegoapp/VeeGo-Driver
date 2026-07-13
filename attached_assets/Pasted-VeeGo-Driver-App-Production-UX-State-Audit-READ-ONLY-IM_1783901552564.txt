@@ -1,0 +1,201 @@
+VeeGo Driver App — Production UX State Audit (READ ONLY)
+
+IMPORTANT:
+- Do NOT modify any files.
+- Do NOT refactor code.
+- Do NOT create commits.
+- Do NOT push changes.
+- This task is analysis only.
+- Generate a detailed audit report only.
+
+Goal:
+Audit the VeeGo Driver application to determine production readiness regarding UI states and async operation handling.
+
+Check every screen and feature for:
+
+1. Loading State
+2. Error State
+3. Empty State
+4. Retry Action
+5. Disabled Buttons During Requests
+6. Refresh / Reload Behavior
+
+---
+
+Audit all important screens, especially:
+
+Authentication:
+- Login
+- OTP Verification
+- Registration flow
+- Vehicle information
+- Document upload
+- Selfie verification
+- Pending approval
+- Suspended states
+
+Main Driver Experience:
+- Home
+- Online / Offline status
+- Ride requests
+- Active ride
+- Ride details
+- Chat
+- Trip history
+- Trip details
+
+Shuttle:
+- Shuttle home
+- Trips
+- Active shuttle trip
+- Passenger boarding
+- Passenger ratings
+- Bookings
+
+Account:
+- Profile
+- Personal information
+- Vehicle
+- Wallet
+- Payouts
+- Ratings
+- Notifications
+- Support
+- Settings
+
+---
+
+For every screen, analyze:
+
+## A) Data Loading
+
+Check:
+- Is there a visible loading indicator?
+- Is loading handled correctly?
+- Can the user interact with incomplete data?
+- Are there screens that appear frozen while waiting for API responses?
+
+## B) Error Handling
+
+Check:
+- What happens when API requests fail?
+- Are errors shown to the user?
+- Is there a recovery path?
+- Is Retry available where appropriate?
+
+Search for:
+- empty catch blocks
+- .catch(() => {})
+- ignored API errors
+- console-only error handling
+
+## C) Empty States
+
+Find screens where data can legitimately be empty:
+
+Examples:
+- No trips
+- No rides
+- No bookings
+- No messages
+- No transactions
+- No notifications
+
+Check:
+- Is there a proper empty state UI?
+- Is the user guided on what to do next?
+
+## D) Async Actions / Buttons
+
+Review every important action:
+
+Examples:
+- Login
+- Verify OTP
+- Submit registration
+- Upload documents
+- Go online/offline
+- Accept ride
+- Complete ride
+- Send message
+- Update profile
+- Withdraw money
+- Rate passenger
+
+For each action check:
+
+- Is loading shown?
+- Is the button disabled during request?
+- Can users trigger duplicate requests?
+- Is success feedback provided?
+- Is failure feedback provided?
+
+## E) Refresh Behavior
+
+Check:
+
+- Pull to refresh support
+- Data refresh after returning to a screen
+- Cache invalidation after mutations
+- Stale data issues
+- Manual refresh options
+
+---
+
+Output format:
+
+# VeeGo Driver Production UX Audit
+
+## Executive Summary
+Include:
+- Overall production readiness score /10
+- Number of screens reviewed
+- Biggest risks
+
+## Critical Issues
+
+For every issue:
+- File
+- Screen
+- Missing behavior
+- User impact
+- Severity
+
+## Screen Audit Table
+
+Columns:
+
+Screen/File |
+Loading |
+Error |
+Empty |
+Retry |
+Button Disabled |
+Refresh |
+Status
+
+Use:
+✅ Implemented
+⚠️ Partial
+❌ Missing
+N/A
+
+## Async Action Audit
+
+List important user actions and whether duplicate submissions are prevented.
+
+## Silent Failure Findings
+
+List all swallowed or ignored errors.
+
+## Recommended Fix Priority
+
+Separate into:
+
+1. Release blockers
+2. High priority fixes
+3. Improvements
+
+Remember:
+This is a READ ONLY audit.
+Do not modify anything.

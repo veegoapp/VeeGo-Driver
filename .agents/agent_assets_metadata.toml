@@ -36,3 +36,9 @@ id = "u12xpOQVSr_EoX88MVPf_"
 uri = "file://DRIVER_APP_BACKEND_AUDIT.md"
 type = "text"
 title = "DRIVER_APP_BACKEND_AUDIT.md"
+
+[[outputs]]
+id = "q2cXCx1T9BCjmSeZ5rzVo"
+uri = "file://VeeGo_Driver_Production_UX_Audit.md"
+type = "text"
+title = "VeeGo Driver — Production UX State Audit"
