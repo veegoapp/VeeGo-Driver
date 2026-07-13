@@ -1,0 +1,91 @@
+VeeGo Driver App — Final Production Hardening Fixes
+
+Scope:
+Fix only the following two issues found in the verification audit.
+
+IMPORTANT RULES:
+- Do NOT refactor architecture.
+- Do NOT change authentication flow.
+- Do NOT change backend API contracts.
+- Do NOT modify unrelated features.
+- Keep changes minimal and isolated.
+- Reuse existing functions and patterns.
+
+================================================
+
+1) Signup Terms Acceptance Backend Sync
+
+Problem:
+The profile terms acceptance flow already calls:
+endpoints.terms.accept()
+
+But the signup/OTP flow only stores acceptance locally using AsyncStorage.
+The backend never receives the driver's terms acceptance during signup.
+
+Required fix:
+
+Files likely:
+- app/login.tsx
+- app/verify-otp.tsx
+
+After successful OTP verification and account authentication:
+
+- Retrieve the accepted/pending terms version already used by the signup flow.
+- Call the existing API:
+  endpoints.terms.accept(termsVersion)
+
+- Keep existing local AsyncStorage behavior if it is still required.
+- Do not remove existing logic unnecessarily.
+
+Error handling:
+- Do not silently ignore backend acceptance failure.
+- Add proper error handling.
+- Keep authentication behavior consistent with the current product flow.
+
+================================================
+
+2) Push Notification Registration Failure Handling
+
+File:
+hooks/usePushNotifications.ts
+
+Current behavior:
+- Registration retries 3 times.
+- If all attempts fail, the final error is silently swallowed.
+
+Required fix:
+
+- Keep the existing retry behavior.
+- Do not block app startup.
+- After final failure:
+  - Add safe error logging (production-safe).
+  - Do not expose technical errors to users.
+  - Keep the app usable.
+
+Optional if already supported by existing architecture:
+- Add a lightweight retry trigger on future app mounts/opening.
+- Do not add new notification systems.
+
+Do NOT:
+- Change notification permissions flow.
+- Change push token format.
+- Change backend registration API.
+
+================================================
+
+Validation:
+
+After changes:
+- Run TypeScript check.
+- Run existing tests if available.
+- Confirm no unrelated files changed.
+
+Report:
+- Files modified.
+- Exact changes.
+- Any remaining risks.
+
+After verification:
+Commit and push directly to origin/main.
+
+Only implement these two fixes.
