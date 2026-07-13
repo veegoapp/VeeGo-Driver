@@ -56,12 +56,17 @@ export function usePushNotifications(onRideRequest?: () => void) {
           const registerWithRetry = async (attempt = 0): Promise<void> => {
             try {
               await endpoints.pushTokens.register(t);
-            } catch {
+            } catch (err) {
               if (attempt < 2) {
                 await new Promise(res => setTimeout(res, 3000 * (attempt + 1)));
                 if (!cancelled) return registerWithRetry(attempt + 1);
               }
-              // All retries exhausted — app continues to function without push notifications
+              // All retries exhausted — app continues to function without push
+              // notifications. Log for diagnostics (no token/PII, not shown to
+              // the user); registration is attempted again automatically on
+              // the next app launch/mount since this effect re-runs then.
+              const reason = err instanceof Error ? err.message : String(err);
+              console.error('[PushNotifications] Token registration failed after retries:', reason);
             }
           };
           registerWithRetry();

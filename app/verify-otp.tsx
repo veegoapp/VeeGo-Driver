@@ -63,17 +63,28 @@ export default function VerifyOtpScreen() {
       const result = await endpoints.auth.verifyOtp(phone, otp);
       if (__DEV__) console.log('[OTP] ✅ verifyOtp succeeded');
 
-      // Accept any pending terms now that we have a real token
-      AsyncStorage.getItem('driver_terms_pending_version').then(async (pendingVersion) => {
-        if (!pendingVersion) return;
-        try {
-          await AsyncStorage.setItem('driver_terms_accepted_version', pendingVersion);
-          await AsyncStorage.removeItem('driver_terms_pending_version');
-        } catch { /* ignore */ }
-      }).catch(() => {});
-
       await login(result.accessToken, result.refreshToken);
       if (__DEV__) console.log('[OTP] ✅ login() done → calling navigateAfterOtp');
+
+      // Sync any pending terms acceptance (recorded during signup) to the
+      // backend now that we have a real access token. Local AsyncStorage
+      // behavior is kept as-is; the pending flag is only cleared once the
+      // backend confirms acceptance so a failure here doesn't get lost.
+      try {
+        const pendingVersion = await AsyncStorage.getItem('driver_terms_pending_version');
+        if (pendingVersion) {
+          try {
+            await endpoints.terms.accept(Number(pendingVersion));
+            await AsyncStorage.setItem('driver_terms_accepted_version', pendingVersion);
+            await AsyncStorage.removeItem('driver_terms_pending_version');
+          } catch (acceptErr) {
+            // Do not silently ignore — log so backend never-received-acceptance
+            // is visible, but don't block login/navigation on it.
+            console.error('[OTP] Failed to sync terms acceptance to backend:', acceptErr);
+          }
+        }
+      } catch { /* AsyncStorage read failed — nothing to sync */ }
+
       await navigateAfterOtp(result.accessToken);
     } catch (err) {
       if (__DEV__) console.log('[OTP] ❌ verifyOtp error:', err);
