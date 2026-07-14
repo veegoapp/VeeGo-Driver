@@ -14,6 +14,7 @@ import { AppLoader } from '@/components/ui/AppLoader';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
 import { useSocket } from '@/lib/socketContext';
+import { payoutStatusBadge, type PayoutAccount, type PayoutHistoryItem } from '@/lib/walletHelpers';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
@@ -26,19 +27,6 @@ type WalletFeature = {
   isEnabled: boolean;
   displayMode: 'live' | 'coming_soon' | 'maintenance' | 'unavailable';
   unavailableMessage?: string | null;
-};
-
-// A driver's own saved payout destination (see /driver/payout-accounts).
-// Only instapay / vodafone_cash are supported today; methodKey is a plain
-// string so future methods (e.g. bank accounts) don't need a shape change.
-type PayoutAccount = {
-  id: number;
-  methodKey: string;
-  accountName: string;
-  accountNumber: string;
-  isDefault: boolean;
-  isVerified: boolean;
-  isActive: boolean;
 };
 
 type WalletBalance = { balance: number; totalPaid?: number; totalPending?: number };
@@ -57,17 +45,6 @@ type Transaction = {
   incoming?: boolean;
   description?: string;
 };
-// One row from GET /driver/wallet/payouts — the driver's own payout requests.
-type PayoutHistoryItem = {
-  id: number;
-  amount: number;
-  status: 'pending' | 'processing' | 'paid' | 'cancelled';
-  method: string | null;
-  accountName: string | null;
-  maskedAccountNumber: string | null;
-  createdAt: string;
-  paidAt: string | null;
-};
 
 const TAB_BAR_HEIGHT = 96;
 
@@ -80,19 +57,6 @@ function MethodIcon({ methodKey, color }: { methodKey: string; color: string }) 
     case 'vodafone_cash': return <Phone size={size} color={color} strokeWidth={sw} />;
     case 'instapay': return <Zap size={size} color={color} strokeWidth={sw} />;
     default: return <CreditCard size={size} color={color} strokeWidth={sw} />;
-  }
-}
-
-// Maps a payout request's status to a badge color + label, reusing existing
-// status_pending / status_paid_out / status_cancelled translation keys.
-function payoutStatusBadge(status: PayoutHistoryItem['status'], colors: ReturnType<typeof useColors>, t: ReturnType<typeof useI18n>['t']) {
-  switch (status) {
-    case 'paid':
-      return { label: t.status_paid_out, color: colors.primary };
-    case 'cancelled':
-      return { label: t.status_cancelled, color: colors.destructive };
-    default:
-      return { label: t.status_pending, color: colors.mutedForeground };
   }
 }
 

@@ -21,7 +21,8 @@ import { AppLoader } from '@/components/ui/AppLoader';
 import { useSocket } from '@/lib/socketContext';
 import { endpoints, type RideMessage } from '@/lib/api';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
-import { useI18n, rtlIconStyle } from '@/lib/i18nContext';
+import { useI18n } from '@/lib/i18nContext';
+import { rtlIconStyle } from '@/lib/rtlUtils';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 

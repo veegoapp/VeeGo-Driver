@@ -10,6 +10,7 @@ import { useColors } from '@/hooks/useColors';
 import { AppLoader } from '@/components/ui/AppLoader';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
+import { payoutStatusBadge, type PayoutAccount, type PayoutHistoryItem } from '@/lib/walletHelpers';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
@@ -17,44 +18,8 @@ import { Shadows } from '@/constants/shadows';
 
 type WalletBalance = { balance: number };
 type Transaction = { id: string; title: string; sub: string; amount: number; incoming: boolean };
-// A driver's own saved payout destination (see /driver/payout-accounts).
-// Only instapay / vodafone_cash are supported today; methodKey is a plain
-// string so future methods (e.g. bank accounts) don't need a shape change.
-type PayoutAccount = {
-  id: number;
-  methodKey: string;
-  accountName: string;
-  accountNumber: string;
-  isDefault: boolean;
-  isVerified: boolean;
-  isActive: boolean;
-};
-// One row from GET /driver/wallet/payouts — the driver's own payout requests.
-type PayoutHistoryItem = {
-  id: number;
-  amount: number;
-  status: 'pending' | 'processing' | 'paid' | 'cancelled';
-  method: string | null;
-  accountName: string | null;
-  maskedAccountNumber: string | null;
-  createdAt: string;
-  paidAt: string | null;
-};
 
 const TAB_BAR_HEIGHT = 96;
-
-// Maps a payout request's status to a badge color + label, reusing existing
-// status_pending / status_paid_out / status_cancelled translation keys.
-function payoutStatusBadge(status: PayoutHistoryItem['status'], colors: ReturnType<typeof useColors>, t: ReturnType<typeof useI18n>['t']) {
-  switch (status) {
-    case 'paid':
-      return { label: t.status_paid_out, color: colors.primary };
-    case 'cancelled':
-      return { label: t.status_cancelled, color: colors.destructive };
-    default:
-      return { label: t.status_pending, color: colors.mutedForeground };
-  }
-}
 
 export default function WalletScreen() {
   const colors = useColors();
