@@ -27,7 +27,7 @@ import { Radius } from '@/constants/radius';
 import { Shadows } from '@/constants/shadows';
 
 const TERMS_VERSION_KEY = 'driver_terms_accepted_version';
-type TermsData = { id: number; version: number; contentAr: string; contentEn: string; updatedAt: string };
+import type { TermsData } from '@/lib/types';
 
 type DriverProfile = {
   id: string;

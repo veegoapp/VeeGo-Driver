@@ -7,16 +7,7 @@ import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 import { formatCurrency } from '@/app/(shuttle)/bookings';
 
-type DriverTrip = {
-  id: string;
-  routeName?: string;
-  date?: string;
-  boardedPassengers?: number;
-  totalPassengers?: number;
-  earnings?: number | string;
-  revenueAmount?: number | string;
-  status?: string;
-};
+import type { DriverTrip } from '@/lib/types';
 
 // Extracted verbatim from app/(shuttle)/bookings.tsx — pure presentational
 // completed-trip list item, no behavior change.

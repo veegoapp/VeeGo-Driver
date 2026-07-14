@@ -31,16 +31,7 @@ const TAB_BAR_HEIGHT = 96;
 
 type MainTab = 'upcoming' | 'completed';
 
-type DriverTrip = {
-  id: string;
-  routeName?: string;
-  date?: string;
-  boardedPassengers?: number;
-  totalPassengers?: number;
-  earnings?: number | string;
-  revenueAmount?: number | string;
-  status?: string;
-};
+import type { DriverTrip } from '@/lib/types';
 
 type BookingDetail = {
   id: string;

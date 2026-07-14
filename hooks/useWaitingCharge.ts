@@ -2,12 +2,8 @@ import { useEffect, useState } from 'react';
 import { useSocket } from '@/lib/socketContext';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
 
-export type WaitingCharge = {
-  rideId: string;
-  amount: number;
-  minutes: number;
-  capped?: boolean;
-};
+import type { WaitingCharge } from '@/lib/types';
+export type { WaitingCharge } from '@/lib/types';
 
 export function useWaitingCharge(
   _driverId: string | undefined,

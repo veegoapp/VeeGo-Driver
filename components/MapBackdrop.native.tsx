@@ -4,13 +4,8 @@ import MapView, { Circle, Marker, Polyline, PROVIDER_GOOGLE } from 'react-native
 import { DARK_MAP_STYLE } from '@/constants/mapStyle';
 import { getToken } from '@/lib/auth';
 
-export interface SurgeZone {
-  id: string;
-  latitude: number;
-  longitude: number;
-  radius: number;
-  multiplier: number;
-}
+import type { SurgeZone } from '@/lib/types';
+export type { SurgeZone } from '@/lib/types';
 
 export interface MapBackdropProps {
   pickup?: { latitude: number; longitude: number };

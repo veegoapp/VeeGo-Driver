@@ -6,13 +6,8 @@
 import React from 'react';
 import { View } from 'react-native';
 
-export interface SurgeZone {
-  id: string;
-  latitude: number;
-  longitude: number;
-  radius: number;
-  multiplier: number;
-}
+import type { SurgeZone } from '@/lib/types';
+export type { SurgeZone } from '@/lib/types';
 
 export interface MapBackdropProps {
   pickup?: { latitude: number; longitude: number };

@@ -241,7 +241,7 @@ function SignInForm({ isRTL, onSuccess, onOtpRequired, initialCredential }: {
   );
 }
 
-type TermsData = { id: number; version: number; contentAr: string; contentEn: string; updatedAt: string };
+import type { TermsData } from '@/lib/types';
 
 function SignUpForm({ isRTL, onOtpRequired }: { isRTL: boolean; onOtpRequired: (phone: string, maskedPhone?: string, retryAfter?: number) => void }) {
   const { t } = useI18n();

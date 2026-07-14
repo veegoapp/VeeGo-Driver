@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { useSocket } from '@/lib/socketContext';
 import { SOCKET_EVENTS } from '../constants/socketEvents';
 import type { CheckinRequiredPayload } from '@/lib/checkinDeadline';
+import type { WaitingCharge, SurgeZone } from '@/lib/types';
+export type { WaitingCharge, SurgeZone } from '@/lib/types';
 
 const RideOfferSchema = z.object({
   id: z.union([z.string(), z.number()]).transform(String),
@@ -46,21 +48,6 @@ export type RideRequest = {
   payment?: string;
   duration?: string;
   [key: string]: unknown;
-};
-
-export type WaitingCharge = {
-  rideId: string;
-  amount: number;
-  minutes: number;
-  capped?: boolean;
-};
-
-export type SurgeZone = {
-  id: string;
-  latitude: number;
-  longitude: number;
-  radius: number;
-  multiplier: number;
 };
 
 type UseRideSocketOptions = {
@@ -215,7 +202,7 @@ export function useRideSocket({
       } else if (data && typeof data === 'object' && 'zones' in data) {
         zones = ((data as { zones?: SurgeZone[] }).zones) ?? [];
       } else if (data && typeof data === 'object' && 'latitude' in data) {
-        zones = [data as SurgeZone];
+        zones = [data as unknown as SurgeZone];
       } else {
         zones = [];
       }
