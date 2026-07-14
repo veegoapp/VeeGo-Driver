@@ -1,0 +1,117 @@
+Act as a Senior Software Architect who has been assigned to evaluate this project before handing it over to a new Software Engineer.
+
+Do NOT modify any code.
+Do NOT refactor anything.
+Do NOT create files.
+This is a READ-ONLY assessment only.
+
+Your main question to answer:
+
+"If we hire a new Senior Software Engineer tomorrow, will they understand this project and continue development safely, or will they get lost because of complexity, missing structure, or technical debt?"
+
+Perform a full project organization and maintainability review.
+
+Analyze:
+
+1. Project Understanding Difficulty
+Evaluate:
+- Can a new engineer understand the architecture quickly?
+- Are responsibilities clear?
+- Is the project structure logical?
+- Are there hidden dependencies?
+- Are there areas that require previous developer knowledge?
+
+Give:
+- Understanding difficulty score (%)
+- Explanation
+
+2. Code Organization Review
+Find areas that need:
+- Splitting large files
+- Moving duplicated logic into shared utilities/components
+- Separating responsibilities
+- Better folder organization
+- Better naming conventions
+
+For every suggestion provide:
+
+- Current problem
+- Recommended organization
+- Estimated risk if changed:
+  "Low / Medium / High"
+- Estimated safety percentage:
+  "If implemented correctly, what is the probability this change will NOT break existing functionality?"
+
+Example:
+"Move X into shared component"
+Risk: Low
+Estimated safe implementation: 95%
+
+3. Architecture Review
+Check:
+- Are modules separated correctly?
+- Is business logic mixed with UI?
+- Are API calls organized correctly?
+- Is state management maintainable?
+- Are there areas that will become difficult when the project grows?
+
+4. Future Development Readiness
+Answer:
+- Can a new engineer add features safely?
+- Will adding new services/features create problems?
+- What areas should be cleaned before continuing development?
+
+5. Technical Debt Review
+List:
+- Duplicated code
+- Temporary solutions
+- Inconsistent patterns
+- Old unused code
+- Parts that need cleanup
+
+For each item include:
+- Priority
+- Estimated effort
+- Break risk percentage
+
+6. Refactoring Roadmap
+Create a practical plan:
+
+Phase 1:
+Changes that are very safe and should be done first.
+
+Phase 2:
+Medium-risk improvements.
+
+Phase 3:
+Large architectural improvements.
+
+For every task include:
+- Why needed
+- Files/modules affected
+- Risk percentage
+- Estimated chance of improving maintainability
+
+Final Report:
+
+Give a summary table:
+
+| Area | Current Status | Problem Level | Safe Improvement % |
+|------|---------------|---------------|--------------------|
+
+Include scores:
+- New Engineer Understanding: XX%
+- Maintainability: XX%
+- Organization Quality: XX%
+- Refactoring Safety: XX%
+- Production Readiness: XX%
+
+Final verdict:
+1. If you join this project tomorrow as a Senior Engineer, how long will it take you to understand it?
+2. Would you feel comfortable owning this project?
+3. What are the top 10 things to organize before continuing development?
+
+Important:
+- Do not report assumptions as bugs.
+- Separate confirmed problems from recommendations.
+- Focus on project organization and maintainability, not just finding errors.
