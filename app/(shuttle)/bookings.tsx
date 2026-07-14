@@ -81,7 +81,7 @@ function normalizeWeekStart(weekStart: string): string {
 
 type WeekBucket = 'current' | 'next' | 'other';
 
-function getWeekBucket(weekStart: string): WeekBucket {
+export function getWeekBucket(weekStart: string): WeekBucket {
   const currentSun = getCurrentWeekSunday();
   const nextSun = new Date(currentSun);
   nextSun.setDate(currentSun.getDate() + 7);
@@ -92,7 +92,7 @@ function getWeekBucket(weekStart: string): WeekBucket {
   return 'other';
 }
 
-function formatWeekRange(weekStart: string, weekEnd?: string, locale = 'ar-EG'): string {
+export function formatWeekRange(weekStart: string, weekEnd?: string, locale = 'ar-EG'): string {
   if (!weekStart) return '—';
   try {
     const s = new Date(weekStart + 'T00:00:00Z');
@@ -108,18 +108,18 @@ function formatWeekRange(weekStart: string, weekEnd?: string, locale = 'ar-EG'):
   }
 }
 
-function formatCurrency(amount: number | string | undefined, egp = 'EGP'): string {
+export function formatCurrency(amount: number | string | undefined, egp = 'EGP'): string {
   if (amount == null) return '—';
   const n = parseFloat(String(amount));
   if (isNaN(n)) return '—';
   return `${n.toFixed(0)} ${egp}`;
 }
 
-const COUNTDOWN_EXPIRED = '__EXPIRED__';
+export const COUNTDOWN_EXPIRED = '__EXPIRED__';
 
 // Countdown is display-only. renewalDeadline is NEVER used for logic decisions.
 // The backend status field is the single source of truth for all UI state.
-function formatCountdown(deadlineIso: string | undefined | null): string {
+export function formatCountdown(deadlineIso: string | undefined | null): string {
   if (!deadlineIso) return '--';
   const t = Date.parse(deadlineIso);
   if (isNaN(t)) return '--';
