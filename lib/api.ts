@@ -469,6 +469,22 @@ export const endpoints = {
         clearTimeout(timeout);
       }
     },
+    // POST /driver-documents/upload — upload a document file (multipart/form-data: file, type)
+    uploadDocument: async (formData: FormData) => {
+      const token = await getToken();
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+      try {
+        return await fetch(`${API_BASE_URL}/driver-documents/upload`, {
+          method: 'POST',
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+          body: formData,
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeout);
+      }
+    },
     // GET /driver/checkin/status — current check-in gate state, for cold start / reconnect.
     checkinStatus: () => api.get<{
       checkInRequired: boolean;
@@ -487,8 +503,8 @@ export const endpoints = {
   },
 
   pushTokens: {
-    register: (token: string) =>
-      api.post('/driver/push-token', { token }),
+    register: (token: string, platform?: 'ios' | 'android' | 'web') =>
+      api.post('/driver/push-token', { token, platform }),
   },
 
   rides: {

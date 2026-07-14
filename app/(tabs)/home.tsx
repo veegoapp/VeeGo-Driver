@@ -295,7 +295,7 @@ export default function HomeScreen() {
   // Push token registration happens on login, not just when going online
   useEffect(() => {
     if (token) {
-      endpoints.pushTokens.register(Platform.OS as 'ios' | 'android' | 'web', token).catch(() => {});
+      endpoints.pushTokens.register(token, Platform.OS as 'ios' | 'android' | 'web').catch(() => {});
     }
   }, [token]);
 
