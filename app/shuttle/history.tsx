@@ -23,12 +23,17 @@ import { useI18n } from '@/lib/i18nContext';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
+import {
+  type RawTrip,
+  extractRouteName,
+  extractDate,
+  extractEarning,
+  extractPassengerCount,
+} from '@/lib/shuttleHistoryHelpers';
 
 const PAGE_LIMIT = 20;
 
 // ── Shape normalisation ────────────────────────────────────────────────────────
-type RawTrip = Record<string, unknown>;
-
 type NormalizedTrip = {
   id: string;
   bookingId: string | null;
@@ -37,41 +42,6 @@ type NormalizedTrip = {
   earnedAmount: number | null;
   passengerCount: number | null;
 };
-
-function extractRouteName(raw: RawTrip): string {
-  if (typeof raw.routeName === 'string' && raw.routeName) return raw.routeName;
-  if (typeof raw.lineName  === 'string' && raw.lineName)  return raw.lineName;
-  const line = raw.line as Record<string, unknown> | undefined;
-  if (line) {
-    if (typeof line.name === 'string' && line.name) return line.name;
-    const route = line.route as Record<string, unknown> | undefined;
-    if (route && typeof route.name === 'string') return route.name;
-  }
-  return '—';
-}
-
-function extractDate(raw: RawTrip): Date | null {
-  const raw_date =
-    raw.completedAt ?? raw.finishedAt ?? raw.endedAt ?? raw.createdAt ?? raw.startedAt;
-  if (!raw_date) return null;
-  const d = new Date(String(raw_date));
-  return isNaN(d.getTime()) ? null : d;
-}
-
-function extractEarning(raw: RawTrip): number | null {
-  const val =
-    raw.earnedAmount ?? raw.driverEarning ?? raw.earning ?? raw.amount ?? raw.netEarning;
-  if (val == null) return null;
-  const n = parseFloat(String(val));
-  return isNaN(n) ? null : n;
-}
-
-function extractPassengerCount(raw: RawTrip): number | null {
-  const val = raw.passengerCount ?? raw.passengers;
-  if (val == null) return null;
-  const n = parseInt(String(val), 10);
-  return isNaN(n) ? null : n;
-}
 
 function extractBookingId(raw: RawTrip): string | null {
   const val =

@@ -20,10 +20,15 @@ import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
+import {
+  type RawTrip,
+  extractRouteName,
+  extractDate,
+  extractEarning,
+  extractPassengerCount,
+} from '@/lib/shuttleHistoryHelpers';
 
 // ── Types shared with history.tsx ──────────────────────────────────────────────
-type RawTrip = Record<string, unknown>;
-
 type NormalizedTrip = {
   id: string;
   routeName: string;
@@ -31,39 +36,6 @@ type NormalizedTrip = {
   earnedAmount: number | null;
   passengerCount: number | null;
 };
-
-function extractRouteName(raw: RawTrip): string {
-  if (typeof raw.routeName === 'string' && raw.routeName) return raw.routeName;
-  if (typeof raw.lineName === 'string' && raw.lineName) return raw.lineName;
-  const line = raw.line as Record<string, unknown> | undefined;
-  if (line) {
-    if (typeof line.name === 'string' && line.name) return line.name;
-    const route = line.route as Record<string, unknown> | undefined;
-    if (route && typeof route.name === 'string') return route.name;
-  }
-  return '—';
-}
-
-function extractDate(raw: RawTrip): Date | null {
-  const v = raw.completedAt ?? raw.finishedAt ?? raw.endedAt ?? raw.createdAt ?? raw.startedAt;
-  if (!v) return null;
-  const d = new Date(String(v));
-  return isNaN(d.getTime()) ? null : d;
-}
-
-function extractEarning(raw: RawTrip): number | null {
-  const v = raw.earnedAmount ?? raw.driverEarning ?? raw.earning ?? raw.amount ?? raw.netEarning;
-  if (v == null) return null;
-  const n = parseFloat(String(v));
-  return isNaN(n) ? null : n;
-}
-
-function extractPassengerCount(raw: RawTrip): number | null {
-  const v = raw.passengerCount ?? raw.passengers;
-  if (v == null) return null;
-  const n = parseInt(String(v), 10);
-  return isNaN(n) ? null : n;
-}
 
 function normalizePage(raw: unknown): { trips: NormalizedTrip[]; total: number } {
   let arr: RawTrip[] = [];
