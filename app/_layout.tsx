@@ -99,7 +99,7 @@ function ReferralSocketBridge() {
     };
 
     socket.on('shuttle:referral:incoming', handleReferral);
-    return () => socket.off('shuttle:referral:incoming', handleReferral);
+    return () => { socket.off('shuttle:referral:incoming', handleReferral); };
   }, [socket, addIncomingReferral]);
 
   return null;
@@ -136,7 +136,7 @@ function RootLayoutNav() {
     // Guard: navigator tree not yet mounted — segments is empty on the very
     // first render cycle. Firing router.replace here causes the
     // "REPLACE action was not handled by any navigator" error.
-    if (segments.length === 0) return;
+    if ((segments as string[]).length === 0) return;
 
     const currentScreen = segments[0] as string | undefined;
     const inPreAuthZone = !currentScreen || PRE_AUTH_SCREENS.has(currentScreen);

@@ -61,6 +61,8 @@ export default function ShuttleHomeScreen() {
   const { socket, connected: socketConnected } = useSocket();
   const { currency } = useServiceControl();
 
+  const { activeLine, stops, currentStopIndex, allLines, renewalBooking, myBookings, tripCancelledBanner, dismissTripCancelledBanner, bookingStatusBanner, dismissBookingStatusBanner, refetch } = useShuttle();
+
   // Broadcast GPS location every 5 s while the driver is online
   useLocationBroadcast({ enabled: online, tripId: activeLine?.tripId ?? null });
 
@@ -85,7 +87,6 @@ export default function ShuttleHomeScreen() {
   });
   const driverData = driverRaw as any;
 
-  const { activeLine, stops, currentStopIndex, allLines, renewalBooking, myBookings, tripCancelledBanner, dismissTripCancelledBanner, bookingStatusBanner, dismissBookingStatusBanner, refetch } = useShuttle();
   const { incomingReferralsCount, pendingReferrals } = useReferral();
   const queryClient = useQueryClient();
 

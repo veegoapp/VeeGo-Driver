@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MapBackdrop } from '@/components/MapBackdrop';
+import { useNavigation } from 'expo-router';
 import { Audio } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GlassView } from '@/components/GlassView';
@@ -61,6 +62,7 @@ export default function ShuttleTripActiveScreen() {
   const topPad = insets.top;
   const { t, isRTL } = useI18n();
   const { socket } = useSocket();
+  const navigation = useNavigation();
   const shuttleCtx = useShuttle();
   const {
     activeLine, stops, currentStopIndex, passengers, nextStop, stationCoords,

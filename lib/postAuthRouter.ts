@@ -20,7 +20,8 @@ const STEP_ROUTES: Record<RegistrationStep, string> = {
   plate_number:   '/register-plate',
   documents:      '/register-documents',
   pending_review: '/pending-approval',
-  // 'approved' is handled dynamically based on serviceType — not in this map
+  // 'approved' is intercepted before this map is consulted (see navigateToHome)
+  approved:       '/(tabs)/home',
   rejected:       '/pending-approval',
 };
 

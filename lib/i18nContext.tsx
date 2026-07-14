@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
-import { Platform, View } from 'react-native';
+import { Platform, View, type ViewStyle } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setApiLanguage } from './api';
 import { applyRTLEngine, triggerAppRestart, rtlIconStyle } from './rtlUtils';
