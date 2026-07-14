@@ -22,7 +22,8 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { type SurgeZone } from '@/components/MapBackdrop';
+// SurgeZone shape — kept inline; this screen renders no map component.
+type SurgeZone = { id: string; latitude: number; longitude: number; radius: number; multiplier: number };
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
