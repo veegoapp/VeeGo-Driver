@@ -15,6 +15,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { GlassView } from '@/components/GlassView';
+import { StationTimeline } from '@/components/StationTimeline';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { useShuttle } from '@/lib/shuttleContext';
@@ -288,54 +289,7 @@ export default function TripDetailsScreen() {
         {stationsLoading ? (
           <ActivityIndicator size="small" color="#1e1e28" style={{ marginTop: Spacing.lg }} />
         ) : stations.length > 0 ? (
-          <GlassView style={{ marginTop: Spacing.md, paddingVertical: Spacing.sm, paddingHorizontal: Spacing.lg }} borderRadius={16}>
-            {stations.map((st, idx) => (
-              <View
-                key={String(st.id)}
-                style={[
-                  styles.stationRow,
-                  { flexDirection: R },
-                  idx < stations.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.border },
-                ]}
-              >
-                <View style={styles.stationIndicator}>
-                  <View style={[
-                    styles.stationDot,
-                    {
-                      backgroundColor: idx === 0 || idx === stations.length - 1 ? '#1e1e28' : colors.secondary,
-                      borderColor: '#1e1e2840',
-                    },
-                  ]} />
-                  {idx < stations.length - 1 && (
-                    <View style={[styles.stationLine, { backgroundColor: colors.border }]} />
-                  )}
-                </View>
-                <View style={{ flex: 1, paddingVertical: Spacing.md }}>
-                  <Text style={[{ fontSize: Typography.size.sm, color: colors.foreground, fontFamily: 'Inter_600SemiBold', textAlign: TA }]}>
-                    {st.name}
-                  </Text>
-                  {st.eta ? (
-                    <Text style={[{ fontSize: Typography.size.xs, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', marginTop: 2, textAlign: TA }]}>
-                      {st.eta}
-                    </Text>
-                  ) : null}
-                </View>
-                {(idx === 0 || idx === stations.length - 1) && (
-                  <View style={[
-                    styles.terminalBadge,
-                    {
-                      backgroundColor: idx === 0 ? '#1e1e2812' : '#dcfce7',
-                      borderColor: idx === 0 ? '#1e1e2825' : '#86efac',
-                    },
-                  ]}>
-                    <Text style={[{ fontSize: 10, fontFamily: 'Inter_700Bold', color: idx === 0 ? '#2d2d42' : '#16a34a' }]}>
-                      {idx === 0 ? t.from.toUpperCase() : t.to.toUpperCase()}
-                    </Text>
-                  </View>
-                )}
-              </View>
-            ))}
-          </GlassView>
+          <StationTimeline stations={stations} colors={colors} R={R} TA={TA} t={{ from: t.from, to: t.to }} />
         ) : (
           <GlassView style={{ marginTop: Spacing.md, padding: Spacing.xl, alignItems: 'center', gap: 10 }} borderRadius={16}>
             <MapPin size={24} color={colors.mutedForeground} strokeWidth={2} />
