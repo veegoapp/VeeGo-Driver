@@ -127,7 +127,6 @@ export default function RegisterServiceTypeScreen() {
       setServiceType(selected.appType as any);
       router.push('/register-vehicle');
     } catch (err) {
-      console.log('[register-service-type] error:', err);
       if (err instanceof ApiError) {
         const body = err.body as { error?: string } | null;
         setError(body?.error ?? 'Failed to save service type. Please try again.');
