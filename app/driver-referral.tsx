@@ -20,8 +20,7 @@ import { endpoints } from '@/lib/api';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
-
-const CARD_RADIUS = 16;
+import { CARD_RADIUS } from '@/constants/uiConstants';
 
 export default function DriverReferralScreen() {
   const colors = useColors();

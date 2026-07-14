@@ -53,10 +53,9 @@ import { compressImage } from '@/lib/imageCompression';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
+import { CARD_RADIUS, BORDER_COLOR } from '@/constants/uiConstants';
 
 const TAB_BAR_HEIGHT = 96;
-const CARD_RADIUS = 16;
-const BORDER_COLOR = 'rgba(0,0,0,0.08)';
 
 // ─── Fallback base profile from GET /driver/me ────────────────────────────
 type BaseProfile = {

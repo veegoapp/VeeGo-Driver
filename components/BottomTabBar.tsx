@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { Animation } from '@/constants/animations';
+import { CONTAINER_PX, PILL_PX } from '@/constants/tabBar';
 
 type TabBarProps = {
   state: { index: number; routes: Array<{ key: string; name: string }> };
@@ -22,8 +23,6 @@ const TAB_ITEMS = [
 ] as const;
 
 const NUM_TABS = TAB_ITEMS.length;
-const CONTAINER_PX = 12;
-const PILL_PX = 8;
 
 export function BottomTabBar({ state, navigation }: TabBarProps) {
   const colors = useColors();

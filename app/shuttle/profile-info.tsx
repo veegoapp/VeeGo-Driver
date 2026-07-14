@@ -31,6 +31,7 @@ import { endpoints } from '@/lib/api';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
+import { BORDER_COLOR } from '@/constants/uiConstants';
 
 type DriverMe = {
   id: string;
@@ -38,8 +39,6 @@ type DriverMe = {
   email: string;
   phone: string;
 };
-
-const BORDER_COLOR = 'rgba(0,0,0,0.08)';
 
 export default function ShuttleProfileInfoScreen() {
   const colors = useColors();

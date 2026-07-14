@@ -7,6 +7,7 @@ import { useColors } from '@/hooks/useColors';
 import { useReferral } from '@/lib/referralContext';
 import { useI18n } from '@/lib/i18nContext';
 import { Animation } from '@/constants/animations';
+import { CONTAINER_PX, PILL_PX } from '@/constants/tabBar';
 
 type TabBarProps = {
   state: { index: number; routes: Array<{ key: string; name: string }> };
@@ -24,9 +25,6 @@ const SHUTTLE_TAB_NAMES = [
 
 /** Index of the Home tab in SHUTTLE_TABS — badge is shown here. */
 const HOME_TAB_INDEX = 0;
-
-const CONTAINER_PX = 12;
-const PILL_PX = 8;
 
 export function ShuttleTabBar({ state, navigation }: TabBarProps) {
   const colors = useColors();

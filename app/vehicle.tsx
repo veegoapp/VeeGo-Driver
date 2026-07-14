@@ -21,6 +21,7 @@ import type { DriverProfileEnriched } from '@/lib/api';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
+import { BORDER_COLOR } from '@/constants/uiConstants';
 
 type VehicleEndpointData = {
   id?: number | string;
@@ -44,8 +45,6 @@ type VehicleEndpointData = {
     plate?: string | null;
   } | null;
 };
-
-const BORDER_COLOR = 'rgba(0,0,0,0.08)';
 
 export default function VehicleScreen() {
   const colors = useColors();
