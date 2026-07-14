@@ -40,7 +40,23 @@ export default function VerifyOtpScreen() {
   const { locked, lockoutRemaining, lock, clear: clearLockout } = useCodeLockout();
   const [resending, setResending] = useState(false);
   const [countdown, setCountdown] = useState(retryAfterParam ? Number(retryAfterParam) : RESEND_COOLDOWN);
+  const [availableChannels, setAvailableChannels] = useState<Array<'whatsapp' | 'sms'>>(['whatsapp']);
+  const [channel, setChannel] = useState<'whatsapp' | 'sms'>('whatsapp');
   const inputRef = useRef<TextInput>(null);
+
+  // Fetch which OTP delivery channels are enabled (admin-configurable), so
+  // resend can offer a channel picker without hardcoding availability.
+  useEffect(() => {
+    endpoints.auth.otpChannels()
+      .then((res) => {
+        const channels: Array<'whatsapp' | 'sms'> = [];
+        if (res.whatsappEnabled) channels.push('whatsapp');
+        if (res.smsEnabled) channels.push('sms');
+        if (channels.length > 0) setAvailableChannels(channels);
+        setChannel(res.defaultChannel);
+      })
+      .catch(() => {});
+  }, []);
 
   // Countdown timer for resend
   useEffect(() => {
@@ -121,7 +137,7 @@ export default function VerifyOtpScreen() {
     setResending(true);
     setError(null);
     try {
-      await endpoints.auth.sendOtp(phone);
+      await endpoints.auth.sendOtp(phone, channel);
       setCountdown(RESEND_COOLDOWN);
       // A fresh OTP clears any lockout and resets the attempt counter server-side.
       clearLockout();
@@ -213,6 +229,23 @@ export default function VerifyOtpScreen() {
               </View>
             )}
 
+            {availableChannels.length > 1 && (
+              <View style={s.channelRow}>
+                {availableChannels.map((ch) => (
+                  <TouchableOpacity
+                    key={ch}
+                    style={[s.channelChip, channel === ch && s.channelChipActive]}
+                    onPress={() => setChannel(ch)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[s.channelChipText, channel === ch && s.channelChipTextActive]}>
+                      {ch === 'whatsapp' ? 'WhatsApp' : 'SMS'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
             <View style={s.resendRow}>
               {countdown > 0 ? (
                 <Text style={s.resendCooldown}>Resend code in <Text style={s.resendCount}>{countdown}s</Text></Text>
@@ -272,6 +305,15 @@ const s = StyleSheet.create({
   lockoutText: { fontSize: 13, color: '#5e5e72', textAlign: 'center', fontFamily: 'Inter_500Medium' },
   loadingRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   loadingText: { fontSize: 13, color: '#55c49a', fontFamily: 'Inter_500Medium' },
+  channelRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: -Spacing.xs },
+  channelChip: {
+    paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm,
+    borderRadius: Radius.lg, borderWidth: 1.5, borderColor: '#e5e5ea',
+    backgroundColor: '#f2f2f5',
+  },
+  channelChipActive: { borderColor: '#55c49a', backgroundColor: '#1e1e28' },
+  channelChipText: { fontSize: 13, fontWeight: Typography.weight.medium, color: '#5e5e72', fontFamily: 'Inter_500Medium' },
+  channelChipTextActive: { color: 'white', fontWeight: Typography.weight.semibold, fontFamily: 'Inter_600SemiBold' },
   resendRow: { alignItems: 'center', marginTop: Spacing.xs },
   resendCooldown: { fontSize: 13, color: '#5e5e72', fontFamily: 'Inter_400Regular' },
   resendCount: { fontWeight: Typography.weight.bold, color: '#1e1e28', fontFamily: 'Inter_700Bold' },

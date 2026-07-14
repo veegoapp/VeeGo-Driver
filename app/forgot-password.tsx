@@ -108,8 +108,22 @@ function RequestStep({ onSuccess, initialPhone }: { onSuccess: (phone: string) =
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
+  const [availableChannels, setAvailableChannels] = useState<Array<'whatsapp' | 'sms'>>(['whatsapp']);
+  const [channel, setChannel] = useState<'whatsapp' | 'sms'>('whatsapp');
 
   const canSubmit = phone.trim().length > 7 && cooldown <= 0;
+
+  useEffect(() => {
+    endpoints.auth.otpChannels()
+      .then((res) => {
+        const channels: Array<'whatsapp' | 'sms'> = [];
+        if (res.whatsappEnabled) channels.push('whatsapp');
+        if (res.smsEnabled) channels.push('sms');
+        if (channels.length > 0) setAvailableChannels(channels);
+        setChannel(res.defaultChannel);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -124,7 +138,7 @@ function RequestStep({ onSuccess, initialPhone }: { onSuccess: (phone: string) =
     try {
       // Backend always responds 200 here regardless of whether the phone is
       // registered, to avoid account enumeration — move to the code step either way.
-      await endpoints.auth.forgotPassword(phone.trim());
+      await endpoints.auth.forgotPassword(phone.trim(), channel);
       onSuccess(phone.trim());
     } catch (err) {
       if (err instanceof ApiError && err.status === 429) {
@@ -160,6 +174,23 @@ function RequestStep({ onSuccess, initialPhone }: { onSuccess: (phone: string) =
           autoFocus
         />
       </View>
+
+      {availableChannels.length > 1 && (
+        <View style={s.channelRow}>
+          {availableChannels.map((ch) => (
+            <TouchableOpacity
+              key={ch}
+              style={[s.channelChip, channel === ch && s.channelChipActive]}
+              onPress={() => setChannel(ch)}
+              activeOpacity={0.8}
+            >
+              <Text style={[s.channelChipText, channel === ch && s.channelChipTextActive]}>
+                {ch === 'whatsapp' ? t.otp_channel_whatsapp : t.otp_channel_sms}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
 
       {error && (
         <View style={s.errorRow}>
@@ -448,6 +479,15 @@ const s = StyleSheet.create({
   divider: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginVertical: 2 },
   dividerLine: { flex: 1, height: 1, backgroundColor: '#e5e5ea' },
   dividerText: { fontSize: 11, color: '#a0a0b8', fontFamily: 'Inter_500Medium', letterSpacing: 0.5 },
+  channelRow: { flexDirection: 'row', gap: Spacing.sm },
+  channelChip: {
+    paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm,
+    borderRadius: Radius.lg, borderWidth: 1.5, borderColor: '#e5e5ea',
+    backgroundColor: '#f2f2f5',
+  },
+  channelChipActive: { borderColor: '#55c49a', backgroundColor: '#1e1e28' },
+  channelChipText: { fontSize: 13, fontWeight: Typography.weight.medium, color: '#5e5e72', fontFamily: 'Inter_500Medium' },
+  channelChipTextActive: { color: 'white', fontWeight: Typography.weight.semibold, fontFamily: 'Inter_600SemiBold' },
   errorRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: Spacing.xs },
   errorText: { fontSize: Typography.size.xs, color: '#e53935', fontFamily: 'Inter_400Regular', flex: 1 },
   cooldownText: { fontSize: Typography.size.xs, color: '#5e5e72', fontFamily: 'Inter_400Regular', paddingHorizontal: Spacing.xs },

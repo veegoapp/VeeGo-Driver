@@ -345,9 +345,16 @@ export const endpoints = {
       request<{ requiresOtp: true; phone: string; maskedPhone: string }>(
         'POST', '/driver/auth/register', data
       ),
-    sendOtp: (phone: string) =>
-      request<{ success: boolean; message: string }>(
-        'POST', '/auth/send-otp', { phone }
+    // Public — tells the client which OTP delivery channels are currently
+    // enabled (and which is preferred), so signup/forgot-password screens can
+    // render a channel picker without hardcoding availability.
+    otpChannels: () =>
+      request<{ whatsappEnabled: boolean; smsEnabled: boolean; defaultChannel: 'whatsapp' | 'sms' }>(
+        'GET', '/auth/otp-channels'
+      ),
+    sendOtp: (phone: string, channel?: 'whatsapp' | 'sms') =>
+      request<{ success: boolean; message: string; channel?: 'whatsapp' | 'sms' }>(
+        'POST', '/auth/send-otp', { phone, ...(channel ? { channel } : {}) }
       ),
     verifyOtp: (phone: string, otp: string) =>
       request<{ success: boolean; accessToken: string; refreshToken: string; user: Record<string, unknown>; driver: Record<string, unknown> }>(
@@ -355,9 +362,9 @@ export const endpoints = {
       ),
     // Not role-scoped on the backend — same two endpoints the passenger app uses,
     // looked up by phone number only (no /driver prefix, no email).
-    forgotPassword: (phone: string) =>
-      request<{ success: boolean; message: string }>(
-        'POST', '/auth/forgot-password', { phone }
+    forgotPassword: (phone: string, channel?: 'whatsapp' | 'sms') =>
+      request<{ success: boolean; message: string; channel?: 'whatsapp' | 'sms' }>(
+        'POST', '/auth/forgot-password', { phone, ...(channel ? { channel } : {}) }
       ),
     resetPassword: (phone: string, token: string, newPassword: string) =>
       request<{ success: boolean; message: string }>(
