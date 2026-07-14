@@ -17,6 +17,7 @@ import { Animation } from '@/constants/animations';
 import { useQuery } from '@tanstack/react-query';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
+import { AppLoader } from '@/components/ui/AppLoader';
 import { endpoints } from '@/lib/api';
 import { useI18n } from '@/lib/i18nContext';
 import { Typography } from '@/constants/typography';
@@ -250,7 +251,7 @@ export default function TripHistoryScreen() {
         {/* ── Initial loading ───────────────────────────────────────────── */}
         {isLoading && page === 1 && (
           <View style={styles.centered}>
-            <ActivityIndicator size="large" color={colors.primary} />
+            <AppLoader />
           </View>
         )}
 

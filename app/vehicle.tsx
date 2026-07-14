@@ -2,7 +2,6 @@ import { router } from 'expo-router';
 import { ArrowLeft, Truck } from 'lucide-react-native';
 import React from 'react';
 import {
-  ActivityIndicator,
   Platform,
   Pressable,
   RefreshControl,
@@ -14,6 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { useColors } from '@/hooks/useColors';
+import { AppLoader } from '@/components/ui/AppLoader';
 import { useI18n, rtlIconStyle } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
 import type { DriverProfileEnriched } from '@/lib/api';
@@ -138,7 +138,7 @@ export default function VehicleScreen() {
 
         {isLoading ? (
           <View style={styles.center}>
-            <ActivityIndicator size="large" color={colors.primary} />
+            <AppLoader />
           </View>
         ) : hasNoData ? (
           <View style={[styles.emptyBox, { backgroundColor: colors.secondary, borderColor: BORDER_COLOR }]}>

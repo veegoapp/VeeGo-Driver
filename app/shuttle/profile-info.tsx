@@ -25,6 +25,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useColors } from '@/hooks/useColors';
+import { AppLoader } from '@/components/ui/AppLoader';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
 import { Typography } from '@/constants/typography';
@@ -116,7 +117,7 @@ export default function ShuttleProfileInfoScreen() {
 
           {isLoading ? (
             <View style={{ alignItems: 'center', marginTop: 60 }}>
-              <ActivityIndicator size="large" color={colors.primary} />
+              <AppLoader />
             </View>
           ) : (
             <>

@@ -1,11 +1,12 @@
 import { router } from 'expo-router';
 import { ArrowLeft, Star } from 'lucide-react-native';
 import React, { useRef, useEffect, useState } from 'react';
-import { ActivityIndicator, Animated, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
+import { AppLoader } from '@/components/ui/AppLoader';
 import { useI18n, rtlIconStyle } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
 import { Animation } from '@/constants/animations';
@@ -80,7 +81,7 @@ export default function RatingsScreen() {
   if (isLoading) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
+        <AppLoader />
       </View>
     );
   }

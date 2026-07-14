@@ -4,13 +4,14 @@ import { router } from 'expo-router';
 import { Award, ChevronRight, Copy, LogOut, Moon, Star, Sun } from 'lucide-react-native';
 import { FeatherIcon } from '@/lib/iconMap';
 import React, { useState, useCallback } from 'react';
-import { ActivityIndicator, Alert, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
+import { AppLoader } from '@/components/ui/AppLoader';
 import { useService } from '@/lib/serviceContext';
 import { useI18n, LanguageSwitchOverlay } from '@/lib/i18nContext';
 import type { Language } from '@/lib/i18nContext';
@@ -152,7 +153,7 @@ export default function ProfileScreen() {
         <GlassView style={styles.profileCard} borderRadius={24}>
           <View style={styles.profileCardInner}>
             {isLoading ? (
-              <ActivityIndicator size="large" color={colors.primary} style={{ marginVertical: Spacing.xxl }} />
+              <AppLoader style={{ marginVertical: Spacing.xxl }} />
             ) : (
               <>
                 <View style={styles.avatarWrap}>

@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
+import { AppLoader } from '@/components/ui/AppLoader';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
 import { useSocket } from '@/lib/socketContext';
@@ -292,7 +293,7 @@ export default function ShuttleWalletScreen() {
   if (isLoading) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
+        <AppLoader />
       </View>
     );
   }

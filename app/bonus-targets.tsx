@@ -9,7 +9,6 @@ import {
 } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
-  ActivityIndicator,
   Platform,
   Pressable,
   RefreshControl,
@@ -21,6 +20,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { useColors } from '@/hooks/useColors';
+import { AppLoader } from '@/components/ui/AppLoader';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
 import type { BonusTarget } from '@/lib/api';
@@ -155,7 +155,7 @@ export default function BonusTargetsScreen() {
       {/* ── Loading state ─────────────────────────────────────────── */}
       {isLoading && !refreshing ? (
         <View style={styles.center}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <AppLoader />
         </View>
 
       /* ── Error state ──────────────────────────────────────────── */

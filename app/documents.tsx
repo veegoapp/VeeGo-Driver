@@ -19,6 +19,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useColors } from '@/hooks/useColors';
+import { AppLoader } from '@/components/ui/AppLoader';
 import { useI18n, rtlIconStyle } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
 import type { DriverProfileEnriched } from '@/lib/api';
@@ -241,7 +242,7 @@ export default function DocumentsScreen() {
         {/* Loading */}
         {docsLoading && (
           <View style={styles.center}>
-            <ActivityIndicator size="large" color={colors.primary} />
+            <AppLoader />
           </View>
         )}
 

@@ -40,6 +40,7 @@ import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { useColors } from '@/hooks/useColors';
+import { AppLoader } from '@/components/ui/AppLoader';
 import { useI18n, LanguageSwitchOverlay } from '@/lib/i18nContext';
 import type { Language } from '@/lib/i18nContext';
 import { useAuth } from '@/lib/authContext';
@@ -235,7 +236,7 @@ export default function ShuttleProfileScreen() {
         {/* ── GROUP 1: Master Driver Card ─────────────────────────────── */}
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           {isLoading ? (
-            <ActivityIndicator size="large" color={colors.primary} style={{ marginVertical: Spacing.xxl }} />
+            <AppLoader style={{ marginVertical: Spacing.xxl }} />
           ) : (
             <>
               {/* Avatar + edit trigger */}

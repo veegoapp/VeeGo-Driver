@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '@/lib/i18nContext';
+import { AppLoader } from '@/components/ui/AppLoader';
 import { useService } from '@/lib/serviceContext';
 import { endpoints, ApiError } from '@/lib/api';
 import { Typography } from '@/constants/typography';
@@ -484,7 +485,7 @@ export default function RegisterVehicleScreen() {
 
           {pickerLoading ? (
             <View style={s.sheetLoader}>
-              <ActivityIndicator size="large" color="#1e1e28" />
+              <AppLoader />
             </View>
           ) : filteredItems.length === 0 ? (
             <View style={s.sheetLoader}>

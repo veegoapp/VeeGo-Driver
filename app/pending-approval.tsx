@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/lib/authContext';
+import { AppLoader } from '@/components/ui/AppLoader';
 import { useSocket } from '@/lib/socketContext';
 import { endpoints } from '@/lib/api';
 import { navigateToHome } from '@/lib/postAuthRouter';
@@ -129,7 +130,7 @@ export default function PendingApprovalScreen() {
 
         {loading ? (
           <View style={s.loadingCard}>
-            <ActivityIndicator size="large" color="#55c49a" />
+            <AppLoader />
           </View>
         ) : (
           <View style={s.card}>

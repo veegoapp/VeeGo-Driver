@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
+import { AppLoader } from '@/components/ui/AppLoader';
 import { endpoints } from '@/lib/api';
 import { useI18n, rtlIconStyle } from '@/lib/i18nContext';
 import { Typography } from '@/constants/typography';
@@ -133,7 +134,7 @@ export default function PersonalInfoScreen() {
 
           {isLoading ? (
             <View style={{ alignItems: 'center', marginTop: 60 }}>
-              <ActivityIndicator size="large" color={colors.primary} />
+              <AppLoader />
             </View>
           ) : (
             <GlassView style={{ marginTop: Spacing.xl }} borderRadius={20}>

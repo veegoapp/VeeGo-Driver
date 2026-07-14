@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
+import { AppLoader } from '@/components/ui/AppLoader';
 import { useSocket } from '@/lib/socketContext';
 import { endpoints, type RideMessage } from '@/lib/api';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
@@ -101,7 +102,7 @@ export default function RideChatScreen() {
 
       {isLoading ? (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <AppLoader />
         </View>
       ) : messages.length === 0 ? (
         <View style={styles.centered}>

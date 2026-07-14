@@ -2,7 +2,6 @@ import { router } from 'expo-router';
 import { AlertCircle, ChevronLeft, RefreshCw, TrendingDown, TrendingUp, Wallet } from 'lucide-react-native';
 import React, { useState, useCallback } from 'react';
 import {
-  ActivityIndicator,
   Platform,
   Pressable,
   RefreshControl,
@@ -14,6 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { useColors } from '@/hooks/useColors';
+import { AppLoader } from '@/components/ui/AppLoader';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
 import type { FinancialAnalytics } from '@/lib/api';
@@ -167,7 +167,7 @@ export default function EarningsScreen() {
         {/* ── Loading state ───────────────────────────────────────────── */}
         {isLoading && !refreshing && (
           <View style={styles.centeredBlock}>
-            <ActivityIndicator size="large" color="#55c49a" />
+            <AppLoader />
             <Text style={[styles.loadingLabel, { color: colors.mutedForeground }]}>
               {t.loading_label}
             </Text>

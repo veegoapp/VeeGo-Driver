@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
+import { AppLoader } from '@/components/ui/AppLoader';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints, type RideHistoryItem } from '@/lib/api';
 import { Typography } from '@/constants/typography';
@@ -132,7 +133,7 @@ export default function RideHistoryScreen() {
         {/* List */}
         {isLoading && page === 1 ? (
           <View style={{ marginTop: 60, alignItems: 'center' }}>
-            <ActivityIndicator size="large" color={colors.primary} />
+            <AppLoader />
           </View>
         ) : isError ? (
           <View style={{ marginTop: 60, alignItems: 'center', gap: Spacing.sm }}>

@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '@/lib/i18nContext';
+import { AppLoader } from '@/components/ui/AppLoader';
 import { useService } from '@/lib/serviceContext';
 import { endpoints, ApiError } from '@/lib/api';
 import { Typography } from '@/constants/typography';
@@ -154,7 +155,7 @@ export default function RegisterServiceTypeScreen() {
 
         {loadingControls ? (
           <View style={s.loadingWrap}>
-            <ActivityIndicator size="large" color="#55c49a" />
+            <AppLoader />
             <Text style={s.loadingText}>Loading available services…</Text>
           </View>
         ) : (
