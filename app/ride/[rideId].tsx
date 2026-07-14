@@ -10,6 +10,7 @@ import { GlassView } from '@/components/GlassView';
 import { ServiceBlockedScreen } from '@/components/ServiceBlockedScreen';
 import { useColors } from '@/hooks/useColors';
 import { useServiceGuard } from '@/hooks/useServiceGuard';
+import { useService } from '@/lib/serviceContext';
 import { useWaitingCharge } from '@/hooks/useWaitingCharge';
 import { useActiveLocationTracking } from '@/hooks/useActiveLocationTracking';
 import { endpoints } from '@/lib/api';
@@ -21,6 +22,12 @@ import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
 import { Shadows } from '@/constants/shadows';
+
+const SERVICE_NAMES: Record<string, string> = {
+  CAR: 'Car Rides',
+  SCOOTER: 'Scooter',
+  DELIVERY: 'Delivery',
+};
 
 type Phase = 'to_pickup' | 'arrived' | 'in_trip' | 'completed';
 type PhaseCopy = { label: string; cta: string; next: Phase };
@@ -53,7 +60,8 @@ export default function RideScreen() {
   };
   const insets = useSafeAreaInsets();
   const topPad = insets.top;
-  const { isBlocked, status: serviceStatus } = useServiceGuard('CAR');
+  const { serviceType } = useService();
+  const { isBlocked, status: serviceStatus } = useServiceGuard();
   const { rideId } = useLocalSearchParams<{ rideId: string }>();
   const { socket } = useSocket();
   const queryClient = useQueryClient();
@@ -130,7 +138,7 @@ export default function RideScreen() {
 
   // All hooks called above — safe to short-circuit for blocked service
   if (isBlocked) {
-    return <ServiceBlockedScreen status={serviceStatus} serviceName="Car Rides" />;
+    return <ServiceBlockedScreen status={serviceStatus} serviceName={SERVICE_NAMES[serviceType] ?? serviceType} />;
   }
 
   const r = rideRaw as RideData | undefined;
