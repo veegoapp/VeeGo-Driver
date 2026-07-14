@@ -54,6 +54,7 @@ import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
 import { CARD_RADIUS, BORDER_COLOR } from '@/constants/uiConstants';
+import { MenuRow } from '@/components/MenuRow';
 
 const TAB_BAR_HEIGHT = 96;
 
@@ -625,54 +626,6 @@ function SectionHeader({
     ]}>
       {label}
     </Text>
-  );
-}
-
-function MenuRow({
-  icon, label, sub, subColor, onPress, colors, isRTL, last,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  sub?: string;
-  subColor?: string;
-  onPress?: () => void;
-  colors: ReturnType<typeof useColors>;
-  isRTL: boolean;
-  last?: boolean;
-}) {
-  const R = isRTL ? 'row-reverse' as const : 'row' as const;
-  const TA = isRTL ? 'right' as const : 'left' as const;
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.menuRow,
-        { flexDirection: R, backgroundColor: pressed ? colors.secondary + '55' : 'transparent' },
-      ]}
-    >
-      <View style={[styles.menuIconWrap, { backgroundColor: colors.secondary }]}>
-        {icon}
-      </View>
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={[styles.menuLabel, { color: colors.foreground, textAlign: TA }]} numberOfLines={1}>
-          {label}
-        </Text>
-        {sub !== undefined && (
-          <Text
-            style={[styles.menuSub, { color: subColor ?? colors.mutedForeground, textAlign: TA }]}
-            numberOfLines={1}
-          >
-            {sub}
-          </Text>
-        )}
-      </View>
-      <ChevronRight
-        size={16}
-        color={colors.mutedForeground}
-        strokeWidth={2}
-        style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }}
-      />
-    </Pressable>
   );
 }
 
