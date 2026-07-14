@@ -44,6 +44,7 @@ import { AppLoader } from '@/components/ui/AppLoader';
 import { useI18n } from '@/lib/i18nContext';
 import type { Language } from '@/lib/i18nContext';
 import { LanguageSwitchOverlay } from '@/components/LanguageSwitchOverlay';
+import { LANGUAGES } from '@/constants/languages';
 import { useAuth } from '@/lib/authContext';
 import { useService } from '@/lib/serviceContext';
 import { endpoints } from '@/lib/api';
@@ -56,11 +57,6 @@ import { Radius } from '@/constants/radius';
 const TAB_BAR_HEIGHT = 96;
 const CARD_RADIUS = 16;
 const BORDER_COLOR = 'rgba(0,0,0,0.08)';
-
-const LANGUAGES: { label: string; value: Language }[] = [
-  { label: 'English', value: 'en' },
-  { label: 'العربية', value: 'ar' },
-];
 
 // ─── Fallback base profile from GET /driver/me ────────────────────────────
 type BaseProfile = {

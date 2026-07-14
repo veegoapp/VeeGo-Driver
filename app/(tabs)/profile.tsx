@@ -16,6 +16,7 @@ import { useService } from '@/lib/serviceContext';
 import { useI18n } from '@/lib/i18nContext';
 import type { Language } from '@/lib/i18nContext';
 import { LanguageSwitchOverlay } from '@/components/LanguageSwitchOverlay';
+import { LANGUAGES } from '@/constants/languages';
 import { useAuth } from '@/lib/authContext';
 import { endpoints } from '@/lib/api';
 import { TermsModal } from '@/components/TermsModal';
@@ -27,11 +28,6 @@ import { Shadows } from '@/constants/shadows';
 
 const TERMS_VERSION_KEY = 'driver_terms_accepted_version';
 type TermsData = { id: number; version: number; contentAr: string; contentEn: string; updatedAt: string };
-
-const LANGUAGES: { label: string; value: Language }[] = [
-  { label: 'English', value: 'en' },
-  { label: 'العربية', value: 'ar' },
-];
 
 type DriverProfile = {
   id: string;
