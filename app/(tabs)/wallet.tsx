@@ -41,7 +41,7 @@ export default function WalletScreen() {
   });
   const { data: txRaw, isLoading: txLoading, isError: txError, refetch: refetchTx } = useQuery({
     queryKey: ['wallet-transactions'],
-    queryFn: endpoints.wallet.transactions,
+    queryFn: () => endpoints.wallet.transactions(),
   });
   const { data: payoutAccountsRaw } = useQuery({
     queryKey: ['payout-accounts'],

@@ -140,7 +140,7 @@ export async function navigateAfterOtp(token: string): Promise<void> {
     }
   } catch (err: any) {
     // No driver record (404) or network error — start from beginning
-    console.log('[navigateAfterOtp] Error/404:', err?.status, '→ /register-service-type');
+    if (__DEV__) console.log('[navigateAfterOtp] Error/404:', err?.status, '→ /register-service-type');
     router.replace('/register-service-type' as any);
   }
 }

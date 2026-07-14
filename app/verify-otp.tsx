@@ -144,7 +144,6 @@ export default function VerifyOtpScreen() {
       setOtp('');
       inputRef.current?.focus();
     } catch (err) {
-      console.log('[OTP] resend error:', err);
       if (err instanceof ApiError && err.status === 429) {
         const body = err.body as { error?: string; retryAfter?: number } | null;
         setError(body?.error ?? 'Failed to resend code. Please try again.');

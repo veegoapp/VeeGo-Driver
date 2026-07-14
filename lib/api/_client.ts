@@ -132,7 +132,7 @@ export async function request<T>(
   } catch (err: unknown) {
     clearTimeout(timeout);
     const isAbort = err instanceof Error && err.name === 'AbortError';
-    if (isVehicleDebug) console.log('[API DEBUG] Network error:', err);
+    if (isVehicleDebug && __DEV__) console.log('[API DEBUG] Network error:', err);
     throw new ApiError(0, isAbort ? 'Request timed out' : 'Network error', null);
   }
   clearTimeout(timeout);

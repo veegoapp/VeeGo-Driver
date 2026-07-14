@@ -7,3 +7,6 @@
 - [Map-first trip experience](map-first-trip.md) — 3-phase trip-active screen (en_route/approaching/at_stop); MapBackdrop extended with stationStatuses+approachCircle+focusTarget; useDriverLocation hook for GPS
 - [ShuttleProvider missing](shuttle-provider-missing.md) — ShuttleProvider was never mounted; all useShuttle() calls returned empty defaults
 - [Service type bridge pattern](service-type-bridge.md) — serviceTypeBridge.ts event emitter solves AsyncStorage race on account switch; backend is sole source of truth via navigateToHome → emitServiceTypeFromBackend
+- [api module split](api-split.md) — lib/api.ts split into lib/api/ (domain files + _client.ts + index.ts barrel); consumers still import @/lib/api
+- [i18nContext split](i18n-split.md) — lib/i18nContext.tsx is a thin re-export; implementation lives in lib/i18n/ (translations, utils, context, components)
+- [shuttleContext split](shuttle-split.md) — lib/shuttleContext.tsx is a thin re-export; implementation lives in lib/shuttle/ (types, helpers, ShuttleContext)
