@@ -2,7 +2,7 @@
 // lib/certificatePinning.ts (initialized from app/_layout.tsx) — it patches
 // the native networking layer, so no changes are needed here. See
 // docs/certificate-pinning.md.
-import { getToken, getRefreshToken, saveToken, saveRefreshToken, deleteToken, deleteRefreshToken } from './auth';
+import { getToken, getRefreshToken, saveToken, saveRefreshToken, deleteToken, deleteRefreshToken, getUserIdFromToken } from './auth';
 
 // ── Language / Accept-Language ─────────────────────────────────────────────────
 // Updated by lib/i18nContext whenever the driver switches language.
@@ -469,13 +469,15 @@ export const endpoints = {
         clearTimeout(timeout);
       }
     },
-    // POST /driver-documents/upload — upload a document file (multipart/form-data: file, type)
+    // POST /driver-documents/upload/:driverId — upload a document file (multipart/form-data: file, type)
     uploadDocument: async (formData: FormData) => {
       const token = await getToken();
+      const driverId = getUserIdFromToken(token);
+      if (!driverId) throw new Error('uploadDocument: no driver ID in token');
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
       try {
-        return await fetch(`${API_BASE_URL}/driver-documents/upload`, {
+        return await fetch(`${API_BASE_URL}/driver-documents/upload/${driverId}`, {
           method: 'POST',
           headers: token ? { 'Authorization': `Bearer ${token}` } : {},
           body: formData,
