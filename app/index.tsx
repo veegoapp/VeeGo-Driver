@@ -62,6 +62,14 @@ export default function SplashScreen() {
       .finally(() => setOnboardingChecked(true));
   }, [authLoading, token]);
 
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: false }),
+      Animated.timing(slideAnim, { toValue: 0, duration: Animation.duration.slow, useNativeDriver: false }),
+      Animated.spring(logoScale, { toValue: 1, stiffness: 200, damping: 18, useNativeDriver: false }),
+    ]).start();
+  }, []);
+
   if (isLanguageLoading) {
     return null;
   }
@@ -77,14 +85,6 @@ export default function SplashScreen() {
   if (!hasSeenOnboarding) {
     return <Redirect href="/onboarding" />;
   }
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: false }),
-      Animated.timing(slideAnim, { toValue: 0, duration: Animation.duration.slow, useNativeDriver: false }),
-      Animated.spring(logoScale, { toValue: 1, stiffness: 200, damping: 18, useNativeDriver: false }),
-    ]).start();
-  }, []);
 
   const topPad = insets.top;
   const botPad = insets.bottom;
