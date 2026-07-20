@@ -22,7 +22,10 @@
     },
     "android": {
       "backgroundColor": "#1B1F2E",
-      "package": "com.veego.driver"
+      "package": "com.veego.driver",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png"
+      }
     },
     "plugins": [
       [
@@ -47,6 +50,13 @@
           "locationAlwaysAndWhenInUsePermission": "Allow VeeGo Driver to use your location while you're online.",
           "isIosBackgroundLocationEnabled": true,
           "isAndroidBackgroundLocationEnabled": true
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow VeeGo Driver to access your photos for document upload.",
+          "cameraPermission": "Allow VeeGo Driver to use the camera for document upload."
         }
       ]
     ],
