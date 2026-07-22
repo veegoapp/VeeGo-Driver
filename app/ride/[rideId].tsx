@@ -96,16 +96,20 @@ export default function RideScreen() {
   // whether triggered by the live socket event or a subsequent status refetch.
   const hasExitedRef = useRef(false);
 
+  // A non-completed ride takes priority over a blocked service — only treat
+  // the screen as blocked once the ride itself has reached 'completed'.
+  const blockedForScreen = isBlocked && phase === 'completed';
+
   const { data: rideRaw } = useQuery({
     queryKey: ['ride-active', rideId],
     queryFn: () => endpoints.rides.getById(rideId ?? ''),
-    enabled: !!rideId && !isBlocked,
+    enabled: !!rideId && !blockedForScreen,
   });
 
   const { data: driverRaw } = useQuery({
     queryKey: ['driver'],
     queryFn: endpoints.driver.me,
-    enabled: !isBlocked,
+    enabled: !blockedForScreen,
   });
 
   const driverData = driverRaw as DriverData | undefined;
@@ -242,8 +246,10 @@ export default function RideScreen() {
     };
   }, [socket, rideId, queryClient]);
 
-  // All hooks called above — safe to short-circuit for blocked service
-  if (isBlocked) {
+  // All hooks called above — safe to short-circuit for blocked service.
+  // A non-completed ride keeps the driver in the ride flow regardless of
+  // service-block state; normal blocking resumes once the ride completes.
+  if (blockedForScreen) {
     return <ServiceBlockedScreen status={serviceStatus} serviceName={SERVICE_NAMES[serviceType] ?? serviceType} />;
   }
 
