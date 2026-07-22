@@ -102,7 +102,11 @@ export default function RideScreen() {
 
   const { data: rideRaw } = useQuery({
     queryKey: ['ride-active', rideId],
-    queryFn: () => endpoints.rides.getById(rideId ?? ''),
+    // Backend wraps ride responses as { data: ride } — unwrap before use.
+    queryFn: async () => {
+      const response = await endpoints.rides.getById(rideId ?? '');
+      return (response as { data?: unknown } | null)?.data ?? response;
+    },
     enabled: !!rideId && !blockedForScreen,
   });
 
@@ -316,7 +320,9 @@ export default function RideScreen() {
         arrived: 'driver_arrived',
         in_trip: 'active',
       };
-      const freshRide = await endpoints.rides.getById(rideId ?? '') as { status?: string } | null;
+      // Backend wraps ride responses as { data: ride } — unwrap before use.
+      const freshRideResponse = await endpoints.rides.getById(rideId ?? '');
+      const freshRide = ((freshRideResponse as { data?: unknown } | null)?.data ?? freshRideResponse) as { status?: string } | null;
       const expected = expectedStatus[phase];
       if (expected && freshRide?.status && freshRide.status !== expected && freshRide.status !== phase) {
         Alert.alert('Status Changed', 'Ride status has changed. Refreshing...');
