@@ -31,6 +31,7 @@ type DriverMe = {
   name: string;
   email: string;
   phone: string;
+  gender?: 'male' | 'female' | null;
   licenseNumber?: string;
   nationalId?: string;
   rating?: number;
@@ -67,6 +68,7 @@ export default function PersonalInfoScreen() {
         name: raw.name ?? '',
         email: raw.email ?? '',
         phone: raw.phone ?? '',
+        gender: raw.gender ?? null,
         licenseNumber: raw.licenseNumber ?? '',
         nationalId: raw.nationalId ?? '',
       });
@@ -95,6 +97,7 @@ export default function PersonalInfoScreen() {
     { key: 'name', label: t.field_full_name, icon: <User size={18} color={colors.mutedForeground} strokeWidth={2} />, keyboard: 'default' },
     { key: 'email', label: t.field_email, icon: <Mail size={18} color={colors.mutedForeground} strokeWidth={2} />, keyboard: 'email-address', editable: false },
     { key: 'phone', label: t.field_phone, icon: <Phone size={18} color={colors.mutedForeground} strokeWidth={2} />, keyboard: 'phone-pad', editable: false },
+    { key: 'gender', label: t.field_gender, icon: <User size={18} color={colors.mutedForeground} strokeWidth={2} />, keyboard: 'default', editable: false },
     { key: 'licenseNumber', label: t.field_license_number, icon: <CreditCard size={18} color={colors.mutedForeground} strokeWidth={2} />, keyboard: 'default', editable: false },
     { key: 'nationalId', label: t.field_national_id, icon: <FileText size={18} color={colors.mutedForeground} strokeWidth={2} />, keyboard: 'default', editable: false },
   ];
@@ -110,7 +113,7 @@ export default function PersonalInfoScreen() {
         >
           <View style={styles.headerRow}>
             <Pressable
-              onPress={() => { if (editing) { setEditing(false); if (raw) setForm({ name: raw.name, email: raw.email, phone: raw.phone, licenseNumber: raw.licenseNumber, nationalId: raw.nationalId }); } else { router.back(); } }}
+              onPress={() => { if (editing) { setEditing(false); if (raw) setForm({ name: raw.name, email: raw.email, phone: raw.phone, gender: raw.gender ?? null, licenseNumber: raw.licenseNumber, nationalId: raw.nationalId }); } else { router.back(); } }}
               style={[styles.backBtn, { backgroundColor: colors.glass, borderColor: colors.border }]}
             >
               <ArrowLeft size={20} color={colors.foreground} strokeWidth={2} style={rtlIconStyle(isRTL)} />
@@ -183,7 +186,9 @@ export default function PersonalInfoScreen() {
                           ]}
                           numberOfLines={1}
                         >
-                          {value || '—'}
+                          {field.key === 'gender'
+                            ? (value === 'male' ? t.gender_male : value === 'female' ? t.gender_female : '—')
+                            : (value || '—')}
                         </Text>
                       )}
                     </View>

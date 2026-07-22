@@ -249,6 +249,7 @@ function SignUpForm({ isRTL, onOtpRequired }: { isRTL: boolean; onOtpRequired: (
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [gender, setGender] = useState<'male' | 'female' | null>(null);
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -264,7 +265,7 @@ function SignUpForm({ isRTL, onOtpRequired }: { isRTL: boolean; onOtpRequired: (
     endpoints.terms.fetchDriver().then(setTermsData).catch(() => {/* fail silently */});
   }, []);
 
-  const canSubmit = name.trim().length > 1 && email.trim().length > 3 && phone.trim().length > 7 && password.length >= 8 && termsChecked;
+  const canSubmit = name.trim().length > 1 && email.trim().length > 3 && phone.trim().length > 7 && password.length >= 8 && !!gender && termsChecked;
 
   const handle = async () => {
     if (!canSubmit) return;
@@ -278,6 +279,7 @@ function SignUpForm({ isRTL, onOtpRequired }: { isRTL: boolean; onOtpRequired: (
         email: email.trim(),
         phone: phone.trim(),
         password,
+        gender: gender!,
       });
       if (__DEV__) console.log('[SIGNUP] ✅ Register succeeded');
       // Accept terms silently after registration — token arrives after OTP
@@ -336,6 +338,31 @@ function SignUpForm({ isRTL, onOtpRequired }: { isRTL: boolean; onOtpRequired: (
         <TouchableOpacity onPress={() => setShowPass(p => !p)} style={{ padding: Spacing.xs }}>
           {showPass ? <EyeOff size={16} color="#5e5e72" /> : <Eye size={16} color="#5e5e72" />}
         </TouchableOpacity>
+      </View>
+
+      {/* Gender — required */}
+      <View style={{ flexDirection: R, gap: 10 }}>
+        {(['male', 'female'] as const).map((g) => (
+          <TouchableOpacity
+            key={g}
+            onPress={() => setGender(g)}
+            activeOpacity={0.8}
+            style={{
+              flex: 1,
+              height: 54,
+              borderRadius: 18,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderWidth: 1,
+              borderColor: gender === g ? '#1e1e28' : '#e5e5ea',
+              backgroundColor: gender === g ? '#1e1e28' : '#f2f2f5',
+            }}
+          >
+            <Text style={{ fontSize: 15, fontWeight: '600', color: gender === g ? '#ffffff' : '#1e1e28' }}>
+              {g === 'male' ? t.gender_male : t.gender_female}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
       {/* Terms checkbox */}

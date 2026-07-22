@@ -34,6 +34,7 @@ type DriverMe = {
   name: string;
   email: string;
   phone: string;
+  gender?: 'male' | 'female' | null;
 };
 
 export default function ShuttleProfileInfoScreen() {
@@ -137,6 +138,24 @@ export default function ShuttleProfileInfoScreen() {
                     </Text>
                     <Text style={[styles.fieldValue, { color: colors.foreground, textAlign: TA }]}>
                       {driver?.email ?? '—'}
+                    </Text>
+                  </View>
+                  <Lock size={14} color={colors.mutedForeground} strokeWidth={2} />
+                </View>
+
+                <View style={[styles.divider, { backgroundColor: BORDER_COLOR }]} />
+
+                {/* Gender — locked */}
+                <View style={[styles.fieldRow, { flexDirection: R }]}>
+                  <View style={[styles.iconWrap, { backgroundColor: colors.secondary }]}>
+                    <User size={17} color={colors.mutedForeground} strokeWidth={2} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.fieldLabel, { color: colors.mutedForeground, textAlign: TA }]}>
+                      {t.field_gender}
+                    </Text>
+                    <Text style={[styles.fieldValue, { color: colors.foreground, textAlign: TA }]}>
+                      {driver?.gender === 'male' ? t.gender_male : driver?.gender === 'female' ? t.gender_female : '—'}
                     </Text>
                   </View>
                   <Lock size={14} color={colors.mutedForeground} strokeWidth={2} />
