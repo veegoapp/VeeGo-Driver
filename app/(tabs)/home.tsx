@@ -45,6 +45,7 @@ export default function HomeScreen() {
   const [online, setOnline] = useState(false);
   const [togglingOnline, setTogglingOnline] = useState(false);
   const [acceptingRide, setAcceptingRide] = useState(false);
+  const [declining, setDeclining] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [request, setRequest] = useState<RideRequest | null>(null);
   const [surgeZones, setSurgeZones] = useState<SurgeZone[]>([]);
@@ -196,6 +197,7 @@ export default function HomeScreen() {
     if (countdownRef.current) clearInterval(countdownRef.current);
 
     setRequest(r);
+    setDeclining(false);
     setCountdown(Math.round(OFFER_TIMEOUT_MS / 1000));
     timerAnim.setValue(1);
 
@@ -431,12 +433,17 @@ export default function HomeScreen() {
   dismissSilentlyRef.current = dismissSilently;
 
   const dismissRequest = () => {
+    if (declining) return;
+    setDeclining(true);
     timerRef.current?.stop();
     if (countdownRef.current) clearInterval(countdownRef.current);
     if (request) {
       endpoints.rides.decline(request.id).catch(() => {});
     }
-    Animated.timing(sheetAnim, { toValue: 300, duration: 250, useNativeDriver: true }).start(() => setRequest(null));
+    Animated.timing(sheetAnim, { toValue: 300, duration: 250, useNativeDriver: true }).start(() => {
+      setRequest(null);
+      setDeclining(false);
+    });
   };
   dismissRequestRef.current = dismissRequest;
 
@@ -666,7 +673,11 @@ export default function HomeScreen() {
                 <Text style={[styles.countdownText, { color: colors.destructive, fontFamily: 'Inter_700Bold' }]}>
                   {countdown}s
                 </Text>
-                <Pressable onPress={dismissRequest} style={[styles.closeBtn, { backgroundColor: colors.secondary }]}>
+                <Pressable
+                  onPress={dismissRequest}
+                  disabled={declining}
+                  style={[styles.closeBtn, { backgroundColor: colors.secondary, opacity: declining ? 0.7 : 1 }]}
+                >
                   <X size={16} color={colors.foreground} strokeWidth={2} />
                 </Pressable>
               </View>
@@ -718,10 +729,14 @@ export default function HomeScreen() {
             <View style={[styles.requestActions, { flexDirection: R }]}>
               <Pressable
                 onPress={dismissRequest}
-                style={[styles.declineBtn, { backgroundColor: colors.secondary }]}
+                disabled={declining}
+                style={[styles.declineBtn, { backgroundColor: colors.secondary, opacity: declining ? 0.7 : 1 }]}
                 accessibilityLabel="Decline ride"
               >
-                <Text style={[styles.declineBtnText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.decline}</Text>
+                {declining
+                  ? <ActivityIndicator size="small" color={colors.foreground} />
+                  : <Text style={[styles.declineBtnText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.decline}</Text>
+                }
               </Pressable>
               <Pressable
                 onPress={acceptRequest}
