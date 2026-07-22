@@ -3,8 +3,8 @@ import { z } from 'zod';
 import { useSocket } from '@/lib/socketContext';
 import { SOCKET_EVENTS } from '../constants/socketEvents';
 import type { CheckinRequiredPayload } from '@/lib/checkinDeadline';
-import type { WaitingCharge, SurgeZone } from '@/lib/types';
-export type { WaitingCharge, SurgeZone } from '@/lib/types';
+import type { SurgeZone } from '@/lib/types';
+export type { SurgeZone } from '@/lib/types';
 
 // Backend's real ride:offer payload (dispatch-manager.ts) is flat — no `id`,
 // no `rider`, no nested pickup/dropoff objects. Parse that actual shape and
@@ -17,6 +17,7 @@ const RideOfferSchema = z.object({
   dropoffAddress: z.string(),
   distanceKm: z.number().optional(),
   estimatedPrice: z.number().optional(),
+  expiresInSeconds: z.number().optional(),
 }).passthrough().transform((raw) => ({
   id: raw.rideId,
   type: raw.vehicleType,
@@ -27,19 +28,13 @@ const RideOfferSchema = z.object({
   },
   dropoff: { address: raw.dropoffAddress },
   fare: raw.estimatedPrice,
+  expiresInSeconds: raw.expiresInSeconds,
 }));
 
 const OfferExpiredSchema = z.union([
   z.string(),
   z.object({ rideId: z.string().optional() }).passthrough(),
 ]);
-
-const WaitingChargeSchema = z.object({
-  rideId: z.string(),
-  amount: z.number(),
-  minutes: z.number(),
-  capped: z.boolean().optional(),
-});
 
 const SurgeSchema = z.union([
   z.array(z.object({
@@ -59,6 +54,7 @@ export type RideRequest = {
   fare?: number;
   payment?: string;
   duration?: string;
+  expiresInSeconds?: number;
   [key: string]: unknown;
 };
 
@@ -67,8 +63,6 @@ type UseRideSocketOptions = {
   onRideOffer: (ride: RideRequest) => void;
   onOfferExpired?: (rideId: string) => void;
   onRideNoLongerAvailable?: () => void;
-  onWaitingChargeUpdated?: (charge: WaitingCharge) => void;
-  onWaitingChargeCapped?: (charge: WaitingCharge) => void;
   onCheckinRequired?: (data: CheckinRequiredPayload) => void;
   onCheckinRejected?: () => void;
   onCheckinApproved?: () => void;
@@ -86,8 +80,6 @@ export function useRideSocket({
   onRideOffer,
   onOfferExpired,
   onRideNoLongerAvailable,
-  onWaitingChargeUpdated,
-  onWaitingChargeCapped,
   onCheckinRequired,
   onCheckinRejected,
   onCheckinApproved,
@@ -104,10 +96,6 @@ export function useRideSocket({
   offerExpiredRef.current = onOfferExpired;
   const rideNoLongerAvailableRef = useRef(onRideNoLongerAvailable);
   rideNoLongerAvailableRef.current = onRideNoLongerAvailable;
-  const waitingChargeUpdatedRef = useRef(onWaitingChargeUpdated);
-  waitingChargeUpdatedRef.current = onWaitingChargeUpdated;
-  const waitingChargeCappedRef = useRef(onWaitingChargeCapped);
-  waitingChargeCappedRef.current = onWaitingChargeCapped;
   const checkinRequiredRef = useRef(onCheckinRequired);
   checkinRequiredRef.current = onCheckinRequired;
   const checkinRejectedRef = useRef(onCheckinRejected);
@@ -166,24 +154,6 @@ export function useRideSocket({
       rideNoLongerAvailableRef.current?.();
     };
 
-    const handleWaitingChargeUpdated = (raw: unknown) => {
-      const parsed = WaitingChargeSchema.safeParse(raw);
-      if (!parsed.success) {
-        console.warn(`[Socket] Invalid ${SOCKET_EVENTS.WAITING_CHARGE_UPDATED} payload`, parsed.error.issues);
-        return;
-      }
-      waitingChargeUpdatedRef.current?.(parsed.data);
-    };
-
-    const handleWaitingChargeCapped = (raw: unknown) => {
-      const parsed = WaitingChargeSchema.safeParse(raw);
-      if (!parsed.success) {
-        console.warn(`[Socket] Invalid ${SOCKET_EVENTS.WAITING_CHARGE_CAPPED} payload`, parsed.error.issues);
-        return;
-      }
-      waitingChargeCappedRef.current?.(parsed.data);
-    };
-
     const handleCheckinRequired = (raw: unknown) => {
       const data = (raw && typeof raw === 'object' ? raw : {}) as CheckinRequiredPayload;
       checkinRequiredRef.current?.(data);
@@ -228,8 +198,6 @@ export function useRideSocket({
     socket.on(SOCKET_EVENTS.RIDE_OFFER, handleRideOffer);
     socket.on(SOCKET_EVENTS.RIDE_OFFER_EXPIRED, handleOfferExpired);
     socket.on(SOCKET_EVENTS.RIDE_NO_LONGER_AVAILABLE, handleRideNoLongerAvailable);
-    socket.on(SOCKET_EVENTS.WAITING_CHARGE_UPDATED, handleWaitingChargeUpdated);
-    socket.on(SOCKET_EVENTS.WAITING_CHARGE_CAPPED, handleWaitingChargeCapped);
     socket.on(SOCKET_EVENTS.DRIVER_CHECKIN_REQUIRED, handleCheckinRequired);
     socket.on(SOCKET_EVENTS.DRIVER_CHECKIN_REJECTED, handleCheckinRejected);
     socket.on(SOCKET_EVENTS.DRIVER_CHECKIN_APPROVED, handleCheckinApproved);
@@ -241,8 +209,6 @@ export function useRideSocket({
       socket.off(SOCKET_EVENTS.RIDE_OFFER, handleRideOffer);
       socket.off(SOCKET_EVENTS.RIDE_OFFER_EXPIRED, handleOfferExpired);
       socket.off(SOCKET_EVENTS.RIDE_NO_LONGER_AVAILABLE, handleRideNoLongerAvailable);
-      socket.off(SOCKET_EVENTS.WAITING_CHARGE_UPDATED, handleWaitingChargeUpdated);
-      socket.off(SOCKET_EVENTS.WAITING_CHARGE_CAPPED, handleWaitingChargeCapped);
       socket.off(SOCKET_EVENTS.DRIVER_CHECKIN_REQUIRED, handleCheckinRequired);
       socket.off(SOCKET_EVENTS.DRIVER_CHECKIN_REJECTED, handleCheckinRejected);
       socket.off(SOCKET_EVENTS.DRIVER_CHECKIN_APPROVED, handleCheckinApproved);

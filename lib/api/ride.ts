@@ -10,7 +10,10 @@ export const ridesEndpoints = {
   decline: (rideId: string) => api.patch(`/driver/rides/${rideId}/decline`),
   cancel: (rideId: string) => api.patch(`/driver/rides/${rideId}/cancel`),
   start: (rideId: string) => api.patch(`/driver/rides/${rideId}/start`),
-  complete: (rideId: string) => api.patch(`/driver/rides/${rideId}/complete`),
+  complete: (rideId: string) =>
+    api.patch<{ data: { rideId: number; finalPrice: number; driverCut: number; waitingCharge: number } }>(
+      `/driver/rides/${rideId}/complete`
+    ),
   active: () => api.get('/driver/rides/active'),
   ratePassenger: (rideId: string, stars: number, comment?: string) =>
     api.post<{ ok: boolean; rideId: number; stars: number; id: number }>(

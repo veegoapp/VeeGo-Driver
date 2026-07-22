@@ -334,7 +334,17 @@ export default function RideScreen() {
       if (phase === 'to_pickup') await endpoints.rides.arrived(rideId ?? '');
       else if (phase === 'arrived') await endpoints.rides.start(rideId ?? '');
       else if (phase === 'in_trip') {
-        await endpoints.rides.complete(rideId ?? '');
+        const completeResponse = await endpoints.rides.complete(rideId ?? '');
+        // finalPrice already includes waitingCharge (finalPrice = estimatedPrice + waitingCharge)
+        // — write it into the same query cache the completion screen reads `fare` from,
+        // instead of leaving the stale pre-completion GET /rides/:id value in place.
+        const completionData = completeResponse?.data;
+        if (completionData?.finalPrice != null) {
+          queryClient.setQueryData(['ride-active', rideId], (old: unknown) => {
+            const prev = (old && typeof old === 'object') ? (old as Record<string, unknown>) : {};
+            return { ...prev, fare: completionData.finalPrice, waitingCharge: completionData.waitingCharge };
+          });
+        }
         queryClient.invalidateQueries({ queryKey: ['earnings-summary'] });
         queryClient.invalidateQueries({ queryKey: ['earnings-weekly'] });
       }

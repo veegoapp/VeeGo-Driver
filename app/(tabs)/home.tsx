@@ -36,6 +36,8 @@ import { Radius } from '@/constants/radius';
 import { Shadows } from '@/constants/shadows';
 
 export const TAB_BAR_HEIGHT = 96;
+// Fallback only — used if a ride:offer payload omits expiresInSeconds.
+// The backend's actual round timeout is otherwise read from the payload.
 const OFFER_TIMEOUT_MS = 12000;
 
 export default function HomeScreen() {
@@ -196,15 +198,19 @@ export default function HomeScreen() {
     timerRef.current?.stop();
     if (countdownRef.current) clearInterval(countdownRef.current);
 
+    const offerDurationMs = (r.expiresInSeconds != null && r.expiresInSeconds > 0)
+      ? r.expiresInSeconds * 1000
+      : OFFER_TIMEOUT_MS;
+
     setRequest(r);
     setDeclining(false);
-    setCountdown(Math.round(OFFER_TIMEOUT_MS / 1000));
+    setCountdown(Math.round(offerDurationMs / 1000));
     timerAnim.setValue(1);
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
 
     Animated.spring(sheetAnim, { toValue: 0, stiffness: 320, damping: 32, useNativeDriver: true }).start();
-    timerRef.current = Animated.timing(timerAnim, { toValue: 0, duration: OFFER_TIMEOUT_MS, useNativeDriver: false });
+    timerRef.current = Animated.timing(timerAnim, { toValue: 0, duration: offerDurationMs, useNativeDriver: false });
     timerRef.current.start(({ finished }) => { if (finished) dismissRequest(); });
 
     // Numeric countdown
