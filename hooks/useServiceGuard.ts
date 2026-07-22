@@ -24,12 +24,15 @@ function isHardBlocked(status: ServiceStatus): boolean {
  *
  * - Fires a fresh API fetch on mount (socket alone is not enough per spec).
  * - Reactively re-evaluates whenever context state changes (socket updates).
- * - Redirects to /service-select after REDIRECT_DELAY_MS if blocked.
+ * - Redirects to /login after a short delay if blocked — unless
+ *   suppressRedirect is true, in which case the forced navigation is held
+ *   off (e.g. while an active ride screen is still open) until it becomes
+ *   false again. Suppression never changes the returned isBlocked/status.
  *
  * Returns { isBlocked, status } for the caller to render a blocked UI
  * during the brief delay before the redirect fires.
  */
-export function useServiceGuard(explicitType?: ServiceType): {
+export function useServiceGuard(explicitType?: ServiceType, suppressRedirect?: boolean): {
   isBlocked: boolean;
   status: ServiceStatus;
 } {
@@ -40,6 +43,9 @@ export function useServiceGuard(explicitType?: ServiceType): {
 
   const status = getServiceStatus(type);
   const blocked = (authLoading || servicesLoading) ? false : isHardBlocked(status);
+  // Drives the redirect-scheduling effect only — isBlocked/status returned
+  // below always reflect the real `blocked` value regardless of suppression.
+  const shouldRedirect = blocked && !suppressRedirect;
 
   // Track redirect so we only schedule one redirect per block episode.
   const redirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -50,9 +56,9 @@ export function useServiceGuard(explicitType?: ServiceType): {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [type]);
 
-  // React to state changes (from refresh or socket).
+  // React to state changes (from refresh, socket, or suppression toggling).
   useEffect(() => {
-    if (blocked && !wasBlockedRef.current) {
+    if (shouldRedirect && !wasBlockedRef.current) {
       wasBlockedRef.current = true;
       // Show the blocked UI briefly, then redirect away from this service.
       redirectTimerRef.current = setTimeout(() => {
@@ -60,7 +66,7 @@ export function useServiceGuard(explicitType?: ServiceType): {
       }, 2800);
     }
 
-    if (!blocked) {
+    if (!shouldRedirect) {
       wasBlockedRef.current = false;
       if (redirectTimerRef.current) {
         clearTimeout(redirectTimerRef.current);
@@ -74,7 +80,7 @@ export function useServiceGuard(explicitType?: ServiceType): {
         redirectTimerRef.current = null;
       }
     };
-  }, [blocked, status.displayMode]);
+  }, [shouldRedirect, status.displayMode]);
 
   return { isBlocked: blocked, status };
 }

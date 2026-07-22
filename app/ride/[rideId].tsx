@@ -72,11 +72,14 @@ export default function RideScreen() {
   const insets = useSafeAreaInsets();
   const topPad = insets.top;
   const { serviceType } = useService();
-  const { isBlocked, status: serviceStatus } = useServiceGuard();
+  const [phase, setPhase] = useState<Phase>('to_pickup');
+  // Suppress useServiceGuard's forced /login redirect while a ride is still
+  // in progress — a service becoming blocked mid-trip must not strand the
+  // driver away from an active ride; the redirect resumes once completed.
+  const { isBlocked, status: serviceStatus } = useServiceGuard(undefined, phase !== 'completed');
   const { rideId } = useLocalSearchParams<{ rideId: string }>();
   const { socket } = useSocket();
   const queryClient = useQueryClient();
-  const [phase, setPhase] = useState<Phase>('to_pickup');
   const [rating, setRating] = useState(0);
   const [ratingComment, setRatingComment] = useState('');
   const [ratingSubmitting, setRatingSubmitting] = useState(false);
