@@ -32,6 +32,16 @@ const SERVICE_NAMES: Record<string, string> = {
 type Phase = 'to_pickup' | 'arrived' | 'in_trip' | 'completed';
 type PhaseCopy = { label: string; cta: string; next: Phase };
 
+// Backend ride-status → UI phase mapping. 'searching' has no representation
+// here (this screen is only reached post-acceptance) and 'cancelled' is
+// handled separately as a screen exit, not a phase.
+const STATUS_TO_PHASE: Partial<Record<string, Phase>> = {
+  driver_assigned: 'to_pickup',
+  driver_arrived: 'arrived',
+  active: 'in_trip',
+  completed: 'completed',
+};
+
 type RideData = {
   id: string;
   rider: { name: string; rating: number; avatar: string; phone?: string };
@@ -73,7 +83,11 @@ export default function RideScreen() {
   const [sosBusy, setSosBusy] = useState(false);
   const [shareBusy, setShareBusy] = useState(false);
   const [shareLink, setShareLink] = useState<{ id: number; url: string } | null>(null);
-  const hasRecovered = useRef(false);
+  const [cancelling, setCancelling] = useState(false);
+  const hasCheckedOwnership = useRef(false);
+  // Guards the cancelled-ride exit (alert + navigate) so it only fires once,
+  // whether triggered by the live socket event or a subsequent status refetch.
+  const hasExitedRef = useRef(false);
 
   const { data: rideRaw } = useQuery({
     queryKey: ['ride-active', rideId],
@@ -95,29 +109,47 @@ export default function RideScreen() {
     rideId: rideId ? Number(rideId) : null,
   });
 
+  // Shared exit path for a ride that turned out to be cancelled — reached
+  // either via the live socket event or a status refetch discovering the
+  // ride is already cancelled (e.g. after app restart/reconnect).
+  const exitForCancellation = () => {
+    if (hasExitedRef.current) return;
+    hasExitedRef.current = true;
+    Alert.alert(
+      t.ride_cancelled_title,
+      t.ride_cancelled_msg,
+      [{ text: t.ok, onPress: () => router.replace('/(tabs)/home') }],
+    );
+  };
+
+  // Backend ride status is the source of truth for the displayed phase.
+  // This runs on every rideRaw update (not just once) so the screen never
+  // gets stuck showing a stale phase after a status change.
   useEffect(() => {
-    if (!rideRaw || hasRecovered.current) return;
-    hasRecovered.current = true;
+    if (!rideRaw) return;
     const r = rideRaw as RideData & { status?: string; driverId?: string | number };
 
-    // Defense-in-depth: verify this ride belongs to the authenticated driver
-    getToken().then(token => {
-      const authenticatedDriverId = getUserIdFromToken(token);
-      if (authenticatedDriverId && r.driverId && String(r.driverId) !== String(authenticatedDriverId)) {
-        console.warn('[Security] Ride does not belong to authenticated driver');
-        router.replace('/(tabs)/home');
-        return;
-      }
-    });
+    if (!hasCheckedOwnership.current) {
+      hasCheckedOwnership.current = true;
+      // Defense-in-depth: verify this ride belongs to the authenticated driver
+      getToken().then(token => {
+        const authenticatedDriverId = getUserIdFromToken(token);
+        if (authenticatedDriverId && r.driverId && String(r.driverId) !== String(authenticatedDriverId)) {
+          console.warn('[Security] Ride does not belong to authenticated driver');
+          router.replace('/(tabs)/home');
+        }
+      });
+    }
 
-    const statusMap: Partial<Record<string, Phase>> = {
-      arrived: 'arrived',
-      in_trip: 'in_trip',
-      active: 'in_trip',
-      in_progress: 'in_trip',
-      completed: 'completed',
-    };
-    setPhase(r.status ? (statusMap[r.status] ?? 'to_pickup') : 'to_pickup');
+    if (r.status === 'cancelled') {
+      exitForCancellation();
+      return;
+    }
+
+    const nextPhase = r.status ? STATUS_TO_PHASE[r.status] : undefined;
+    if (nextPhase) setPhase(nextPhase);
+    // Unrecognized/unmapped statuses intentionally leave the current phase
+    // untouched instead of silently falling back to 'to_pickup'.
   }, [rideRaw]);
 
   // Listen for ride cancellation while on this screen
@@ -126,11 +158,7 @@ export default function RideScreen() {
     const handleCancelled = (data: { rideId?: string | number } | undefined) => {
       const cancelledId = String(data?.rideId ?? '');
       if (cancelledId && cancelledId !== rideId) return;
-      Alert.alert(
-        t.ride_cancelled_title,
-        t.ride_cancelled_msg,
-        [{ text: t.ok, onPress: () => router.replace('/(tabs)/home') }],
-      );
+      exitForCancellation();
     };
     socket.on(SOCKET_EVENTS.RIDE_CANCELLED, handleCancelled);
     return () => { socket.off(SOCKET_EVENTS.RIDE_CANCELLED, handleCancelled); };
@@ -200,9 +228,9 @@ export default function RideScreen() {
     try {
       // Re-fetch status before transition to detect concurrent changes
       const expectedStatus: Partial<Record<Phase, string>> = {
-        to_pickup: 'accepted',
-        arrived: 'arrived',
-        in_trip: 'in_trip',
+        to_pickup: 'driver_assigned',
+        arrived: 'driver_arrived',
+        in_trip: 'active',
       };
       const freshRide = await endpoints.rides.getById(rideId ?? '') as { status?: string } | null;
       const expected = expectedStatus[phase];
@@ -227,6 +255,38 @@ export default function RideScreen() {
     } finally {
       setBusy(false);
     }
+  };
+
+  // Driver-initiated cancel — only reachable while phase is 'to_pickup' or
+  // 'arrived' (see the CTA sheet below); once the ride is 'in_trip' this
+  // action is not offered.
+  const handleCancelRide = () => {
+    if (cancelling) return;
+    Alert.alert(
+      t.cancel_ride,
+      t.cancel_ride_confirm_msg,
+      [
+        { text: t.cancel, style: 'cancel' },
+        {
+          text: t.cancel_ride_confirm_btn,
+          style: 'destructive',
+          onPress: async () => {
+            setCancelling(true);
+            try {
+              await endpoints.rides.cancel(rideId ?? '');
+              hasExitedRef.current = true;
+              queryClient.invalidateQueries({ queryKey: ['ride-active'] });
+              router.replace('/(tabs)/home');
+            } catch (err: unknown) {
+              const body = (err as { body?: { error?: string } })?.body;
+              Alert.alert(t.action_failed_title, body?.error ?? t.try_again_msg);
+            } finally {
+              setCancelling(false);
+            }
+          },
+        },
+      ],
+    );
   };
 
   const handleSOS = async () => {
@@ -486,6 +546,21 @@ export default function RideScreen() {
               </LinearGradient>
             </Pressable>
 
+            {(phase === 'to_pickup' || phase === 'arrived') && (
+              <Pressable
+                onPress={handleCancelRide}
+                disabled={cancelling}
+                style={[styles.cancelRideBtn, { opacity: cancelling ? 0.6 : 1 }]}
+                accessibilityLabel="Cancel ride"
+              >
+                {cancelling ? (
+                  <ActivityIndicator size="small" color={colors.destructive} />
+                ) : (
+                  <Text style={[styles.cancelRideBtnText, { color: colors.destructive, fontFamily: 'Inter_600SemiBold' }]}>{t.cancel_ride}</Text>
+                )}
+              </Pressable>
+            )}
+
             <View style={styles.bottomRow}>
               <View style={styles.safetyRow}>
                 <Shield size={14} color={colors.mutedForeground} strokeWidth={2} />
@@ -567,6 +642,8 @@ const styles = StyleSheet.create({
   ctaBtn: { marginTop: Spacing.md, borderRadius: Radius.lg, overflow: 'hidden', elevation: Shadows.large.elevation, shadowColor: '#2d2d42', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 12 },
   ctaBtnGrad: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
   ctaBtnText: { fontSize: Typography.size.md },
+  cancelRideBtn: { alignItems: 'center', justifyContent: 'center', paddingVertical: 10, marginTop: Spacing.xs },
+  cancelRideBtnText: { fontSize: Typography.size.sm },
   bottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: Spacing.md },
   safetyRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   safetyText: { fontSize: Typography.size.xs },

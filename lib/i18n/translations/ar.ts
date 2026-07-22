@@ -941,6 +941,8 @@ export const ar: Translations = {
   phase_done_btn: 'تم',
   ride_cancelled_title: 'تم إلغاء الرحلة',
   ride_cancelled_msg: 'قام الراكب بإلغاء هذه الرحلة',
+  cancel_ride_confirm_msg: 'هل أنت متأكد أنك تريد إلغاء هذه الرحلة؟',
+  cancel_ride_confirm_btn: 'نعم، إلغاء الرحلة',
   calculating: 'جارٍ الحساب...',
   waiting_for_rider: 'في انتظار الراكب',
   action_failed_title: 'فشلت العملية',

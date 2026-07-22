@@ -941,6 +941,8 @@ export const en = {
   phase_done_btn: 'Done',
   ride_cancelled_title: 'Ride Cancelled',
   ride_cancelled_msg: 'The rider has cancelled this trip.',
+  cancel_ride_confirm_msg: 'Are you sure you want to cancel this ride?',
+  cancel_ride_confirm_btn: 'Yes, cancel ride',
   calculating: 'Calculating...',
   waiting_for_rider: 'Waiting for rider',
   action_failed_title: 'Action Failed',

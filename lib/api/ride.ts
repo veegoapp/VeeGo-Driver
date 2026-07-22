@@ -8,6 +8,7 @@ export const ridesEndpoints = {
   accept: (rideId: string) => api.patch(`/driver/rides/${rideId}/accept`),
   arrived: (rideId: string) => api.patch(`/driver/rides/${rideId}/arrived`),
   decline: (rideId: string) => api.patch(`/driver/rides/${rideId}/decline`),
+  cancel: (rideId: string) => api.patch(`/driver/rides/${rideId}/cancel`),
   start: (rideId: string) => api.patch(`/driver/rides/${rideId}/start`),
   complete: (rideId: string) => api.patch(`/driver/rides/${rideId}/complete`),
   active: () => api.get('/driver/rides/active'),
