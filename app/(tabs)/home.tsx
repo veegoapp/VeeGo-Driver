@@ -696,10 +696,12 @@ export default function HomeScreen() {
                 <Image source={{ uri: request.rider.avatar }} style={styles.riderAvatar} />
                 <View>
                   <Text style={[styles.riderName, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{request.rider.name}</Text>
-                  <View style={[styles.riderRatingRow, { flexDirection: R }]}>
-                    <Star size={12} color={colors.accent} fill={colors.accent} strokeWidth={2} />
-                    <Text style={[styles.riderRating, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{request.rider.rating}</Text>
-                  </View>
+                  {request.rider.rating != null && (
+                    <View style={[styles.riderRatingRow, { flexDirection: R }]}>
+                      <Star size={12} color={colors.accent} fill={colors.accent} strokeWidth={2} />
+                      <Text style={[styles.riderRating, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{request.rider.rating}</Text>
+                    </View>
+                  )}
                 </View>
               </View>
             </View>

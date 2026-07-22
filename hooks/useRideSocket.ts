@@ -6,16 +6,28 @@ import type { CheckinRequiredPayload } from '@/lib/checkinDeadline';
 import type { WaitingCharge, SurgeZone } from '@/lib/types';
 export type { WaitingCharge, SurgeZone } from '@/lib/types';
 
+// Backend's real ride:offer payload (dispatch-manager.ts) is flat — no `id`,
+// no `rider`, no nested pickup/dropoff objects. Parse that actual shape and
+// transform it into the RideRequest shape the offer card already renders,
+// instead of requiring fields the backend has never sent.
 const RideOfferSchema = z.object({
-  id: z.union([z.string(), z.number()]).transform(String),
-  type: z.string().optional(),
-  rider: z.object({ name: z.string(), rating: z.number(), avatar: z.string().optional() }),
-  pickup: z.object({ address: z.string(), distance: z.string().optional(), eta: z.string().optional() }),
-  dropoff: z.object({ address: z.string(), distance: z.string().optional() }),
-  fare: z.number().optional(),
-  payment: z.string().optional(),
-  duration: z.string().optional(),
-}).passthrough();
+  rideId: z.union([z.string(), z.number()]).transform(String),
+  vehicleType: z.string().optional(),
+  pickupAddress: z.string(),
+  dropoffAddress: z.string(),
+  distanceKm: z.number().optional(),
+  estimatedPrice: z.number().optional(),
+}).passthrough().transform((raw) => ({
+  id: raw.rideId,
+  type: raw.vehicleType,
+  rider: { name: "Rider" },
+  pickup: {
+    address: raw.pickupAddress,
+    distance: raw.distanceKm != null ? `${raw.distanceKm.toFixed(1)} km` : undefined,
+  },
+  dropoff: { address: raw.dropoffAddress },
+  fare: raw.estimatedPrice,
+}));
 
 const OfferExpiredSchema = z.union([
   z.string(),
@@ -41,7 +53,7 @@ const SurgeSchema = z.union([
 export type RideRequest = {
   id: string;
   type?: string;
-  rider: { name: string; rating: number; avatar?: string };
+  rider: { name: string; rating?: number; avatar?: string };
   pickup: { address: string; distance?: string; eta?: string };
   dropoff: { address: string; distance?: string };
   fare?: number;
