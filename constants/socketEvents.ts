@@ -9,7 +9,13 @@ export const SOCKET_EVENTS = {
   /* unused — reserved for future */
   RIDE_NEW_REQUEST:         "ride:new_request",
   RIDE_OFFER_EXPIRED:       "ride:offer_expired",
-  RIDE_STATUS_UPDATE:       "ride:status_update",
+  // Backend-confirmed value; was previously "ride:status_update" (never emitted, unused).
+  RIDE_STATUS_UPDATE:       "ride:status:changed",
+  RIDE_DRIVER_ASSIGNED:     "ride:driver_assigned",
+  RIDE_DRIVER_ARRIVED:      "ride:driver_arrived",
+  RIDE_STARTED:             "ride:started",
+  RIDE_DRIVER_CANCELLED:    "ride:driver_cancelled",
+  RIDE_NO_SHOW_CANCELLED:   "ride:no_show_cancelled",
   RIDE_TIMEOUT:             "ride:timeout",
   RIDE_DEVIATION_WARNING:   "ride:deviation:warning",
 

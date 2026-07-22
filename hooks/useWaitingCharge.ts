@@ -15,6 +15,10 @@ export function useWaitingCharge(
   useEffect(() => {
     if (!socket || !rideId) return;
 
+    const handleStarted = (c: WaitingCharge) => {
+      if (c.rideId === rideId) setCharge(c);
+    };
+
     const handleUpdated = (c: WaitingCharge) => {
       if (c.rideId === rideId) setCharge(c);
     };
@@ -23,10 +27,12 @@ export function useWaitingCharge(
       if (c.rideId === rideId) setCharge({ ...c, capped: true });
     };
 
+    socket.on(SOCKET_EVENTS.WAITING_CHARGE_STARTED, handleStarted);
     socket.on(SOCKET_EVENTS.WAITING_CHARGE_UPDATED, handleUpdated);
     socket.on(SOCKET_EVENTS.WAITING_CHARGE_CAPPED, handleCapped);
 
     return () => {
+      socket.off(SOCKET_EVENTS.WAITING_CHARGE_STARTED, handleStarted);
       socket.off(SOCKET_EVENTS.WAITING_CHARGE_UPDATED, handleUpdated);
       socket.off(SOCKET_EVENTS.WAITING_CHARGE_CAPPED, handleCapped);
     };

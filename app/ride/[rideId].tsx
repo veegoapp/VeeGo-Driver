@@ -13,6 +13,7 @@ import { useServiceGuard } from '@/hooks/useServiceGuard';
 import { useService } from '@/lib/serviceContext';
 import { useWaitingCharge } from '@/hooks/useWaitingCharge';
 import { useActiveLocationTracking } from '@/hooks/useActiveLocationTracking';
+import { useLocationBroadcast } from '@/hooks/useLocationBroadcast';
 import { endpoints } from '@/lib/api';
 import { getToken, getUserIdFromToken } from '@/lib/auth';
 import { useI18n } from '@/lib/i18nContext';
@@ -84,6 +85,9 @@ export default function RideScreen() {
   const [shareBusy, setShareBusy] = useState(false);
   const [shareLink, setShareLink] = useState<{ id: number; url: string } | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  // Reactive counterpart to hasExitedRef — lets location broadcasting stop
+  // as soon as the ride is exiting, without waiting for unmount.
+  const [isExiting, setIsExiting] = useState(false);
   const hasCheckedOwnership = useRef(false);
   // Guards the cancelled-ride exit (alert + navigate) so it only fires once,
   // whether triggered by the live socket event or a subsequent status refetch.
@@ -104,20 +108,32 @@ export default function RideScreen() {
   const driverData = driverRaw as DriverData | undefined;
   const waitingCharge = useWaitingCharge(driverData?.id, rideId);
 
+  const locationTrackingEnabled = !!rideId && phase !== 'completed' && !isExiting;
+
+  // REST snapshots (5-min interval, offline-queued) — unchanged from before.
   useActiveLocationTracking({
-    enabled: !!rideId && phase !== 'completed',
+    enabled: locationTrackingEnabled,
     rideId: rideId ? Number(rideId) : null,
   });
 
-  // Shared exit path for a ride that turned out to be cancelled — reached
-  // either via the live socket event or a status refetch discovering the
-  // ride is already cancelled (e.g. after app restart/reconnect).
-  const exitForCancellation = () => {
+  // Real-time ride-scoped location (driver:ride:location, ~5s) — active only
+  // for the lifecycle of this ride; stops on completed/cancelled same as above.
+  useLocationBroadcast({
+    enabled: locationTrackingEnabled,
+    rideId: rideId ? Number(rideId) : null,
+  });
+
+  // Shared exit path for a ride that ended outside the driver's own action —
+  // reached via a live socket event (cancelled by rider/system, timeout,
+  // no-show) or a status refetch discovering the ride is already cancelled
+  // (e.g. after app restart/reconnect).
+  const exitRide = (title: string, message: string) => {
     if (hasExitedRef.current) return;
     hasExitedRef.current = true;
+    setIsExiting(true);
     Alert.alert(
-      t.ride_cancelled_title,
-      t.ride_cancelled_msg,
+      title,
+      message,
       [{ text: t.ok, onPress: () => router.replace('/(tabs)/home') }],
     );
   };
@@ -142,7 +158,7 @@ export default function RideScreen() {
     }
 
     if (r.status === 'cancelled') {
-      exitForCancellation();
+      exitRide(t.ride_cancelled_title, t.ride_cancelled_msg);
       return;
     }
 
@@ -152,17 +168,76 @@ export default function RideScreen() {
     // untouched instead of silently falling back to 'to_pickup'.
   }, [rideRaw]);
 
-  // Listen for ride cancellation while on this screen
+  // Ride lifecycle socket events (backend-confirmed). Status-changing events
+  // resync via the existing GET-based phase sync above; terminal events
+  // (cancelled by rider, cancelled by driver/system, timeout, no-show) exit
+  // the ride safely; deviation warning is surfaced without ever throwing.
   useEffect(() => {
     if (!socket || !rideId) return;
-    const handleCancelled = (data: { rideId?: string | number } | undefined) => {
-      const cancelledId = String(data?.rideId ?? '');
-      if (cancelledId && cancelledId !== rideId) return;
-      exitForCancellation();
+
+    const matchesThisRide = (data: unknown): boolean => {
+      const payloadRideId = (data && typeof data === 'object')
+        ? (data as { rideId?: string | number }).rideId
+        : undefined;
+      return payloadRideId == null || String(payloadRideId) === rideId;
     };
+
+    const handleCancelled = (data: unknown) => {
+      if (!matchesThisRide(data)) return;
+      exitRide(t.ride_cancelled_title, t.ride_cancelled_msg);
+    };
+
+    const handleDriverCancelled = (data: unknown) => {
+      if (!matchesThisRide(data)) return;
+      exitRide(t.ride_cancelled_title, t.ride_driver_cancelled_msg);
+    };
+
+    const handleTimeout = (data: unknown) => {
+      if (!matchesThisRide(data)) return;
+      exitRide(t.ride_timeout_title, t.ride_timeout_msg);
+    };
+
+    const handleNoShowCancelled = (data: unknown) => {
+      if (!matchesThisRide(data)) return;
+      exitRide(t.ride_cancelled_title, t.ride_no_show_msg);
+    };
+
+    const handleStatusChanged = (data: unknown) => {
+      if (!matchesThisRide(data)) return;
+      queryClient.invalidateQueries({ queryKey: ['ride-active', rideId] });
+    };
+
+    const handleDeviationWarning = (data: unknown) => {
+      try {
+        if (!matchesThisRide(data)) return;
+        Alert.alert(t.route_deviation_title, t.route_deviation_msg);
+      } catch {
+        // Never let a malformed deviation payload crash the ride screen.
+      }
+    };
+
     socket.on(SOCKET_EVENTS.RIDE_CANCELLED, handleCancelled);
-    return () => { socket.off(SOCKET_EVENTS.RIDE_CANCELLED, handleCancelled); };
-  }, [socket, rideId]);
+    socket.on(SOCKET_EVENTS.RIDE_DRIVER_CANCELLED, handleDriverCancelled);
+    socket.on(SOCKET_EVENTS.RIDE_TIMEOUT, handleTimeout);
+    socket.on(SOCKET_EVENTS.RIDE_NO_SHOW_CANCELLED, handleNoShowCancelled);
+    socket.on(SOCKET_EVENTS.RIDE_STATUS_UPDATE, handleStatusChanged);
+    socket.on(SOCKET_EVENTS.RIDE_DRIVER_ASSIGNED, handleStatusChanged);
+    socket.on(SOCKET_EVENTS.RIDE_DRIVER_ARRIVED, handleStatusChanged);
+    socket.on(SOCKET_EVENTS.RIDE_STARTED, handleStatusChanged);
+    socket.on(SOCKET_EVENTS.RIDE_DEVIATION_WARNING, handleDeviationWarning);
+
+    return () => {
+      socket.off(SOCKET_EVENTS.RIDE_CANCELLED, handleCancelled);
+      socket.off(SOCKET_EVENTS.RIDE_DRIVER_CANCELLED, handleDriverCancelled);
+      socket.off(SOCKET_EVENTS.RIDE_TIMEOUT, handleTimeout);
+      socket.off(SOCKET_EVENTS.RIDE_NO_SHOW_CANCELLED, handleNoShowCancelled);
+      socket.off(SOCKET_EVENTS.RIDE_STATUS_UPDATE, handleStatusChanged);
+      socket.off(SOCKET_EVENTS.RIDE_DRIVER_ASSIGNED, handleStatusChanged);
+      socket.off(SOCKET_EVENTS.RIDE_DRIVER_ARRIVED, handleStatusChanged);
+      socket.off(SOCKET_EVENTS.RIDE_STARTED, handleStatusChanged);
+      socket.off(SOCKET_EVENTS.RIDE_DEVIATION_WARNING, handleDeviationWarning);
+    };
+  }, [socket, rideId, queryClient]);
 
   // All hooks called above — safe to short-circuit for blocked service
   if (isBlocked) {
@@ -275,6 +350,7 @@ export default function RideScreen() {
             try {
               await endpoints.rides.cancel(rideId ?? '');
               hasExitedRef.current = true;
+              setIsExiting(true);
               queryClient.invalidateQueries({ queryKey: ['ride-active'] });
               router.replace('/(tabs)/home');
             } catch (err: unknown) {

@@ -11,12 +11,16 @@ const BROADCAST_INTERVAL_MS = 5000;
 interface Options {
   enabled: boolean;
   tripId?: number | string | null;
+  // Active-ride mode (Car/Scooter/Delivery): when set, emits the confirmed
+  // driver:ride:location contract instead of the shuttle tripId broadcast below.
+  rideId?: number | string | null;
 }
 
-export function useLocationBroadcast({ enabled, tripId }: Options): void {
+export function useLocationBroadcast({ enabled, tripId, rideId }: Options): void {
   const { socket } = useSocket();
   const socketRef = useRef(socket);
   const tripIdRef = useRef(tripId);
+  const rideIdRef = useRef(rideId);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const permissionGrantedRef = useRef(false);
   // Cached after the first async check so emit() doesn't re-query every 5 s.
@@ -24,6 +28,7 @@ export function useLocationBroadcast({ enabled, tripId }: Options): void {
 
   useEffect(() => { socketRef.current = socket; }, [socket]);
   useEffect(() => { tripIdRef.current = tripId; }, [tripId]);
+  useEffect(() => { rideIdRef.current = rideId; }, [rideId]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -46,12 +51,25 @@ export function useLocationBroadcast({ enabled, tripId }: Options): void {
       const { latitude, longitude, speed, heading } = loc.coords;
       if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) return;
 
+      const currentRideId = rideIdRef.current ?? undefined;
+      const sock = socketRef.current;
+
+      // Active-ride mode: use the confirmed driver:ride:location contract
+      // exactly (rideId, latitude, longitude) — socket-only. No REST fallback
+      // exists for this contract; useActiveLocationTracking already covers
+      // the disconnected/offline case for rides via its own REST channel.
+      if (currentRideId != null) {
+        if (sock?.connected) {
+          sock.emit(SOCKET_EVENTS.DRIVER_RIDE_LOCATION, { rideId: currentRideId, latitude, longitude });
+        }
+        return;
+      }
+
       const speedKmh = speed != null && speed >= 0 ? Math.round(speed * 3.6) : undefined;
       const headingDeg = heading != null && heading >= 0 ? Math.round(heading) : undefined;
       const currentTripId = tripIdRef.current ?? undefined;
 
       // Try socket first (real-time), always fall back to REST
-      const sock = socketRef.current;
       if (sock?.connected) {
         const payload: Record<string, unknown> = { latitude, longitude };
         if (speedKmh !== undefined) payload.speed = speedKmh;
