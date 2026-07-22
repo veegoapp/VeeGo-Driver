@@ -113,9 +113,15 @@ export const shuttleEndpoints = {
   complete: (lineId: string) => api.post(`/shuttle/lines/${lineId}/complete`),
   passengers: (tripId: string) => api.get(`/shuttle/trips/${tripId}/passengers`),
 
-  // PATCH /driver/bookings/:id/board — marks passenger as boarded
+  // PATCH /driver/bookings/:id/board — marks passenger as boarded.
+  // Backend's BoardBody requires stationId as a number (no string coercion),
+  // but ShuttleStop.id is typed/populated as a string — coerce here so every
+  // caller is covered regardless of what it passes in.
   boardBooking: (bookingId: string, payload?: { stationId?: string | number; cashCollected?: boolean; amountCollected?: number }) =>
-    api.patch(`/driver/bookings/${bookingId}/board`, payload ?? {}),
+    api.patch(`/driver/bookings/${bookingId}/board`, payload ? {
+      ...payload,
+      ...(payload.stationId != null ? { stationId: Number(payload.stationId) } : {}),
+    } : {}),
 
   driverTrips: (page = 1, limit = 10) =>
     api.get(`/shuttle/driver/my-trips?page=${page}&limit=${limit}`),

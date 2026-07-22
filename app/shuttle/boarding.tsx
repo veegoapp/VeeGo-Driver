@@ -105,7 +105,7 @@ export default function ShuttleBoardingScreen() {
     );
   };
 
-  const handleDepart = async () => {
+  const handleDepart = async (retryOnlyIds?: string[]) => {
     if (isDeparting) return;
     const stationId = currentStop?.id;
     if (!stationId) {
@@ -114,12 +114,33 @@ export default function ShuttleBoardingScreen() {
     }
     setIsDeparting(true);
     try {
-      const boardedIds = passengers.filter(p => p.checkedIn).map(p => p.id);
-      await Promise.allSettled(
+      const boardedIds = retryOnlyIds ?? passengers.filter(p => p.checkedIn).map(p => p.id);
+      const results = await Promise.allSettled(
         boardedIds.map(bookingId =>
           endpoints.shuttle.boardBooking(bookingId, { stationId })
         )
       );
+
+      // Surface per-passenger failures instead of silently continuing —
+      // mirrors the same pattern already used in trip-active.tsx.
+      const failedIds: string[] = [];
+      results.forEach((r, i) => {
+        if (r.status === 'rejected') failedIds.push(boardedIds[i]);
+      });
+
+      if (failedIds.length > 0) {
+        const names = failedIds.map(id => passengers.find(p => p.id === id)?.name ?? id).join(', ');
+        Alert.alert(
+          t.boarding_partial_fail_title,
+          t.boarding_partial_fail_msg.replace('{names}', names),
+          [
+            { text: t.cancel, style: 'cancel' },
+            { text: t.retry_label, onPress: () => { handleDepart(failedIds); } },
+          ]
+        );
+        return;
+      }
+
       nextStop();
       router.back();
     } finally {
@@ -327,7 +348,7 @@ export default function ShuttleBoardingScreen() {
 
       <View style={[styles.bottomAction, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: botPad + 12 }]}>
         {total > 0 && checkedIn === total ? (
-          <Pressable onPress={handleDepart} disabled={isDeparting} style={[styles.departBtn, { opacity: isDeparting ? 0.7 : 1 }]}>
+          <Pressable onPress={() => handleDepart()} disabled={isDeparting} style={[styles.departBtn, { opacity: isDeparting ? 0.7 : 1 }]}>
             <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.departBtnGrad}>
               {isDeparting
                 ? <ActivityIndicator size="small" color={colors.primaryForeground} />
