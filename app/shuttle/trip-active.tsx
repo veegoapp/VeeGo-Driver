@@ -512,6 +512,16 @@ export default function ShuttleTripActiveScreen() {
               <ChevronLeft size={20} color="#fff" strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
             </Pressable>
 
+            {!!activeLine?.direction && (
+              <GlassView style={styles.tripBadge} borderRadius={20}>
+                <Text style={[styles.badgeText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
+                  {activeLine.direction === 'outbound' ? t.direction_outbound
+                    : activeLine.direction === 'return' ? t.direction_return
+                    : activeLine.direction}
+                </Text>
+              </GlassView>
+            )}
+
             <GlassView style={styles.tripBadge} borderRadius={20}>
               <Users size={13} color={colors.foreground} strokeWidth={2} />
               <Text style={[styles.badgeText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>

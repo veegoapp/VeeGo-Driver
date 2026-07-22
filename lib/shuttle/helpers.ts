@@ -37,6 +37,9 @@ export type BackendTrip = {
   bookedSeats?: number;
   price: number;
   status: string;
+  // Trip leg (e.g. 'outbound' | 'return'). Optional — GET /driver/trips has
+  // not been confirmed to send this field; do not assume it is present.
+  direction?: string;
   bookings?: { id: string; passengerName?: string; passengerPhone?: string; passengerAvatar?: string }[];
 };
 
@@ -118,6 +121,9 @@ type RawDriverBooking = {
   toStation?: string;
   fromLocation?: string;
   toLocation?: string;
+  // Trip leg (e.g. 'outbound' | 'return'). Optional — GET /shuttle/route-bookings
+  // has not been confirmed to send this field; do not assume it is present.
+  direction?: string;
   trip?: {
     thresholdMet?: boolean;
     bookedSeats?: number;
@@ -151,6 +157,7 @@ function normalizeBooking(b: RawDriverBooking): ShuttleBooking {
     status: b.status ?? '',
     renewalDeadline: b.renewalDeadline,
     nextWeekBookingId: b.nextWeekBookingId,
+    direction: b.direction,
     trip: b.trip ? {
       thresholdMet: b.trip.thresholdMet ?? false,
       bookedSeats: b.trip.bookedSeats ?? 0,
@@ -207,8 +214,14 @@ export function buildLine(route: BackendRoute, trip: BackendTrip | undefined): S
   const total = trip?.totalSeats ?? 0;
   const booked = trip?.bookedSeats ?? (trip ? total - trip.availableSeats : 0);
   return {
-    id: String(route.id),
+    // A trip's id is the unique identity for its line — this is what lets an
+    // outbound trip and a return trip on the same route each get their own
+    // ShuttleLine instead of one overwriting the other. Routes with no trip
+    // yet fall back to the route id as a placeholder line identity.
+    id: trip ? String(trip.id) : String(route.id),
+    routeId: String(route.id),
     tripId: trip ? String(trip.id) : undefined,
+    direction: trip?.direction,
     lineNumber: `L${route.id}`,
     name: route.name,
     from: route.fromLocation ?? route.from ?? '—',
@@ -226,4 +239,27 @@ export function buildLine(route: BackendRoute, trip: BackendTrip | undefined): S
     estimatedDuration: route.estimatedDuration ?? 0,
     basePrice: route.basePrice ?? 0,
   };
+}
+
+// A route can now back more than one ShuttleLine (outbound trip + return
+// trip both share the same routeId). Screens that used to do
+// `allLines.find(l => l.id === routeId)` need to disambiguate between them —
+// this picks the best match without requiring backend `direction` support:
+// direction match (when both sides have it) > matching departure time
+// (outbound/return necessarily depart at different times) > any assigned
+// trip > first entry. With only one line for the route (the common case
+// today) this returns exactly what the old lookup returned.
+export function findLineForRoute(
+  lines: ShuttleLine[],
+  routeId: string | number,
+  ref?: { direction?: string; departureTime?: string }
+): ShuttleLine | undefined {
+  const candidates = lines.filter(l => String(l.routeId) === String(routeId));
+  if (candidates.length <= 1) return candidates[0];
+  return (
+    candidates.find(l => !!ref?.direction && !!l.direction && l.direction === ref.direction) ??
+    candidates.find(l => !!ref?.departureTime && l.departure === ref.departureTime) ??
+    candidates.find(l => l.assigned) ??
+    candidates[0]
+  );
 }

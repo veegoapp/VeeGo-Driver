@@ -22,7 +22,7 @@ import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { endpoints } from '@/lib/api';
-import { useShuttle, type ShuttleBooking, type ShuttleLine } from '@/lib/shuttleContext';
+import { useShuttle, findLineForRoute, type ShuttleBooking, type ShuttleLine } from '@/lib/shuttleContext';
 import { useReferral } from '@/lib/referralContext';
 import { useSocket } from '@/lib/socketContext';
 import { useServiceControl } from '@/lib/serviceControlContext';
@@ -61,7 +61,7 @@ export default function ShuttleHomeScreen() {
   const { socket, connected: socketConnected } = useSocket();
   const { currency } = useServiceControl();
 
-  const { activeLine, stops, currentStopIndex, allLines, renewalBooking, myBookings, tripCancelledBanner, dismissTripCancelledBanner, bookingStatusBanner, dismissBookingStatusBanner, refetch } = useShuttle();
+  const { activeLine, stops, currentStopIndex, allLines, routes, renewalBooking, myBookings, tripCancelledBanner, dismissTripCancelledBanner, bookingStatusBanner, dismissBookingStatusBanner, refetch } = useShuttle();
 
   // Broadcast GPS location every 5 s while the driver is online
   useLocationBroadcast({ enabled: online, tripId: activeLine?.tripId ?? null });
@@ -441,7 +441,7 @@ export default function ShuttleHomeScreen() {
         <GlassView strong style={styles.statsRow} borderRadius={20}>
           <StatItem label={t.trips_stat} value={String(completedCount)} colors={colors} />
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <StatItem label={t.routes} value={String(allLines.length)} colors={colors} />
+          <StatItem label={t.routes} value={String(routes.length)} colors={colors} />
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
           <StatItem label={t.net_earnings} value={`${todayEarnings} ${isRTL ? currency.symbolAr : currency.symbol}`} highlight colors={colors} />
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -607,7 +607,13 @@ export default function ShuttleHomeScreen() {
         ) : (
           <View style={{ gap: 10 }}>
             {upcomingBookings.map(booking => {
-              const line = allLines.find(l => String(l.id) === String(booking.routeId));
+              // A routeId can now back more than one line (outbound + return
+              // trip on the same route) — disambiguate by direction/departure
+              // time instead of assuming a 1:1 routeId match.
+              const line = findLineForRoute(allLines, booking.routeId, {
+                direction: booking.direction,
+                departureTime: booking.departureTime,
+              });
               return (
                 <UpcomingTripCard
                   key={booking.id}
@@ -629,6 +635,7 @@ export default function ShuttleHomeScreen() {
                         weekStart: booking.weekStart,
                         weekEnd: booking.weekEnd ?? '',
                         status: booking.status,
+                        direction: booking.direction ?? '',
                       },
                     })
                   }

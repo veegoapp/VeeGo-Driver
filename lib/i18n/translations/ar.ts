@@ -599,6 +599,8 @@ export const ar: Translations = {
   lines_confirm_title: 'تأكيد حجز 5 أيام',
   lines_dialog_route: 'الخط',
   lines_dialog_direction: 'الاتجاه',
+  direction_outbound: 'ذهاب',
+  direction_return: 'عودة',
   lines_dialog_week: 'الأسبوع  ·  الأحد – الخميس',
   lines_dialog_departure: 'وقت المغادرة',
   lines_dialog_stops: 'المحطات',

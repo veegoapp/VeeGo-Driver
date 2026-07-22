@@ -34,6 +34,9 @@ export type ShuttleBooking = {
   status: string;
   renewalDeadline?: string;
   nextWeekBookingId?: string | null;
+  // Trip leg this booking runs (e.g. 'outbound' | 'return'). Undefined when
+  // the backend response doesn't include it — never guess a value here.
+  direction?: string;
   trip?: {
     thresholdMet: boolean;
     bookedSeats: number;
@@ -52,13 +55,25 @@ export type ShuttleStop = {
   boarded: number;
   expected: number;
   status: 'pending' | 'arrived' | 'completed';
+  // Preserved from the backend station record (see BackendStation) — not
+  // used for filtering here, just carried through instead of discarded.
+  direction?: string;
 };
 
 export type VehicleType = 'HiAce' | 'Mini Bus' | 'Unknown';
 
 export type ShuttleLine = {
+  // Unique per line: the trip's id when a trip is assigned, otherwise the
+  // route's id (placeholder line for a route with no trip yet). A single
+  // routeId can now back more than one ShuttleLine (e.g. an outbound trip
+  // and a return trip on the same route) — use `routeId` to find all lines
+  // for a route, not `id`.
   id: string;
+  routeId: string | number;
   tripId?: string;
+  // Trip leg (e.g. 'outbound' | 'return'), sourced from BackendTrip.direction
+  // when the backend provides it. Undefined otherwise — not guessed.
+  direction?: string;
   lineNumber: string;
   name: string;
   from: string;

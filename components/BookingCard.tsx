@@ -42,6 +42,13 @@ export function BookingCard({
           >
             {booking.routeName}
           </Text>
+          {!!booking.direction && (
+            <Text style={[styles.metaText, { color: colors.mutedForeground }]} numberOfLines={1}>
+              {booking.direction === 'outbound' ? t.direction_outbound
+                : booking.direction === 'return' ? t.direction_return
+                : booking.direction}
+            </Text>
+          )}
           <View style={styles.metaRow}>
             <Clock size={11} color={colors.mutedForeground} strokeWidth={2} />
             <Text style={[styles.metaText, { color: colors.mutedForeground }]}>

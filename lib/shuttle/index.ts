@@ -15,3 +15,4 @@ export type {
 } from './types';
 
 export { ShuttleContext, ShuttleProvider, useShuttle } from './ShuttleContext';
+export { findLineForRoute } from './helpers';

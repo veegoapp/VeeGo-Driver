@@ -39,6 +39,9 @@ type BookingDetail = {
   totalSeats: number | null;
   minRequiredPassengers: number | null;
   thresholdMet: boolean;
+  // Optional — GET /shuttle/route-bookings/:id/detail has not been confirmed
+  // to send this field.
+  direction?: string;
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

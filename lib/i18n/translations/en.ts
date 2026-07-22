@@ -599,6 +599,8 @@ export const en = {
   lines_confirm_title: 'Confirm 5-Day Booking',
   lines_dialog_route: 'Route',
   lines_dialog_direction: 'Direction',
+  direction_outbound: 'Outbound',
+  direction_return: 'Return',
   lines_dialog_week: 'Week  ·  Sun – Thu',
   lines_dialog_departure: 'Departure',
   lines_dialog_stops: 'Stops',

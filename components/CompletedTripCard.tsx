@@ -37,6 +37,13 @@ export function CompletedTripCard({
         >
           {trip.routeName ?? t.shuttle_trip_default}
         </Text>
+        {!!trip.direction && (
+          <Text style={[styles.metaText, { color: colors.mutedForeground }]} numberOfLines={1}>
+            {trip.direction === 'outbound' ? t.direction_outbound
+              : trip.direction === 'return' ? t.direction_return
+              : trip.direction}
+          </Text>
+        )}
         <View style={styles.metaRow}>
           {trip.date && (
             <>

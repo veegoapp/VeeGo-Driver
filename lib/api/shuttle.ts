@@ -161,6 +161,10 @@ export const shuttleEndpoints = {
       `/shuttle/route-bookings/${bookingId}/cancel-preview`
     ),
 
+  // NOTE: `direction` on the top-level response and per-station is optional —
+  // not confirmed present on GET /shuttle/route-bookings/:id/trip-detail today.
+  // Typed here so callers can read it once the backend adds it, without
+  // masking its current absence.
   tripDetail: (bookingId: string) =>
     api.get<{
       bookingId: number;
@@ -169,7 +173,8 @@ export const shuttleEndpoints = {
       routeNameAr?: string;
       bookedSeats: number;
       totalSeats: number;
-      stations: Array<{ id: number; name: string; order: number; eta: string }>;
+      direction?: string;
+      stations: Array<{ id: number; name: string; order: number; eta: string; direction?: string }>;
     }>(`/shuttle/route-bookings/${bookingId}/trip-detail`),
 
   myReferralCode: () => api.get<{ code: string }>('/driver/me/referral-code'),

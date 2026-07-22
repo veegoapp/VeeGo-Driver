@@ -18,7 +18,7 @@ import { GlassView } from '@/components/GlassView';
 import { StationTimeline } from '@/components/StationTimeline';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
-import { useShuttle } from '@/lib/shuttleContext';
+import { useShuttle, findLineForRoute } from '@/lib/shuttleContext';
 import { endpoints } from '@/lib/api';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
@@ -35,6 +35,7 @@ type Params = {
   weekStart?: string;
   weekEnd?: string;
   status?: string;
+  direction?: string;
 };
 
 type Station = {
@@ -42,6 +43,7 @@ type Station = {
   name: string;
   order?: number;
   eta?: string;
+  direction?: string;
 };
 
 export default function TripDetailsScreen() {
@@ -60,6 +62,7 @@ export default function TripDetailsScreen() {
     weekStart: paramWeekStart,
     weekEnd: paramWeekEnd,
     status: paramStatus,
+    direction: paramDirection,
   } = useLocalSearchParams<Params>();
 
   const { myBookings, allLines, listLoading, setStartedTripId, refetch } = useShuttle();
@@ -69,7 +72,6 @@ export default function TripDetailsScreen() {
   // myBookings may be empty when this screen is outside ShuttleProvider's scope
   // (app/shuttle/ vs app/(shuttle)/ route groups); params are the reliable source.
   const booking = myBookings.find(b => String(b.id) === String(bookingId));
-  const line = allLines.find(l => String(l.id) === String(routeId));
 
   // Synthesise a booking object from URL params when context lookup returns nothing.
   // This covers the case where ShuttleProvider is not mounted in this route group.
@@ -85,8 +87,16 @@ export default function TripDetailsScreen() {
         timeSlotId: '',
         renewalDeadline: undefined,
         nextWeekBookingId: undefined,
+        direction: paramDirection || undefined,
       }
     : null);
+
+  // A routeId can back more than one line (outbound + return trip on the
+  // same route) — disambiguate instead of assuming a 1:1 routeId match.
+  const line = findLineForRoute(allLines, routeId, {
+    direction: effectiveBooking?.direction,
+    departureTime: effectiveBooking?.departureTime,
+  });
 
   const { data: tripDetailData, isLoading: stationsLoading } = useQuery({
     queryKey: ['shuttle-trip-detail', bookingId],
@@ -195,6 +205,10 @@ export default function TripDetailsScreen() {
   const totalSeats = tripDetailData?.totalSeats ?? (line?.totalSeats ?? 0);
   const vehicleType = line?.vehicleType ?? '—';
   const lineNumber = line?.lineNumber ?? '—';
+  const direction = tripDetailData?.direction ?? effectiveBooking?.direction ?? line?.direction;
+  const directionLabel = direction === 'outbound' ? t.direction_outbound
+    : direction === 'return' ? t.direction_return
+    : direction;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -221,6 +235,11 @@ export default function TripDetailsScreen() {
           <Text style={[styles.routeSubtitle, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>
             {from} → {to}
           </Text>
+          {!!directionLabel && (
+            <Text style={[styles.routeSubtitle, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold', textAlign: TA, marginTop: 2 }]}>
+              {directionLabel}
+            </Text>
+          )}
         </View>
 
         {/* Status badge */}

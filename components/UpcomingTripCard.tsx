@@ -43,6 +43,13 @@ export function UpcomingTripCard({
               {booking.fromStation ?? line?.from} → {booking.toStation ?? line?.to}
             </Text>
           )}
+          {!!(booking.direction ?? line?.direction) && (
+            <Text style={[{ fontSize: Typography.size.xs, color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold', textAlign: TA }]} numberOfLines={1}>
+              {(booking.direction ?? line?.direction) === 'outbound' ? t.direction_outbound
+                : (booking.direction ?? line?.direction) === 'return' ? t.direction_return
+                : (booking.direction ?? line?.direction)}
+            </Text>
+          )}
           {/* Date & Exact Time */}
           <View style={[styles.upcomingMeta, { flexDirection: R }]}>
             <Calendar size={12} color={colors.mutedForeground} strokeWidth={2} />

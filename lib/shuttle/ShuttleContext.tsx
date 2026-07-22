@@ -182,31 +182,29 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
   const renewalBooking: ShuttleBooking | null =
     myBookings.find(b => b.status === 'pending_renewal') ?? null;
 
-  // Trip execution layer (unchanged logic)
+  // Trip execution layer.
+  // Trips are grouped by routeId — NOT collapsed to one per route — so a
+  // route running both an outbound and a return trip surfaces one
+  // ShuttleLine per trip. Each trip keeps buildLine()'s tripId-based
+  // identity instead of one trip silently overwriting the other.
   const driverTrips: BackendTrip[] = extractTrips(tripsRaw);
-  const tripByRouteId = new Map<number, BackendTrip>();
+  const tripsByRouteId = new Map<number, BackendTrip[]>();
   for (const trip of driverTrips) {
-    const existing = tripByRouteId.get(trip.routeId);
-    if (!existing) {
-      tripByRouteId.set(trip.routeId, trip);
-    } else {
-      const priority = (s: string) => (s === 'active' ? 3 : s === 'scheduled' ? 2 : 1);
-      const np = priority(trip.status);
-      const ep = priority(existing.status);
-      if (np > ep) {
-        tripByRouteId.set(trip.routeId, trip);
-      } else if (np === ep && trip.status === 'scheduled') {
-        if (new Date(trip.departureTime) < new Date(existing.departureTime)) {
-          tripByRouteId.set(trip.routeId, trip);
-        }
-      }
-    }
+    const list = tripsByRouteId.get(trip.routeId);
+    if (list) list.push(trip);
+    else tripsByRouteId.set(trip.routeId, [trip]);
   }
 
-  const allLines: ShuttleLine[] = backendRoutes.map(route =>
-    buildLine(route, tripByRouteId.get(route.id))
-  );
+  const allLines: ShuttleLine[] = backendRoutes.flatMap(route => {
+    const trips = tripsByRouteId.get(route.id);
+    return trips && trips.length > 0
+      ? trips.map(trip => buildLine(route, trip))
+      : [buildLine(route, undefined)];
+  });
 
+  // A route can now have more than one line (outbound + return); this keeps
+  // the pre-existing "single active trip drives the map" assumption used by
+  // location tracking, which is out of scope for this change.
   const activeLine = allLines.find(l => l.status === 'in-progress') ?? null;
 
   const activeTripId = activeLine?.tripId;
@@ -240,6 +238,10 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
     expected: idx === currentStopIndex ? passengers.length : 0,
     status:
       idx < currentStopIndex ? 'completed' : idx === currentStopIndex ? 'arrived' : 'pending',
+    // Carried through from the backend station record instead of being
+    // discarded — the stations endpoint is already scoped to this trip, so
+    // this is preserved for display, not used to re-filter the list.
+    direction: st.direction,
   }));
 
   // Load per-station passengers whenever the active trip stations data or current stop changes.

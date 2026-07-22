@@ -38,6 +38,9 @@ export interface DriverTrip {
   earnings?: number | string;
   revenueAmount?: number | string;
   status?: string;
+  /** Trip leg (e.g. 'outbound' | 'return'). Optional — GET /shuttle/driver/my-trips
+   *  has not been confirmed to send this field; do not assume it is present. */
+  direction?: string;
 }
 
 // ─── Auth / Legal ─────────────────────────────────────────────────────────────
