@@ -87,7 +87,6 @@ export default function PersonalInfoScreen() {
   const handleSave = () => {
     const payload: Partial<DriverMe> = {};
     if (form.name && form.name !== raw?.name) payload.name = form.name.trim();
-    if (form.phone && form.phone !== raw?.phone) payload.phone = form.phone.trim();
     if (Object.keys(payload).length === 0) { setEditing(false); return; }
     updateMutation.mutate(payload);
   };
@@ -95,7 +94,7 @@ export default function PersonalInfoScreen() {
   const FIELDS: Field[] = [
     { key: 'name', label: t.field_full_name, icon: <User size={18} color={colors.mutedForeground} strokeWidth={2} />, keyboard: 'default' },
     { key: 'email', label: t.field_email, icon: <Mail size={18} color={colors.mutedForeground} strokeWidth={2} />, keyboard: 'email-address', editable: false },
-    { key: 'phone', label: t.field_phone, icon: <Phone size={18} color={colors.mutedForeground} strokeWidth={2} />, keyboard: 'phone-pad' },
+    { key: 'phone', label: t.field_phone, icon: <Phone size={18} color={colors.mutedForeground} strokeWidth={2} />, keyboard: 'phone-pad', editable: false },
     { key: 'licenseNumber', label: t.field_license_number, icon: <CreditCard size={18} color={colors.mutedForeground} strokeWidth={2} />, keyboard: 'default', editable: false },
     { key: 'nationalId', label: t.field_national_id, icon: <FileText size={18} color={colors.mutedForeground} strokeWidth={2} />, keyboard: 'default', editable: false },
   ];

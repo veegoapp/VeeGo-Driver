@@ -7,23 +7,19 @@ import {
   Phone,
   User,
   KeyRound,
-  Check,
 } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
-  ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useColors } from '@/hooks/useColors';
 import { AppLoader } from '@/components/ui/AppLoader';
 import { useI18n } from '@/lib/i18nContext';
@@ -45,45 +41,14 @@ export default function ShuttleProfileInfoScreen() {
   const { t, isRTL } = useI18n();
   const insets = useSafeAreaInsets();
   const topPad = insets.top;
-  const queryClient = useQueryClient();
 
   const TA = isRTL ? 'right' as const : 'left' as const;
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
-
-  const [email, setEmail] = useState('');
-  const [emailEditing, setEmailEditing] = useState(false);
-  const [emailSaved, setEmailSaved] = useState(false);
 
   const { data: driver, isLoading } = useQuery<DriverMe>({
     queryKey: ['driver'],
     queryFn: endpoints.driver.me as () => Promise<DriverMe>,
   });
-
-  useEffect(() => {
-    if (driver?.email) setEmail(driver.email);
-  }, [driver?.email]);
-
-  const updateMutation = useMutation({
-    mutationFn: (data: { email: string }) =>
-      endpoints.driver.updateMe(data) as Promise<DriverMe>,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['driver'] });
-      setEmailEditing(false);
-      setEmailSaved(true);
-      setTimeout(() => setEmailSaved(false), 2500);
-    },
-    onError: () => {
-      Alert.alert('', t.email_save_error);
-    },
-  });
-
-  const handleSaveEmail = () => {
-    if (!email.trim() || email.trim() === driver?.email) {
-      setEmailEditing(false);
-      return;
-    }
-    updateMutation.mutate({ email: email.trim() });
-  };
 
   return (
     <KeyboardAvoidingView
@@ -158,17 +123,10 @@ export default function ShuttleProfileInfoScreen() {
                   </View>
                   <Lock size={14} color={colors.mutedForeground} strokeWidth={2} />
                 </View>
-              </View>
 
-              <Text style={[styles.lockedHint, { color: colors.mutedForeground, textAlign: TA }]}>
-                {t.locked_field_hint}
-              </Text>
+                <View style={[styles.divider, { backgroundColor: BORDER_COLOR }]} />
 
-              {/* ── Email — editable ──────────────────────────── */}
-              <Text style={[styles.sectionLabel, { color: colors.mutedForeground, textAlign: TA, marginTop: Spacing.xl }]}>
-                {t.field_email}
-              </Text>
-              <View style={[styles.card, { borderColor: BORDER_COLOR }]}>
+                {/* Email — locked */}
                 <View style={[styles.fieldRow, { flexDirection: R }]}>
                   <View style={[styles.iconWrap, { backgroundColor: colors.secondary }]}>
                     <Mail size={17} color={colors.mutedForeground} strokeWidth={2} />
@@ -177,61 +135,17 @@ export default function ShuttleProfileInfoScreen() {
                     <Text style={[styles.fieldLabel, { color: colors.mutedForeground, textAlign: TA }]}>
                       {t.field_email}
                     </Text>
-                    {emailEditing ? (
-                      <TextInput
-                        value={email}
-                        onChangeText={setEmail}
-                        keyboardType="email-address"
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                        autoFocus
-                        style={[
-                          styles.emailInput,
-                          {
-                            color: colors.foreground,
-                            borderBottomColor: colors.primary,
-                            textAlign: TA,
-                          },
-                        ]}
-                        placeholderTextColor={colors.mutedForeground}
-                        placeholder={t.field_email}
-                      />
-                    ) : (
-                      <Text style={[styles.fieldValue, { color: colors.foreground, textAlign: TA }]}>
-                        {email || '—'}
-                      </Text>
-                    )}
+                    <Text style={[styles.fieldValue, { color: colors.foreground, textAlign: TA }]}>
+                      {driver?.email ?? '—'}
+                    </Text>
                   </View>
-
-                  {emailEditing ? (
-                    <Pressable
-                      onPress={handleSaveEmail}
-                      disabled={updateMutation.isPending}
-                      style={[styles.actionBtn, { backgroundColor: colors.primary }]}
-                    >
-                      {updateMutation.isPending
-                        ? <ActivityIndicator size="small" color="#fff" />
-                        : <Check size={15} color="#fff" strokeWidth={2.5} />
-                      }
-                    </Pressable>
-                  ) : (
-                    <Pressable
-                      onPress={() => setEmailEditing(true)}
-                      style={[styles.actionBtn, { backgroundColor: colors.secondary }]}
-                    >
-                      <Text style={[styles.editBtnText, { color: colors.primary }]}>
-                        {t.edit}
-                      </Text>
-                    </Pressable>
-                  )}
+                  <Lock size={14} color={colors.mutedForeground} strokeWidth={2} />
                 </View>
               </View>
 
-              {emailSaved && (
-                <Text style={[styles.savedMsg, { color: '#16a34a', textAlign: TA }]}>
-                  ✓ {t.email_save_success}
-                </Text>
-              )}
+              <Text style={[styles.lockedHint, { color: colors.mutedForeground, textAlign: TA }]}>
+                {t.locked_field_hint}
+              </Text>
 
               {/* ── Change Password ───────────────────────────── */}
               <Text style={[styles.sectionLabel, { color: colors.mutedForeground, textAlign: TA, marginTop: Spacing.xl }]}>
@@ -329,12 +243,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: 'Inter_600SemiBold',
   },
-  emailInput: {
-    fontSize: 15,
-    fontFamily: 'Inter_600SemiBold',
-    paddingVertical: 3,
-    borderBottomWidth: 1.5,
-  },
   divider: { height: 1, marginHorizontal: Spacing.lg },
   lockedHint: {
     fontSize: Typography.size.xs,
@@ -342,23 +250,5 @@ const styles = StyleSheet.create({
     marginTop: 6,
     paddingHorizontal: Spacing.xs,
     lineHeight: 17,
-  },
-  actionBtn: {
-    minWidth: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 10,
-  },
-  editBtnText: {
-    fontSize: 13,
-    fontFamily: 'Inter_600SemiBold',
-  },
-  savedMsg: {
-    fontSize: 13,
-    fontFamily: 'Inter_500Medium',
-    marginTop: Spacing.sm,
-    paddingHorizontal: Spacing.xs,
   },
 });
