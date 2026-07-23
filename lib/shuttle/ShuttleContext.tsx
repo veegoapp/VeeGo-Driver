@@ -355,9 +355,13 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
       Alert.alert('', 'Your booking for next week has been confirmed');
     };
 
-    // Task 3c: SHUTTLE_BOOKING_CREATED — silent refresh of bookings
+    // Task 3c: SHUTTLE_BOOKING_CREATED — silent refresh of bookings.
+    // Also reused by manual single-trip driver assignment (assign-driver), so
+    // refresh the assigned-trip list too — the driver should see a manually
+    // assigned trip immediately instead of waiting for the next poll.
     const handleBookingCreated = () => {
       queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['shuttle-driver-trips'] });
     };
 
     // Real-time slot availability: another driver booked a slot

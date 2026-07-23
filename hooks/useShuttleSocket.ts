@@ -74,13 +74,18 @@ export function useShuttleSocket() {
   useEffect(() => {
     if (!socket) return;
 
-    // Navigation side-effect only — cache invalidation handled by ShuttleProvider
+    // Navigation side-effect only — cache invalidation handled by ShuttleProvider.
+    // This event is also reused by POST /admin/trips/:id/assign-driver (manual
+    // single-trip assignment), whose payload carries tripId/assignedBy instead
+    // of a weekly bookingId — only navigate for the real weekly-booking case,
+    // so a manual assignment doesn't yank the driver to the wrong screen.
     const handleBookingCreated = (raw: unknown) => {
       const parsed = BookingCreatedPayloadSchema.safeParse(raw);
       if (!parsed.success) {
         console.warn(`[Socket] Invalid ${SOCKET_EVENTS.SHUTTLE_BOOKING_CREATED} payload`, parsed.error.issues);
         return;
       }
+      if (parsed.data.bookingId == null) return;
       router.push('/(shuttle)/bookings' as any);
     };
 
