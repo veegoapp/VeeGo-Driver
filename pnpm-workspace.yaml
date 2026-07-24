@@ -155,3 +155,6 @@ overrides:
   # drizzle-kit uses esbuild internally on an older version that's vulnerable, this overrides it
   "@esbuild-kit/esm-loader": "npm:tsx@^4.21.0"
   esbuild: "0.27.3"
+  # Expo CLI requests tar ^7.5.2; use a compatible patch release that is
+  # available through the package firewall and past the release-age threshold.
+  tar: "7.5.21"

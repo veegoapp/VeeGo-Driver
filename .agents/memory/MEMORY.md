@@ -10,3 +10,4 @@
 - [api module split](api-split.md) — lib/api.ts split into lib/api/ (domain files + _client.ts + index.ts barrel); consumers still import @/lib/api
 - [i18nContext split](i18n-split.md) — lib/i18nContext.tsx is a thin re-export; implementation lives in lib/i18n/ (translations, utils, context, components)
 - [shuttleContext split](shuttle-split.md) — lib/shuttleContext.tsx is a thin re-export; implementation lives in lib/shuttle/ (types, helpers, ShuttleContext)
+- [Expo tar registry workaround](expo-tar-registry.md) — Replit’s package firewall rejects tar@7.5.2; workspace pins tar@7.5.21 without disabling release-age protection
