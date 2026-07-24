@@ -102,15 +102,17 @@ export function BottomTabBar({ state, navigation }: TabBarProps) {
 
         {pillReady && (
           <Animated.View
-            style={[styles.activePill, { width: pillW, transform: [{ translateX: pillX }] }]}
+            style={[styles.activePill, { transform: [{ translateX: pillX }] }]}
             pointerEvents="none"
           >
-            <LinearGradient
-              colors={colors.gradientPrimary}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.activePillGradient}
-            />
+            <Animated.View style={[styles.activePillWidth, { width: pillW }]}>
+              <LinearGradient
+                colors={colors.gradientPrimary}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.activePillGradient}
+              />
+            </Animated.View>
           </Animated.View>
         )}
 
@@ -193,8 +195,11 @@ const styles = StyleSheet.create({
     top: PILL_PX,
     bottom: PILL_PX,
     left: 0,
+  },
+  activePillWidth: {
     borderRadius: 16,
     overflow: 'hidden',
+    height: '100%',
   },
   activePillGradient: {
     flex: 1,
