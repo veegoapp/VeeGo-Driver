@@ -22,14 +22,8 @@ radius is in **meters**.
 - 1.5–2.0×: orange (`rgba(249,115,22,...)`)
 - 2.0×+: red (`rgba(239,68,68,...)`)
 
-## Web (MapLibre)
-- Two layers on `surge-zones` GeoJSON source: `surge-fill` (fill) + `surge-stroke` (line dashed)
-- Circle polygons generated client-side via `geoCirclePolygon()` helper (lat/lng/radius → 48-point polygon)
-- Multiplier label markers added/removed via `surgeMarkersRef`
-- Source updated reactively via `useEffect([surgeZones])` calling `source.setData(...)`
-
 ## Native (react-native-maps)
-- `<Circle>` overlay per zone (radius in meters, fill/stroke colors)
+- `<Circle>` overlay per zone (radius in meters, fill/stroke colors) plus a centered multiplier `<Marker>` label
 
 ## Home screen badge
 - Amber pill positioned absolutely at `bottom: TAB_BAR_HEIGHT + 140` (adjusts up if locationError banner also showing)

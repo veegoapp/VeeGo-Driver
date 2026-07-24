@@ -1,4 +1,4 @@
-- [Expo RN app structure](expo-structure.md) — frontend is a bare Expo app at the monorepo root (not a workspace package); native map uses react-native-webview + MapLibre HTML (not react-native-maps)
+- [Expo RN app structure](expo-structure.md) — frontend is a bare Expo app at the monorepo root (not a workspace package); native map uses react-native-maps with Google provider
 - [Surge zone implementation](surge-zones.md) — SurgeZone type lives in both MapBackdrop files + useRideSocket; MapBackdrop.tsx re-exports from .web.tsx
 - [Backend URL wiring](backend-url-wiring.md) — BACKEND_URL secret → setup.sh writes .env → EXPO_PUBLIC_API_URL; use pnpm exec expo start not npx
 - [Shuttle referral architecture](shuttle-referral-arch.md) — ReferralContext + ShuttleReferralBridge pattern for badge state; new Expo Router paths need `as any` cast until the app rebuilds its route types
