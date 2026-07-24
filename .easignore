@@ -1,0 +1,35 @@
+# ── Dependencies (EAS installs these automatically) ──────────────────────────
+node_modules/
+
+# ── Replit-specific runtime & store (not needed on EAS servers) ──────────────
+.local/
+.cache/
+.replit
+.replitignore
+
+# ── Replit agent memory & skills ─────────────────────────────────────────────
+.agents/
+
+# ── Local build output (Replit static-build only, not an Expo/EAS artifact) ──
+static-build/
+
+# ── Local scripts (setup.sh is Replit bootstrap; build.js is static-build only)
+scripts/
+
+# ── Uploaded reference files (screenshots, prompts, source images) ────────────
+attached_assets/
+
+# ── Internal documentation (no effect on the build) ──────────────────────────
+docs/
+README.md
+DRIVER_APP_PRODUCTION_AUDIT.md
+VeeGo_Driver_Production_UX_Audit.md
+"Driver App Cleanup Report.md"
+driver-audit-verification-report.md
+driver-local-fixes-report.md
+
+# ── Local environment file (values are supplied via EAS Secrets instead) ──────
+.env
+
+# ── Misc ──────────────────────────────────────────────────────────────────────
+*.log
