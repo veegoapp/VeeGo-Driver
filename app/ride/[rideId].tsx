@@ -14,6 +14,7 @@ import { useService } from '@/lib/serviceContext';
 import { useWaitingCharge } from '@/hooks/useWaitingCharge';
 import { useActiveLocationTracking } from '@/hooks/useActiveLocationTracking';
 import { useLocationBroadcast } from '@/hooks/useLocationBroadcast';
+import { useDriverLocation } from '@/hooks/useDriverLocation';
 import { endpoints } from '@/lib/api';
 import { getToken, getUserIdFromToken } from '@/lib/auth';
 import { useI18n } from '@/lib/i18nContext';
@@ -133,6 +134,8 @@ export default function RideScreen() {
     enabled: locationTrackingEnabled,
     rideId: rideId ? Number(rideId) : null,
   });
+
+  const { position: driverPosition } = useDriverLocation(locationTrackingEnabled);
 
   // Shared exit path for a ride that ended outside the driver's own action —
   // reached via a live socket event (cancelled by rider/system, timeout,
@@ -504,6 +507,7 @@ export default function RideScreen() {
         dropoff={r?.dropoffLatitude != null && r?.dropoffLongitude != null
           ? { latitude: Number(r.dropoffLatitude), longitude: Number(r.dropoffLongitude) }
           : undefined}
+        driverLocation={driverPosition ?? undefined}
       />
 
       <View style={[styles.overlay, { paddingTop: topPad }]}>

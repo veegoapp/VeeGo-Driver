@@ -1,0 +1,82 @@
+I want you to implement only the following three Google Maps related changes in the driver app. Do not expand the scope. Do not refactor unrelated code. Do not modify backend, API keys, Google Cloud configuration, build settings, dependencies, or any files outside the required scope.
+
+## 1) Confirmed bug: Live driver marker missing for Car, Scooter, and Delivery
+
+File:
+app/ride/[rideId].tsx
+
+Problem:
+The normal ride screen already tracks and broadcasts the driver's location, but it does not pass the driver's live location to MapBackdrop.
+
+Required fix:
+- Use the existing location hook already used by the app (`useDriverLocation`).
+- Connect the existing ride lifecycle state to enable/disable location tracking.
+- Pass the driver position into MapBackdrop using the existing `driverLocation` prop.
+- Do not create a new GPS implementation.
+- Do not change ride tracking, ride status, cancellation, completion, or rating logic.
+
+Expected result:
+Car, Scooter, and Delivery rides should display the live driver marker using the existing native map implementation.
+
+---
+
+## 2) Required Uber-like initial map camera behavior
+
+File:
+components/MapBackdrop.native.tsx
+
+Requirement:
+The ride map should behave like Uber when opening an active ride.
+
+Expected behavior:
+- When the ride opens, the camera should automatically show the important ride points:
+  - Driver location (if available)
+  - Pickup location
+  - Dropoff location
+  - Route if available
+- If ride coordinates arrive after the map is already ready, the camera should update once to include the new ride coordinates.
+- Do not continuously move the camera during normal map usage.
+- Do not fight with active navigation/follow-driver camera mode.
+- Preserve existing navigation mode, focusTarget behavior, markers, polylines, and other map features.
+
+This is a required product behavior, not a redesign.
+
+---
+
+## 3) Shuttle approach notification and station visualization behavior
+
+File:
+app/shuttle/trip-active.tsx
+
+Required behavior:
+Keep these two concepts separate:
+
+A) Approach warning:
+- When the shuttle is 250 meters from the next station:
+  - Trigger the approaching state.
+  - Play the existing/appropriate voice notification that the next station is 250 meters away.
+
+B) Station visualization:
+- The station itself should remain represented by:
+  - A station pin marker in the center.
+  - A circle around the station with a 100 meter radius.
+
+Important:
+Do NOT change the circle radius to 250 meters.
+The 250 meter distance is for the warning/approach trigger.
+The 100 meter circle represents the actual station area.
+
+---
+
+## Safety requirements
+
+Before editing:
+- Review the current implementation.
+- Only modify the minimum required code.
+- Do not change existing behavior that is unrelated to these three requirements.
+
+After editing provide:
+1. List of files changed.
+2. Exact changes made in each file.
+3. Confirmation that no unrelated files were modified.
+4. Verification that Car, Scooter, Delivery, and Shuttle map flows are preserved.

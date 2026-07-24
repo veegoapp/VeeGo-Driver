@@ -88,6 +88,7 @@ export function MapBackdrop({
 
   const prevPosRef = useRef<{ latitude: number; longitude: number } | null>(null);
   const userPannedRef = useRef(false);
+  const initialFitDoneRef = useRef(false);
 
   // ── Initial camera center ────────────────────────────────────────────────
   const initialCenter = useMemo(() => {
@@ -145,24 +146,9 @@ export function MapBackdrop({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusTarget?.latitude, focusTarget?.longitude]);
 
-  // ── Auto-fit all points on map ready (non-nav mode) ─────────────────────
+  // ── Mark the map ready; initial fitting runs when ride points are available ─
   const handleMapReady = useCallback(() => {
     setMapReady(true);
-    if (navigationMode) return;
-    const pts = [
-      ...(routePolyline ?? []),
-      pickup,
-      dropoff,
-    ].filter(Boolean) as Array<{ latitude: number; longitude: number }>;
-    if (pts.length < 2) return;
-    // Delay slightly so the MapView has painted its first frame
-    setTimeout(() => {
-      mapRef.current?.fitToCoordinates(pts, {
-        edgePadding: { top: 80, right: 60, bottom: 220, left: 60 },
-        animated: true,
-      });
-    }, 350);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Auto-fetch route for non-nav on-demand rides ─────────────────────────
@@ -235,6 +221,56 @@ export function MapBackdrop({
     : autoPolyline?.length
     ? autoPolyline
     : null;
+
+  // ── One-shot initial ride framing (non-nav mode) ─────────────────────────
+  // Include the driver when it is already available, but do not refit as the
+  // driver moves. The user, navigation mode, and focusTarget retain control
+  // over the camera.
+  const initialFitPoints = useMemo(
+    () => [
+      ...(displayRouteCoords ?? []),
+      driverLocation
+        ? { latitude: driverLocation.latitude, longitude: driverLocation.longitude }
+        : undefined,
+      pickup,
+      dropoff,
+    ].filter(Boolean) as Array<{ latitude: number; longitude: number }>,
+    [
+      displayRouteCoords,
+      driverLocation?.latitude,
+      driverLocation?.longitude,
+      pickup?.latitude,
+      pickup?.longitude,
+      dropoff?.latitude,
+      dropoff?.longitude,
+    ],
+  );
+
+  useEffect(() => {
+    if (
+      !mapReady ||
+      navigationMode ||
+      focusTarget ||
+      userPanned ||
+      initialFitDoneRef.current ||
+      initialFitPoints.length < 2
+    ) {
+      return;
+    }
+
+    // Delay slightly so the MapView has painted its first frame. The effect
+    // cleanup cancels this if navigation/focus/user interaction takes over.
+    const timer = setTimeout(() => {
+      if (navigationMode || focusTarget || userPannedRef.current) return;
+      initialFitDoneRef.current = true;
+      mapRef.current?.fitToCoordinates(initialFitPoints, {
+        edgePadding: { top: 80, right: 60, bottom: 220, left: 60 },
+        animated: true,
+      });
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [mapReady, navigationMode, focusTarget, userPanned, initialFitPoints]);
 
   // Station markers are drawn when routePolyline holds station coordinates + statuses
   const hasStations = (routePolyline?.length ?? 0) >= 2 && !!stationStatuses;
