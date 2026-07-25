@@ -32,15 +32,15 @@ import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
 import { Shadows } from '@/constants/shadows';
+import { TAB_BAR_HEIGHT_BASE } from '@/constants/tabBar';
 import { UpcomingTripCard } from '@/components/UpcomingTripCard';
 import { StatItem } from '@/components/StatItem';
-
-const TAB_BAR_HEIGHT = 96;
 
 export default function ShuttleHomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const topPad = insets.top;
+  const tabBarHeight = TAB_BAR_HEIGHT_BASE + insets.bottom;
   const { t, isRTL } = useI18n();
   const TA = isRTL ? 'right' as const : 'left' as const;
   const [online, setOnline] = useState(false);
@@ -285,7 +285,7 @@ export default function ShuttleHomeScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
-        contentContainerStyle={{ paddingTop: topPad + 8, paddingBottom: TAB_BAR_HEIGHT + 24, paddingHorizontal: Spacing.lg }}
+        contentContainerStyle={{ paddingTop: topPad + 8, paddingBottom: tabBarHeight + 24, paddingHorizontal: Spacing.lg }}
         showsVerticalScrollIndicator={false}
         style={{ flex: 1 }}
       >
@@ -666,7 +666,7 @@ export default function ShuttleHomeScreen() {
 
       {/* Floating offline button — centered above tab bar, shown only when offline */}
       {!online && (
-        <View style={[styles.floatingOfflineWrap, { bottom: TAB_BAR_HEIGHT + 20 }]} pointerEvents="box-none">
+        <View style={[styles.floatingOfflineWrap, { bottom: tabBarHeight + 20 }]} pointerEvents="box-none">
           <View style={styles.floatingPulseWrap}>
             <Pressable
               onPress={toggleOnline}

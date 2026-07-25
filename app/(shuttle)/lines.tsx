@@ -19,8 +19,7 @@ import { endpoints, ApiError } from '@/lib/api';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
-
-const TAB_BAR_HEIGHT = 96;
+import { TAB_BAR_HEIGHT_BASE } from '@/constants/tabBar';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -100,6 +99,7 @@ export default function ShuttleLinesScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const topPad = insets.top;
+  const tabBarHeight = TAB_BAR_HEIGHT_BASE + insets.bottom;
   const { t, isRTL } = useI18n();
   const TA = isRTL ? 'right' as const : 'left' as const;
   const headerAnim = useRef(new Animated.Value(0)).current;
@@ -272,7 +272,7 @@ export default function ShuttleLinesScreen() {
       <ScrollView
         contentContainerStyle={{
           paddingTop: topPad + 8,
-          paddingBottom: TAB_BAR_HEIGHT + 24,
+          paddingBottom: tabBarHeight + 24,
           paddingHorizontal: Spacing.lg,
         }}
         showsVerticalScrollIndicator={false}

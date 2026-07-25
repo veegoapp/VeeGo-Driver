@@ -54,9 +54,8 @@ import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
 import { CARD_RADIUS, BORDER_COLOR } from '@/constants/uiConstants';
+import { TAB_BAR_HEIGHT_BASE } from '@/constants/tabBar';
 import { MenuRow } from '@/components/MenuRow';
-
-const TAB_BAR_HEIGHT = 96;
 
 // ─── Fallback base profile from GET /driver/me ────────────────────────────
 type BaseProfile = {
@@ -74,6 +73,7 @@ export default function ShuttleProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const topPad = insets.top;
+  const tabBarHeight = TAB_BAR_HEIGHT_BASE + insets.bottom;
   const { t, isRTL, language, setLanguage, isSwitchingLanguage } = useI18n();
   const { logout } = useAuth();
   const { isDarkMode, setIsDarkMode } = useService();
@@ -220,7 +220,7 @@ export default function ShuttleProfileScreen() {
       <ScrollView
         contentContainerStyle={{
           paddingTop: topPad + 8,
-          paddingBottom: TAB_BAR_HEIGHT + 24,
+          paddingBottom: tabBarHeight + 24,
           paddingHorizontal: 20,
         }}
         showsVerticalScrollIndicator={false}

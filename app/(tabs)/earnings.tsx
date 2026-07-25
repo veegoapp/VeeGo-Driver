@@ -23,6 +23,7 @@ import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
 import { Shadows } from '@/constants/shadows';
+import { TAB_BAR_HEIGHT_BASE } from '@/constants/tabBar';
 
 type WeekDay = { week_start: string; trip_count: number; total_earned: number; paid?: number; pending?: number; confirmed?: number };
 type EarningsSummary = {
@@ -50,13 +51,12 @@ const PERIOD_HERO_LABELS: Record<PeriodKey, string> = {
   current_month: 'TOTAL THIS MONTH',
 };
 
-const TAB_BAR_HEIGHT = 96;
-
 export default function EarningsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { t, isRTL } = useI18n();
   const topPad = insets.top;
+  const tabBarHeight = TAB_BAR_HEIGHT_BASE + insets.bottom;
 
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
   const TA = isRTL ? 'right' as const : 'left' as const;
@@ -116,7 +116,7 @@ export default function EarningsScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingTop: topPad + 8, paddingBottom: TAB_BAR_HEIGHT + 24, paddingHorizontal: 20 }}
+        contentContainerStyle={{ paddingTop: topPad + 8, paddingBottom: tabBarHeight + 24, paddingHorizontal: 20 }}
         showsVerticalScrollIndicator={false}
       >
         <View style={[styles.header, { flexDirection: R }]}>

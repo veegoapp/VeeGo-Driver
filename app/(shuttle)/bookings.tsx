@@ -20,12 +20,11 @@ import { useI18n } from '@/lib/i18nContext';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
+import { TAB_BAR_HEIGHT_BASE } from '@/constants/tabBar';
 import { BookingCard } from '@/components/BookingCard';
 import { CompletedTripCard } from '@/components/CompletedTripCard';
 import { MainTabBtn } from '@/components/MainTabBtn';
 import { RenewalBanner } from '@/components/RenewalBanner';
-
-const TAB_BAR_HEIGHT = 96;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -136,6 +135,7 @@ export default function BookingsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const topPad = insets.top;
+  const tabBarHeight = TAB_BAR_HEIGHT_BASE + insets.bottom;
   const { t, isRTL, language } = useI18n();
   const TA = isRTL ? 'right' as const : 'left' as const;
   const locale = language === 'ar' ? 'ar-EG' : 'en-GB';
@@ -273,7 +273,7 @@ export default function BookingsScreen() {
       <ScrollView
         contentContainerStyle={{
           paddingTop: topPad + 8,
-          paddingBottom: TAB_BAR_HEIGHT + 24,
+          paddingBottom: tabBarHeight + 24,
           paddingHorizontal: Spacing.lg,
         }}
         showsVerticalScrollIndicator={false}

@@ -27,6 +27,7 @@ import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
 import { Shadows } from '@/constants/shadows';
+import { TAB_BAR_HEIGHT_BASE } from '@/constants/tabBar';
 
 // Task 2: status field added — drives which action buttons are shown
 type Trip = {
@@ -42,7 +43,6 @@ type Trip = {
 
 type FilterKey = 'all' | 'scheduled' | 'active' | 'completed';
 const FILTER_KEYS: FilterKey[] = ['all', 'scheduled', 'active', 'completed'];
-const TAB_BAR_HEIGHT = 96;
 const MAX_ANIM = 50;
 
 export default function TripsScreen() {
@@ -54,6 +54,7 @@ export default function TripsScreen() {
   const [allTrips, setAllTrips] = useState<Trip[]>([]);
   const PAGE_LIMIT = 20;
   const topPad = insets.top;
+  const tabBarHeight = TAB_BAR_HEIGHT_BASE + insets.bottom;
   const queryClient = useQueryClient();
 
   // Cancel modal state
@@ -211,7 +212,7 @@ export default function TripsScreen() {
       </Modal>
 
       <ScrollView
-        contentContainerStyle={{ paddingTop: topPad + 8, paddingBottom: TAB_BAR_HEIGHT + 24, paddingHorizontal: 20 }}
+        contentContainerStyle={{ paddingTop: topPad + 8, paddingBottom: tabBarHeight + 24, paddingHorizontal: 20 }}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
       >

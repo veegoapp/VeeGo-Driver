@@ -20,18 +20,19 @@ import { endpoints, type RideHistoryItem } from '@/lib/api';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
+import { TAB_BAR_HEIGHT_BASE } from '@/constants/tabBar';
 
 type FilterKey = 'all' | 'completed' | 'cancelled';
 const FILTER_KEYS: FilterKey[] = ['all', 'completed', 'cancelled'];
 const PAGE_LIMIT = 20;
 const MAX_ANIM = 50;
-const TAB_BAR_HEIGHT = 96;
 
 export default function RideHistoryTabScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { t, isRTL } = useI18n();
   const topPad = insets.top;
+  const tabBarHeight = TAB_BAR_HEIGHT_BASE + insets.bottom;
 
   const TA = isRTL ? 'right' as const : 'left' as const;
   const R  = isRTL ? 'row-reverse' as const : 'row' as const;
@@ -87,7 +88,7 @@ export default function RideHistoryTabScreen() {
         contentContainerStyle={{
           paddingTop: topPad + 8,
           paddingHorizontal: 20,
-          paddingBottom: TAB_BAR_HEIGHT + 24,
+          paddingBottom: tabBarHeight + 24,
         }}
         showsVerticalScrollIndicator={false}
       >

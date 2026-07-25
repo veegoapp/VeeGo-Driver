@@ -16,17 +16,17 @@ import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
 import { Shadows } from '@/constants/shadows';
+import { TAB_BAR_HEIGHT_BASE } from '@/constants/tabBar';
 
 type WalletBalance = { balance: number };
 type Transaction = { id: string; title: string; sub: string; amount: number; incoming: boolean };
-
-const TAB_BAR_HEIGHT = 96;
 
 export default function WalletScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { t, isRTL } = useI18n();
   const topPad = insets.top;
+  const tabBarHeight = TAB_BAR_HEIGHT_BASE + insets.bottom;
   const queryClient = useQueryClient();
 
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
@@ -148,7 +148,7 @@ export default function WalletScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
-        contentContainerStyle={{ paddingTop: topPad + 8, paddingBottom: TAB_BAR_HEIGHT + 24, paddingHorizontal: 20 }}
+        contentContainerStyle={{ paddingTop: topPad + 8, paddingBottom: tabBarHeight + 24, paddingHorizontal: 20 }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}

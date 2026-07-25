@@ -20,7 +20,7 @@ import { LANGUAGES } from '@/constants/languages';
 import { useAuth } from '@/lib/authContext';
 import { endpoints } from '@/lib/api';
 import { TermsModal } from '@/components/TermsModal';
-import { TAB_BAR_HEIGHT } from './home';
+import { TAB_BAR_HEIGHT_BASE } from '@/constants/tabBar';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
@@ -46,6 +46,7 @@ export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const topPad = insets.top;
+  const tabBarHeight = TAB_BAR_HEIGHT_BASE + insets.bottom;
   const { isDarkMode, setIsDarkMode } = useService();
   const { t, isRTL, language, setLanguage, isSwitchingLanguage } = useI18n();
   const { logout } = useAuth();
@@ -141,7 +142,7 @@ export default function ProfileScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
-        contentContainerStyle={{ paddingTop: topPad + 8, paddingBottom: TAB_BAR_HEIGHT + 24, paddingHorizontal: 20 }}
+        contentContainerStyle={{ paddingTop: topPad + 8, paddingBottom: tabBarHeight + 24, paddingHorizontal: 20 }}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
       >
