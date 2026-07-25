@@ -8,17 +8,24 @@ echo "=========================================="
 echo ""
 
 # ── 1. Check required secrets ──────────────────────────────────────────────
-if [ -z "$BACKEND_URL" ]; then
-  echo "⚠️  WARNING: BACKEND_URL secret is not set."
-  echo "    The app will start in Demo-only mode (no live backend)."
-  echo "    To connect a real backend, add BACKEND_URL in Replit Secrets."
-  echo ""
-  EFFECTIVE_URL="http://localhost:3000/api"
-else
+# EXPO_PUBLIC_API_URL is the preferred secret name. BACKEND_URL remains
+# supported for existing environments.
+if [ -n "$EXPO_PUBLIC_API_URL" ]; then
+  echo "✅  EXPO_PUBLIC_API_URL found"
+  EFFECTIVE_URL="$EXPO_PUBLIC_API_URL"
+elif [ -n "$BACKEND_URL" ]; then
   echo "✅  BACKEND_URL found: $BACKEND_URL"
   EFFECTIVE_URL="$BACKEND_URL"
+else
+  echo "⚠️  WARNING: EXPO_PUBLIC_API_URL/BACKEND_URL secret is not set."
+  echo "    The app will start in Demo-only mode (no live backend)."
+  echo "    To connect a real backend, add EXPO_PUBLIC_API_URL in Replit Secrets."
+  echo ""
+  EFFECTIVE_URL="http://localhost:3000/api"
+fi
 
-  # ── 2. Verify backend connectivity ──────────────────────────────────────
+# ── 2. Verify backend connectivity when a real backend is configured ───────
+if [ "$EFFECTIVE_URL" != "http://localhost:3000/api" ]; then
   echo ""
   echo "🔗  Checking backend connectivity..."
   HTTP_STATUS=$(curl -o /dev/null -s -w "%{http_code}" --max-time 8 "$EFFECTIVE_URL/health" 2>/dev/null || echo "000")

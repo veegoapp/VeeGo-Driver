@@ -3,12 +3,12 @@ name: Backend URL wiring
 description: How BACKEND_URL secret flows into the app and what can go wrong at login
 ---
 
-The single source of truth is the `BACKEND_URL` Replit secret.
+The preferred source of truth is the `EXPO_PUBLIC_API_URL` Replit secret; `BACKEND_URL` remains supported as a legacy fallback.
 
 **Flow:**
-1. `setup.sh` reads `$BACKEND_URL` (exits if unset)
-2. Pings `$BACKEND_URL/health` with an 8-second timeout; warns but continues if unreachable
-3. Writes `.env` → `EXPO_PUBLIC_API_URL=$BACKEND_URL`
+1. `setup.sh` reads `$EXPO_PUBLIC_API_URL`, then falls back to `$BACKEND_URL`
+2. Pings the selected backend `/health` endpoint with an 8-second timeout; warns but continues if unreachable
+3. Writes `.env` → `EXPO_PUBLIC_API_URL=<selected backend URL>`
 4. Runs `pnpm install` then `pnpm exec expo start --tunnel --clear`
 5. Metro bakes `EXPO_PUBLIC_API_URL` into the bundle at startup
 

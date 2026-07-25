@@ -24,7 +24,9 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { SurgeZone } from '@/lib/types';
 import { GlassView } from '@/components/GlassView';
+import { MapBackdrop } from '@/components/MapBackdrop';
 import { useColors } from '@/hooks/useColors';
+import { useDriverLocation } from '@/hooks/useDriverLocation';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useRideSocket, type RideRequest } from '@/hooks/useRideSocket';
 import { useI18n } from '@/lib/i18nContext';
@@ -53,6 +55,7 @@ export default function HomeScreen() {
   const [surgeZones, setSurgeZones] = useState<SurgeZone[]>([]);
   const [countdown, setCountdown] = useState(12);
   const topPad = insets.top;
+  const { position: driverPosition } = useDriverLocation(online);
 
   // Socket event UI state
   const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -475,6 +478,10 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <MapBackdrop
+        driverLocation={driverPosition ?? undefined}
+        surgeZones={surgeZones}
+      />
 
       {/* Reconnecting banner */}
       <Animated.View
