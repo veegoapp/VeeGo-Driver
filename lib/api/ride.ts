@@ -55,7 +55,7 @@ export const safetyEndpoints = {
 };
 
 export const earningsEndpoints = {
-  summary: () => api.get('/earnings/summary'),
+  summary: (period?: string) => api.get(`/earnings/summary${period ? `?period=${period}` : ''}`),
   weekly: (weeks = 4) => api.get(`/earnings/weekly?weeks=${weeks}`),
 };
 

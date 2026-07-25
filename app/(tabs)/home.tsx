@@ -4,7 +4,7 @@ import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import { DRIVER_LOCATION_TASK } from '@/lib/backgroundLocationTask';
-import { AlertCircle, Bell, Check, CheckCircle, Settings, Star, TrendingUp, X } from 'lucide-react-native';
+import { AlertCircle, Bell, Check, CheckCircle, Star, Tag, TrendingUp, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSocket } from '@/lib/socketContext';
@@ -54,6 +54,7 @@ export default function HomeScreen() {
   const [request, setRequest] = useState<RideRequest | null>(null);
   const [surgeZones, setSurgeZones] = useState<SurgeZone[]>([]);
   const [countdown, setCountdown] = useState(12);
+  const [promoDismissed, setPromoDismissed] = useState(false);
   const topPad = insets.top;
   const { position: driverPosition } = useDriverLocation(online);
 
@@ -80,8 +81,19 @@ export default function HomeScreen() {
   });
   const { data: earningsRaw, isLoading: earningsLoading, isError: earningsError, refetch: refetchEarnings } = useQuery({
     queryKey: ['earnings-summary'],
-    queryFn: endpoints.earnings.summary,
+    queryFn: () => endpoints.earnings.summary(),
   });
+  const { data: promotionsRaw } = useQuery({
+    queryKey: ['driver-promotions'],
+    queryFn: () => endpoints.driver.promotions(),
+    retry: false,
+    staleTime: 60000,
+  });
+  const _now = new Date();
+  const activePromo: { id: string; title: string; description?: string; bonusPercentage?: number; bonusAmount?: number; targetRides?: number; validUntil?: string } | null =
+    (Array.isArray(promotionsRaw) ? promotionsRaw as any[] : Array.isArray((promotionsRaw as any)?.data) ? (promotionsRaw as any).data : [])
+      .find((p: any) => p.isActive === true && (!p.validUntil || new Date(p.validUntil) > _now)) ?? null;
+
   const { data: activeRideRaw } = useQuery({
     queryKey: ['ride-active'],
     queryFn: endpoints.rides.active,
@@ -567,15 +579,6 @@ export default function HomeScreen() {
                 )}
               </GlassView>
             </Pressable>
-            <Pressable
-              onPress={() => router.push('/settings')}
-              style={styles.iconBtn}
-              accessibilityLabel="Settings"
-            >
-              <GlassView style={styles.iconBtnGlass} borderRadius={20}>
-                <Settings size={18} color={colors.foreground} strokeWidth={2} />
-              </GlassView>
-            </Pressable>
           </View>
         </View>
 
@@ -601,6 +604,38 @@ export default function HomeScreen() {
             )}
           </GlassView>
         </View>
+
+        {/* ── Active Promotions card — session-dismissible ─────────────── */}
+        {!promoDismissed && activePromo !== null && (
+          <View style={{ paddingHorizontal: Spacing.lg, marginTop: Spacing.sm }}>
+            <GlassView strong style={styles.promoHomeInner} borderRadius={16}>
+              <View style={[styles.promoHomeBody, { flexDirection: R }]}>
+                <View style={[styles.promoHomeIcon, { backgroundColor: colors.primary + '26' }]}>
+                  <Tag size={16} color={colors.primary} strokeWidth={2} />
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={[styles.promoHomeTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]} numberOfLines={1}>{activePromo.title}</Text>
+                  {(activePromo.bonusPercentage != null || activePromo.bonusAmount != null) && (
+                    <Text style={[styles.promoHomeBonus, { color: colors.primary, fontFamily: 'Inter_700Bold' }]}>
+                      {activePromo.bonusPercentage != null
+                        ? `+${activePromo.bonusPercentage}% bonus`
+                        : `+${activePromo.bonusAmount} ${t.egp} bonus`}
+                      {activePromo.targetRides != null ? ` · ${activePromo.targetRides} trips` : ''}
+                    </Text>
+                  )}
+                  {activePromo.validUntil && (
+                    <Text style={[styles.promoHomeExpiry, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
+                      Valid until {new Date(activePromo.validUntil).toLocaleDateString()}
+                    </Text>
+                  )}
+                </View>
+                <Pressable onPress={() => setPromoDismissed(true)} style={styles.promoHomeClose} hitSlop={8}>
+                  <X size={14} color={colors.mutedForeground} strokeWidth={2} />
+                </Pressable>
+              </View>
+            </GlassView>
+          </View>
+        )}
 
         {surgeZones.length > 0 && online && (
           <Animated.View style={[styles.demandCard, { transform: [{ translateX: demandAnim }], opacity: demandOpacity }]}>
@@ -862,6 +897,14 @@ const styles = StyleSheet.create({
   acceptBtnGrad: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
   acceptBtnText: { fontSize: 15 },
   timerBar: { height: 4, borderRadius: 2, marginTop: Spacing.md },
+  // Active Promotions card
+  promoHomeInner: {},
+  promoHomeBody: { alignItems: 'flex-start', gap: Spacing.md, padding: Spacing.md },
+  promoHomeIcon: { width: 36, height: 36, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
+  promoHomeTitle: { fontSize: Typography.size.sm },
+  promoHomeBonus: { fontSize: 12, marginTop: 2 },
+  promoHomeExpiry: { fontSize: 11, marginTop: Spacing.xs },
+  promoHomeClose: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
   // Toast banner — ride:no_longer_available / driver:cooldown:cleared
   toastWrap: { position: 'absolute', left: 0, right: 0, zIndex: 100, paddingHorizontal: Spacing.lg },
   toastInner: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, borderRadius: Radius.md, paddingVertical: 10, paddingHorizontal: Spacing.lg, shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 5 },

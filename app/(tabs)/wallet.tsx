@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { ArrowDownLeft, ArrowUpRight, Briefcase, CreditCard, Phone, Plus, X } from 'lucide-react-native';
+import { ArrowDownLeft, ArrowUpRight, X } from 'lucide-react-native';
 import React, { useRef, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Animated, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,6 +11,7 @@ import { AppLoader } from '@/components/ui/AppLoader';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
 import { payoutStatusBadge, type PayoutAccount, type PayoutHistoryItem } from '@/lib/walletHelpers';
+// PayoutAccount is used by the Cash Out flow (handlePayoutOpen / handlePayoutConfirm)
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
@@ -209,50 +210,6 @@ export default function WalletScreen() {
           </View>
         </Animated.View>
 
-        <View style={[styles.sectionHeader, { flexDirection: R }]}>
-          <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>{t.payout_methods}</Text>
-          <Pressable onPress={() => router.push('/payout-accounts' as any)} hitSlop={8}>
-            <Text style={[styles.addBtn, { color: colors.primary, fontFamily: 'Inter_700Bold' }]}>{t.manage}</Text>
-          </Pressable>
-        </View>
-        <View style={{ gap: Spacing.sm }}>
-          {payoutAccounts.length > 0 ? payoutAccounts.map((account) => (
-            <GlassView key={account.id} style={[styles.methodCard, { flexDirection: R }]} borderRadius={16}>
-              <View style={[styles.methodIcon, { backgroundColor: account.isDefault ? colors.primary + '26' : colors.secondary }]}>
-                {account.methodKey === 'vodafone_cash' ? (
-                  <Phone size={20} color={account.isDefault ? colors.primary : colors.mutedForeground} strokeWidth={2} />
-                ) : account.methodKey === 'instapay' ? (
-                  <Briefcase size={20} color={account.isDefault ? colors.primary : colors.mutedForeground} strokeWidth={2} />
-                ) : (
-                  <CreditCard size={20} color={account.isDefault ? colors.primary : colors.mutedForeground} strokeWidth={2} />
-                )}
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.methodName, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
-                  {account.accountName} — {account.accountNumber}
-                </Text>
-                <Text style={[styles.methodSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>
-                  {account.isVerified ? t.default_card : t.pending_verification}
-                </Text>
-              </View>
-              {account.isDefault && (
-                <Text style={[styles.defaultBadge, { color: colors.primary, fontFamily: 'Inter_700Bold' }]}>{t.default_card}</Text>
-              )}
-            </GlassView>
-          )) : (
-            <Pressable onPress={() => router.push('/payout-accounts' as any)}>
-              <GlassView style={[styles.methodCard, { flexDirection: R }]} borderRadius={16}>
-                <View style={[styles.methodIcon, { backgroundColor: colors.secondary }]}>
-                  <Plus size={20} color={colors.mutedForeground} strokeWidth={2} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.methodName, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>{t.no_payout_methods}</Text>
-                </View>
-              </GlassView>
-            </Pressable>
-          )}
-        </View>
-
         <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', marginTop: Spacing.xl, marginBottom: Spacing.md, textAlign: TA }]}>{t.payout_history_label}</Text>
         {historyLoading ? (
           <GlassView borderRadius={16} style={{ padding: Spacing.xl, alignItems: 'center' }}>
@@ -338,13 +295,7 @@ const styles = StyleSheet.create({
   actionGrad: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
   secondaryAction: { height: 48, alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
   actionText: { fontSize: Typography.size.sm },
-  sectionHeader: { alignItems: 'center', justifyContent: 'space-between', marginTop: Spacing.xl, marginBottom: Spacing.md },
   sectionTitle: { fontSize: Typography.size.xs, letterSpacing: 2, textTransform: 'uppercase' },
-  addBtn: { fontSize: Typography.size.xs },
-  methodCard: { alignItems: 'center', gap: Spacing.md, padding: Spacing.md },
-  methodIcon: { width: 40, height: 40, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
-  methodName: { fontSize: Typography.size.sm },
-  methodSub: { fontSize: Typography.size.xs, marginTop: 2 },
   defaultBadge: { fontSize: 10, letterSpacing: 1, textTransform: 'uppercase' },
   trashBtn: { padding: 6 },
   txItem: { alignItems: 'center', gap: Spacing.md, padding: Spacing.lg },

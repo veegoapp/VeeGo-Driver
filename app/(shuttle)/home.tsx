@@ -200,7 +200,7 @@ export default function ShuttleHomeScreen() {
 
   const { data: summaryRaw } = useQuery({
     queryKey: ['earnings-summary'],
-    queryFn: endpoints.earnings.summary,
+    queryFn: () => endpoints.earnings.summary(),
   });
   const summaryData = summaryRaw as { summary?: { totalEarnings?: string | number } } | undefined;
   const todayEarnings = parseFloat(String(summaryData?.summary?.totalEarnings ?? 0)).toFixed(0);

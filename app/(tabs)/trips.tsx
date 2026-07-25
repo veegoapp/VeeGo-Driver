@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { Check, ChevronRight, Sliders, Star, X } from 'lucide-react-native';
+import { Car, Check, ChevronRight, Sliders, Star, X } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -251,7 +251,7 @@ export default function TripsScreen() {
           </View>
         ) : tripsData.length === 0 ? (
           <View style={{ marginTop: 60, alignItems: 'center', gap: Spacing.sm }}>
-            <Text style={{ fontSize: 32 }}>🚗</Text>
+            <Car size={52} color={colors.mutedForeground} strokeWidth={1.5} style={{ opacity: 0.45 }} />
             <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: Typography.size.md }}>{t.trips_empty_title}</Text>
             <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13 }}>
               {filter === 'all' ? t.no_trip_history_sub : `${filterLabels[filter]}`}
