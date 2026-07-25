@@ -18,6 +18,13 @@ The single source of truth is the `BACKEND_URL` Replit secret.
 **Why `--clear` is required:**
 `EXPO_PUBLIC_*` vars are baked in at Metro bundle time. Without `--clear`, stale cache may serve the old URL even after `.env` changes.
 
+**Environment caveat:**
+Changing the `BACKEND_URL` secret does not update an already-running Expo bundle. The setup workflow must run again so it rewrites `.env` and restarts Metro; an older `npx expo start` process can occupy port 8081 and leave the workflow waiting for an interactive port choice.
+
+**Why:** The app can show the offline banner while the backend is healthy if the bundle still contains the fallback `localhost:3000/api` URL, which a phone/emulator cannot reach as the backend.
+
+**How to apply:** After changing `BACKEND_URL`, stop stale Expo/Metro processes, run `bash scripts/setup.sh`, and confirm the resulting `.env` points to the backend before opening the app.
+
 **Socket URL derivation:**
 `hooks/useRideSocket.ts` and `lib/serviceControlContext.tsx` both strip the trailing `/api` segment from `EXPO_PUBLIC_API_URL` to get the WebSocket root. If `BACKEND_URL` does not end with `/api`, the socket will connect to the wrong host.
 
