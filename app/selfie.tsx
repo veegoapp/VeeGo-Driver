@@ -16,6 +16,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Ellipse, Path } from 'react-native-svg';
 import { useService } from '@/lib/serviceContext';
+import { navigateToHome } from '@/lib/postAuthRouter';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
 import { compressImage } from '@/lib/imageCompression';
@@ -158,7 +159,7 @@ export default function SelfieScreen() {
         await endpoints.driver.uploadDocument(formData);
         setConfirmed(true);
         setTimeout(() => {
-          router.replace(serviceType === 'SHUTTLE' ? '/(shuttle)/home' as any : '/(tabs)/home');
+          navigateToHome(serviceType);
         }, 1200);
       }
     } catch {
