@@ -1,0 +1,447 @@
+import { ArrowLeft, Camera, Check, CheckCircle, CheckCircle2, Settings } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { router, useLocalSearchParams } from 'expo-router';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  Linking,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Ellipse, Path } from 'react-native-svg';
+import { useService } from '@/lib/serviceContext';
+import { navigateToHome } from '@/lib/postAuthRouter';
+import { useI18n } from '@/lib/i18nContext';
+import { endpoints } from '@/lib/api';
+import { compressImage } from '@/lib/imageCompression';
+import { useSocket } from '@/lib/socketContext';
+import { SOCKET_EVENTS } from '@/constants/socketEvents';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
+import { Radius } from '@/constants/radius';
+import { Shadows } from '@/constants/shadows';
+
+export default function SelfieScreen() {
+  const insets = useSafeAreaInsets();
+  const topPad = insets.top;
+  const botPad = insets.bottom;
+  const { serviceType } = useService();
+  const { t } = useI18n();
+  const [photo, setPhoto] = useState<string | null>(null);
+  const [confirmed, setConfirmed] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [cameraBlocked, setCameraBlocked] = useState(false);
+
+  // Shuttle trip check-in (tripId present) and the periodic "long_shift" driver
+  // check-in (deadlineMinutes present, no tripId) share this screen and its
+  // POST /driver/checkin submission — they only differ in the tripId field and copy.
+  const params = useLocalSearchParams<{ tripId?: string; deadlineMinutes?: string }>();
+  const shuttleCheckinMode = !!params.tripId;
+  const periodicCheckinMode = !params.tripId && !!params.deadlineMinutes;
+  const checkinMode = shuttleCheckinMode || periodicCheckinMode;
+  const deadlineSecs = checkinMode
+    ? Math.max(1, parseInt(params.deadlineMinutes ?? '10', 10)) * 60
+    : 0;
+
+  const [secondsLeft, setSecondsLeft] = useState(deadlineSecs);
+  const [timedOut, setTimedOut] = useState(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Prevents the sync POST response and a later DRIVER_CHECKIN_APPROVED/REJECTED
+  // socket event from both trying to act (double-navigate, double-alert).
+  const settledRef = useRef(false);
+  const { socket } = useSocket();
+
+  useEffect(() => {
+    if (!checkinMode) return;
+    intervalRef.current = setInterval(() => {
+      setSecondsLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(intervalRef.current!);
+          setTimedOut(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [checkinMode]);
+
+  // Listen for the async approval/rejection verdict — fired right after the
+  // POST resolves. Both the shuttle and periodic paths get consistent
+  // close-on-approved / retake-on-rejected behavior via this, not just the
+  // synchronous POST response above.
+  useEffect(() => {
+    if (!checkinMode || !socket) return;
+
+    const handleApproved = () => {
+      if (settledRef.current) return;
+      settledRef.current = true;
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      setConfirmed(true);
+      setTimeout(() => router.back(), 1200);
+    };
+
+    const handleRejected = (data?: { message?: string }) => {
+      if (settledRef.current) return;
+      setPhoto(null);
+      Alert.alert(t.no_face_detected_title, data?.message ?? t.no_face_detected_msg);
+    };
+
+    socket.on(SOCKET_EVENTS.DRIVER_CHECKIN_APPROVED, handleApproved);
+    socket.on(SOCKET_EVENTS.DRIVER_CHECKIN_REJECTED, handleRejected);
+    return () => {
+      socket.off(SOCKET_EVENTS.DRIVER_CHECKIN_APPROVED, handleApproved);
+      socket.off(SOCKET_EVENTS.DRIVER_CHECKIN_REJECTED, handleRejected);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checkinMode, socket]);
+
+  const formatCountdown = (secs: number) => {
+    const m = Math.floor(secs / 60).toString().padStart(2, '0');
+    const s = (secs % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
+
+  const takeSelfie = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      setCameraBlocked(true);
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
+      quality: 0.85,
+      allowsEditing: true,
+      aspect: [1, 1],
+      cameraType: ImagePicker.CameraType.front,
+    });
+    if (!result.canceled && result.assets[0]) {
+      setPhoto(result.assets[0].uri);
+    }
+  };
+
+  const handleConfirm = async () => {
+    if (!photo || isUploading) return;
+    if (checkinMode && timedOut) {
+      Alert.alert(t.timeout_alert_title, shuttleCheckinMode ? t.timeout_alert_body : t.periodic_timeout_alert_body);
+      return;
+    }
+    setIsUploading(true);
+    try {
+      const compressed = await compressImage(photo, 'selfie');
+      const formData = new FormData();
+      formData.append('file', { uri: compressed.uri, type: compressed.mimeType, name: compressed.fileName } as unknown as Blob);
+      formData.append('type', 'selfie');
+
+      if (checkinMode) {
+        if (params.tripId) formData.append('tripId', params.tripId);
+        const response = await endpoints.driver.checkin(formData);
+        if (!response.ok) throw new Error('Checkin failed');
+        const result = await response.json() as { faceDetected?: boolean; message?: string };
+        if (result.faceDetected === false) {
+          setPhoto(null);
+          Alert.alert(t.no_face_detected_title, result.message ?? t.no_face_detected_msg);
+          return;
+        }
+        settledRef.current = true;
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        setConfirmed(true);
+        setTimeout(() => router.back(), 1200);
+      } else {
+        await endpoints.driver.uploadDocument(formData);
+        setConfirmed(true);
+        setTimeout(() => {
+          navigateToHome(serviceType);
+        }, 1200);
+      }
+    } catch {
+      Alert.alert(t.selfie_upload_failed_title, t.selfie_upload_failed_msg);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  if (cameraBlocked) {
+    return (
+      <View style={[s.root, s.blockedRoot, { backgroundColor: '#fafafd' }]}>
+        <TouchableOpacity onPress={() => router.back()} style={[s.backBtn, { position: 'absolute', top: topPad + 16, left: 24 }]} activeOpacity={0.7}>
+          <ArrowLeft size={20} color="#1e1e28" strokeWidth={2} />
+        </TouchableOpacity>
+        <View style={s.blockedCard}>
+          <View style={s.blockedIconBox}>
+            <Camera size={36} color="#5e5e72" strokeWidth={1.5} />
+          </View>
+          <Text style={s.blockedTitle}>{t.camera_required}</Text>
+          <Text style={s.blockedSub}>{t.camera_required_sub}</Text>
+          <TouchableOpacity style={s.settingsBtn} onPress={() => Linking.openSettings()} activeOpacity={0.85}>
+            <Settings size={16} color="white" strokeWidth={2} />
+            <Text style={s.settingsBtnText}>{t.open_settings}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={s.retryPermBtn}
+            onPress={async () => {
+              const { status } = await ImagePicker.requestCameraPermissionsAsync();
+              if (status === 'granted') setCameraBlocked(false);
+            }}
+            activeOpacity={0.7}
+          >
+            <Text style={s.retryPermText}>{t.retry_camera_btn}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  if (confirmed) {
+    return (
+      <View style={[s.root, s.successRoot]}>
+        <View style={s.successIcon}>
+          <CheckCircle2 size={72} color="#1e1e28" />
+        </View>
+        <Text style={s.successTitle}>
+          {shuttleCheckinMode ? t.verified_title_checkin : periodicCheckinMode ? t.verified_title_periodic_checkin : t.selfie_all_set}
+        </Text>
+        <Text style={s.successSub}>
+          {shuttleCheckinMode
+            ? t.verified_sub_checkin
+            : periodicCheckinMode
+              ? t.verified_sub_periodic_checkin
+              : t.selfie_review_sub}
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={[s.root, { backgroundColor: '#fafafd' }]}>
+      <View style={{ paddingTop: topPad + 16, paddingHorizontal: Spacing.xl }}>
+        <TouchableOpacity onPress={() => router.back()} style={s.backBtn} activeOpacity={0.7}>
+          <ArrowLeft size={20} color="#1e1e28" strokeWidth={2} />
+        </TouchableOpacity>
+
+        <View style={s.header}>
+          {shuttleCheckinMode ? (
+            <>
+              <Text style={s.step}>{t.selfie_checkin_step}</Text>
+              <Text style={s.title}>{t.selfie_checkin_title}</Text>
+              <Text style={s.sub}>{t.selfie_checkin_sub}</Text>
+            </>
+          ) : periodicCheckinMode ? (
+            <>
+              <Text style={s.step}>{t.selfie_periodic_checkin_step}</Text>
+              <Text style={s.title}>{t.selfie_periodic_checkin_title}</Text>
+              <Text style={s.sub}>{t.selfie_periodic_checkin_sub}</Text>
+            </>
+          ) : (
+            <>
+              <Text style={s.step}>{t.reg_step_4_of_4}</Text>
+              <Text style={s.title}>{t.selfie_title}</Text>
+              <Text style={s.sub}>{t.selfie_sub}</Text>
+            </>
+          )}
+        </View>
+
+        {checkinMode && (
+          <View style={[
+            s.timerBox,
+            timedOut ? { backgroundColor: '#fee2e2', borderColor: '#fca5a5' } : { backgroundColor: '#fff7ed', borderColor: '#fed7aa' },
+          ]}>
+            {timedOut ? (
+              <Text style={[s.timerText, { color: '#dc2626', fontFamily: 'Inter_700Bold' }]}>
+                {shuttleCheckinMode ? t.checkin_timed_out_msg : t.periodic_checkin_timed_out_msg}
+              </Text>
+            ) : (
+              <>
+                <Text style={[s.timerLabel, { color: '#92400e', fontFamily: 'Inter_400Regular' }]}>{t.time_remaining}</Text>
+                <Text style={[s.timerCount, { color: secondsLeft <= 60 ? '#dc2626' : '#c2410c', fontFamily: 'Inter_700Bold' }]}>
+                  {formatCountdown(secondsLeft)}
+                </Text>
+              </>
+            )}
+          </View>
+        )}
+      </View>
+
+      <View style={s.faceArea}>
+        {photo ? (
+          <View style={s.previewBox}>
+            <Image source={{ uri: photo }} style={s.previewImg} />
+            <View style={s.previewOverlay}>
+              <Svg width="240" height="300" viewBox="0 0 240 300">
+                <Ellipse
+                  cx="120" cy="150" rx="100" ry="130"
+                  stroke="#1e1e28" strokeWidth="3"
+                  fill="none"
+                  strokeDasharray="8 6"
+                />
+              </Svg>
+            </View>
+          </View>
+        ) : (
+          <View style={s.ovalGuide}>
+            <Svg width="240" height="300" viewBox="0 0 240 300">
+              <Ellipse
+                cx="120" cy="150" rx="100" ry="130"
+                stroke="#1e1e28" strokeWidth="2.5"
+                fill="rgba(30,30,40,0.04)"
+                strokeDasharray="8 6"
+              />
+              <Path
+                d="M120 60 C80 60 50 90 50 130 C50 175 80 220 120 240 C160 220 190 175 190 130 C190 90 160 60 120 60"
+                fill="#e8e8ee"
+                opacity="0.6"
+              />
+              <Ellipse cx="120" cy="115" rx="28" ry="28" fill="#c3c3cc" opacity="0.7" />
+              <Path
+                d="M70 240 C70 200 170 200 170 240"
+                fill="#c3c3cc" opacity="0.7"
+              />
+            </Svg>
+            <View style={s.ovalHint}>
+              <Text style={s.ovalHintText}>{t.face_in_oval}</Text>
+            </View>
+          </View>
+        )}
+      </View>
+
+      <View style={[s.footer, { paddingBottom: botPad + 28, paddingHorizontal: Spacing.xl }]}>
+        {photo ? (
+          <View style={s.actionRow}>
+            <TouchableOpacity
+              style={s.retakeBtn}
+              onPress={() => setPhoto(null)}
+              activeOpacity={0.8}
+              disabled={isUploading}
+            >
+              <Camera size={18} color="#1e1e28" />
+              <Text style={s.retakeBtnText}>{t.retake_photo}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[s.confirmBtn, { flex: 2, opacity: (isUploading || (checkinMode && timedOut)) ? 0.6 : 1 }]}
+              onPress={handleConfirm}
+              activeOpacity={0.9}
+              disabled={isUploading || (checkinMode && timedOut)}
+            >
+              {isUploading ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <>
+                  <Text style={s.confirmBtnText}>
+                    {shuttleCheckinMode ? t.confirm_checkin : periodicCheckinMode ? t.confirm_periodic_checkin : t.selfie_confirm}
+                  </Text>
+                  <Check size={18} color="white" strokeWidth={2} />
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={[s.confirmBtn, { opacity: (checkinMode && timedOut) ? 0.5 : 1 }]}
+            onPress={takeSelfie}
+            activeOpacity={0.9}
+            disabled={checkinMode && timedOut}
+          >
+            <Camera size={20} color="white" />
+            <Text style={s.confirmBtnText}>{t.take_photo_btn}</Text>
+          </TouchableOpacity>
+        )}
+
+        {!checkinMode && (
+          <View style={s.tipsRow}>
+            {[t.tip_good_lighting, t.tip_face_centered, t.tip_no_glasses].map((tip) => (
+              <View key={tip} style={s.tip}>
+                <CheckCircle size={13} color="#5e5e72" />
+                <Text style={s.tipText}>{tip}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+    </View>
+  );
+}
+
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: '#fafafd' },
+  blockedRoot: { alignItems: 'center', justifyContent: 'center', padding: Spacing.xxl },
+  blockedCard: {
+    backgroundColor: 'white', borderRadius: 28, padding: 28,
+    alignItems: 'center', gap: Spacing.md,
+    borderWidth: 1, borderColor: '#e5e5ea',
+    shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.07, shadowRadius: 16, elevation: Shadows.medium.elevation,
+    width: '100%',
+  },
+  blockedIconBox: {
+    width: 80, height: 80, borderRadius: Radius.xl, backgroundColor: '#f2f2f5',
+    alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.xs,
+  },
+  blockedTitle: { fontSize: 20, fontWeight: Typography.weight.bold, color: '#1e1e28', textAlign: 'center', fontFamily: 'Inter_700Bold' },
+  blockedSub: { fontSize: Typography.size.sm, color: '#5e5e72', lineHeight: 21, textAlign: 'center', fontFamily: 'Inter_400Regular' },
+  settingsBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
+    backgroundColor: '#1e1e28', borderRadius: Radius.lg, height: 48,
+    paddingHorizontal: Spacing.xl, marginTop: Spacing.sm,
+  },
+  settingsBtnText: { color: 'white', fontSize: Typography.size.sm, fontWeight: Typography.weight.semibold, fontFamily: 'Inter_600SemiBold' },
+  retryPermBtn: { paddingVertical: Spacing.sm },
+  retryPermText: { fontSize: 13, color: '#5e5e72', fontFamily: 'Inter_400Regular', textDecorationLine: 'underline' },
+  successRoot: { alignItems: 'center', justifyContent: 'center', gap: Spacing.lg, paddingHorizontal: 40 },
+  successIcon: {
+    width: 120, height: 120, borderRadius: 60, backgroundColor: '#f2f2f5',
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 6,
+  },
+  successTitle: { fontSize: 32, fontWeight: Typography.weight.bold, color: '#1e1e28', letterSpacing: -1, fontFamily: 'Inter_700Bold', textAlign: 'center' },
+  successSub: { fontSize: 15, color: '#5e5e72', lineHeight: 22, fontFamily: 'Inter_400Regular', textAlign: 'center' },
+  backBtn: {
+    width: 42, height: 42, borderRadius: 14, backgroundColor: 'white',
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: '#e5e5ea',
+  },
+  header: { marginTop: 20, gap: Spacing.sm },
+  step: { fontSize: Typography.size.xs, fontWeight: Typography.weight.semibold, color: '#5e5e72', letterSpacing: 1, textTransform: 'uppercase', fontFamily: 'Inter_600SemiBold' },
+  title: { fontSize: 34, fontWeight: Typography.weight.bold, color: '#1e1e28', letterSpacing: -1.2, lineHeight: 40, fontFamily: 'Inter_700Bold' },
+  sub: { fontSize: Typography.size.sm, color: '#5e5e72', lineHeight: 20, fontFamily: 'Inter_400Regular' },
+  timerBox: {
+    marginTop: Spacing.md, borderRadius: Radius.md, borderWidth: 1,
+    paddingHorizontal: Spacing.lg, paddingVertical: 10, alignItems: 'center',
+  },
+  timerLabel: { fontSize: 11, letterSpacing: 0.5 },
+  timerCount: { fontSize: Typography.size.xxl, letterSpacing: 2, marginTop: 2 },
+  timerText: { fontSize: 13, lineHeight: 20, textAlign: 'center' },
+  faceArea: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  ovalGuide: { alignItems: 'center', gap: Spacing.lg },
+  ovalHint: {
+    backgroundColor: 'rgba(30,30,40,0.06)', borderRadius: 99,
+    paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm,
+  },
+  ovalHintText: { fontSize: 13, color: '#1e1e28', fontWeight: Typography.weight.medium, fontFamily: 'Inter_500Medium' },
+  previewBox: { width: 240, height: 300, borderRadius: 120, overflow: 'hidden', position: 'relative' },
+  previewImg: { width: '100%', height: '100%', resizeMode: 'cover' },
+  previewOverlay: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
+  footer: { paddingTop: Spacing.lg, gap: 14 },
+  actionRow: { flexDirection: 'row', gap: 10 },
+  retakeBtn: {
+    flex: 1, height: 56, borderRadius: 20,
+    backgroundColor: '#f2f2f5', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    borderWidth: 1, borderColor: '#e5e5ea',
+  },
+  retakeBtnText: { fontSize: Typography.size.sm, fontWeight: Typography.weight.semibold, color: '#1e1e28', fontFamily: 'Inter_600SemiBold' },
+  confirmBtn: {
+    height: 56, borderRadius: 20, backgroundColor: '#1e1e28',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm,
+    shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 20, elevation: Shadows.large.elevation,
+  },
+  confirmBtnText: { color: 'white', fontSize: 15, fontWeight: Typography.weight.semibold, fontFamily: 'Inter_600SemiBold' },
+  tipsRow: { flexDirection: 'row', justifyContent: 'center', gap: Spacing.lg },
+  tip: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+  tipText: { fontSize: 11, color: '#5e5e72', fontFamily: 'Inter_400Regular' },
+});
