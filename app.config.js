@@ -1,4 +1,4 @@
-export default ({ config }: { config: any }) => ({
+module.exports = ({ config }) => ({
   ...config,
 
   ios: {
