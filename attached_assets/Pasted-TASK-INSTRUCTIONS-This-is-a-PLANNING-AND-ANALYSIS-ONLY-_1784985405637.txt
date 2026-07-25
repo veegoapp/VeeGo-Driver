@@ -1,0 +1,37 @@
+TASK INSTRUCTIONS: This is a PLANNING AND ANALYSIS ONLY request. DO NOT modify, write, or execute any code yet. 
+Review the codebase against the requirements below and present a detailed implementation plan + answer the architectural question.
+
+---
+### SCOPE OF REQUESTED CHANGES (Profile, Support, & Messages):
+
+1. **Profile Screen Avatar (`app/(tabs)/profile.tsx`):**
+   - Update the top profile avatar component to dynamically fetch and display the actual Driver Profile Photo uploaded during sign-up/onboarding instead of a placeholder.
+
+2. **Personal Information Screen (`app/profile/personal-info.tsx`):**
+   - Remove the "Locked" badge/labels currently displayed on driver data fields. Keep all fields Read-Only, but clean without the explicit "Locked" text.
+   - Ensure the Driver Name field is also set to Read-Only.
+   - Completely remove the "License Number" and "National ID" fields from this screen.
+
+3. **Bonus Targets Icon Bug:**
+   - Diagnose and fix why the icon for the "Bonus Targets" item on the main Profile screen is currently invisible/broken.
+
+4. **Help & Support Screen Restructure:**
+   - Completely remove the "Chat with Us" and "Call Support" action options.
+   - Refactor "Browse Topics" to properly display a curated list of common driver FAQs/support topics.
+   - Refactor "Submit Ticket" into a structured Card:
+     - Tapping it must first prompt the driver to select the specific Trip related to the issue.
+     - Upon selecting a trip, display predefined issue categories/types.
+     - Allow entering a description and uploading attachment photos before submitting.
+
+5. **Messages Screen (`app/profile/messages.tsx` or equivalent):**
+   - Implement a 2-Tab layout:
+     - Tab 1: **Notifications** (System/App alerts).
+     - Tab 2: **Support Messages** (Responses/updates on submitted support tickets).
+
+---
+### QUESTION & DELIVERABLES REQUIRED FROM YOU:
+
+1. **Question:** Explain the difference between `app/(tabs)/trips.tsx` and the `Ride History` route under Profile in the current codebase (e.g., are they redundant, or do they serve different roles?).
+2. **Implementation Plan:** Provide a clean, step-by-step file-by-file plan for implementing all 5 requirements above.
+
+WAIT FOR MY EXPLICIT APPROVAL BEFORE WRITING OR CHANGING ANY CODE.
