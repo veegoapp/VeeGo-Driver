@@ -31,7 +31,7 @@ import { AuthProvider, useAuth } from '@/lib/authContext';
 import { SocketProvider, useSocket } from '@/lib/socketContext';
 import { ReferralProvider, useReferral } from '@/lib/referralContext';
 import { navigateAfterAuth } from '@/lib/postAuthRouter';
-import { setOnAccountSuspended, endpoints } from '@/lib/api';
+import { setOnAccountSuspended, setOnSessionCleared, refreshAccessToken, endpoints } from '@/lib/api';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
 import { deleteToken, deleteRefreshToken } from '@/lib/auth';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
@@ -169,7 +169,7 @@ function LanguageCacheInvalidator() {
 }
 
 function RootLayoutNav() {
-  const { token, isLoading } = useAuth();
+  const { token, isLoading, login, clearLocalSession } = useAuth();
   const router = useRouter();
   const segments = useSegments();
 
@@ -178,6 +178,16 @@ function RootLayoutNav() {
       router.replace('/suspended');
     });
   }, [router]);
+
+  // Keep AuthContext in sync when the API client clears tokens after an
+  // unrecoverable 401. Without this, AuthContext would still hold the old
+  // token in React state while SecureStore is already empty, causing the
+  // next cold start to require login without a visible reason this session.
+  useEffect(() => {
+    setOnSessionCleared(() => {
+      clearLocalSession();
+    });
+  }, [clearLocalSession]);
 
   useEffect(() => {
     if (isLoading) return;
@@ -227,10 +237,22 @@ function RootLayoutNav() {
         }
 
         if (typeof payload.exp === 'number' && payload.exp <= Math.floor(Date.now() / 1000)) {
-          queryClient.clear();
-          deleteToken();
-          deleteRefreshToken();
-          setTimeout(() => router.replace('/login'), 0);
+          // Access token is expired — attempt a silent refresh before giving up.
+          // Do not delete the refresh token yet; it may still be valid.
+          (async () => {
+            const newToken = await refreshAccessToken();
+            if (newToken) {
+              // Refresh succeeded: update AuthContext state. The effect will
+              // re-fire with the new token and continue the authenticated flow.
+              await login(newToken);
+            } else {
+              // Refresh token is also gone or rejected — clear the session.
+              queryClient.clear();
+              await deleteToken();
+              await deleteRefreshToken();
+              setTimeout(() => router.replace('/login'), 0);
+            }
+          })();
           return;
         }
       }

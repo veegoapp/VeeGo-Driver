@@ -103,9 +103,14 @@ export async function navigateAfterAuth(token: string | null): Promise<void> {
       await deleteToken();
       await deleteRefreshToken();
       router.replace('/login');
-    } else {
+    } else if (err?.status === 401) {
+      // The server explicitly rejected the token — the session is invalid.
       router.replace('/login');
     }
+    // Network errors (status 0), timeouts, and temporary server errors (5xx)
+    // are not authentication failures. Do not redirect to login — the driver
+    // retains their session and the app remains on the current screen until
+    // connectivity is restored.
   }
 }
 

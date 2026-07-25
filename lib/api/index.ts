@@ -3,7 +3,7 @@
 // All existing imports (endpoints, api, ApiError, types) continue to work unchanged.
 
 // ── Core client ───────────────────────────────────────────────────────────────
-export { api, ApiError, API_BASE_URL, setApiLanguage, setOnAccountSuspended } from './_client';
+export { api, ApiError, API_BASE_URL, setApiLanguage, setOnAccountSuspended, refreshAccessToken, setOnSessionCleared } from './_client';
 
 // ── Shared types ──────────────────────────────────────────────────────────────
 export type {

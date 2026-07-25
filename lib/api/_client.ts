@@ -48,10 +48,19 @@ export function setOnAccountSuspended(cb: SuspendedCallback) {
   _onAccountSuspended = cb;
 }
 
+// Global callback invoked when tokens are deleted after an unrecoverable 401.
+// Registered by the auth guard in app/_layout.tsx to keep AuthContext state
+// in sync with SecureStore when the API client clears the session.
+type SessionClearedCallback = () => void;
+let _onSessionCleared: SessionClearedCallback | null = null;
+export function setOnSessionCleared(cb: SessionClearedCallback) {
+  _onSessionCleared = cb;
+}
+
 // Single-flight refresh — only one refresh request may exist at a time.
 let _refreshPromise: Promise<string | null> | null = null;
 
-async function refreshAccessToken(): Promise<string | null> {
+export async function refreshAccessToken(): Promise<string | null> {
   if (_refreshPromise) {
     return _refreshPromise;
   }
@@ -155,12 +164,14 @@ export async function request<T>(
     }
     await deleteToken();
     await deleteRefreshToken();
+    _onSessionCleared?.();
     throw new ApiError(401, 'Unauthorized', null);
   }
 
   if (response.status === 401 && isRetry) {
     await deleteToken();
     await deleteRefreshToken();
+    _onSessionCleared?.();
     throw new ApiError(401, 'Unauthorized', null);
   }
 
