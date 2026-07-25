@@ -28,3 +28,7 @@ export const DARK_MAP_STYLE = [
   { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#3d5166' }] },
   { featureType: 'water', elementType: 'labels.text.stroke', stylers: [{ color: '#0a1628' }] },
 ];
+
+// Light Google Maps style — clean minimal palette for daytime use.
+// An empty array restores Google Maps' default light theme exactly.
+export const LIGHT_MAP_STYLE: object[] = [];

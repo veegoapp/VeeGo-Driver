@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
-import { AlertTriangle, Check, ChevronUp, Clock, MessageCircle, Navigation, Phone, Share2, Shield, Star } from 'lucide-react-native';
-import React, { useRef, useEffect, useState } from 'react';
+import { AlertTriangle, Check, ChevronUp, Clock, Map, MessageCircle, Navigation, Phone, Share2, Shield, Star } from 'lucide-react-native';
+import React, { useCallback, useRef, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Animated, Easing, Image, Linking, Platform, Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -498,6 +498,43 @@ export default function RideScreen() {
     router.replace('/(tabs)/home');
   };
 
+  // ── Google Maps deep link ────────────────────────────────────────────────
+  // During to_pickup / arrived → navigate to pickup; during in_trip → dropoff.
+  const handleNavigate = useCallback(() => {
+    const target =
+      phase === 'in_trip'
+        ? (r?.dropoffLatitude != null && r?.dropoffLongitude != null
+            ? { lat: Number(r.dropoffLatitude), lng: Number(r.dropoffLongitude) }
+            : null)
+        : (r?.pickupLatitude != null && r?.pickupLongitude != null
+            ? { lat: Number(r.pickupLatitude), lng: Number(r.pickupLongitude) }
+            : null);
+
+    if (!target) return;
+    const { lat, lng } = target;
+
+    // Android: native intent → web fallback
+    // iOS: URL scheme → web fallback
+    const androidUrl = `google.navigation:q=${lat},${lng}`;
+    const iosSchemeUrl = `comgooglemaps://?daddr=${lat},${lng}&directionsmode=driving`;
+    const webFallback = `https://maps.google.com/?daddr=${lat},${lng}`;
+
+    if (Platform.OS === 'android') {
+      Linking.canOpenURL(androidUrl)
+        .then(supported =>
+          Linking.openURL(supported ? androidUrl : webFallback),
+        )
+        .catch(() => Linking.openURL(webFallback).catch(() => {}));
+    } else {
+      Linking.canOpenURL(iosSchemeUrl)
+        .then(supported =>
+          Linking.openURL(supported ? iosSchemeUrl : webFallback),
+        )
+        .catch(() => Linking.openURL(webFallback).catch(() => {}));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, r?.pickupLatitude, r?.pickupLongitude, r?.dropoffLatitude, r?.dropoffLongitude]);
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <MapBackdrop
@@ -673,6 +710,14 @@ export default function RideScreen() {
               </View>
               <View style={styles.bottomActions}>
                 <Pressable
+                  onPress={handleNavigate}
+                  style={[styles.navigateBtn, { backgroundColor: colors.secondary }]}
+                  accessibilityLabel="Open in Google Maps"
+                >
+                  <Map size={14} color={colors.primary} strokeWidth={2} />
+                  <Text style={[styles.navigateBtnText, { color: colors.primary, fontFamily: 'Inter_700Bold' }]}>Navigate</Text>
+                </Pressable>
+                <Pressable
                   onPress={handleShareTrip}
                   disabled={shareBusy}
                   style={[styles.shareBtn, { backgroundColor: colors.secondary, opacity: shareBusy ? 0.6 : 1 }]}
@@ -753,6 +798,8 @@ const styles = StyleSheet.create({
   safetyRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   safetyText: { fontSize: Typography.size.xs },
   bottomActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  navigateBtn: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, paddingHorizontal: Spacing.md, paddingVertical: 6, borderRadius: 10 },
+  navigateBtnText: { fontSize: Typography.size.xs },
   shareBtn: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, paddingHorizontal: Spacing.md, paddingVertical: 6, borderRadius: 10 },
   shareBtnText: { fontSize: Typography.size.xs },
   sosBtn: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, backgroundColor: '#ef4444', paddingHorizontal: Spacing.md, paddingVertical: 6, borderRadius: 10 },

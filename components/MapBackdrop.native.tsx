@@ -1,8 +1,11 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import MapView, { Circle, Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
-import { DARK_MAP_STYLE } from '@/constants/mapStyle';
+import { DARK_MAP_STYLE, LIGHT_MAP_STYLE } from '@/constants/mapStyle';
 import { getToken } from '@/lib/auth';
+
+const MAP_THEME_KEY = 'veego_map_theme';
 
 import type { SurgeZone } from '@/lib/types';
 export type { SurgeZone } from '@/lib/types';
@@ -89,6 +92,28 @@ export function MapBackdrop({
   const prevPosRef = useRef<{ latitude: number; longitude: number } | null>(null);
   const userPannedRef = useRef(false);
   const initialFitDoneRef = useRef(false);
+
+  // ── Theme management ─────────────────────────────────────────────────────
+  // savedTheme: explicit user choice persisted to AsyncStorage.
+  // null = follow system color scheme (the default).
+  const systemScheme = useColorScheme();
+  const [savedTheme, setSavedTheme] = useState<'dark' | 'light' | null>(null);
+
+  useEffect(() => {
+    AsyncStorage.getItem(MAP_THEME_KEY)
+      .then(val => { if (val === 'dark' || val === 'light') setSavedTheme(val); })
+      .catch(() => {});
+  }, []);
+
+  const effectiveTheme: 'dark' | 'light' =
+    savedTheme ?? (systemScheme === 'light' ? 'light' : 'dark');
+  const mapStyle = effectiveTheme === 'dark' ? DARK_MAP_STYLE : LIGHT_MAP_STYLE;
+
+  const handleThemeToggle = useCallback(() => {
+    const next: 'dark' | 'light' = effectiveTheme === 'dark' ? 'light' : 'dark';
+    setSavedTheme(next);
+    AsyncStorage.setItem(MAP_THEME_KEY, next).catch(() => {});
+  }, [effectiveTheme]);
 
   // ── Initial camera center ────────────────────────────────────────────────
   const initialCenter = useMemo(() => {
@@ -281,7 +306,7 @@ export function MapBackdrop({
         ref={mapRef}
         style={StyleSheet.absoluteFillObject}
         provider={PROVIDER_GOOGLE}
-        customMapStyle={DARK_MAP_STYLE}
+        customMapStyle={mapStyle}
         initialCamera={{
           center: initialCenter,
           pitch: navigationMode ? 50 : 0,
@@ -452,6 +477,17 @@ export function MapBackdrop({
         )}
       </MapView>
 
+      {/* ── Theme toggle button ───────────────────────────────────────────── */}
+      <Pressable
+        onPress={handleThemeToggle}
+        style={styles.themeToggleBtn}
+        accessibilityLabel={effectiveTheme === 'dark' ? 'Switch to light map' : 'Switch to dark map'}
+      >
+        <Text style={styles.themeToggleIcon}>
+          {effectiveTheme === 'dark' ? '☀️' : '🌙'}
+        </Text>
+      </Pressable>
+
       {/* ── Recenter button ───────────────────────────────────────────────── */}
       {userPanned && (
         <Pressable onPress={handleRecenter} style={styles.recenterBtn}>
@@ -600,6 +636,21 @@ const styles = StyleSheet.create({
   },
   surgeLabelFlash: { fontSize: 11, color: '#D5B23D' },
   surgeLabelText: { fontSize: 11, fontWeight: 'bold', color: 'white' },
+  // Theme toggle button
+  themeToggleBtn: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(15,15,25,0.75)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  themeToggleIcon: { fontSize: 16, lineHeight: 20 },
   // Recenter button
   recenterBtn: {
     position: 'absolute',
