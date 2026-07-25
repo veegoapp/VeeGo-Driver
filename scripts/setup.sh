@@ -8,16 +8,11 @@ echo "=========================================="
 echo ""
 
 # ── 1. Check required secrets ──────────────────────────────────────────────
-# EXPO_PUBLIC_API_URL is the preferred secret name. BACKEND_URL remains
-# supported for existing environments.
 if [ -n "$EXPO_PUBLIC_API_URL" ]; then
   echo "✅  EXPO_PUBLIC_API_URL found"
   EFFECTIVE_URL="$EXPO_PUBLIC_API_URL"
-elif [ -n "$BACKEND_URL" ]; then
-  echo "✅  BACKEND_URL found: $BACKEND_URL"
-  EFFECTIVE_URL="$BACKEND_URL"
 else
-  echo "⚠️  WARNING: EXPO_PUBLIC_API_URL/BACKEND_URL secret is not set."
+  echo "⚠️  WARNING: EXPO_PUBLIC_API_URL secret is not set."
   echo "    The app will start in Demo-only mode (no live backend)."
   echo "    To connect a real backend, add EXPO_PUBLIC_API_URL in Replit Secrets."
   echo ""
