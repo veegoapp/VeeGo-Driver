@@ -170,6 +170,7 @@ function LanguageCacheInvalidator() {
 
 function RootLayoutNav() {
   const { token, isLoading, login, clearLocalSession } = useAuth();
+  const { isLanguageLoading } = useI18n();
   const router = useRouter();
   const segments = useSegments();
 
@@ -274,7 +275,7 @@ function RootLayoutNav() {
     }
   }, [token, isLoading, segments]);
 
-  if (isLoading) return null;
+  if (isLoading || isLanguageLoading) return null;
 
   return (
     <>
