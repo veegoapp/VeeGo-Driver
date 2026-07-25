@@ -2,7 +2,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { safeBack } from '@/lib/navUtils';
 import { AlertCircle, Check, ChevronLeft, Package, Phone, Tag, Users, X } from 'lucide-react-native';
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Animated, Image, Platform, Pressable, ScrollView, StyleSheet, Text, View, ImageErrorEventData, NativeSyntheticEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlassView } from '@/components/GlassView';
@@ -26,8 +26,20 @@ export default function ShuttleBoardingScreen() {
   const { socket } = useSocket();
   const { stops, currentStopIndex, passengers, togglePassenger, nextStop, activeLine } = useShuttle();
   const currentStop = stops[currentStopIndex];
-  const checkedIn = passengers.filter(p => p.checkedIn).length;
-  const total = passengers.length;
+
+  // Strictly derive the passenger list for the active stop index.
+  // ShuttleContext already replaces `passengers` when currentStopIndex changes,
+  // but making the dependency explicit here ensures the manifest never
+  // accidentally renders stale data from the previous stop during the brief
+  // async window between the index update and the context state flush.
+  const currentStopPassengers = useMemo(
+    () => passengers,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [currentStopIndex, passengers],
+  );
+
+  const checkedIn = currentStopPassengers.filter(p => p.checkedIn).length;
+  const total = currentStopPassengers.length;
   const progressAnim = useRef(new Animated.Value(checkedIn / total)).current;
 
   const [stationTimeoutVisible, setStationTimeoutVisible] = useState(false);
@@ -114,7 +126,7 @@ export default function ShuttleBoardingScreen() {
     }
     setIsDeparting(true);
     try {
-      const boardedIds = retryOnlyIds ?? passengers.filter(p => p.checkedIn).map(p => p.id);
+      const boardedIds = retryOnlyIds ?? currentStopPassengers.filter(p => p.checkedIn).map(p => p.id);
       const results = await Promise.allSettled(
         boardedIds.map(bookingId =>
           endpoints.shuttle.boardBooking(bookingId, { stationId })
@@ -129,7 +141,7 @@ export default function ShuttleBoardingScreen() {
       });
 
       if (failedIds.length > 0) {
-        const names = failedIds.map(id => passengers.find(p => p.id === id)?.name ?? id).join(', ');
+        const names = failedIds.map(id => currentStopPassengers.find(p => p.id === id)?.name ?? id).join(', ');
         Alert.alert(
           t.boarding_partial_fail_title,
           t.boarding_partial_fail_msg.replace('{names}', names),
@@ -216,7 +228,7 @@ export default function ShuttleBoardingScreen() {
 
         <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.passengers}</Text>
         <View style={{ gap: 10 }}>
-          {passengers.map((p) => {
+          {currentStopPassengers.map((p) => {
             const action = actionState[p.id];
             const isLoading = loadingPassengerId === p.id;
             const isDisabled = !!action || !!loadingPassengerId;

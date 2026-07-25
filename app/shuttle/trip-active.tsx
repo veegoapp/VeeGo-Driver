@@ -29,9 +29,18 @@ import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
 
-// ── Constants ────────────────────────────────────────────────────────────────
-const APPROACH_THRESHOLD_M = 250;
-const STOP_DURATION_S = 60;
+// ── Navigation constants ──────────────────────────────────────────────────────
+/**
+ * Configurable thresholds for the shuttle trip active screen.
+ * Centralised here so they can be adjusted without hunting through logic code.
+ */
+const SHUTTLE_TRIP_CONFIG = {
+  /** Haversine distance (metres) at which the driver transitions en_route → approaching. */
+  APPROACH_THRESHOLD_M: 250,
+  /** Dwell time (seconds) the per-stop countdown is initialised to on arrival. */
+  STOP_DURATION_S: 60,
+} as const;
+
 const { height: SCREEN_H } = Dimensions.get('window');
 
 type TripPhase = 'en_route' | 'approaching' | 'at_stop';
@@ -109,7 +118,7 @@ export default function ShuttleTripActiveScreen() {
   const { coords: roadPolylineCoords } = useRoadPolyline(segmentWaypoints);
 
   const animDurationMs = 1200;
-  const [stopTimer, setStopTimer] = useState(STOP_DURATION_S);
+  const [stopTimer, setStopTimer] = useState<number>(SHUTTLE_TRIP_CONFIG.STOP_DURATION_S);
   const [timerActive, setTimerActive] = useState(false);
   const [passengerStatuses, setPassengerStatuses] = useState<Record<string, PassengerStatus>>({});
   const [isArrivingLoading, setIsArrivingLoading] = useState(false);
@@ -129,7 +138,7 @@ export default function ShuttleTripActiveScreen() {
   useEffect(() => {
     if (phase === 'at_stop') return;
     if (proximityM !== null) {
-      const next: TripPhase = proximityM <= APPROACH_THRESHOLD_M ? 'approaching' : 'en_route';
+      const next: TripPhase = proximityM <= SHUTTLE_TRIP_CONFIG.APPROACH_THRESHOLD_M ? 'approaching' : 'en_route';
       if (next !== phase) setPhase(next);
     }
   }, [proximityM]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -174,7 +183,7 @@ export default function ShuttleTripActiveScreen() {
   useEffect(() => {
     setPhase('en_route');
     setPassengerStatuses({});
-    setStopTimer(STOP_DURATION_S);
+    setStopTimer(SHUTTLE_TRIP_CONFIG.STOP_DURATION_S);
     setTimerActive(false);
     setFocusTarget(null);
     setStationTimeoutVisible(false);
