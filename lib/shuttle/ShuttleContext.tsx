@@ -96,6 +96,9 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
   const [isAppActive, setIsAppActive] = useState(AppState.currentState === 'active');
   const [currentStopIndex, setCurrentStopIndex] = useState(0);
+  // Ref so socket handlers can always read the current activeTripId without
+  // being re-registered every time the derived value changes.
+  const activeTripIdRef = useRef<string | undefined>(undefined);
   const [passengers, setPassengers] = useState<BoardingPassenger[]>([]);
   const [tripCancelledBanner, setTripCancelledBanner] = useState<string | null>(null);
   // Gap A: optimistic tripId stored immediately on Start Trip press
@@ -209,6 +212,12 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
 
   const activeTripId = activeLine?.tripId;
 
+  // Keep ref in sync so socket handlers always read the current tripId value
+  // without needing to be re-registered on every activeTripId change.
+  useEffect(() => {
+    activeTripIdRef.current = activeTripId;
+  }, [activeTripId]);
+
   // Load per-station passenger lists from GET /driver/trips/:id/stations (NEW endpoint)
   const {
     data: tripStationsRaw,
@@ -243,6 +252,34 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
     // this is preserved for display, not used to re-filter the list.
     direction: st.direction,
   }));
+
+  // ── Derive currentStopIndex from server station statuses ─────────────────
+  // Runs whenever the stations query result changes (initial load, 30s poll,
+  // or an explicit refetch triggered by SHUTTLE_STATE_SYNC / booking cancel).
+  // Priority: 'arrived' station → its index; first 'pending' by order → next;
+  // all 'completed' → last index (trip almost done).
+  useEffect(() => {
+    if (!tripStations.length || !activeTripId) return;
+
+    const arrivedIdx = tripStations.findIndex(st => st.status === 'arrived');
+    if (arrivedIdx !== -1) {
+      setCurrentStopIndex(arrivedIdx);
+      return;
+    }
+
+    const firstPending = tripStations
+      .map((st, idx) => ({ st, idx }))
+      .filter(({ st }) => st.status === 'pending')
+      .sort((a, b) => a.st.order - b.st.order)[0];
+    if (firstPending) {
+      setCurrentStopIndex(firstPending.idx);
+      return;
+    }
+
+    // All stations completed — stay on last stop (route wrapping up)
+    setCurrentStopIndex(tripStations.length - 1);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tripStationsRaw, activeTripId]);
 
   // Load per-station passengers whenever the active trip stations data or current stop changes.
   // Merges server-reported status (boarded/absent) with any local optimistic updates.
@@ -313,11 +350,18 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
     // Backend sends { bookingId, routeId, reason } — use payload for targeted invalidation.
     // SHUTTLE_BOOKING_CANCELLED: the booking is gone — show cancellation wording.
     const handleShuttleBookingCancelled = (data?: { bookingId?: string | number; routeId?: string | number; reason?: string }) => {
-      queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
-      queryClient.invalidateQueries({ queryKey: ['shuttle-lines'] });
       if (data?.bookingId != null) {
+        // Immediately remove the cancelled passenger from the active stop manifest
+        // so the driver's boarding screen reflects the change without waiting for a poll.
+        setPassengers(prev => prev.filter(p => p.id !== String(data.bookingId)));
+        // Background re-sync to guarantee full station state consistency.
+        if (activeTripIdRef.current) {
+          queryClient.invalidateQueries({ queryKey: ['shuttle-trip-stations', activeTripIdRef.current] });
+        }
         queryClient.invalidateQueries({ queryKey: ['shuttle-booking-detail', String(data.bookingId)] });
       }
+      queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['shuttle-lines'] });
       setBookingStatusBanner({
         type: 'cancelled',
         message: data?.reason
@@ -391,13 +435,18 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
     // Server emits shuttle:state:sync on every connect + reconnect.
     // We call the snapshot endpoint to get fresh bookings + today's trips in one shot,
     // then invalidate the relevant query keys so React Query re-renders with fresh data.
-    const handleStateSync = async () => {
+    const handleStateSync = async (data?: { action?: string }) => {
       try {
         await endpoints.shuttle.stateSnapshot();
       } catch { /* snapshot is best-effort; polling will recover */ }
       queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['shuttle-lines'] });
       queryClient.invalidateQueries({ queryKey: ['shuttle-driver-trips'] });
+      // When the server explicitly requests a full refetch, also re-sync the
+      // active trip's station list so currentStopIndex is recovered from server state.
+      if (data?.action === 'refetch' && activeTripIdRef.current) {
+        queryClient.invalidateQueries({ queryKey: ['shuttle-trip-stations', activeTripIdRef.current] });
+      }
     };
 
     // trip:activated fires when the booking threshold is crossed and the trip

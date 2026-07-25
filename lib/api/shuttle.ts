@@ -1,5 +1,5 @@
 import { api } from './_client';
-import type { TripCashSummary, TripRevenueSummary, FinancialAnalytics } from './types';
+import type { TripCashSummary, TripRevenueSummary, FinancialAnalytics, StationEtaResponse } from './types';
 
 export const shuttleEndpoints = {
   lines: () => api.get('/shuttle/lines'),
@@ -205,7 +205,11 @@ export const tripsEndpoints = {
   cancel: (tripId: string, reason: string) =>
     api.patch(`/driver/trips/${tripId}/cancel`, { reason }),
   stations: (tripId: string) => api.get(`/driver/trips/${tripId}/stations`),
-  stationsEta: (tripId: string) => api.get(`/driver/trips/${tripId}/stations/eta`),
+  stationsEta: (tripId: string) => api.get<StationEtaResponse>(`/driver/trips/${tripId}/stations/eta`),
+  // POST /driver/shuttle/trips/:tripId/sos
+  // Body: { latitude, longitude, notes? }  Response 201: { sosId, message }
+  sosAlert: (tripId: string, data: { latitude: number; longitude: number; notes?: string }) =>
+    api.post<{ sosId: number; message: string }>(`/driver/shuttle/trips/${tripId}/sos`, data),
   stationArrived: (tripId: string, stationId: string) =>
     api.patch(`/driver/trips/${tripId}/stations/${stationId}/arrived`),
   stationCompleted: (tripId: string, stationId: string) =>

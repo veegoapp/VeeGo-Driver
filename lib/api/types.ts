@@ -166,6 +166,27 @@ export interface RideHistoryItem {
   myRating?: number;
 }
 
+// ─── Station ETAs ─────────────────────────────────────────────────────────────
+
+/**
+ * Response from GET /driver/trips/:id/stations/eta.
+ * nextStation — the stop the driver is currently heading towards.
+ * remainingStations — all remaining stops (excluding the current one), in order.
+ */
+export interface StationEtaResponse {
+  nextStation: {
+    stationId: number;
+    stationName: string;
+    etaMinutes: number | null;
+  } | null;
+  remainingStations: Array<{
+    stationId: number;
+    stationName: string;
+    etaMinutes: number | null;
+    order: number;
+  }>;
+}
+
 // ─── Tracking ─────────────────────────────────────────────────────────────────
 
 export interface LocationSnapshot {

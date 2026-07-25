@@ -24,7 +24,7 @@ import { useShuttle } from '@/lib/shuttleContext';
 import { useI18n } from '@/lib/i18nContext';
 import { useSocket } from '@/lib/socketContext';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
-import { api, endpoints, type ShuttleCompleteResponse } from '@/lib/api';
+import { endpoints, type ShuttleCompleteResponse, type StationEtaResponse } from '@/lib/api';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
@@ -131,6 +131,7 @@ export default function ShuttleTripActiveScreen() {
   const isFinishingRef = useRef(false);
   const lastStopProcessingRef = useRef(false);
   const [stationTimeoutVisible, setStationTimeoutVisible] = useState(false);
+  const [stationEtas, setStationEtas] = useState<StationEtaResponse | null>(null);
 
   // Map always fills full height — both sheets are absolute overlays
 
@@ -275,11 +276,29 @@ export default function ShuttleTripActiveScreen() {
   }, [socket, tripId, nextStop]);
 
   // ── Actions ────────────────────────────────────────────────────────────────
+
+  // ── Station ETAs — fetched from backend on mount and after each transition ─
+  const fetchStationEtas = useCallback(async () => {
+    if (!tripId) return;
+    try {
+      const result = await endpoints.trips.stationsEta(tripId) as StationEtaResponse;
+      setStationEtas(result);
+    } catch {
+      // Best-effort; OSRM local estimate serves as fallback when unavailable.
+    }
+  }, [tripId]);
+
+  // Fetch ETAs once on mount / whenever the active trip changes.
+  useEffect(() => {
+    fetchStationEtas();
+  }, [fetchStationEtas]);
+
   const handleArrived = useCallback(async () => {
     if (!stationId || isArrivingLoading) return;
     setIsArrivingLoading(true);
     try {
       if (tripId) await endpoints.trips.stationArrived(tripId, stationId);
+      void fetchStationEtas(); // refresh ETAs after recording arrival
       setPhase('at_stop');
       setTimerActive(true);
       if (nextCoords) setFocusTarget({ latitude: nextCoords.latitude, longitude: nextCoords.longitude, zoom: 16 });
@@ -288,7 +307,7 @@ export default function ShuttleTripActiveScreen() {
     } finally {
       setIsArrivingLoading(false);
     }
-  }, [tripId, stationId, isArrivingLoading, nextCoords, t]);
+  }, [tripId, stationId, isArrivingLoading, nextCoords, t, fetchStationEtas]);
 
   const handleNextStop = useCallback(async (retryOnly?: { id: string; action: 'boarded' | 'no_show' }[]) => {
     if (isNextLoading) return;
@@ -341,6 +360,7 @@ export default function ShuttleTripActiveScreen() {
 
         setFailedStationActions([]);
         await endpoints.trips.stationCompleted(tripId, stationId);
+        void fetchStationEtas(); // refresh ETAs after recording completion
       }
       nextStop();
     } catch {
@@ -349,7 +369,7 @@ export default function ShuttleTripActiveScreen() {
     } finally {
       setIsNextLoading(false);
     }
-  }, [isNextLoading, tripId, stationId, passengerStatuses, passengers, nextStop, t]);
+  }, [isNextLoading, tripId, stationId, passengerStatuses, passengers, nextStop, t, fetchStationEtas]);
 
   const handleFinishRoute = useCallback(async () => {
     if (!activeLine) return;
@@ -411,11 +431,19 @@ export default function ShuttleTripActiveScreen() {
               const phoneClean = ec.phone.replace(/\D/g, '');
               await Linking.openURL(`whatsapp://send?phone=${phoneClean}&text=${encodeURIComponent(lines)}`);
               if (tripId) {
-                // NOTE: backend must implement POST /shuttle/trips/:tripId/sos
-                api.post(`/shuttle/trips/${tripId}/sos`, {
-                  latitude: loc?.latitude ?? 0,
-                  longitude: loc?.longitude ?? 0,
-                }).catch(() => {});
+                const lat = isFinite(loc?.latitude ?? NaN) ? loc!.latitude : 0;
+                const lng = isFinite(loc?.longitude ?? NaN) ? loc!.longitude : 0;
+                const notes = `Trip #${tripId} | Stop ${currentStopIndex + 1}/${stops.length}`;
+                try {
+                  await endpoints.trips.sosAlert(tripId, { latitude: lat, longitude: lng, notes });
+                } catch (err: unknown) {
+                  // SOS delivered via WhatsApp; backend failure is non-blocking.
+                  // 400 = invalid payload, 404 = trip not found, 500 = server error.
+                  if (__DEV__) {
+                    const code = (err as { status?: number })?.status;
+                    console.warn(`[SOS] backend alert failed (HTTP ${code ?? 'unknown'})`, err);
+                  }
+                }
               }
             } catch {
               Alert.alert(t.sos_confirm_title, t.whatsapp_emergency_no_contact);
@@ -597,10 +625,12 @@ export default function ShuttleTripActiveScreen() {
 
               <View style={styles.hudSep} />
 
-              {/* ETA */}
+              {/* ETA — prefer backend-calculated value; fall back to OSRM estimate */}
               <View style={styles.hudCell}>
                 <Text style={[styles.hudPrimary, { fontFamily: 'Inter_700Bold' }]}>
-                  {roadEta.etaSeconds !== null ? etaLabel(roadEta.etaSeconds) : '—'}
+                  {stationEtas?.nextStation?.etaMinutes != null
+                    ? `~${stationEtas.nextStation.etaMinutes} min`
+                    : roadEta.etaSeconds !== null ? etaLabel(roadEta.etaSeconds) : '—'}
                 </Text>
                 <Text style={[styles.hudLabel, { fontFamily: 'Inter_400Regular' }]}>ETA</Text>
               </View>
@@ -799,9 +829,11 @@ export default function ShuttleTripActiveScreen() {
                   <Text style={[styles.distanceText, { color: phase === 'approaching' ? '#f59e0b' : 'rgba(255,255,255,0.9)', fontFamily: 'Inter_700Bold' }]}>
                     {distanceLabel(distanceM)}
                   </Text>
-                  {roadEta.etaSeconds !== null && (
+                  {(stationEtas?.nextStation?.etaMinutes != null || roadEta.etaSeconds !== null) && (
                     <Text style={[styles.etaText, { color: phase === 'approaching' ? '#f59e0b99' : 'rgba(255,255,255,0.45)', fontFamily: 'Inter_400Regular' }]}>
-                      {etaLabel(roadEta.etaSeconds)}
+                      {stationEtas?.nextStation?.etaMinutes != null
+                        ? `~${stationEtas.nextStation.etaMinutes} min`
+                        : etaLabel(roadEta.etaSeconds!)}
                     </Text>
                   )}
                 </View>

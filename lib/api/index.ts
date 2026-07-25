@@ -20,6 +20,7 @@ export type {
   RideMessage,
   RideHistoryItem,
   LocationSnapshot,
+  StationEtaResponse,
 } from './types';
 
 // ── Endpoint group imports ────────────────────────────────────────────────────
