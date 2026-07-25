@@ -545,6 +545,7 @@ export default function RideScreen() {
           ? { latitude: Number(r.dropoffLatitude), longitude: Number(r.dropoffLongitude) }
           : undefined}
         driverLocation={driverPosition ?? undefined}
+        navigationMode={phase === 'in_trip'}
       />
 
       <View style={[styles.overlay, { paddingTop: topPad }]}>

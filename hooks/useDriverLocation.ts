@@ -33,15 +33,17 @@ export function useDriverLocation(enabled = true): {
   useEffect(() => {
     if (!enabled) return;
     let sub: Location.LocationSubscription | null = null;
+    let active = true; // guards against stale assignment after unmount
 
     (async () => {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
+        if (!active) return; // unmounted while awaiting permission
         if (status !== 'granted') {
           setPermissionDenied(true);
           return;
         }
-        sub = await Location.watchPositionAsync(
+        const s = await Location.watchPositionAsync(
           {
             accuracy: Location.Accuracy.High,
             timeInterval: 3000,
@@ -56,12 +58,19 @@ export function useDriverLocation(enabled = true): {
             });
           }
         );
+        if (!active) {
+          // unmounted while watchPositionAsync was resolving — remove immediately
+          s.remove();
+          return;
+        }
+        sub = s;
       } catch {
         // expo-location may not be available in Expo Go; fail silently
       }
     })();
 
     return () => {
+      active = false;
       sub?.remove();
     };
   }, [enabled]);

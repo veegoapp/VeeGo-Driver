@@ -31,4 +31,5 @@ export const DARK_MAP_STYLE = [
 
 // Light Google Maps style — clean minimal palette for daytime use.
 // An empty array restores Google Maps' default light theme exactly.
-export const LIGHT_MAP_STYLE: object[] = [];
+import type { MapStyleElement } from 'react-native-maps';
+export const LIGHT_MAP_STYLE: MapStyleElement[] = [];

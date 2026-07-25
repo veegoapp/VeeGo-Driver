@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import MapView, { Circle, Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DARK_MAP_STYLE, LIGHT_MAP_STYLE } from '@/constants/mapStyle';
 import { getToken } from '@/lib/auth';
 
@@ -197,9 +198,15 @@ export function MapBackdrop({
       .then(data => {
         if (Array.isArray(data?.polyline) && data.polyline.length >= 2) {
           setAutoPolyline(data.polyline);
+        } else if (pickup && dropoff) {
+          // Backend returned no usable polyline — fall back to straight line
+          setAutoPolyline([pickup, dropoff]);
         }
       })
-      .catch(() => {})
+      .catch(() => {
+        // Network / timeout error — straight-line fallback keeps route visible
+        if (pickup && dropoff) setAutoPolyline([pickup, dropoff]);
+      })
       .finally(() => clearTimeout(timer));
     return () => {
       ctrl.abort();
