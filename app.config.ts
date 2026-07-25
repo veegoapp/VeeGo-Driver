@@ -20,11 +20,5 @@ export default ({ config }: { config: any }) => ({
   plugins: [
     ...(config.plugins ?? []),
     "expo-secure-store",
-    [
-      "react-native-maps",
-      {
-        googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY_ANDROID || "",
-      },
-    ],
   ],
 });

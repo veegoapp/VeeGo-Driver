@@ -1,0 +1,85 @@
+Project: VeeGo Driver Expo SDK 54 app.
+
+Task 1 — Fix react-native-maps Expo configuration
+
+IMPORTANT:
+- Only modify the incorrect react-native-maps Expo plugin configuration.
+- Do not refactor unrelated files.
+- Do not change the secret management approach.
+- Do not add .env files.
+- Do not use dotenv.
+- Keep using process.env values.
+- Do not remove react-native-maps dependency.
+- Do not change map implementation.
+
+Current issue:
+Expo fails with:
+
+Unable to resolve a valid config plugin for react-native-maps
+
+Root cause confirmed:
+react-native-maps@1.20.1 is not an Expo config plugin.
+
+Required change:
+- Remove only the react-native-maps entry from the Expo plugins array in app.config.ts.
+- Keep the existing native Google Maps configuration:
+  - android.config.googleMaps.apiKey
+  - ios.config.googleMapsApiKey
+- Make sure they continue reading from process.env.
+
+After the change:
+- Verify Expo config can resolve successfully.
+- Do not modify any other Expo settings.
+
+==================================================
+
+Task 2 — Audit required project secrets (report only)
+
+After fixing the configuration, inspect the VeeGo Driver app and provide a list of all environment variables/secrets that this project actually requires.
+
+IMPORTANT:
+- Do not create secrets.
+- Do not add secrets.
+- Do not modify Replit Secrets.
+- Do not modify EAS environments.
+- Only report.
+
+For each required secret provide:
+
+1) Exact variable name:
+Example:
+GOOGLE_MAPS_API_KEY_ANDROID
+
+2) Where it is used:
+- File path
+- Purpose
+
+3) Required for:
+- Development on Replit
+- EAS Preview build
+- EAS Production build
+- Optional/conditional
+
+4) Whether it is currently referenced in code.
+
+Check:
+- app.config.ts
+- API URLs
+- authentication configuration
+- maps
+- notifications
+- payments
+- analytics
+- any other process.env usage
+
+Final response format:
+
+Section 1:
+Files changed and what was changed.
+
+Section 2:
+Complete required secrets table:
+SECRET_NAME | USED IN | PURPOSE | REQUIRED FOR
+
+Section 3:
+Confirm no unrelated files/features were modified.
