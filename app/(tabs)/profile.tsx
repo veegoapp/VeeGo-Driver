@@ -128,7 +128,7 @@ export default function ProfileScreen() {
     ?? null;
 
   const driver = driverRaw;
-  const avatarUri = driver?.avatar ?? profilePhotoUrl ?? `https://ui-avatars.com/api/?name=${encodeURIComponent(driver?.name ?? 'Driver')}&background=1e1e28&color=fff`;
+  const avatarUri = driver?.avatar || profilePhotoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(driver?.name ?? 'Driver')}&background=1e1e28&color=fff`;
 
   const handleCopyCode = async () => {
     const code = driver?.referralCode;

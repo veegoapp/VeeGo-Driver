@@ -1165,6 +1165,37 @@ export const en = {
   messages_load_err_sub: 'Pull down to retry.',
   messages_empty_title: 'No messages yet',
   messages_empty_sub: 'Announcements and notifications will appear here.',
+  // ── Messages tabs ─────────────────────────────────────────────────────────────
+  tab_notifications: 'Notifications',
+  tab_support_msgs: 'Support',
+  support_msgs_empty_title: 'No support updates yet',
+  support_msgs_empty_sub: 'Replies to your submitted tickets will appear here.',
+  // ── Support screen — FAQ answers ──────────────────────────────────────────────
+  support_faq_header: 'Frequently Asked Questions',
+  support_faq_a_payments: 'Your earnings are calculated based on completed trips. Payments are processed every Sunday and transferred to your registered payout account within 2–3 business days. If a payment is missing, check that your payout account details are up to date.',
+  support_faq_a_account: 'To update your account information, go to Profile → Personal Information. For security reasons, your phone number and email can only be changed by contacting support. If you\'re having trouble logging in, tap "Forgot password" on the login screen.',
+  support_faq_a_trip: 'If a trip was unfairly rated or you believe a fare was calculated incorrectly, submit a ticket with the specific trip selected. Our team reviews disputes within 48 hours.',
+  support_faq_a_vehicle: 'Vehicle and document updates (insurance, registration) must be submitted through Profile → Documents. Expired documents may temporarily restrict your ability to accept new trips.',
+  support_faq_a_safety: 'If you feel unsafe during a trip, use the SOS button on the active trip screen to call 122 and alert our safety team. After the trip, report the incident via a support ticket.',
+  support_faq_a_app: 'For app crashes or technical issues, try force-closing and reopening the app. If the problem persists, ensure you have the latest version installed. You can also submit a ticket describing what happened.',
+  // ── Support screen — Submit Ticket steps ──────────────────────────────────────
+  support_open_ticket: 'Submit a Ticket',
+  support_ticket_step_trip: 'Step 1 — Select a Trip',
+  support_ticket_step_trip_sub: 'Which trip is this about?',
+  support_ticket_step_category: 'Step 2 — Issue Type',
+  support_ticket_step_describe: 'Step 3 — Describe the Issue',
+  support_no_specific_trip: 'Not about a specific trip',
+  support_loading_trips: 'Loading trips…',
+  support_no_trips_found: 'No recent trips found',
+  support_continue: 'Continue',
+  support_description_placeholder: 'Describe your issue in detail…',
+  // ── Support screen — Category labels ─────────────────────────────────────────
+  support_cat_payment: 'Payments & Earnings',
+  support_cat_safety: 'Safety',
+  support_cat_quality: 'Trip Quality',
+  support_cat_refund: 'Refund Request',
+  support_cat_lost_found: 'Lost & Found',
+  support_cat_other: 'Other',
 };
 
 export type Translations = typeof en;

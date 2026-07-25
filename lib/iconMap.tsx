@@ -7,7 +7,7 @@ import {
   Globe, HelpCircle, Home, Inbox, Lock, LogOut, Map, MapPin,
   MessageCircle, MessageSquare, Mic, Moon, Navigation, Package,
   Phone, Play, Plus, Radio, Search, Settings, Share2,
-  Shield, Sliders, Star, Sun, Tag, TrendingUp, Truck,
+  Shield, Sliders, Star, Sun, Tag, Target, TrendingUp, Truck,
   User, Users, Volume2, Wifi, WifiOff, X, Zap,
 } from 'lucide-react-native';
 
@@ -59,6 +59,7 @@ const ICON_MAP: Record<string, React.ComponentType<{ size?: number; color?: stri
   'star': Star,
   'sun': Sun,
   'tag': Tag,
+  'target': Target,
   'trending-up': TrendingUp,
   'truck': Truck,
   'user': User,

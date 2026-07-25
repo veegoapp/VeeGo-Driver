@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { ArrowLeft, Bell, CheckCheck, InboxIcon } from 'lucide-react-native';
-import React from 'react';
+import { ArrowLeft, Bell, CheckCheck, InboxIcon, MessageSquare } from 'lucide-react-native';
+import React, { useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -24,12 +24,16 @@ type Notification = {
   read: boolean;
 };
 
+type TabKey = 'notifications' | 'support';
+
 export default function MessagesScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const topPad = insets.top;
   const { t, isRTL } = useI18n();
   const queryClient = useQueryClient();
+
+  const [activeTab, setActiveTab] = useState<TabKey>('notifications');
 
   const { data: rawNotifications, isLoading, isError } = useQuery({
     queryKey: ['notifications'],
@@ -81,9 +85,10 @@ export default function MessagesScreen() {
           <ArrowLeft size={20} color={colors.foreground} strokeWidth={2} style={rtlIconStyle(isRTL)} />
         </Pressable>
 
+        {/* Title + mark-all row */}
         <View style={styles.titleRow}>
           <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.messages_title}</Text>
-          {hasUnread && (
+          {activeTab === 'notifications' && hasUnread && (
             <Pressable
               onPress={() => markAllMutation.mutate()}
               disabled={markAllMutation.isPending}
@@ -98,83 +103,122 @@ export default function MessagesScreen() {
           )}
         </View>
 
-        {isLoading && (
-          <View style={styles.centeredState}>
-            <ActivityIndicator color={colors.primary} size="large" />
-          </View>
-        )}
+        {/* Tab bar */}
+        <View style={[styles.tabBar, { backgroundColor: colors.glass, borderColor: colors.border }]}>
+          {(['notifications', 'support'] as TabKey[]).map(tab => {
+            const isActive = activeTab === tab;
+            const label = tab === 'notifications' ? t.tab_notifications : t.tab_support_msgs;
+            const Icon = tab === 'notifications' ? Bell : MessageSquare;
+            return (
+              <Pressable
+                key={tab}
+                onPress={() => setActiveTab(tab)}
+                style={[styles.tabBtn, isActive && { backgroundColor: colors.primary, borderRadius: Radius.md }]}
+              >
+                <Icon size={14} color={isActive ? colors.primaryForeground : colors.mutedForeground} strokeWidth={2} />
+                <Text style={[styles.tabLabel, { color: isActive ? colors.primaryForeground : colors.mutedForeground, fontFamily: isActive ? 'Inter_700Bold' : 'Inter_500Medium' }]}>
+                  {label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
 
-        {isError && (
-          <GlassView style={styles.centeredState} borderRadius={20}>
-            <Bell size={32} color={colors.mutedForeground} strokeWidth={1.5} />
-            <Text style={[styles.stateTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-              {t.messages_load_err_title}
-            </Text>
-            <Text style={[styles.stateSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-              {t.messages_load_err_sub}
-            </Text>
-          </GlassView>
-        )}
+        {/* ── Notifications Tab ───────────────────────────────────────── */}
+        {activeTab === 'notifications' && (
+          <>
+            {isLoading && (
+              <View style={styles.centeredState}>
+                <ActivityIndicator color={colors.primary} size="large" />
+              </View>
+            )}
 
-        {!isLoading && !isError && (!notifications || notifications.length === 0) && (
-          <GlassView style={styles.centeredState} borderRadius={20}>
-            <InboxIcon size={32} color={colors.mutedForeground} strokeWidth={1.5} />
-            <Text style={[styles.stateTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-              {t.messages_empty_title}
-            </Text>
-            <Text style={[styles.stateSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-              {t.messages_empty_sub}
-            </Text>
-          </GlassView>
-        )}
+            {isError && (
+              <GlassView style={styles.centeredState} borderRadius={20}>
+                <Bell size={32} color={colors.mutedForeground} strokeWidth={1.5} />
+                <Text style={[styles.stateTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
+                  {t.messages_load_err_title}
+                </Text>
+                <Text style={[styles.stateSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
+                  {t.messages_load_err_sub}
+                </Text>
+              </GlassView>
+            )}
 
-        {!isLoading && !isError && notifications && notifications.length > 0 && (
-          <GlassView style={{ marginTop: 20 }} borderRadius={20}>
-            {notifications.map((n, i) => {
-              const isSystem = !n.title.includes('@');
-              return (
-                <Pressable
-                  key={n.id}
-                  onPress={() => handleTap(n)}
-                  style={({ pressed }) => [
-                    styles.msgRow,
-                    i > 0 && { borderTopWidth: 1, borderTopColor: colors.border },
-                    pressed && { backgroundColor: colors.secondary + '66' },
-                  ]}
-                >
-                  {isSystem ? (
-                    <LinearGradient colors={['#2d2d42', '#1e1e28']} style={styles.avatarCircle}>
-                      <Text style={[styles.avatarLetter, { color: '#fff', fontFamily: 'Inter_700Bold' }]}>
-                        {n.title[0]?.toUpperCase() ?? 'V'}
-                      </Text>
-                    </LinearGradient>
-                  ) : (
-                    <View style={[styles.avatarCircle, { backgroundColor: colors.secondary }]}>
-                      <Text style={[styles.avatarLetter, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-                        {n.title[0]?.toUpperCase() ?? '?'}
-                      </Text>
-                    </View>
-                  )}
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <View style={styles.msgHeader}>
-                      <Text style={[styles.msgFrom, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]} numberOfLines={1}>
-                        {isRTL && n.titleAr ? n.titleAr : n.title}
-                      </Text>
-                      <Text style={[styles.msgTime, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>
-                        {n.time}
-                      </Text>
-                    </View>
-                    <Text
-                      style={[styles.msgPreview, { color: n.read ? colors.mutedForeground : colors.foreground, fontFamily: 'Inter_400Regular' }]}
-                      numberOfLines={2}
+            {!isLoading && !isError && notifications.length === 0 && (
+              <GlassView style={styles.centeredState} borderRadius={20}>
+                <InboxIcon size={32} color={colors.mutedForeground} strokeWidth={1.5} />
+                <Text style={[styles.stateTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
+                  {t.messages_empty_title}
+                </Text>
+                <Text style={[styles.stateSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
+                  {t.messages_empty_sub}
+                </Text>
+              </GlassView>
+            )}
+
+            {!isLoading && !isError && notifications.length > 0 && (
+              <GlassView style={{ marginTop: 20 }} borderRadius={20}>
+                {notifications.map((n, i) => {
+                  const isSystem = !n.title.includes('@');
+                  return (
+                    <Pressable
+                      key={n.id}
+                      onPress={() => handleTap(n)}
+                      style={({ pressed }) => [
+                        styles.msgRow,
+                        i > 0 && { borderTopWidth: 1, borderTopColor: colors.border },
+                        pressed && { backgroundColor: colors.secondary + '66' },
+                      ]}
                     >
-                      {isRTL && n.bodyAr ? n.bodyAr : n.body}
-                    </Text>
-                  </View>
-                  {!n.read && <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} />}
-                </Pressable>
-              );
-            })}
+                      {isSystem ? (
+                        <LinearGradient colors={['#2d2d42', '#1e1e28']} style={styles.avatarCircle}>
+                          <Text style={[styles.avatarLetter, { color: '#fff', fontFamily: 'Inter_700Bold' }]}>
+                            {n.title[0]?.toUpperCase() ?? 'V'}
+                          </Text>
+                        </LinearGradient>
+                      ) : (
+                        <View style={[styles.avatarCircle, { backgroundColor: colors.secondary }]}>
+                          <Text style={[styles.avatarLetter, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
+                            {n.title[0]?.toUpperCase() ?? '?'}
+                          </Text>
+                        </View>
+                      )}
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <View style={styles.msgHeader}>
+                          <Text style={[styles.msgFrom, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]} numberOfLines={1}>
+                            {isRTL && n.titleAr ? n.titleAr : n.title}
+                          </Text>
+                          <Text style={[styles.msgTime, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>
+                            {n.time}
+                          </Text>
+                        </View>
+                        <Text
+                          style={[styles.msgPreview, { color: n.read ? colors.mutedForeground : colors.foreground, fontFamily: 'Inter_400Regular' }]}
+                          numberOfLines={2}
+                        >
+                          {isRTL && n.bodyAr ? n.bodyAr : n.body}
+                        </Text>
+                      </View>
+                      {!n.read && <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} />}
+                    </Pressable>
+                  );
+                })}
+              </GlassView>
+            )}
+          </>
+        )}
+
+        {/* ── Support Messages Tab ────────────────────────────────────── */}
+        {activeTab === 'support' && (
+          <GlassView style={styles.centeredState} borderRadius={20}>
+            <MessageSquare size={32} color={colors.mutedForeground} strokeWidth={1.5} />
+            <Text style={[styles.stateTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
+              {t.support_msgs_empty_title}
+            </Text>
+            <Text style={[styles.stateSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
+              {t.support_msgs_empty_sub}
+            </Text>
           </GlassView>
         )}
       </ScrollView>
@@ -183,21 +227,24 @@ export default function MessagesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: Spacing.xl, marginBottom: 0 },
-  pageTitle: { fontSize: 24 },
-  markAllBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: Radius.md, borderWidth: 1 },
-  markAllText: { fontSize: Typography.size.xs },
-  centeredState: { marginTop: 40, alignItems: 'center', padding: Spacing.xxl, gap: Spacing.md },
-  stateTitle: { fontSize: Typography.size.md, textAlign: 'center' },
-  stateSub: { fontSize: 13, textAlign: 'center', lineHeight: 20 },
-  msgRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.md, padding: Spacing.lg },
+  container:    { flex: 1 },
+  backBtn:      { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  titleRow:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: Spacing.xl, marginBottom: 0 },
+  pageTitle:    { fontSize: 24 },
+  markAllBtn:   { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: Radius.md, borderWidth: 1 },
+  markAllText:  { fontSize: Typography.size.xs },
+  tabBar:       { flexDirection: 'row', borderRadius: Radius.md, borderWidth: 1, padding: 4, marginTop: Spacing.lg, gap: 4 },
+  tabBtn:       { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 8 },
+  tabLabel:     { fontSize: Typography.size.xs },
+  centeredState:{ marginTop: 40, alignItems: 'center', padding: Spacing.xxl, gap: Spacing.md },
+  stateTitle:   { fontSize: Typography.size.md, textAlign: 'center' },
+  stateSub:     { fontSize: 13, textAlign: 'center', lineHeight: 20 },
+  msgRow:       { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.md, padding: Spacing.lg },
   avatarCircle: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   avatarLetter: { fontSize: Typography.size.sm },
-  msgHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  msgFrom: { fontSize: Typography.size.sm, flex: 1 },
-  msgTime: { fontSize: 10 },
-  msgPreview: { fontSize: Typography.size.xs, marginTop: 2, lineHeight: 18 },
-  unreadDot: { width: 8, height: 8, borderRadius: 4, marginTop: Spacing.sm },
+  msgHeader:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  msgFrom:      { fontSize: Typography.size.sm, flex: 1 },
+  msgTime:      { fontSize: 10 },
+  msgPreview:   { fontSize: Typography.size.xs, marginTop: 2, lineHeight: 18 },
+  unreadDot:    { width: 8, height: 8, borderRadius: 4, marginTop: Spacing.sm },
 });
