@@ -41,7 +41,7 @@ export function useRoadEta(
   const fetching = useRef(false);
   const abortCtrl = useRef<AbortController | null>(null);
 
-  // ── OSRM fetch — gated by time and distance ───────────────────────────────
+  // ── Backend /directions proxy fetch — gated by time and distance ─────────
   useEffect(() => {
     if (!enabled || !driverPos || !target) {
       anchor.current = null;
@@ -112,7 +112,7 @@ export function useRoadEta(
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, driverPos?.latitude, driverPos?.longitude, target?.latitude, target?.longitude]);
 
-  // ── Smooth tick-down between OSRM refreshes ───────────────────────────────
+  // ── Smooth tick-down between backend refreshes ────────────────────────────
   useEffect(() => {
     if (!enabled) return;
     const id = setInterval(() => {
