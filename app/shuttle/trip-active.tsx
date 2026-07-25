@@ -275,19 +275,6 @@ export default function ShuttleTripActiveScreen() {
     return () => { socket.off(SOCKET_EVENTS.SHUTTLE_STATION_TIMEOUT, handler); };
   }, [socket, tripId, nextStop]);
 
-  // ── Socket: SOS acknowledgement ───────────────────────────────────────────
-  // The backend emits driver:sos:ack after it receives the SOS alert and
-  // notifies the ops team. Show the driver a clear confirmation.
-  useEffect(() => {
-    if (!socket) return;
-    const handler = (data?: { ok?: boolean; message?: string; triggeredAt?: string }) => {
-      const msg = data?.message ?? t.sos_confirm_body;
-      Alert.alert(t.sos_confirm_title, msg);
-    };
-    socket.on(SOCKET_EVENTS.DRIVER_SOS_ACK, handler);
-    return () => { socket.off(SOCKET_EVENTS.DRIVER_SOS_ACK, handler); };
-  }, [socket, t]);
-
   // ── Actions ────────────────────────────────────────────────────────────────
 
   // ── Station ETAs — fetched from backend on mount and after each transition ─

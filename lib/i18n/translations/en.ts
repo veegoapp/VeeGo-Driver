@@ -953,6 +953,8 @@ export const en = {
   try_again_msg: 'Please try again.',
   sos_sent_title: 'SOS Sent',
   sos_sent_msg: 'The operations team has been alerted. Help is on the way.',
+  sos_ack_title: 'SOS Received',
+  sos_ack_msg: 'Your SOS was received. The operations team has been alerted.',
   sos_failed_title: 'SOS Failed',
   sos_failed_msg: 'Could not send SOS. Please call emergency services: 197',
   trip_done_title: 'Trip completed!',

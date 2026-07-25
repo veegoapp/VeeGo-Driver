@@ -18,7 +18,7 @@ import * as Notifications from 'expo-notifications';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect } from 'react';
-import { Platform } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -81,20 +81,41 @@ function PushNotificationsBridge() {
  */
 function ForceDisconnectBridge() {
   const { socket } = useSocket();
-  const { logout } = useAuth();
+  const { clearLocalSession } = useAuth();
   const router = useRouter();
+  const handledRef = React.useRef(false);
 
   useEffect(() => {
     if (!socket) return;
     const handle = async (_data?: { reason?: string }) => {
-      // Navigate first — auth guard allows /suspended even without a token
+      if (handledRef.current) return;
+      handledRef.current = true;
+      // Disconnect before any state or navigation changes so no more socket
+      // events can be processed during the forced session shutdown.
+      socket.disconnect();
       router.replace('/suspended');
-      // Then clear local credentials (non-blocking; API call is best-effort)
-      await logout();
+      await clearLocalSession();
+      queryClient.clear();
     };
     socket.on(SOCKET_EVENTS.FORCE_DISCONNECT, handle);
     return () => { socket.off(SOCKET_EVENTS.FORCE_DISCONNECT, handle); };
-  }, [socket, logout, router]);
+  }, [socket, clearLocalSession, router]);
+
+  return null;
+}
+
+function SosAcknowledgementBridge() {
+  const { socket } = useSocket();
+  const { t } = useI18n();
+
+  useEffect(() => {
+    if (!socket) return;
+    const handle = (data?: { ok?: boolean; message?: string; triggeredAt?: string }) => {
+      Alert.alert(t.sos_ack_title, data?.message ?? t.sos_ack_msg);
+    };
+    socket.on(SOCKET_EVENTS.DRIVER_SOS_ACK, handle);
+    return () => { socket.off(SOCKET_EVENTS.DRIVER_SOS_ACK, handle); };
+  }, [socket, t]);
 
   return null;
 }
@@ -237,6 +258,7 @@ function RootLayoutNav() {
     <>
       <PushNotificationsBridge />
       <ForceDisconnectBridge />
+      <SosAcknowledgementBridge />
       <ReferralSocketBridge />
 
       <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>

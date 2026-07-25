@@ -122,8 +122,8 @@ export function useRideSocket({
       joinRoom();
     }
 
-    socket.on('connect', onConnect);
-    return () => { socket.off('connect', onConnect); };
+    socket.on(SOCKET_EVENTS.CONNECT, onConnect);
+    return () => { socket.off(SOCKET_EVENTS.CONNECT, onConnect); };
   }, [socket, connected]);
 
   // Attach ride-specific event handlers to the shared socket

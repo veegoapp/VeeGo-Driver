@@ -8,6 +8,7 @@ type AuthContextType = {
   isLoading: boolean;
   login: (accessToken: string, refreshToken?: string) => Promise<void>;
   logout: () => Promise<void>;
+  clearLocalSession: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -43,8 +44,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setToken(null);
   };
 
+  const clearLocalSession = async () => {
+    // Force-disconnect must not make a backend request. Stop local tracking
+    // and clear credentials so the socket cannot be recreated.
+    await stopLocationTracking();
+    await deleteToken();
+    await deleteRefreshToken();
+    setToken(null);
+  };
+
   return (
-    <AuthContext.Provider value={{ token, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ token, isLoading, login, logout, clearLocalSession }}>
       {children}
     </AuthContext.Provider>
   );

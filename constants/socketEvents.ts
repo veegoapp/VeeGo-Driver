@@ -72,9 +72,6 @@ export const SOCKET_EVENTS = {
   // Server → Driver: wallet feature toggled by admin
   DRIVER_WALLET_FEATURE:      "driver:wallet:feature:changed",
 
-  // Server → Driver: payment methods changed by admin
-  PAYMENT_METHODS_CHANGED:    "payment:methods:changed",
-
   // Server → Driver: admin cancels a shuttle booking
   ADMIN_SHUTTLE_BOOKING_CANCELLED: "admin:shuttle_booking_cancelled",
 
@@ -128,8 +125,6 @@ export const SOCKET_EVENTS = {
 
   // Client → Server
   JOIN:                     "join",
-  JOIN_TRIP:                "join:trip",
-  LEAVE_TRIP:               "leave:trip",
   DRIVER_HEARTBEAT:         "driver:heartbeat",
   /* unused — reserved for future backend compatibility: do not remove */
   DRIVER_STATUS_ONLINE:     "driver:status:online",
