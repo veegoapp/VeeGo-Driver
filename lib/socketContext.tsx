@@ -3,6 +3,7 @@ import { AppState, type AppStateStatus } from 'react-native';
 import type { Socket } from 'socket.io-client';
 import { useAuth } from './authContext';
 import { getToken } from './auth';
+import { SOCKET_EVENTS } from '@/constants/socketEvents';
 
 const _rawApiUrl = process.env.EXPO_PUBLIC_API_URL ?? '';
 const _apiBase = _rawApiUrl.startsWith('http') ? _rawApiUrl : `https://${_rawApiUrl}`;
@@ -57,11 +58,11 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       socketRef.current = socket;
       setSocketInstance(socket);
 
-      socket.on('connect', () => {
+      socket.on(SOCKET_EVENTS.CONNECT, () => {
         setConnected(true);
       });
 
-      socket.on('disconnect', () => {
+      socket.on(SOCKET_EVENTS.DISCONNECT, () => {
         setConnected(false);
       });
 
@@ -94,6 +95,17 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     const sub = AppState.addEventListener('change', handleAppStateChange);
     return () => sub.remove();
   }, []);
+
+  // Emit driver:heartbeat every 30 s while the socket is connected.
+  // The interval is cleared automatically when the socket disconnects or
+  // the component unmounts (return cleanup), preventing duplicate timers.
+  useEffect(() => {
+    if (!connected || !socketInstance) return;
+    const id = setInterval(() => {
+      socketInstance.emit(SOCKET_EVENTS.DRIVER_HEARTBEAT);
+    }, 30_000);
+    return () => clearInterval(id);
+  }, [connected, socketInstance]);
 
   const value = useMemo(() => ({ socket: socketInstance, connected }), [socketInstance, connected]);
 

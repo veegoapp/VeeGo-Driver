@@ -121,6 +121,11 @@ export const SOCKET_EVENTS = {
   // Server → Driver: misc
   ERROR:                    "error",
 
+  // Socket.io lifecycle (client ↔ server)
+  CONNECT:                  "connect",
+  DISCONNECT:               "disconnect",
+  RECONNECT:                "reconnect",
+
   // Client → Server
   JOIN:                     "join",
   JOIN_TRIP:                "join:trip",

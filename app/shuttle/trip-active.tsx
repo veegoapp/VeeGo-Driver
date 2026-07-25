@@ -275,6 +275,19 @@ export default function ShuttleTripActiveScreen() {
     return () => { socket.off(SOCKET_EVENTS.SHUTTLE_STATION_TIMEOUT, handler); };
   }, [socket, tripId, nextStop]);
 
+  // ── Socket: SOS acknowledgement ───────────────────────────────────────────
+  // The backend emits driver:sos:ack after it receives the SOS alert and
+  // notifies the ops team. Show the driver a clear confirmation.
+  useEffect(() => {
+    if (!socket) return;
+    const handler = (data?: { ok?: boolean; message?: string; triggeredAt?: string }) => {
+      const msg = data?.message ?? t.sos_confirm_body;
+      Alert.alert(t.sos_confirm_title, msg);
+    };
+    socket.on(SOCKET_EVENTS.DRIVER_SOS_ACK, handler);
+    return () => { socket.off(SOCKET_EVENTS.DRIVER_SOS_ACK, handler); };
+  }, [socket, t]);
+
   // ── Actions ────────────────────────────────────────────────────────────────
 
   // ── Station ETAs — fetched from backend on mount and after each transition ─
@@ -378,6 +391,8 @@ export default function ShuttleTripActiveScreen() {
       const id = activeLine.tripId;
       if (!id) throw new Error('No trip ID');
       const result = await endpoints.trips.complete(id) as ShuttleCompleteResponse;
+      // Notify the server that the driver has completed the shuttle trip.
+      if (socket) socket.emit(SOCKET_EVENTS.DRIVER_TRIP_COMPLETE, { tripId: Number(id) });
       const earned = result?.earnedAmount ?? result?.data?.earnedAmount;
       const balance = result?.walletBalance ?? result?.data?.walletBalance;
       router.replace({
@@ -391,7 +406,7 @@ export default function ShuttleTripActiveScreen() {
     } catch {
       router.replace('/shuttle/trip-complete' as any);
     }
-  }, [activeLine]);
+  }, [activeLine, socket]);
 
   const updatePassengerStatus = useCallback((passengerId: string, status: PassengerStatus) => {
     setPassengerStatuses(prev => ({ ...prev, [passengerId]: status }));

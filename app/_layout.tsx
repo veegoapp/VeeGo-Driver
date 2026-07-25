@@ -32,6 +32,7 @@ import { SocketProvider, useSocket } from '@/lib/socketContext';
 import { ReferralProvider, useReferral } from '@/lib/referralContext';
 import { navigateAfterAuth } from '@/lib/postAuthRouter';
 import { setOnAccountSuspended, endpoints } from '@/lib/api';
+import { SOCKET_EVENTS } from '@/constants/socketEvents';
 import { deleteToken, deleteRefreshToken } from '@/lib/auth';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { ServerStatusBanner } from '@/components/ServerStatusBanner';
@@ -69,6 +70,32 @@ const PENDING_SCREENS = new Set([
 
 function PushNotificationsBridge() {
   usePushNotifications();
+  return null;
+}
+
+/**
+ * Listens for the server-initiated `force:disconnect` event, clears local
+ * auth credentials, and redirects the driver to the suspended screen.
+ * Navigation happens before token deletion so the auth guard's isSuspendedFlow
+ * carve-out prevents it from bouncing the driver back to /login.
+ */
+function ForceDisconnectBridge() {
+  const { socket } = useSocket();
+  const { logout } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!socket) return;
+    const handle = async (_data?: { reason?: string }) => {
+      // Navigate first — auth guard allows /suspended even without a token
+      router.replace('/suspended');
+      // Then clear local credentials (non-blocking; API call is best-effort)
+      await logout();
+    };
+    socket.on(SOCKET_EVENTS.FORCE_DISCONNECT, handle);
+    return () => { socket.off(SOCKET_EVENTS.FORCE_DISCONNECT, handle); };
+  }, [socket, logout, router]);
+
   return null;
 }
 
@@ -209,6 +236,7 @@ function RootLayoutNav() {
   return (
     <>
       <PushNotificationsBridge />
+      <ForceDisconnectBridge />
       <ReferralSocketBridge />
 
       <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>

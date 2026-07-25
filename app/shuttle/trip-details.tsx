@@ -20,6 +20,8 @@ import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { useShuttle, findLineForRoute } from '@/lib/shuttleContext';
 import { endpoints } from '@/lib/api';
+import { useSocket } from '@/lib/socketContext';
+import { SOCKET_EVENTS } from '@/constants/socketEvents';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
@@ -66,6 +68,7 @@ export default function TripDetailsScreen() {
   } = useLocalSearchParams<Params>();
 
   const { myBookings, allLines, listLoading, setStartedTripId, refetch } = useShuttle();
+  const { socket } = useSocket();
   const [starting, setStarting] = useState(false);
 
   // Use String() coercion on both sides — defends against numeric IDs at runtime.
@@ -332,6 +335,8 @@ export default function TripDetailsScreen() {
                 const tripId = line?.tripId;
                 if (!tripId) throw new Error('No trip assigned to this route yet');
                 await endpoints.trips.start(String(tripId));
+                // Notify the server that the driver has started the shuttle trip.
+                if (socket) socket.emit(SOCKET_EVENTS.DRIVER_TRIP_START, { tripId: Number(tripId) });
                 setStartedTripId(String(tripId));
                 refetch();
                 router.push('/shuttle/trip-active' as any);
