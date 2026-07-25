@@ -110,6 +110,8 @@ export function MapBackdrop({
     savedTheme ?? (systemScheme === 'light' ? 'light' : 'dark');
   const mapStyle = effectiveTheme === 'dark' ? DARK_MAP_STYLE : LIGHT_MAP_STYLE;
 
+  const insets = useSafeAreaInsets();
+
   const handleThemeToggle = useCallback(() => {
     const next: 'dark' | 'light' = effectiveTheme === 'dark' ? 'light' : 'dark';
     setSavedTheme(next);
@@ -487,7 +489,7 @@ export function MapBackdrop({
       {/* ── Theme toggle button ───────────────────────────────────────────── */}
       <Pressable
         onPress={handleThemeToggle}
-        style={styles.themeToggleBtn}
+        style={[styles.themeToggleBtn, { top: insets.top + 12 }]}
         accessibilityLabel={effectiveTheme === 'dark' ? 'Switch to light map' : 'Switch to dark map'}
       >
         <Text style={styles.themeToggleIcon}>
