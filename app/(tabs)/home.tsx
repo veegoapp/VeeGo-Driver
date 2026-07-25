@@ -36,6 +36,7 @@ import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
 import { Shadows } from '@/constants/shadows';
+import { TAB_BAR_HEIGHT_BASE } from '@/constants/tabBar';
 
 export const TAB_BAR_HEIGHT = 96;
 // Fallback only — used if a ride:offer payload omits expiresInSeconds.
@@ -708,7 +709,7 @@ export default function HomeScreen() {
       </View>
 
       {request && (
-        <Animated.View style={[styles.requestSheet, { transform: [{ translateY: sheetAnim }] }]}>
+        <Animated.View style={[styles.requestSheet, { paddingBottom: TAB_BAR_HEIGHT_BASE + insets.bottom + Spacing.md, transform: [{ translateY: sheetAnim }] }]}>
           <GlassView strong style={[styles.requestCard, { borderColor: colors.primary + '4D' }]} borderRadius={24}>
             <View style={[styles.requestHeader, { flexDirection: R }]}>
               <View style={[styles.requestHeaderLeft, { flexDirection: R }]}>
