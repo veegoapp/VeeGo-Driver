@@ -211,6 +211,7 @@ const styles = StyleSheet.create({
   },
   pill: {
     flexDirection: 'row',
+    direction: 'ltr',
     borderRadius: 24,
     borderWidth: 1,
     paddingVertical: PILL_PX,

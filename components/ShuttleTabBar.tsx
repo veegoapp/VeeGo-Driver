@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { Bookmark, CreditCard, GitBranch, Radio, User } from 'lucide-react-native';
 import React, { useRef, useEffect, useState } from 'react';
-import { Animated, I18nManager, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { useReferral } from '@/lib/referralContext';
@@ -42,12 +42,9 @@ export function ShuttleTabBar({ state, navigation }: TabBarProps) {
   // Incoming referral badge count — drives the red dot on the Home tab icon
   const { incomingReferralsCount } = useReferral();
 
-  // I18nManager.isRTL is always synchronously correct — it reflects the OS RTL
-  // state set by forceRTL() in the *previous* session, so it's ready on the
-  // very first render before AsyncStorage loads the language preference.
-  const rtl = I18nManager.isRTL;
-
-  const visualIndex = rtl ? SHUTTLE_TAB_NAMES.length - 1 - activeIndex : activeIndex;
+  // The pill container is forced LTR (see styles.pill), so activeIndex maps
+  // directly to the visual left-to-right position regardless of I18nManager.isRTL.
+  const visualIndex = activeIndex;
 
   // Language change: fade labels out, let the RTL reflow + new text land, then fade in.
   useEffect(() => {
@@ -179,6 +176,7 @@ const styles = StyleSheet.create({
   },
   pill: {
     flexDirection: 'row',
+    direction: 'ltr',
     borderRadius: 24,
     borderWidth: 1,
     paddingVertical: PILL_PX,
