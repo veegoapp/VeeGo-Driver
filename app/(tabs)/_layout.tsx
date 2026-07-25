@@ -32,6 +32,7 @@ function TabLayoutContent() {
       <Tabs.Screen name="home" options={{ title: 'Drive' }} />
       <Tabs.Screen name="earnings" options={{ title: 'Earnings' }} />
       <Tabs.Screen name="trips" options={{ title: 'Trips' }} />
+      <Tabs.Screen name="history" options={{ title: 'History' }} />
       <Tabs.Screen name="wallet" options={{ title: 'Wallet' }} />
       <Tabs.Screen name="profile" options={{ title: 'Profile' }} />
     </Tabs>

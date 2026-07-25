@@ -1,11 +1,9 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
-import { ChevronLeft, Clock, MapPin, Star } from 'lucide-react-native';
+import { Clock, MapPin, Star } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -27,11 +25,12 @@ type FilterKey = 'all' | 'completed' | 'cancelled';
 const FILTER_KEYS: FilterKey[] = ['all', 'completed', 'cancelled'];
 const PAGE_LIMIT = 20;
 const MAX_ANIM = 50;
+const TAB_BAR_HEIGHT = 96;
 
-export default function RideHistoryScreen() {
+export default function RideHistoryTabScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { isRTL } = useI18n();
+  const { t, isRTL } = useI18n();
   const topPad = insets.top;
 
   const TA = isRTL ? 'right' as const : 'left' as const;
@@ -77,29 +76,26 @@ export default function RideHistoryScreen() {
   }, [allRides.length, filter]);
 
   const filterLabels: Record<FilterKey, string> = {
-    all: 'All',
-    completed: 'Completed',
-    cancelled: 'Cancelled',
+    all: t.all,
+    completed: t.completed_label,
+    cancelled: t.status_cancelled,
   };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: topPad + 8, borderBottomColor: colors.border }]}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
-          <ChevronLeft size={24} color={colors.foreground} strokeWidth={2}
-            style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
-        </Pressable>
-        <Text style={[styles.headerTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-          Ride History
-        </Text>
-        <View style={{ width: 40 }} />
-      </View>
-
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
+        contentContainerStyle={{
+          paddingTop: topPad + 8,
+          paddingHorizontal: 20,
+          paddingBottom: TAB_BAR_HEIGHT + 24,
+        }}
         showsVerticalScrollIndicator={false}
       >
+        {/* Page title */}
+        <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
+          {t.ride_history_label}
+        </Text>
+
         {/* Filter chips */}
         <ScrollView
           horizontal
@@ -213,7 +209,6 @@ function RideCard({
   TA: 'left' | 'right';
 }) {
   const isCompleted = ride.status === 'completed';
-  const isCancelled = ride.status === 'cancelled';
 
   const statusBg = isCompleted ? colors.secondary : '#ef444415';
   const statusFg = isCompleted ? colors.mutedForeground : '#ef4444';
@@ -312,27 +307,18 @@ function RideCard({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 17 },
-  chip: { paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm, borderRadius: 20 },
-  chipText: { fontSize: Typography.size.xs },
-  card: { padding: Spacing.lg },
-  statusBadge: { paddingHorizontal: Spacing.sm, paddingVertical: 2, borderRadius: 20 },
-  statusText: { fontSize: 9, letterSpacing: 0.8, textTransform: 'uppercase' },
-  routeDots: { alignItems: 'center', paddingTop: Spacing.xs },
-  dotTop: { width: 8, height: 8, borderRadius: 4 },
-  routeLine: { width: 1, flex: 1, marginVertical: 3, minHeight: 8 },
-  dotBottom: { width: 8, height: 8, borderRadius: 2 },
-  addressText: { fontSize: Typography.size.sm },
-  fareText: { fontSize: Typography.size.md },
-  starsRow: { gap: 2, marginTop: Spacing.xs },
+  container:    { flex: 1 },
+  pageTitle:    { fontSize: 24, marginBottom: 0 },
+  chip:         { paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm, borderRadius: 20 },
+  chipText:     { fontSize: Typography.size.xs },
+  card:         { padding: Spacing.lg },
+  statusBadge:  { paddingHorizontal: Spacing.sm, paddingVertical: 2, borderRadius: 20 },
+  statusText:   { fontSize: 9, letterSpacing: 0.8, textTransform: 'uppercase' },
+  routeDots:    { alignItems: 'center', paddingTop: Spacing.xs },
+  dotTop:       { width: 8, height: 8, borderRadius: 4 },
+  routeLine:    { width: 1, flex: 1, marginVertical: 3, minHeight: 8 },
+  dotBottom:    { width: 8, height: 8, borderRadius: 2 },
+  addressText:  { fontSize: Typography.size.sm },
+  fareText:     { fontSize: Typography.size.md },
+  starsRow:     { gap: 2, marginTop: Spacing.xs },
 });

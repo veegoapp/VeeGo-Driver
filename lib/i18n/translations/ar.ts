@@ -1168,6 +1168,7 @@ export const ar: Translations = {
   // ── Messages tabs ─────────────────────────────────────────────────────────────
   tab_notifications: 'الإشعارات',
   tab_support_msgs: 'الدعم',
+  tab_history: 'السجل',
   support_msgs_empty_title: 'لا توجد تحديثات من الدعم بعد',
   support_msgs_empty_sub: 'ستظهر هنا ردود فريق الدعم على التذاكر المقدمة.',
   // ── Support screen — FAQ answers ──────────────────────────────────────────────

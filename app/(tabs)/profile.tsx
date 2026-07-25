@@ -203,7 +203,6 @@ export default function ProfileScreen() {
           {driverReferralInfo?.config.enabled && (
             <MenuItem icon="gift" label={t.driver_referral_menu_label} onPress={() => router.push('/driver-referral')} colors={colors} isRTL={isRTL} />
           )}
-          <MenuItem icon="clock" label={t.ride_history_label} sub={t.ride_history_sub} onPress={() => router.push('/ride/history' as any)} colors={colors} isRTL={isRTL} />
           <MenuItem icon="shield" label={t.safety_toolkit} sub={t.safety_sub} onPress={() => router.push('/safety')} colors={colors} isRTL={isRTL} last />
         </GlassView>
 

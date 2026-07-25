@@ -1168,6 +1168,7 @@ export const en = {
   // ── Messages tabs ─────────────────────────────────────────────────────────────
   tab_notifications: 'Notifications',
   tab_support_msgs: 'Support',
+  tab_history: 'History',
   support_msgs_empty_title: 'No support updates yet',
   support_msgs_empty_sub: 'Replies to your submitted tickets will appear here.',
   // ── Support screen — FAQ answers ──────────────────────────────────────────────

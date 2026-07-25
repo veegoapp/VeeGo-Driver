@@ -1,10 +1,11 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { BarChart2, Clock, CreditCard, Home, User } from 'lucide-react-native';
-import React, { useRef, useEffect, useState } from 'react';
+import { BarChart2, Clock, CreditCard, History, Home, User } from 'lucide-react-native';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
+import { useService } from '@/lib/serviceContext';
 import { Animation } from '@/constants/animations';
 import { CONTAINER_PX, PILL_PX } from '@/constants/tabBar';
 
@@ -14,20 +15,37 @@ type TabBarProps = {
   navigation: { emit: (args: any) => { defaultPrevented: boolean }; navigate: (name: string) => void };
 };
 
-const TAB_ITEMS = [
-  { name: 'home', key: 'drive' as const, Icon: Home },
-  { name: 'earnings', key: 'earnings' as const, Icon: BarChart2 },
-  { name: 'trips', key: 'trips' as const, Icon: Clock },
-  { name: 'wallet', key: 'wallet' as const, Icon: CreditCard },
-  { name: 'profile', key: 'profile' as const, Icon: User },
-] as const;
-
-const NUM_TABS = TAB_ITEMS.length;
+type TabItem = {
+  name: string;
+  key: 'drive' | 'earnings' | 'trips' | 'tab_history' | 'wallet' | 'profile';
+  Icon: React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>;
+};
 
 export function BottomTabBar({ state, navigation }: TabBarProps) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { t, language } = useI18n();
+  const { serviceType } = useService();
+
+  const isShuttle = serviceType === 'SHUTTLE';
+
+  // Dynamic tab items: position 2 swaps between Trips (shuttle) and History (on-demand).
+  const tabItems: TabItem[] = useMemo(() => [
+    { name: 'home',    key: 'drive',       Icon: Home      },
+    { name: 'earnings', key: 'earnings',   Icon: BarChart2 },
+    isShuttle
+      ? { name: 'trips',   key: 'trips',      Icon: Clock   }
+      : { name: 'history', key: 'tab_history', Icon: History },
+    { name: 'wallet',  key: 'wallet',      Icon: CreditCard },
+    { name: 'profile', key: 'profile',     Icon: User      },
+  ], [isShuttle]);
+
+  // Name-based active detection: finds active route name from Expo Router state,
+  // then maps it to the visual position in tabItems. This is robust against
+  // having more registered routes in state.routes than visible tabs (e.g. the
+  // hidden 'history' or 'trips' tab that isn't shown in the current service mode).
+  const activeRouteName = state.routes[state.index]?.name;
+  const activeVisualIndex = tabItems.findIndex(item => item.name === activeRouteName);
 
   const pillX = useRef(new Animated.Value(0)).current;
   const pillW = useRef(new Animated.Value(0)).current;
@@ -57,7 +75,7 @@ export function BottomTabBar({ state, navigation }: TabBarProps) {
     Animated.spring(iconScale, { toValue: 1, ...Animation.spring.tabBar, useNativeDriver: true }).start();
   };
 
-  // Language change: bump generation and fade labels
+  // Language change: bump generation and fade labels.
   useEffect(() => {
     layoutGen.current += 1;
     Animated.sequence([
@@ -66,11 +84,21 @@ export function BottomTabBar({ state, navigation }: TabBarProps) {
     ]).start();
   }, [language]);
 
-  // Active tab change: animate pill
+  // Active tab change: animate pill using visual index.
   useEffect(() => {
-    if (!pillReady) return;
-    animatePill(state.index);
-  }, [state.index, pillReady]);
+    if (!pillReady || activeVisualIndex < 0) return;
+    animatePill(activeVisualIndex);
+  }, [activeVisualIndex, pillReady]);
+
+  // Service type change: reset pill measurements so layout re-runs cleanly
+  // against the new tab item at position 2.
+  useEffect(() => {
+    setPillReady(false);
+    tabWidths.current = [];
+    tabOffsets.current = [];
+    tabMeasureGen.current = [];
+    layoutGen.current += 1;
+  }, [isShuttle]);
 
   const handleLayout = (i: number, x: number, w: number) => {
     tabWidths.current[i] = w;
@@ -78,11 +106,12 @@ export function BottomTabBar({ state, navigation }: TabBarProps) {
     tabMeasureGen.current[i] = layoutGen.current;
 
     const currentGen = layoutGen.current;
-    const allFresh = TAB_ITEMS.every((_, idx) => tabMeasureGen.current[idx] === currentGen);
+    const allFresh = tabItems.every((_, idx) => tabMeasureGen.current[idx] === currentGen);
     if (!allFresh) return;
 
-    const tx = tabOffsets.current[state.index];
-    const tw = tabWidths.current[state.index];
+    const visualIdx = activeVisualIndex >= 0 ? activeVisualIndex : 0;
+    const tx = tabOffsets.current[visualIdx];
+    const tw = tabWidths.current[visualIdx];
     if (tx === undefined || !(tw > 0)) return;
 
     if (!pillReady) {
@@ -90,7 +119,7 @@ export function BottomTabBar({ state, navigation }: TabBarProps) {
       pillW.setValue(tw);
       setPillReady(true);
     } else {
-      animatePill(state.index);
+      animatePill(visualIdx);
     }
   };
 
@@ -116,9 +145,11 @@ export function BottomTabBar({ state, navigation }: TabBarProps) {
           </Animated.View>
         )}
 
-        {TAB_ITEMS.map((item, index) => {
-          const isActive = state.index === index;
-          const route = state.routes[index];
+        {tabItems.map((item, index) => {
+          const isActive = item.name === activeRouteName;
+          // Look up the route by name so the tabPress event targets the correct route key,
+          // even when state.routes contains more entries than the visible tabs.
+          const route = state.routes.find(r => r.name === item.name);
 
           const onPress = () => {
             const event = navigation.emit({
