@@ -4,7 +4,7 @@ import { AlertTriangle, Check, ChevronUp, Clock, Map, MessageCircle, Navigation,
 import React, { useCallback, useRef, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Animated, Easing, Linking, Platform, Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { MapBackdrop } from '@/components/MapBackdrop';
 import { GlassView } from '@/components/GlassView';
 import { ServiceBlockedScreen } from '@/components/ServiceBlockedScreen';
@@ -45,22 +45,6 @@ const STATUS_TO_PHASE: Partial<Record<string, Phase>> = {
   completed: 'completed',
 };
 
-type RideData = {
-  id: string;
-  rider: { name: string; rating: number; avatar: string; phone?: string };
-  pickup: { address: string; distance: string; eta: string };
-  dropoff: { address: string; distance: string };
-  fare: number;
-  type: string;
-  payment: string;
-  duration: string;
-  pickupLatitude?: number;
-  pickupLongitude?: number;
-  dropoffLatitude?: number;
-  dropoffLongitude?: number;
-};
-
-type DriverData = { id: string };
 
 export default function RideScreen() {
   const colors = useColors();
@@ -101,24 +85,7 @@ export default function RideScreen() {
   // the screen as blocked once the ride itself has reached 'completed'.
   const blockedForScreen = isBlocked && phase === 'completed';
 
-  const { data: rideRaw } = useQuery({
-    queryKey: ['ride-active', rideId],
-    // Backend wraps ride responses as { data: ride } — unwrap before use.
-    queryFn: async () => {
-      const response = await endpoints.rides.getById(rideId ?? '');
-      return (response as { data?: unknown } | null)?.data ?? response;
-    },
-    enabled: !!rideId && !blockedForScreen,
-  });
-
-  const { data: driverRaw } = useQuery({
-    queryKey: ['driver'],
-    queryFn: endpoints.driver.me,
-    enabled: !blockedForScreen,
-  });
-
-  const driverData = driverRaw as DriverData | undefined;
-  const waitingCharge = useWaitingCharge(driverData?.id, rideId);
+  const waitingCharge = useWaitingCharge(undefined, rideId);
 
   const locationTrackingEnabled = !!rideId && phase !== 'completed' && !isExiting;
 
@@ -152,28 +119,8 @@ export default function RideScreen() {
     );
   };
 
-  // Backend ride status is the source of truth for the displayed phase.
-  // This runs on every rideRaw update (not just once) so the screen never
-  // gets stuck showing a stale phase after a status change.
-  useEffect(() => {
-    if (!rideRaw) return;
-    const r = rideRaw as RideData & { status?: string; driverId?: string | number };
-
-    // Ownership is enforced server-side: GET /api/driver/session and
-    // session:snapshot are already scoped to the authenticated driver.
-    if (r.status === 'cancelled') {
-      exitRide(t.ride_cancelled_title, t.ride_cancelled_msg);
-      return;
-    }
-
-    const nextPhase = r.status ? STATUS_TO_PHASE[r.status] : undefined;
-    if (nextPhase) setPhase(nextPhase);
-    // Unrecognized/unmapped statuses intentionally leave the current phase
-    // untouched instead of silently falling back to 'to_pickup'.
-  }, [rideRaw]);
-
   // Ride lifecycle socket events (backend-confirmed). Status-changing events
-  // resync via the existing GET-based phase sync above; terminal events
+  // resync via the ActiveSession phase sync below; terminal events
   // (cancelled by rider, cancelled by driver/system, timeout, no-show) exit
   // the ride safely; deviation warning is surfaced without ever throwing.
   useEffect(() => {
@@ -243,21 +190,31 @@ export default function RideScreen() {
     };
   }, [socket, rideId, queryClient]);
 
-  // ActiveSession: read-only session state used as an additional source of truth
-  // for ride fields when an initialized session is available. Does not affect
-  // mutations, socket handlers, cancellation logic, or the GET /rides/:id query.
+  // ActiveSession: primary source of truth for all ride display data.
+  // Does not affect mutations, socket handlers, or cancellation logic.
   const { session, initialized } = useActiveSession();
   const rideSession: DriverRideSession | null =
     (initialized && session?.sessionType === 'ride')
       ? (session as DriverRideSession)
       : null;
 
+  // Phase sync from ActiveSession: advances the UI phase whenever the backend
+  // pushes a session:snapshot with an updated ride status. Cancellation is handled
+  // separately — by socket events and the session→null termination effect.
+  // 'completed' is never in DriverRideSession.status so it is never overwritten here.
+  useEffect(() => {
+    if (!rideSession) return;
+    const nextPhase = STATUS_TO_PHASE[rideSession.status];
+    if (nextPhase) setPhase(nextPhase);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rideSession?.status]);
+
   // ActiveSession termination: when the server ends the ride (cancellation,
   // timeout, admin action), the session:snapshot socket event delivers
   // { data: null }, which sets session = null in ActiveSessionContext.
   // This effect detects that transition and exits via the existing exitRide()
   // path, which is already guarded by hasExitedRef to prevent duplicate exits
-  // alongside the socket-event and GET /rides/:id status-polling paths.
+  // alongside the socket-event paths.
   //
   // Guards:
   //   initialized — avoids acting on the initial null before the first fetch
@@ -281,36 +238,31 @@ export default function RideScreen() {
     return <ServiceBlockedScreen status={serviceStatus} serviceName={SERVICE_NAMES[serviceType] ?? serviceType} />;
   }
 
-  const r = rideRaw as RideData | undefined;
   const p = PHASE_COPY[phase];
 
-  // ── ActiveSession-preferred fields (fallback to GET /rides/:id) ────────────
-  // Prefer the ActiveSession snapshot for the fields below when available.
-  // Fields NOT listed here (rider.rating, rider.avatar, pickup.eta)
-  // are read exclusively from GET /rides/:id and are not migrated in this phase.
-  const passengerName  = rideSession?.passenger?.name  ?? r?.rider.name;
-  const passengerPhone = rideSession?.passenger?.phone ?? (r as any)?.rider?.phone;
-  const pickupAddress  = rideSession?.pickup.address   ?? r?.pickup.address;
-  const pickupLat      = rideSession?.pickup.latitude  ?? r?.pickupLatitude;
-  const pickupLng      = rideSession?.pickup.longitude ?? r?.pickupLongitude;
-  const dropoffAddress = rideSession?.dropoff.address  ?? r?.dropoff.address;
-  const dropoffLat     = rideSession?.dropoff.latitude ?? r?.dropoffLatitude;
-  const dropoffLng     = rideSession?.dropoff.longitude ?? r?.dropoffLongitude;
-  const paymentMethod  = rideSession?.paymentMethod    ?? r?.payment;
-  const displayFare    = rideSession?.finalPrice ?? rideSession?.estimatedPrice ?? r?.fare;
+  // ── ActiveSession fields ────────────────────────────────────────────────────
+  // All ride display data is sourced exclusively from ActiveSession.
+  const passengerName  = rideSession?.passenger?.name;
+  const passengerPhone = rideSession?.passenger?.phone;
+  const pickupAddress  = rideSession?.pickup.address;
+  const pickupLat      = rideSession?.pickup.latitude;
+  const pickupLng      = rideSession?.pickup.longitude;
+  const dropoffAddress = rideSession?.dropoff.address;
+  const dropoffLat     = rideSession?.dropoff.latitude;
+  const dropoffLng     = rideSession?.dropoff.longitude;
+  const paymentMethod  = rideSession?.paymentMethod;
+  const displayFare    = rideSession?.finalPrice ?? rideSession?.estimatedPrice;
   // vehicleType: available for future use; not yet rendered in this screen.
-  const vehicleType    = rideSession?.vehicleType ?? r?.type;
-  // Avatar: DriverRideSession.passenger has no avatar URL — derive initials from name as fallback.
+  const vehicleType    = rideSession?.vehicleType;
+  // Avatar: DriverRideSession.passenger has no avatar URL — initials derived from name.
   const passengerInitials = passengerName
     ? passengerName.trim().split(/\s+/).map((w: string) => w[0]?.toUpperCase() ?? '').slice(0, 2).join('')
     : '?';
-  // duration: formatted client-side from estimatedDurationMinutes (e.g. 15 → "15 min");
-  // falls back to GET /rides/:id pre-formatted string when ActiveSession unavailable.
+  // duration: formatted client-side from estimatedDurationMinutes (e.g. 15 → "15 min"); null if unavailable.
   const displayDuration = rideSession?.estimatedDurationMinutes != null
     ? `${rideSession.estimatedDurationMinutes} min`
-    : r?.duration ?? null;
-  // distanceKm: single formatted ride distance (e.g. 1.5 → "1.5 km"); falls back to null
-  // so callers can fall back to their respective GET /rides/:id pickup/dropoff distance fields.
+    : null;
+  // distanceKm: formatted ride distance (e.g. 1.5 → "1.5 km"); null if unavailable.
   // ActiveSession provides one total distance, not separate pickup/dropoff distances.
   const displayDistance = rideSession?.distanceKm != null
     ? `${rideSession.distanceKm} km`
@@ -318,22 +270,14 @@ export default function RideScreen() {
 
   function getPhaseEta(): string {
     if (phase === 'to_pickup') {
-      const parts: string[] = [];
-      // ETA: ActiveSession does not provide pickup ETA — keep existing GET /rides/:id source.
-      if (r?.pickup?.eta) parts.push(r.pickup.eta);
-      // Distance: prefer ActiveSession displayDistance; fall back to GET /rides/:id pickup distance.
-      const pickupDistance = displayDistance ?? r?.pickup?.distance;
-      if (pickupDistance) parts.push(pickupDistance);
-      return parts.length > 0 ? parts.join(' · ') : t.calculating;
+      // ETA is not available in ActiveSession; show distance only if present.
+      return displayDistance ?? t.calculating;
     }
     if (phase === 'arrived') return t.waiting_for_rider;
     if (phase === 'in_trip') {
       const parts: string[] = [];
-      // Duration: prefer ActiveSession displayDuration; fall back to GET /rides/:id duration.
       if (displayDuration) parts.push(displayDuration);
-      // Distance: prefer ActiveSession displayDistance; fall back to GET /rides/:id dropoff distance.
-      const dropoffDistance = displayDistance ?? r?.dropoff?.distance;
-      if (dropoffDistance) parts.push(dropoffDistance);
+      if (displayDistance) parts.push(displayDistance);
       return parts.length > 0 ? parts.join(' · ') : t.calculating;
     }
     return '';

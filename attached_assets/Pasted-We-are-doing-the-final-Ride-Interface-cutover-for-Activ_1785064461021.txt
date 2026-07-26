@@ -1,0 +1,132 @@
+We are doing the final Ride Interface cutover for ActiveSession migration in VeeGo Driver App.
+
+IMPORTANT ARCHITECTURE RULE:
+There are TWO separate interfaces:
+1. Shuttle interface: /(shuttle)
+2. Other services interface (Car/Scooter/Delivery): /(tabs)
+
+This task is ONLY for Ride interface.
+Do NOT touch any Shuttle file or logic.
+
+==================================================
+CURRENT STATE
+==================================================
+
+Completed migration:
+
+- ActiveSession foundation exists.
+- ActiveSession initialization is complete.
+- Active ride recovery from home works.
+- app/ride/[rideId].tsx migrated to ActiveSession for:
+  - passenger information
+  - pickup/dropoff information
+  - coordinates
+  - payment method
+  - fare
+  - vehicle type
+  - duration
+  - distance
+- ActiveSession termination handling exists.
+- driverId ownership dependency removed.
+- avatar and rating dependencies resolved without fake data.
+
+The old:
+GET /rides/:id
+
+still exists temporarily.
+
+==================================================
+TASK
+==================================================
+
+Perform the final Ride screen cutover.
+
+Goal:
+Make app/ride/[rideId].tsx no longer depend on GET /rides/:id as a ride data source.
+
+==================================================
+REQUIREMENTS
+==================================================
+
+1. Audit every remaining usage of:
+- rideRaw
+- r
+- GET /rides/:id query
+- old ride response fields
+
+inside app/ride/[rideId].tsx.
+
+2. For each remaining usage:
+
+A) If the data already exists in ActiveSession:
+- Replace it with ActiveSession source.
+
+B) If the data is only needed for mutations/actions:
+- Keep the mutation logic unchanged.
+
+C) If the data does not exist in ActiveSession and is not required:
+- Remove the dependency.
+
+D) If something truly cannot be migrated:
+- Do NOT invent data.
+- Report it instead of creating fake values.
+
+==================================================
+IMPORTANT SAFETY RULES
+==================================================
+
+Do NOT change:
+
+- ride mutations:
+  - arrived
+  - start
+  - complete
+  - cancel
+
+- handleNext()
+- handleCancelRide()
+- handleSOS()
+- handleShareTrip()
+- handleSubmitRating()
+
+- socket ride event handlers
+- termination logic using ActiveSession
+- navigation behavior
+- location tracking hooks
+- waiting charge logic
+
+Do NOT touch:
+- any shuttle file
+- ShuttleContext
+- /(shuttle) routes
+
+==================================================
+CLEANUP SCOPE
+==================================================
+
+This is ONLY cleanup inside app/ride/[rideId].tsx.
+
+You may remove:
+- unused GET /rides/:id query
+- unused imports
+- unused variables
+- old response types
+
+ONLY if they are no longer referenced.
+
+Do NOT delete backend endpoints yet.
+Do NOT remove API files yet.
+
+==================================================
+VERIFICATION
+==================================================
+
+After implementation report:
+
+1. Modified files.
+2. Whether GET /rides/:id query was removed from the screen.
+3. Any remaining references to old ride response data.
+4. Any items that could not be migrated and why.
+5. Confirmation that mutations and socket handlers are untouched.
+6. Confirmation that Shuttle was untouched.
+7. TypeScript check result.
