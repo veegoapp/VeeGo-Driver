@@ -18,6 +18,8 @@ import { useDriverLocation } from '@/hooks/useDriverLocation';
 import { endpoints } from '@/lib/api';
 import { getToken, getUserIdFromToken } from '@/lib/auth';
 import { useI18n } from '@/lib/i18nContext';
+import { useActiveSession } from '@/lib/activeSessionContext';
+import type { DriverRideSession } from '@/lib/activeSession/types';
 import { useSocket } from '@/lib/socketContext';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
 import { Typography } from '@/constants/typography';
@@ -253,6 +255,15 @@ export default function RideScreen() {
     };
   }, [socket, rideId, queryClient]);
 
+  // ActiveSession: read-only session state used as an additional source of truth
+  // for ride fields when an initialized session is available. Does not affect
+  // mutations, socket handlers, cancellation logic, or the GET /rides/:id query.
+  const { session, initialized } = useActiveSession();
+  const rideSession: DriverRideSession | null =
+    (initialized && session?.sessionType === 'ride')
+      ? (session as DriverRideSession)
+      : null;
+
   // All hooks called above — safe to short-circuit for blocked service.
   // A non-completed ride keeps the driver in the ride flow regardless of
   // service-block state; normal blocking resumes once the ride completes.
@@ -262,6 +273,24 @@ export default function RideScreen() {
 
   const r = rideRaw as RideData | undefined;
   const p = PHASE_COPY[phase];
+
+  // ── ActiveSession-preferred fields (fallback to GET /rides/:id) ────────────
+  // Prefer the ActiveSession snapshot for the fields below when available.
+  // Fields NOT listed here (rider.rating, rider.avatar, pickup.eta,
+  // pickup.distance, dropoff.distance, duration, driverId) are read
+  // exclusively from GET /rides/:id and are not migrated in this phase.
+  const passengerName  = rideSession?.passenger?.name  ?? r?.rider.name;
+  const passengerPhone = rideSession?.passenger?.phone ?? (r as any)?.rider?.phone;
+  const pickupAddress  = rideSession?.pickup.address   ?? r?.pickup.address;
+  const pickupLat      = rideSession?.pickup.latitude  ?? r?.pickupLatitude;
+  const pickupLng      = rideSession?.pickup.longitude ?? r?.pickupLongitude;
+  const dropoffAddress = rideSession?.dropoff.address  ?? r?.dropoff.address;
+  const dropoffLat     = rideSession?.dropoff.latitude ?? r?.dropoffLatitude;
+  const dropoffLng     = rideSession?.dropoff.longitude ?? r?.dropoffLongitude;
+  const paymentMethod  = rideSession?.paymentMethod    ?? r?.payment;
+  const displayFare    = rideSession?.finalPrice ?? rideSession?.estimatedPrice ?? r?.fare;
+  // vehicleType: available for future use; not yet rendered in this screen.
+  const vehicleType    = rideSession?.vehicleType ?? r?.type;
 
   function getPhaseEta(): string {
     if (phase === 'to_pickup') {
@@ -503,11 +532,11 @@ export default function RideScreen() {
   const handleNavigate = useCallback(() => {
     const target =
       phase === 'in_trip'
-        ? (r?.dropoffLatitude != null && r?.dropoffLongitude != null
-            ? { lat: Number(r.dropoffLatitude), lng: Number(r.dropoffLongitude) }
+        ? (dropoffLat != null && dropoffLng != null
+            ? { lat: Number(dropoffLat), lng: Number(dropoffLng) }
             : null)
-        : (r?.pickupLatitude != null && r?.pickupLongitude != null
-            ? { lat: Number(r.pickupLatitude), lng: Number(r.pickupLongitude) }
+        : (pickupLat != null && pickupLng != null
+            ? { lat: Number(pickupLat), lng: Number(pickupLng) }
             : null);
 
     if (!target) return;
@@ -533,16 +562,16 @@ export default function RideScreen() {
         .catch(() => Linking.openURL(webFallback).catch(() => {}));
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, r?.pickupLatitude, r?.pickupLongitude, r?.dropoffLatitude, r?.dropoffLongitude]);
+  }, [phase, pickupLat, pickupLng, dropoffLat, dropoffLng]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <MapBackdrop
-        pickup={r?.pickupLatitude != null && r?.pickupLongitude != null
-          ? { latitude: Number(r.pickupLatitude), longitude: Number(r.pickupLongitude) }
+        pickup={pickupLat != null && pickupLng != null
+          ? { latitude: Number(pickupLat), longitude: Number(pickupLng) }
           : undefined}
-        dropoff={r?.dropoffLatitude != null && r?.dropoffLongitude != null
-          ? { latitude: Number(r.dropoffLatitude), longitude: Number(r.dropoffLongitude) }
+        dropoff={dropoffLat != null && dropoffLng != null
+          ? { latitude: Number(dropoffLat), longitude: Number(dropoffLng) }
           : undefined}
         driverLocation={driverPosition ?? undefined}
         navigationMode={phase === 'in_trip'}
@@ -557,7 +586,7 @@ export default function RideScreen() {
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={[styles.navEta, { color: colors.primary, fontFamily: 'Inter_700Bold' }]}>{getPhaseEta()}</Text>
               <Text style={[styles.navAddress, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]} numberOfLines={1}>
-                {phase === 'in_trip' ? (r?.dropoff.address ?? '—') : (r?.pickup.address ?? '—')}
+                {phase === 'in_trip' ? (dropoffAddress ?? '—') : (pickupAddress ?? '—')}
               </Text>
             </View>
           </GlassView>
@@ -572,13 +601,13 @@ export default function RideScreen() {
             </LinearGradient>
           </Animated.View>
           <Text style={[styles.completedTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.trip_done_title}</Text>
-          <Text style={[styles.fareEarned, { color: colors.primary, fontFamily: 'Inter_700Bold' }]}>+{parseFloat(String(r?.fare ?? 0)).toFixed(2)} {t.egp}</Text>
+          <Text style={[styles.fareEarned, { color: colors.primary, fontFamily: 'Inter_700Bold' }]}>+{parseFloat(String(displayFare ?? 0)).toFixed(2)} {t.egp}</Text>
           <Text style={[styles.fareNote, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{t.added_to_earnings}</Text>
 
           <GlassView style={styles.ratingCard} borderRadius={16}>
             <View style={styles.ratingCardHeader}>
               <Image source={{ uri: r?.rider.avatar || undefined }} style={styles.ratingAvatar} />
-              <Text style={[styles.ratingCardLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>{t.rate_rider_label.replace('{name}', r?.rider.name ?? '—')}</Text>
+              <Text style={[styles.ratingCardLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>{t.rate_rider_label.replace('{name}', passengerName ?? '—')}</Text>
             </View>
             <View style={styles.starsRow}>
               {[1, 2, 3, 4, 5].map(n => (
@@ -629,11 +658,11 @@ export default function RideScreen() {
             <View style={styles.riderRow}>
               <Image source={{ uri: r?.rider.avatar || undefined }} style={styles.riderAvatar} />
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={[styles.riderName, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]} numberOfLines={1}>{r?.rider.name ?? '—'}</Text>
+                <Text style={[styles.riderName, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]} numberOfLines={1}>{passengerName ?? '—'}</Text>
                 <View style={styles.riderMeta}>
                   <Star size={12} color={colors.accent} fill={colors.accent} strokeWidth={2} />
                   <Text style={[styles.riderMetaText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-                    {r?.rider.rating != null ? parseFloat(String(r.rider.rating)).toFixed(1) : '—'} · {r?.payment ?? '—'} · {parseFloat(String(r?.fare ?? 0)).toFixed(2)} {t.egp}
+                    {r?.rider.rating != null ? parseFloat(String(r.rider.rating)).toFixed(1) : '—'} · {paymentMethod ?? '—'} · {parseFloat(String(displayFare ?? 0)).toFixed(2)} {t.egp}
                   </Text>
                 </View>
               </View>
@@ -647,7 +676,7 @@ export default function RideScreen() {
               <Pressable
                 style={[styles.actionBtn, { backgroundColor: colors.primary + '26' }]}
                 onPress={() => {
-                  const phone = (r as any)?.rider?.phone;
+                  const phone = passengerPhone;
                   if (phone) Linking.openURL(`tel:${phone}`).catch(() => {});
                 }}
                 accessibilityLabel="Call rider"
