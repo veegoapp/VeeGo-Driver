@@ -31,7 +31,7 @@ import { AuthProvider, useAuth } from '@/lib/authContext';
 import { SocketProvider, useSocket } from '@/lib/socketContext';
 import { ReferralProvider, useReferral } from '@/lib/referralContext';
 import { navigateAfterAuth } from '@/lib/postAuthRouter';
-import { ActiveSessionProvider } from '@/lib/activeSessionContext';
+import { ActiveSessionProvider, useActiveSession } from '@/lib/activeSessionContext';
 import { setOnAccountSuspended, setOnSessionCleared, refreshAccessToken, endpoints } from '@/lib/api';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
 import { deleteToken, deleteRefreshToken } from '@/lib/auth';
@@ -117,6 +117,40 @@ function SosAcknowledgementBridge() {
     socket.on(SOCKET_EVENTS.DRIVER_SOS_ACK, handle);
     return () => { socket.off(SOCKET_EVENTS.DRIVER_SOS_ACK, handle); };
   }, [socket, t]);
+
+  return null;
+}
+
+/**
+ * Activates the REST cold-start recovery path defined in the ActiveSession
+ * contract (GET /api/driver/session) exactly once per authenticated session.
+ *
+ * Fires initializeActiveSession() as soon as:
+ *   - auth loading has finished
+ *   - a valid token is present
+ *   - it has not already been called for the current login session
+ *
+ * Resets the guard when the token becomes null (logout) so the next login
+ * triggers a fresh fetch. Does not read session state, does not navigate,
+ * and does not interfere with the existing session:snapshot socket listener
+ * inside ActiveSessionProvider, which continues to operate independently.
+ */
+function ActiveSessionInitBridge() {
+  const { token, isLoading } = useAuth();
+  const { initializeActiveSession } = useActiveSession();
+  const hasInitializedRef = React.useRef(false);
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (!token) {
+      // Reset so the next successful login triggers a fresh initialization.
+      hasInitializedRef.current = false;
+      return;
+    }
+    if (hasInitializedRef.current) return;
+    hasInitializedRef.current = true;
+    initializeActiveSession();
+  }, [token, isLoading, initializeActiveSession]);
 
   return null;
 }
@@ -284,6 +318,7 @@ function RootLayoutNav() {
       <ForceDisconnectBridge />
       <SosAcknowledgementBridge />
       <ReferralSocketBridge />
+      <ActiveSessionInitBridge />
 
       <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
         <Stack.Screen name="language-select" />
