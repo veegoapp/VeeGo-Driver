@@ -1,0 +1,152 @@
+We are continuing the ActiveSession migration in VeeGo Driver App.
+
+IMPORTANT ARCHITECTURE RULE:
+There are TWO completely separate interfaces:
+1. Shuttle interface: /(shuttle)
+2. Other services interface (Car/Scooter/Delivery): /(tabs)
+
+This task is ONLY for the Ride interface.
+Do NOT touch any Shuttle file, context, endpoint, component, or logic.
+
+==================================================
+CURRENT MIGRATION STATUS
+==================================================
+
+Already completed:
+
+- ActiveSession foundation is implemented.
+- ActiveSession initialization is wired.
+- app/(tabs)/home.tsx redirects active rides using ActiveSession.
+- app/ride/[rideId].tsx uses ActiveSession for:
+  - passenger name
+  - passenger phone
+  - pickup address
+  - pickup coordinates
+  - dropoff address
+  - dropoff coordinates
+  - payment method
+  - fare
+  - vehicle type
+  - duration formatting
+  - distance formatting
+- session:snapshot { data:null } termination handling is implemented.
+- GET /rides/:id still exists temporarily.
+- No cleanup has been done yet.
+
+==================================================
+CURRENT TASK
+==================================================
+
+Migrate the remaining Ride screen dependencies that are not available in DriverRideSession.
+
+ONLY modify:
+app/ride/[rideId].tsx
+
+==================================================
+PART 1 — driverId ownership check
+==================================================
+
+Current behavior:
+The screen reads:
+
+r.driverId
+
+from GET /rides/:id
+
+and compares it with the authenticated driver id.
+
+Problem:
+DriverRideSession does not contain driverId.
+
+Change:
+Remove the client-side ownership check that depends on r.driverId.
+
+Reason:
+The backend already scopes:
+- GET /api/driver/session
+- session:snapshot
+
+to the authenticated driver.
+
+Do NOT:
+- add a new endpoint
+- add a new ownership mechanism
+- change authentication logic
+
+==================================================
+PART 2 — rider rating and avatar
+==================================================
+
+Current dependencies:
+
+r?.rider.rating
+r?.rider.avatar
+
+Problem:
+DriverRideSession.passenger only provides:
+
+{
+  id,
+  name,
+  phone
+}
+
+There is no rating or avatar in the contract.
+
+Requirements:
+
+1. Do NOT invent data.
+2. Do NOT add API calls.
+3. Do NOT modify backend contracts.
+
+For the active ride UI:
+- Replace missing avatar usage with a safe fallback.
+  Example:
+  - initials from passenger name
+  - placeholder behavior
+  - or existing UI fallback if already available
+
+For rating:
+- Do not display fake rating values.
+- Use a neutral empty state / hidden state / unavailable state depending on the existing component style.
+
+Keep the UI stable.
+
+==================================================
+DO NOT CHANGE
+==================================================
+
+Do NOT modify:
+
+- GET /rides/:id query
+- ride mutations:
+  - arrived
+  - start
+  - complete
+  - cancel
+- handleNext()
+- completion flow
+- waiting charge
+- location tracking
+- location broadcast
+- socket ride events
+- termination logic
+- navigation
+- Shuttle files
+
+This is NOT the final cleanup step.
+
+==================================================
+VERIFICATION REQUIRED
+==================================================
+
+After implementation report:
+
+1. Modified files.
+2. How driverId ownership validation changed.
+3. How avatar fallback works.
+4. How missing rating is handled.
+5. Confirmation that no fake data was created.
+6. Confirmation that Shuttle was untouched.
+7. Confirmation that old GET /rides/:id still exists.
+8. Run TypeScript and report result.

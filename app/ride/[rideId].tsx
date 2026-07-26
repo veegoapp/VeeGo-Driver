@@ -2,7 +2,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { AlertTriangle, Check, ChevronUp, Clock, Map, MessageCircle, Navigation, Phone, Share2, Shield, Star } from 'lucide-react-native';
 import React, { useCallback, useRef, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Animated, Easing, Image, Linking, Platform, Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Animated, Easing, Linking, Platform, Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { MapBackdrop } from '@/components/MapBackdrop';
@@ -16,7 +16,6 @@ import { useActiveLocationTracking } from '@/hooks/useActiveLocationTracking';
 import { useLocationBroadcast } from '@/hooks/useLocationBroadcast';
 import { useDriverLocation } from '@/hooks/useDriverLocation';
 import { endpoints } from '@/lib/api';
-import { getToken, getUserIdFromToken } from '@/lib/auth';
 import { useI18n } from '@/lib/i18nContext';
 import { useActiveSession } from '@/lib/activeSessionContext';
 import type { DriverRideSession } from '@/lib/activeSession/types';
@@ -94,7 +93,6 @@ export default function RideScreen() {
   // Reactive counterpart to hasExitedRef — lets location broadcasting stop
   // as soon as the ride is exiting, without waiting for unmount.
   const [isExiting, setIsExiting] = useState(false);
-  const hasCheckedOwnership = useRef(false);
   // Guards the cancelled-ride exit (alert + navigate) so it only fires once,
   // whether triggered by the live socket event or a subsequent status refetch.
   const hasExitedRef = useRef(false);
@@ -161,18 +159,8 @@ export default function RideScreen() {
     if (!rideRaw) return;
     const r = rideRaw as RideData & { status?: string; driverId?: string | number };
 
-    if (!hasCheckedOwnership.current) {
-      hasCheckedOwnership.current = true;
-      // Defense-in-depth: verify this ride belongs to the authenticated driver
-      getToken().then(token => {
-        const authenticatedDriverId = getUserIdFromToken(token);
-        if (authenticatedDriverId && r.driverId && String(r.driverId) !== String(authenticatedDriverId)) {
-          console.warn('[Security] Ride does not belong to authenticated driver');
-          router.replace('/(tabs)/home');
-        }
-      });
-    }
-
+    // Ownership is enforced server-side: GET /api/driver/session and
+    // session:snapshot are already scoped to the authenticated driver.
     if (r.status === 'cancelled') {
       exitRide(t.ride_cancelled_title, t.ride_cancelled_msg);
       return;
@@ -298,7 +286,7 @@ export default function RideScreen() {
 
   // ── ActiveSession-preferred fields (fallback to GET /rides/:id) ────────────
   // Prefer the ActiveSession snapshot for the fields below when available.
-  // Fields NOT listed here (rider.rating, rider.avatar, pickup.eta, driverId)
+  // Fields NOT listed here (rider.rating, rider.avatar, pickup.eta)
   // are read exclusively from GET /rides/:id and are not migrated in this phase.
   const passengerName  = rideSession?.passenger?.name  ?? r?.rider.name;
   const passengerPhone = rideSession?.passenger?.phone ?? (r as any)?.rider?.phone;
@@ -312,6 +300,10 @@ export default function RideScreen() {
   const displayFare    = rideSession?.finalPrice ?? rideSession?.estimatedPrice ?? r?.fare;
   // vehicleType: available for future use; not yet rendered in this screen.
   const vehicleType    = rideSession?.vehicleType ?? r?.type;
+  // Avatar: DriverRideSession.passenger has no avatar URL — derive initials from name as fallback.
+  const passengerInitials = passengerName
+    ? passengerName.trim().split(/\s+/).map((w: string) => w[0]?.toUpperCase() ?? '').slice(0, 2).join('')
+    : '?';
   // duration: formatted client-side from estimatedDurationMinutes (e.g. 15 → "15 min");
   // falls back to GET /rides/:id pre-formatted string when ActiveSession unavailable.
   const displayDuration = rideSession?.estimatedDurationMinutes != null
@@ -644,7 +636,9 @@ export default function RideScreen() {
 
           <GlassView style={styles.ratingCard} borderRadius={16}>
             <View style={styles.ratingCardHeader}>
-              <Image source={{ uri: r?.rider.avatar || undefined }} style={styles.ratingAvatar} />
+              <View style={[styles.ratingAvatar, { justifyContent: 'center', alignItems: 'center', backgroundColor: colors.secondary }]}>
+                <Text style={{ color: colors.mutedForeground, fontSize: 11, fontFamily: 'Inter_700Bold' }}>{passengerInitials}</Text>
+              </View>
               <Text style={[styles.ratingCardLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>{t.rate_rider_label.replace('{name}', passengerName ?? '—')}</Text>
             </View>
             <View style={styles.starsRow}>
@@ -694,13 +688,15 @@ export default function RideScreen() {
             <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
 
             <View style={styles.riderRow}>
-              <Image source={{ uri: r?.rider.avatar || undefined }} style={styles.riderAvatar} />
+              <View style={[styles.riderAvatar, { justifyContent: 'center', alignItems: 'center', backgroundColor: colors.secondary }]}>
+                <Text style={{ color: colors.mutedForeground, fontSize: 16, fontFamily: 'Inter_700Bold' }}>{passengerInitials}</Text>
+              </View>
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={[styles.riderName, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]} numberOfLines={1}>{passengerName ?? '—'}</Text>
                 <View style={styles.riderMeta}>
                   <Star size={12} color={colors.accent} fill={colors.accent} strokeWidth={2} />
                   <Text style={[styles.riderMetaText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-                    {r?.rider.rating != null ? parseFloat(String(r.rider.rating)).toFixed(1) : '—'} · {paymentMethod ?? '—'} · {parseFloat(String(displayFare ?? 0)).toFixed(2)} {t.egp}
+                    {'—'} · {paymentMethod ?? '—'} · {parseFloat(String(displayFare ?? 0)).toFixed(2)} {t.egp}
                   </Text>
                 </View>
               </View>
