@@ -1,0 +1,89 @@
+I have attached the Backend ActiveSession Integration Contract document with this prompt.
+
+Treat the attached contract as the only source of truth for the expected ActiveSession behavior.
+Do not guess any fields, APIs, events, or statuses outside this contract.
+
+We are starting the ActiveSession Recovery migration for the Driver App.
+
+Before making any changes, perform a complete audit of the current driver recovery architecture.
+
+Do not modify any files.
+Do not implement anything.
+Only analyze and report.
+
+I need you to answer the following:
+
+1. Current cold-start recovery flow:
+- When the driver opens the app after being killed, what happens step by step?
+- Which file/function decides the initial destination?
+- Which APIs are called to detect an active ride or shuttle trip?
+- Which contexts/hooks/state stores hold the recovered data?
+
+2. Current background → foreground recovery:
+- Is there any AppState listener?
+- Does the app refresh active ride/trip state after returning from background?
+- Which files contain this logic?
+
+3. Current socket reconnect recovery:
+- What happens after socket reconnect?
+- Is `session:snapshot` already handled?
+- Are there manual reconnect handlers?
+- Are REST calls made after reconnect?
+
+4. Current ride recovery:
+- How does the driver recover:
+  - car rides
+  - scooter rides
+  - delivery rides
+- Which endpoints are used?
+- Is there any usage of old recovery endpoints like:
+  - GET /rides/active
+  - GET /rides/:id
+  - any other active/recovery endpoint?
+- Where is the recovered ride state stored?
+- Which screens consume it?
+
+5. Current shuttle trip recovery:
+- How does the driver recover an active shuttle trip?
+- Which API/context/hooks/screens are involved?
+- Is there any existing trip recovery flow?
+
+6. Search the codebase for all recovery-related logic:
+Find usages of:
+- active
+- resume
+- recover
+- restore
+- reconnect
+- AppState
+- socket events
+- ride status
+- trip status
+- session
+
+7. Compare the current implementation with the attached Backend ActiveSession Contract:
+
+Expected:
+- GET /api/driver/session
+- Response:
+  { data: DriverActiveSession | null }
+- sessionType:
+  - "ride"
+  - "shuttle_trip"
+- Socket event:
+  session:snapshot
+  payload:
+  { data: DriverActiveSession } or { data: null }
+
+Report:
+
+A) What already exists and matches the contract.
+B) What still uses old recovery mechanisms.
+C) What migration gaps exist.
+D) List exact files/functions involved.
+
+Important:
+- Do not change code.
+- Do not propose implementation steps yet.
+- Do not refactor.
+- Only provide a factual audit of the current Driver App recovery architecture.
