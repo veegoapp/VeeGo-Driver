@@ -264,6 +264,28 @@ export default function RideScreen() {
       ? (session as DriverRideSession)
       : null;
 
+  // ActiveSession termination: when the server ends the ride (cancellation,
+  // timeout, admin action), the session:snapshot socket event delivers
+  // { data: null }, which sets session = null in ActiveSessionContext.
+  // This effect detects that transition and exits via the existing exitRide()
+  // path, which is already guarded by hasExitedRef to prevent duplicate exits
+  // alongside the socket-event and GET /rides/:id status-polling paths.
+  //
+  // Guards:
+  //   initialized — avoids acting on the initial null before the first fetch
+  //                 or first socket snapshot has resolved.
+  //   session !== null — only act on a null transition, not the starting state.
+  //   phase !== 'completed' — the completion/rating flow owns that exit path;
+  //                           do not interfere when the ride finishes normally.
+  useEffect(() => {
+    if (!initialized || session !== null || phase === 'completed') return;
+    exitRide(t.ride_cancelled_title, t.ride_cancelled_msg);
+  // exitRide and t are stable within the component lifecycle and intentionally
+  // omitted from deps — consistent with the existing useEffect at line ~177
+  // that calls exitRide(t.*) with only [rideRaw] in its dependency array.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialized, session, phase]);
+
   // All hooks called above — safe to short-circuit for blocked service.
   // A non-completed ride keeps the driver in the ride flow regardless of
   // service-block state; normal blocking resumes once the ride completes.
