@@ -95,10 +95,18 @@ export default function ShuttleHomeScreen() {
   // Waits for initialized before acting so a null session is not mistaken
   // for "no active session" during the initial fetch.
   const { session: activeSession, initialized: activeSessionInitialized } = useActiveSession();
+  // Guard: redirect only once per mount so repeated session:snapshot updates
+  // while on this screen do not cause a redirect loop.
+  const hasRedirectedRef = useRef(false);
   useEffect(() => {
     if (!activeSessionInitialized) return;
     if (activeSession?.sessionType === 'shuttle_trip') {
+      if (hasRedirectedRef.current) return;
+      hasRedirectedRef.current = true;
       router.replace('/shuttle/trip-active');
+    } else {
+      // Reset so a future trip session can trigger recovery again.
+      hasRedirectedRef.current = false;
     }
   }, [activeSessionInitialized, activeSession]);
 

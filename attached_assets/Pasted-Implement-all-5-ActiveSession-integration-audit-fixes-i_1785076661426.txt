@@ -1,0 +1,120 @@
+Implement all 5 ActiveSession integration audit fixes in the VeeGo Driver App.
+
+Important constraints:
+- Do NOT migrate the app fully to ActiveSession.
+- Do NOT remove ShuttleContext.
+- Do NOT modify backend contracts.
+- Do NOT change existing business logic or mutations.
+- Keep ActiveSession as the recovery/session source and keep existing feature flows intact.
+- Make minimal targeted changes only.
+- Run TypeScript check after completion.
+
+Fix 1 — B1: Remove duplicate shuttle:referral:incoming listener
+
+Problem:
+The event shuttle:referral:incoming is currently handled twice:
+1. ReferralSocketBridge in app/_layout.tsx
+2. useShuttleSocket.ts inside the shuttle route group
+
+This causes duplicate referral queue entries and duplicate badge counts.
+
+Action:
+Keep only one active listener.
+Prefer keeping the shuttle-specific handling inside useShuttleSocket.ts.
+Remove the duplicate listener from ReferralSocketBridge or otherwise ensure only one handler exists.
+
+Verify:
+- shuttle:referral:incoming fires exactly once.
+- No duplicate addIncomingReferral calls remain.
+
+
+Fix 2 — R2: Ensure ShuttleProvider exists during ActiveSession cold-start recovery
+
+Problem:
+When the app restarts during an active shuttle trip:
+ActiveSession redirects directly to /shuttle/trip-active.
+The ShuttleProvider from (shuttle)/_layout.tsx may not be mounted.
+This leaves ShuttleContext values empty:
+- activeLine
+- stops
+- passengers
+- stationCoords
+- nextStop
+
+GPS recovery works, but operational trip data can be missing.
+
+Action:
+Move ShuttleProvider to a parent scope where it is guaranteed to exist during cold-start recovery.
+Do not break existing shuttle screens.
+Keep current ShuttleContext API unchanged.
+
+Verify:
+- Opening the app during an active shuttle trip restores:
+  - stops
+  - passengers
+  - station data
+  - trip controls
+
+
+Fix 3 — R1: Add ride socket event fallback for phase updates
+
+Problem:
+Ride screen currently registers:
+- ride:status:changed
+- ride:driver_assigned
+- ride:driver_arrived
+- ride:started
+
+but handlers do nothing.
+The UI depends only on session:snapshot.
+
+Action:
+Implement fallback phase updates from socket events:
+- driver_assigned → to_pickup
+- driver_arrived → arrived
+- started → in_trip
+
+Keep session:snapshot as the primary source.
+This is only a resilience fallback.
+
+Verify:
+- Ride phase updates correctly even if snapshot delivery is delayed.
+
+
+Fix 4 — B2: Prevent repeated shuttle home redirects
+
+Problem:
+(shuttle)/home.tsx can trigger router.replace('/shuttle/trip-active') multiple times when activeSession changes.
+
+Action:
+Add a ref guard such as hasRedirectedRef.
+Allow redirect only once per mount/session recovery.
+
+Verify:
+- No redirect loops.
+- Normal navigation remains unchanged.
+
+
+Fix 5 — R3: Add missing referral accepted/declined handlers
+
+Problem:
+SOCKET_EVENTS contains:
+- REFERRAL_ACCEPTED
+- REFERRAL_DECLINED
+
+but no listeners exist.
+
+Action:
+Add listeners in the correct existing socket layer.
+Do not create a new flow.
+Only connect these events to the existing referral state/notification mechanism.
+
+Verify:
+- Driver receives accepted/declined referral updates correctly.
+
+
+Final verification:
+- Run TypeScript check.
+- Report modified files.
+- Confirm no migration was performed.
+- Confirm ShuttleContext and ActiveSession coexist correctly.

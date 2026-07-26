@@ -109,14 +109,36 @@ export function useShuttleSocket() {
       if (referralId) dismissRef.current(referralId);
     };
 
+    // Fix 5: handle referral response events (Driver 1 receives when Driver 2 responds).
+    // Dismiss the matching referral from local state to keep the badge accurate.
+    const handleReferralAccepted = (raw: unknown) => {
+      const parsed = ReferralCancelledSchema.safeParse(raw);
+      if (!parsed.success) return;
+      const data = parsed.data;
+      const referralId = typeof data === 'string' ? data : (data?.referralId ?? '');
+      if (referralId) dismissRef.current(referralId);
+    };
+
+    const handleReferralDeclined = (raw: unknown) => {
+      const parsed = ReferralCancelledSchema.safeParse(raw);
+      if (!parsed.success) return;
+      const data = parsed.data;
+      const referralId = typeof data === 'string' ? data : (data?.referralId ?? '');
+      if (referralId) dismissRef.current(referralId);
+    };
+
     socket.on(SOCKET_EVENTS.SHUTTLE_BOOKING_CREATED, handleBookingCreated);
     socket.on(SOCKET_EVENTS.SHUTTLE_INCOMING_REFERRAL, handleIncomingReferral);
     socket.on(SOCKET_EVENTS.SHUTTLE_REFERRAL_CANCELLED, handleReferralCancelled);
+    socket.on(SOCKET_EVENTS.REFERRAL_ACCEPTED, handleReferralAccepted);
+    socket.on(SOCKET_EVENTS.REFERRAL_DECLINED, handleReferralDeclined);
 
     return () => {
       socket.off(SOCKET_EVENTS.SHUTTLE_BOOKING_CREATED, handleBookingCreated);
       socket.off(SOCKET_EVENTS.SHUTTLE_INCOMING_REFERRAL, handleIncomingReferral);
       socket.off(SOCKET_EVENTS.SHUTTLE_REFERRAL_CANCELLED, handleReferralCancelled);
+      socket.off(SOCKET_EVENTS.REFERRAL_ACCEPTED, handleReferralAccepted);
+      socket.off(SOCKET_EVENTS.REFERRAL_DECLINED, handleReferralDeclined);
     };
   }, [socket]);
 }

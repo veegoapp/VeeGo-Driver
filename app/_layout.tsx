@@ -29,7 +29,8 @@ import { ServiceProvider } from '@/lib/serviceContext';
 import { ServiceControlProvider } from '@/lib/serviceControlContext';
 import { AuthProvider, useAuth } from '@/lib/authContext';
 import { SocketProvider, useSocket } from '@/lib/socketContext';
-import { ReferralProvider, useReferral } from '@/lib/referralContext';
+import { ReferralProvider } from '@/lib/referralContext';
+import { ShuttleProvider } from '@/lib/shuttleContext';
 import { navigateAfterAuth } from '@/lib/postAuthRouter';
 import { ActiveSessionProvider, useActiveSession } from '@/lib/activeSessionContext';
 import { setOnAccountSuspended, setOnSessionCleared, refreshAccessToken, endpoints } from '@/lib/api';
@@ -155,38 +156,6 @@ function ActiveSessionInitBridge() {
   return null;
 }
 
-function ReferralSocketBridge() {
-  const { socket } = useSocket();
-  const { addIncomingReferral } = useReferral();
-
-  useEffect(() => {
-    if (!socket) return;
-
-    const handleReferral = (data: any) => {
-      addIncomingReferral({
-        referralId: String(data.referralId ?? data.id ?? ''),
-        bookingId: String(data.bookingId ?? ''),
-        routeName: data.routeName ?? '',
-        routeNameAr: data.routeNameAr,
-        departureTime: data.departureTime ?? '',
-        fromStation: data.fromStation ?? '',
-        toStation: data.toStation ?? '',
-        fromStationAr: data.fromStationAr,
-        toStationAr: data.toStationAr,
-        passengerCount: data.passengerCount,
-        totalSeats: data.totalSeats,
-        lineNumber: data.lineNumber,
-        vehicleType: data.vehicleType,
-        weekStart: data.weekStart,
-      });
-    };
-
-    socket.on('shuttle:referral:incoming', handleReferral);
-    return () => { socket.off('shuttle:referral:incoming', handleReferral); };
-  }, [socket, addIncomingReferral]);
-
-  return null;
-}
 
 function LanguageCacheInvalidator() {
   const { language } = useI18n();
@@ -317,7 +286,6 @@ function RootLayoutNav() {
       <PushNotificationsBridge />
       <ForceDisconnectBridge />
       <SosAcknowledgementBridge />
-      <ReferralSocketBridge />
       <ActiveSessionInitBridge />
 
       <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
@@ -412,9 +380,11 @@ export default function RootLayout() {
                     <ReferralProvider>
                       <SocketProvider>
                         <ActiveSessionProvider>
-                          <ServiceControlProvider>
-                            <RootLayoutNav />
-                          </ServiceControlProvider>
+                          <ShuttleProvider>
+                            <ServiceControlProvider>
+                              <RootLayoutNav />
+                            </ServiceControlProvider>
+                          </ShuttleProvider>
                         </ActiveSessionProvider>
                       </SocketProvider>
                     </ReferralProvider>

@@ -152,8 +152,28 @@ export default function RideScreen() {
       exitRide(t.ride_cancelled_title, t.ride_no_show_msg);
     };
 
+    // Resilience fallback: advance phase directly from socket events in case
+    // session:snapshot delivery is delayed. session:snapshot remains primary.
     const handleStatusChanged = (data: unknown) => {
       if (!matchesThisRide(data)) return;
+      const payload = data as { status?: string };
+      const nextPhase = STATUS_TO_PHASE[payload?.status ?? ''];
+      if (nextPhase) setPhase(nextPhase);
+    };
+
+    const handleDriverAssigned = (data: unknown) => {
+      if (!matchesThisRide(data)) return;
+      setPhase('to_pickup');
+    };
+
+    const handleDriverArrived = (data: unknown) => {
+      if (!matchesThisRide(data)) return;
+      setPhase('arrived');
+    };
+
+    const handleRideStarted = (data: unknown) => {
+      if (!matchesThisRide(data)) return;
+      setPhase('in_trip');
     };
 
     const handleDeviationWarning = (data: unknown) => {
@@ -170,9 +190,9 @@ export default function RideScreen() {
     socket.on(SOCKET_EVENTS.RIDE_TIMEOUT, handleTimeout);
     socket.on(SOCKET_EVENTS.RIDE_NO_SHOW_CANCELLED, handleNoShowCancelled);
     socket.on(SOCKET_EVENTS.RIDE_STATUS_UPDATE, handleStatusChanged);
-    socket.on(SOCKET_EVENTS.RIDE_DRIVER_ASSIGNED, handleStatusChanged);
-    socket.on(SOCKET_EVENTS.RIDE_DRIVER_ARRIVED, handleStatusChanged);
-    socket.on(SOCKET_EVENTS.RIDE_STARTED, handleStatusChanged);
+    socket.on(SOCKET_EVENTS.RIDE_DRIVER_ASSIGNED, handleDriverAssigned);
+    socket.on(SOCKET_EVENTS.RIDE_DRIVER_ARRIVED, handleDriverArrived);
+    socket.on(SOCKET_EVENTS.RIDE_STARTED, handleRideStarted);
     socket.on(SOCKET_EVENTS.RIDE_DEVIATION_WARNING, handleDeviationWarning);
 
     return () => {
@@ -181,9 +201,9 @@ export default function RideScreen() {
       socket.off(SOCKET_EVENTS.RIDE_TIMEOUT, handleTimeout);
       socket.off(SOCKET_EVENTS.RIDE_NO_SHOW_CANCELLED, handleNoShowCancelled);
       socket.off(SOCKET_EVENTS.RIDE_STATUS_UPDATE, handleStatusChanged);
-      socket.off(SOCKET_EVENTS.RIDE_DRIVER_ASSIGNED, handleStatusChanged);
-      socket.off(SOCKET_EVENTS.RIDE_DRIVER_ARRIVED, handleStatusChanged);
-      socket.off(SOCKET_EVENTS.RIDE_STARTED, handleStatusChanged);
+      socket.off(SOCKET_EVENTS.RIDE_DRIVER_ASSIGNED, handleDriverAssigned);
+      socket.off(SOCKET_EVENTS.RIDE_DRIVER_ARRIVED, handleDriverArrived);
+      socket.off(SOCKET_EVENTS.RIDE_STARTED, handleRideStarted);
       socket.off(SOCKET_EVENTS.RIDE_DEVIATION_WARNING, handleDeviationWarning);
     };
   }, [socket, rideId, queryClient]);
