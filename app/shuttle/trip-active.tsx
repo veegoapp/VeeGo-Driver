@@ -21,6 +21,7 @@ import { useRoadEta } from '@/hooks/useRoadEta';
 import { useRoadPolyline } from '@/hooks/useRoadPolyline';
 import { useActiveLocationTracking } from '@/hooks/useActiveLocationTracking';
 import { useShuttle } from '@/lib/shuttleContext';
+import { useActiveSession } from '@/lib/activeSessionContext';
 import { useI18n } from '@/lib/i18nContext';
 import { useSocket } from '@/lib/socketContext';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
@@ -77,10 +78,24 @@ export default function ShuttleTripActiveScreen() {
     activeLine, stops, currentStopIndex, passengers, nextStop, stationCoords,
   } = shuttleCtx;
 
+  // ── ActiveSession (Phase 1 migration) ──────────────────────────────────────
+  // DriverShuttleSession is the preferred source for display/read-only fields.
+  // Mutations and ShuttleContext-computed state (stops, currentStopIndex,
+  // passengers, stationCoords, nextStop) are not yet migrated.
+  const { session } = useActiveSession();
+  const shuttleSession = session?.sessionType === 'shuttle_trip' ? session : null;
+
   const currentStop = stops[currentStopIndex] ?? null;
   const nextCoords = stationCoords[currentStopIndex] ?? null;
   const isLastStop = currentStopIndex >= stops.length - 1;
-  const tripId = activeLine?.tripId;
+  // Prefer session tripId (authoritative); fall back to ShuttleContext while
+  // DriverShuttleSession is not yet initialized or not yet providing a value.
+  // Normalize to string | undefined to preserve compatibility with API endpoints
+  // and socket comparisons that expect a string.
+  const _rawTripId = shuttleSession?.tripId ?? activeLine?.tripId;
+  const tripId: string | undefined = _rawTripId != null ? String(_rawTripId) : undefined;
+  // Prefer session direction for display; fall back to ShuttleContext.
+  const direction = shuttleSession?.direction ?? activeLine?.direction;
   const stationId = currentStop?.id;
 
   useActiveLocationTracking({
@@ -551,12 +566,12 @@ export default function ShuttleTripActiveScreen() {
               <ChevronLeft size={20} color="#fff" strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
             </Pressable>
 
-            {!!activeLine?.direction && (
+            {!!direction && (
               <GlassView style={styles.tripBadge} borderRadius={20}>
                 <Text style={[styles.badgeText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-                  {activeLine.direction === 'outbound' ? t.direction_outbound
-                    : activeLine.direction === 'return' ? t.direction_return
-                    : activeLine.direction}
+                  {direction === 'outbound' ? t.direction_outbound
+                    : direction === 'return' ? t.direction_return
+                    : direction}
                 </Text>
               </GlassView>
             )}
