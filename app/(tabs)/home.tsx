@@ -30,6 +30,7 @@ import { useDriverLocation } from '@/hooks/useDriverLocation';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useRideSocket, type RideRequest } from '@/hooks/useRideSocket';
 import { useI18n } from '@/lib/i18nContext';
+import { useActiveSession } from '@/lib/activeSessionContext';
 import { endpoints } from '@/lib/api';
 import { computeDeadlineMinutes, type CheckinRequiredPayload } from '@/lib/checkinDeadline';
 import { Typography } from '@/constants/typography';
@@ -95,11 +96,6 @@ export default function HomeScreen() {
     (Array.isArray(promotionsRaw) ? promotionsRaw as any[] : Array.isArray((promotionsRaw as any)?.data) ? (promotionsRaw as any).data : [])
       .find((p: any) => p.isActive === true && (!p.validUntil || new Date(p.validUntil) > _now)) ?? null;
 
-  const { data: activeRideRaw } = useQuery({
-    queryKey: ['ride-active'],
-    queryFn: endpoints.rides.active,
-    retry: false,
-  });
   const { data: notificationsRaw, refetch: refetchNotifications } = useQuery({
     queryKey: ['notifications'],
     queryFn: () => endpoints.notifications.list() as Promise<{ id: string; read?: boolean; isRead?: boolean }[]>,
@@ -116,16 +112,19 @@ export default function HomeScreen() {
 
   const driverData = driverRaw as any;
   const earningsData = earningsRaw as any;
-  const activeRide = activeRideRaw as any;
   const statsLoading = driverLoading || earningsLoading;
   const statsError = driverError || earningsError;
 
-  // Resume active ride if one exists on mount
+  // ActiveSession: navigate to the active ride on cold-start recovery.
+  // Waits for initialized before acting so a null session is not mistaken
+  // for "no active session" during the initial fetch.
+  const { session: activeSession, initialized: activeSessionInitialized } = useActiveSession();
   useEffect(() => {
-    if (activeRide?.id) {
-      router.replace(`/ride/${activeRide.id}`);
+    if (!activeSessionInitialized) return;
+    if (activeSession?.sessionType === 'ride') {
+      router.replace(`/ride/${activeSession.rideId}`);
     }
-  }, [activeRide?.id]);
+  }, [activeSessionInitialized, activeSession]);
 
   const queryClient = useQueryClient();
 
