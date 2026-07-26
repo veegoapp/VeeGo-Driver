@@ -52,6 +52,7 @@ import {
   financialAnalyticsEndpoints,
 } from './shuttle';
 import { trackingEndpoints } from './tracking';
+import { sessionEndpoints } from './session';
 
 // ── Assembled endpoints object ────────────────────────────────────────────────
 // Shape is identical to the original endpoints object in lib/api.ts.
@@ -80,4 +81,5 @@ export const endpoints = {
   financialAnalytics: financialAnalyticsEndpoints,
   tracking:           trackingEndpoints,
   terms:              termsEndpoints,
+  session:            sessionEndpoints,
 };

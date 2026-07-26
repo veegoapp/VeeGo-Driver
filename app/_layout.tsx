@@ -31,6 +31,7 @@ import { AuthProvider, useAuth } from '@/lib/authContext';
 import { SocketProvider, useSocket } from '@/lib/socketContext';
 import { ReferralProvider, useReferral } from '@/lib/referralContext';
 import { navigateAfterAuth } from '@/lib/postAuthRouter';
+import { ActiveSessionProvider } from '@/lib/activeSessionContext';
 import { setOnAccountSuspended, setOnSessionCleared, refreshAccessToken, endpoints } from '@/lib/api';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
 import { deleteToken, deleteRefreshToken } from '@/lib/auth';
@@ -375,9 +376,11 @@ export default function RootLayout() {
                   <ServiceProvider>
                     <ReferralProvider>
                       <SocketProvider>
-                        <ServiceControlProvider>
-                          <RootLayoutNav />
-                        </ServiceControlProvider>
+                        <ActiveSessionProvider>
+                          <ServiceControlProvider>
+                            <RootLayoutNav />
+                          </ServiceControlProvider>
+                        </ActiveSessionProvider>
                       </SocketProvider>
                     </ReferralProvider>
                   </ServiceProvider>

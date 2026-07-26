@@ -118,6 +118,12 @@ export const SOCKET_EVENTS = {
   // Server → Driver: misc
   ERROR:                    "error",
 
+  // Server → Driver + Passenger: active session snapshot.
+  // Emitted automatically on every connect/reconnect and on server-side
+  // session termination. Payload: { data: DriverActiveSession | null }.
+  // No client emit required to trigger this.
+  SESSION_SNAPSHOT:         "session:snapshot",
+
   // Socket.io lifecycle (client ↔ server)
   CONNECT:                  "connect",
   DISCONNECT:               "disconnect",
