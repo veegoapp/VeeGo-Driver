@@ -1,0 +1,119 @@
+Use the attached Driver ActiveSession Contract as the source of truth.
+
+We need a navigation architecture audit before continuing migration.
+
+Context:
+The Driver App has two separate UI experiences:
+
+1. Normal services:
+- Car
+- Scooter
+- Delivery
+
+Main screens:
+- /(tabs)
+- app/(tabs)/home.tsx
+- app/ride/[rideId].tsx
+
+2. Shuttle service:
+- /(shuttle)
+- ShuttleContext
+- app/(shuttle)/home.tsx
+- app/shuttle/trip-active.tsx
+
+ActiveSession is now the unified recovery source:
+- sessionType: "ride"
+- sessionType: "shuttle_trip"
+- null
+
+Do not modify code.
+Do not refactor.
+Only audit and report.
+
+Audit these areas:
+
+1. App startup routing:
+
+Trace the complete flow from:
+- app/_layout.tsx
+- authentication restore
+- lib/postAuthRouter.ts
+- navigateAfterAuth()
+- navigateToHome()
+
+Answer:
+- How is the initial destination currently decided?
+- Does it know about ActiveSession?
+- Can it distinguish between ride and shuttle_trip?
+- Is there any existing service selection logic that conflicts with ActiveSession?
+
+2. ActiveSession integration:
+
+Check:
+- ActiveSessionProvider placement
+- useActiveSession usage
+- whether both UI branches can consume it
+
+Explain the expected flow:
+
+Case A:
+ActiveSession = ride
+→ which screen should open?
+→ which service mode should be selected?
+
+Case B:
+ActiveSession = shuttle_trip
+→ which screen should open?
+→ how does shuttle UI become active?
+
+Case C:
+ActiveSession = null
+→ normal idle behavior
+
+3. Current shuttle recovery:
+
+Audit:
+- ShuttleContext
+- app/(shuttle)/home.tsx
+- trip-active screen
+
+Find:
+- how active shuttle trip is detected today
+- what APIs are called
+- what state is stored locally
+- whether it conflicts with DriverActiveSession.shuttle_trip
+
+4. Current service switching:
+
+Audit:
+- ServiceContext
+- AsyncStorage serviceType
+- resumeService navigation param
+- any logic that chooses between /(tabs) and /(shuttle)
+
+Answer:
+- Which source currently has priority?
+- Should ActiveSession become the highest priority?
+- Are there race conditions on cold start?
+
+5. Migration recommendation:
+
+Do NOT implement.
+
+Provide the safest migration order.
+
+Example:
+Phase 1: unify startup routing
+Phase 2: migrate shuttle recovery
+Phase 3: migrate ride recovery
+Phase 4: remove old endpoints
+
+But base the recommendation on the actual code.
+
+Final report must include:
+- Current architecture diagram (text form)
+- Conflicts found
+- Migration risks
+- Recommended next phase only
+
+No code changes.
