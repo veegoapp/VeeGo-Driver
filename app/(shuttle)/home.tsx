@@ -35,6 +35,7 @@ import { Shadows } from '@/constants/shadows';
 import { TAB_BAR_HEIGHT_BASE } from '@/constants/tabBar';
 import { UpcomingTripCard } from '@/components/UpcomingTripCard';
 import { StatItem } from '@/components/StatItem';
+import { useActiveSession } from '@/lib/activeSessionContext';
 
 export default function ShuttleHomeScreen() {
   const colors = useColors();
@@ -89,6 +90,17 @@ export default function ShuttleHomeScreen() {
 
   const { incomingReferralsCount, pendingReferrals } = useReferral();
   const queryClient = useQueryClient();
+
+  // ActiveSession: navigate to the active shuttle trip on cold-start recovery.
+  // Waits for initialized before acting so a null session is not mistaken
+  // for "no active session" during the initial fetch.
+  const { session: activeSession, initialized: activeSessionInitialized } = useActiveSession();
+  useEffect(() => {
+    if (!activeSessionInitialized) return;
+    if (activeSession?.sessionType === 'shuttle_trip') {
+      router.replace('/shuttle/trip-active');
+    }
+  }, [activeSessionInitialized, activeSession]);
 
   useEffect(() => {
     const notifs = Array.isArray(notificationsRaw) ? notificationsRaw : [];
