@@ -298,9 +298,8 @@ export default function RideScreen() {
 
   // ── ActiveSession-preferred fields (fallback to GET /rides/:id) ────────────
   // Prefer the ActiveSession snapshot for the fields below when available.
-  // Fields NOT listed here (rider.rating, rider.avatar, pickup.eta,
-  // pickup.distance, dropoff.distance, duration, driverId) are read
-  // exclusively from GET /rides/:id and are not migrated in this phase.
+  // Fields NOT listed here (rider.rating, rider.avatar, pickup.eta, driverId)
+  // are read exclusively from GET /rides/:id and are not migrated in this phase.
   const passengerName  = rideSession?.passenger?.name  ?? r?.rider.name;
   const passengerPhone = rideSession?.passenger?.phone ?? (r as any)?.rider?.phone;
   const pickupAddress  = rideSession?.pickup.address   ?? r?.pickup.address;
@@ -313,19 +312,36 @@ export default function RideScreen() {
   const displayFare    = rideSession?.finalPrice ?? rideSession?.estimatedPrice ?? r?.fare;
   // vehicleType: available for future use; not yet rendered in this screen.
   const vehicleType    = rideSession?.vehicleType ?? r?.type;
+  // duration: formatted client-side from estimatedDurationMinutes (e.g. 15 → "15 min");
+  // falls back to GET /rides/:id pre-formatted string when ActiveSession unavailable.
+  const displayDuration = rideSession?.estimatedDurationMinutes != null
+    ? `${rideSession.estimatedDurationMinutes} min`
+    : r?.duration ?? null;
+  // distanceKm: single formatted ride distance (e.g. 1.5 → "1.5 km"); falls back to null
+  // so callers can fall back to their respective GET /rides/:id pickup/dropoff distance fields.
+  // ActiveSession provides one total distance, not separate pickup/dropoff distances.
+  const displayDistance = rideSession?.distanceKm != null
+    ? `${rideSession.distanceKm} km`
+    : null;
 
   function getPhaseEta(): string {
     if (phase === 'to_pickup') {
       const parts: string[] = [];
+      // ETA: ActiveSession does not provide pickup ETA — keep existing GET /rides/:id source.
       if (r?.pickup?.eta) parts.push(r.pickup.eta);
-      if (r?.pickup?.distance) parts.push(r.pickup.distance);
+      // Distance: prefer ActiveSession displayDistance; fall back to GET /rides/:id pickup distance.
+      const pickupDistance = displayDistance ?? r?.pickup?.distance;
+      if (pickupDistance) parts.push(pickupDistance);
       return parts.length > 0 ? parts.join(' · ') : t.calculating;
     }
     if (phase === 'arrived') return t.waiting_for_rider;
     if (phase === 'in_trip') {
       const parts: string[] = [];
-      if (r?.duration) parts.push(r.duration);
-      if (r?.dropoff?.distance) parts.push(r.dropoff.distance);
+      // Duration: prefer ActiveSession displayDuration; fall back to GET /rides/:id duration.
+      if (displayDuration) parts.push(displayDuration);
+      // Distance: prefer ActiveSession displayDistance; fall back to GET /rides/:id dropoff distance.
+      const dropoffDistance = displayDistance ?? r?.dropoff?.distance;
+      if (dropoffDistance) parts.push(dropoffDistance);
       return parts.length > 0 ? parts.join(' · ') : t.calculating;
     }
     return '';

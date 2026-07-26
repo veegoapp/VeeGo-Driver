@@ -1,0 +1,86 @@
+We are continuing the ActiveSession migration in VeeGo Driver App.
+
+Architecture reminder:
+There are TWO separate interfaces:
+1. Shuttle interface: /(shuttle)
+2. Other services interface (Car/Scooter/Delivery): /(tabs)
+
+Do NOT touch anything related to Shuttle.
+
+Migration status:
+- Shared ActiveSession foundation is complete.
+- ActiveSession initialization is complete.
+- Ride screen already consumes ActiveSession for primary ride fields.
+- Ride termination via session:snapshot { data:null } is already handled.
+- Old GET /rides/:id is still temporarily present.
+- No cleanup or deletion yet.
+
+Current task:
+Migrate ride display calculations that currently depend on formatted fields from GET /rides/:id.
+
+ONLY modify:
+app/ride/[rideId].tsx
+
+Target fields to migrate:
+
+1. Duration
+
+Current source:
+r?.duration
+
+New source:
+rideSession?.estimatedDurationMinutes
+
+Requirements:
+- Format it for display in the client.
+- Example:
+  15 → "15 min"
+- If null, keep existing fallback behavior.
+
+2. Ride distance
+
+Current sources:
+r?.pickup.distance
+r?.dropoff.distance
+
+New source:
+rideSession?.distanceKm
+
+Requirements:
+- Format client-side.
+- Example:
+  1.5 → "1.5 km"
+- Do not create separate pickup/dropoff distances because ActiveSession does not provide them.
+- Use the same formatted value where the UI requires ride distance.
+- If null, keep existing fallback behavior.
+
+3. Pickup ETA
+
+Important:
+ActiveSession does NOT contain pickup ETA.
+
+Do NOT invent ETA logic.
+Do NOT call new APIs.
+Do NOT add calculations.
+
+Keep the current fallback behavior for ETA when no value exists.
+
+Do NOT modify:
+- GET /rides/:id query
+- ride mutations
+- handleNext()
+- cancellation logic
+- socket handlers
+- termination logic
+- navigation
+- Shuttle files
+
+This is an additive migration step only.
+
+After implementation report:
+1. Modified files.
+2. Exact fields migrated from old source to ActiveSession.
+3. How null values are handled.
+4. Confirmation that pickup ETA was not fabricated.
+5. Confirmation that Shuttle was untouched.
+6. Run TypeScript and report result.
