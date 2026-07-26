@@ -178,7 +178,12 @@ export default function HomeScreen() {
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const demandAnim = useRef(new Animated.Value(60)).current;
   const demandOpacity = useRef(new Animated.Value(0)).current;
-  const bannerAnim = useRef(new Animated.Value(-44)).current;
+  const bannerAnim = useRef(new Animated.Value(-200)).current;
+  // True once the socket has connected at least once this session.
+  // Prevents a false-positive "Reconnecting" banner during the initial
+  // socket handshake — the banner should only appear when a previously
+  // established connection drops while the driver is online.
+  const socketEverConnectedRef = useRef(false);
   const showRequestRef = useRef<((r: RideRequest) => void) | null>(null);
   const dismissRequestRef = useRef<(() => void) | null>(null);
   const dismissSilentlyRef = useRef<(() => void) | null>(null);
@@ -388,11 +393,22 @@ export default function HomeScreen() {
     stopLocationTracking();
   }, []);
 
-  // Reconnecting banner — slide down when socket drops while online
+  // Track whether the socket has ever reached a connected state this session.
+  // Must run before the banner effect so the ref is updated first.
   useEffect(() => {
-    const show = online && !socketConnected;
+    if (socketConnected) {
+      socketEverConnectedRef.current = true;
+    }
+  }, [socketConnected]);
+
+  // Reconnecting banner — slide down only when socket drops after having been
+  // connected. Never show during the initial connection handshake, which would
+  // produce a false positive: REST API can be healthy while the socket is still
+  // completing its first handshake.
+  useEffect(() => {
+    const show = online && !socketConnected && socketEverConnectedRef.current;
     Animated.spring(bannerAnim, {
-      toValue: show ? 0 : -44,
+      toValue: show ? 0 : -200,
       useNativeDriver: true,
       bounciness: 0,
     }).start();
