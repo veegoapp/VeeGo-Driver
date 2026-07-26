@@ -1,0 +1,159 @@
+We are working on the VeeGo Driver App.
+
+IMPORTANT CONTEXT:
+
+- The project already has ActiveSession infrastructure implemented.
+- ShuttleContext is the current working system for shuttle trip operations.
+- ActiveSession is currently used for active trip recovery and session awareness only.
+- We are intentionally keeping ActiveSession + ShuttleContext working together during the Shuttle launch phase.
+- We are NOT migrating the Shuttle flow to ActiveSession yet.
+- The goal of this task is only to apply safety fixes to prevent conflicts between the two systems.
+
+Do NOT:
+- migrate ShuttleContext to ActiveSession.
+- remove ShuttleContext.
+- modify Ride files.
+- modify shared ActiveSession infrastructure.
+- change socket listeners.
+- change mutations.
+- change existing business logic.
+- change navigation flow except where explicitly requested below.
+
+Target file:
+app/shuttle/trip-active.tsx only
+
+Goal:
+Apply 3 small safety fixes so ActiveSession recovery and ShuttleContext operation can coexist safely during the Shuttle experimental launch.
+
+==================================================
+
+FIX 1 — Cold start GPS / tracking activation
+
+Problem:
+
+When the app starts while a shuttle trip is already active:
+
+1. ActiveSession restores the active trip.
+2. Navigation opens app/shuttle/trip-active.
+3. ShuttleContext may need a few seconds to load activeLine.
+
+During this short window:
+- GPS tracking is disabled.
+- Driver location tracking is disabled.
+- Road ETA is disabled.
+- Any guard depending only on activeLine is temporarily inactive.
+
+Change:
+
+Where the screen currently uses:
+
+!!activeLine
+
+as the enabled condition for:
+- useActiveLocationTracking
+- useDriverLocation
+- useRoadEta
+- active trip protection guards that only depend on activeLine
+
+Update only the condition to:
+
+!!activeLine || !!shuttleSession
+
+Keep activeLine usage where it is still required.
+Do not remove activeLine.
+Do not migrate anything to ActiveSession.
+
+==================================================
+
+FIX 2 — Prevent incorrect Finish Route state during cold start
+
+Problem:
+
+During startup:
+
+- shuttleSession can already exist from ActiveSession.
+- ShuttleContext stops may still be empty while queries are loading.
+
+Current logic:
+
+currentStopIndex >= stops.length - 1
+
+can incorrectly become true when:
+
+stops.length === 0
+
+This can temporarily show the Finish Route button before stops are loaded.
+
+Change ONLY the isLastStop calculation.
+
+Required behavior:
+
+If stops are not loaded yet:
+isLastStop must be false.
+
+Use logic equivalent to:
+
+stops.length > 0 && currentStopIndex >= stops.length - 1
+
+Do not:
+- change currentStopIndex source.
+- use ActiveSession as a replacement.
+- change stop progression logic.
+
+==================================================
+
+FIX 3 — Handle ActiveSession termination while trip screen is open
+
+Problem:
+
+If the backend terminates the active shuttle session:
+
+- ActiveSession receives session:snapshot with data:null.
+- shuttleSession becomes null.
+- trip-active.tsx currently does not react immediately.
+- ShuttleContext may remain active temporarily.
+
+Add a small safety effect only.
+
+Required behavior:
+
+When:
+- the screen has already finished initialization,
+- there was an active shuttle session,
+- then shuttleSession becomes null,
+
+the screen should safely exit the active trip screen and return to the shuttle home screen.
+
+Requirements:
+
+- Do not trigger during initial loading.
+- Do not trigger if there was never an active session.
+- Prevent duplicate navigation.
+- Do not create a navigation loop.
+- Follow the existing navigation style used in the app.
+
+Do not add any new termination business logic.
+This is only a UI recovery safety behavior.
+
+==================================================
+
+After implementation:
+
+Run:
+
+tsc --noEmit
+
+Return a report containing:
+
+1. Modified files.
+2. Exact changes made for each fix.
+3. Confirmation that:
+   - ShuttleContext was not removed.
+   - ActiveSession infrastructure was not modified.
+   - Ride files were untouched.
+   - Mutations were untouched.
+   - Socket listeners were untouched.
+   - No migration was performed.
+4. TypeScript result.
+
+Do not perform any additional cleanup, refactoring, or migration outside these 3 fixes.

@@ -87,7 +87,7 @@ export default function ShuttleTripActiveScreen() {
 
   const currentStop = stops[currentStopIndex] ?? null;
   const nextCoords = stationCoords[currentStopIndex] ?? null;
-  const isLastStop = currentStopIndex >= stops.length - 1;
+  const isLastStop = stops.length > 0 && currentStopIndex >= stops.length - 1;
   // Prefer session tripId (authoritative); fall back to ShuttleContext while
   // DriverShuttleSession is not yet initialized or not yet providing a value.
   // Normalize to string | undefined to preserve compatibility with API endpoints
@@ -104,12 +104,12 @@ export default function ShuttleTripActiveScreen() {
   const stationId = currentStop?.id;
 
   useActiveLocationTracking({
-    enabled: !!activeLine,
+    enabled: !!activeLine || !!shuttleSession,
     tripId: tripId != null ? Number(tripId) : null,
   });
 
   // ── GPS ────────────────────────────────────────────────────────────────────
-  const { position: gpsPos } = useDriverLocation(!!activeLine);
+  const { position: gpsPos } = useDriverLocation(!!activeLine || !!shuttleSession);
   const effectivePos = gpsPos;
 
   // Haversine used only for proximity-based phase transitions (fast, no network)
@@ -122,7 +122,7 @@ export default function ShuttleTripActiveScreen() {
   const [phase, setPhase] = useState<TripPhase>('en_route');
 
   // Road-accurate distance + ETA via OSRM (throttled, with fallback)
-  const roadEta = useRoadEta(effectivePos, nextCoords, phase !== 'at_stop' && !!activeLine);
+  const roadEta = useRoadEta(effectivePos, nextCoords, phase !== 'at_stop' && (!!activeLine || !!shuttleSession));
   const distanceM = roadEta.distanceM;
 
   // Segment-only micro-routing: fetch OSRM only for current station → next station.
@@ -150,6 +150,9 @@ export default function ShuttleTripActiveScreen() {
   const timeoutProcessingRef = useRef(false);
   const isFinishingRef = useRef(false);
   const lastStopProcessingRef = useRef(false);
+  // Fix 3: track whether an active shuttle session was ever present on this screen
+  const hasHadSessionRef = useRef(false);
+  const sessionTerminatedNavRef = useRef(false);
   const [stationTimeoutVisible, setStationTimeoutVisible] = useState(false);
   const [stationEtas, setStationEtas] = useState<StationEtaResponse | null>(null);
 
@@ -249,7 +252,7 @@ export default function ShuttleTripActiveScreen() {
 
   // ── Exit guard ─────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!activeLine) return;
+    if (!activeLine && !shuttleSession) return;
     const unsub = navigation.addListener('beforeRemove', (e: any) => {
       if (isFinishingRef.current) return; // intentional finish — let it through
       e.preventDefault();
@@ -263,7 +266,22 @@ export default function ShuttleTripActiveScreen() {
       );
     });
     return unsub;
-  }, [navigation, activeLine]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [navigation, activeLine, shuttleSession]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Fix 3: Navigate home when active session is terminated by the backend ──
+  // Triggers only after a session was previously seen (not during initial load).
+  useEffect(() => {
+    if (shuttleSession) {
+      hasHadSessionRef.current = true;
+      return;
+    }
+    // shuttleSession is null here
+    if (!hasHadSessionRef.current) return; // never had a session; skip (initial load)
+    if (sessionTerminatedNavRef.current) return; // already navigating; prevent duplicates
+    sessionTerminatedNavRef.current = true;
+    isFinishingRef.current = true; // bypass the exit guard alert
+    router.replace('/(shuttle)' as any);
+  }, [shuttleSession]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Socket: seat count ─────────────────────────────────────────────────────
   const [liveSeats, setLiveSeats] = useState<{ bookedSeats: number; totalSeats: number } | null>(null);
