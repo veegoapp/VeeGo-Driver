@@ -318,17 +318,15 @@ export default function RideScreen() {
     }
     setBusy(true);
     try {
-      // Re-fetch status before transition to detect concurrent changes
+      // Guard: verify ActiveSession status matches the expected transition
+      // before firing the mutation — prevents double-taps or stale phase.
       const expectedStatus: Partial<Record<Phase, string>> = {
         to_pickup: 'driver_assigned',
         arrived: 'driver_arrived',
         in_trip: 'active',
       };
-      // Backend wraps ride responses as { data: ride } — unwrap before use.
-      const freshRideResponse = await endpoints.rides.getById(rideId ?? '');
-      const freshRide = ((freshRideResponse as { data?: unknown } | null)?.data ?? freshRideResponse) as { status?: string } | null;
       const expected = expectedStatus[phase];
-      if (expected && freshRide?.status && freshRide.status !== expected && freshRide.status !== phase) {
+      if (!rideSession || (expected && rideSession.status !== expected)) {
         Alert.alert('Status Changed', 'Ride status has changed. Refreshing...');
         setBusy(false);
         return;
