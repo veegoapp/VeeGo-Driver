@@ -1,0 +1,138 @@
+We are continuing the ActiveSession + ShuttleContext coexistence setup.
+
+IMPORTANT CONTEXT:
+
+- ActiveSession infrastructure is already implemented and working.
+- Shuttle interface is intentionally NOT being fully migrated yet.
+- Keep ShuttleContext as the current source of trip operation logic.
+- ActiveSession is only used for active trip recovery and session awareness.
+- Do NOT migrate data sources.
+- Do NOT remove ShuttleContext.
+- Do NOT modify Ride files.
+- Do NOT modify shared ActiveSession infrastructure.
+- Do NOT change socket listeners.
+- Do NOT change mutations.
+- Do NOT change navigation flow except where explicitly requested below.
+
+Target file:
+app/shuttle/trip-active.tsx only
+
+Goal:
+Apply 3 safety fixes to make ActiveSession + ShuttleContext coexist safely during the experimental Shuttle launch.
+
+Make ONLY these changes:
+
+==================================================
+
+FIX 1 — Cold start GPS / tracking activation
+
+Problem:
+When the app opens with an active shuttle trip:
+- ActiveSession already has shuttleSession.
+- The screen opens through ActiveSession recovery.
+- ShuttleContext may take a few seconds to load activeLine.
+- During that short window:
+  - GPS tracking is disabled.
+  - Driver location tracking is disabled.
+  - Road ETA is disabled.
+
+Change:
+
+Where the screen currently uses:
+- !!activeLine as the enabled condition for:
+  - useActiveLocationTracking
+  - useDriverLocation
+  - useRoadEta
+  - any active trip guard that only depends on activeLine
+
+Update the condition to also accept ActiveSession:
+
+Use:
+!!activeLine || !!shuttleSession
+
+Do not change any other logic.
+Do not remove activeLine usage.
+
+==================================================
+
+FIX 2 — Prevent incorrect Finish Route button during cold start
+
+Problem:
+During startup:
+- shuttleSession may already exist.
+- ShuttleContext stops array may still be empty.
+- Current logic:
+  currentStopIndex >= stops.length - 1
+
+can incorrectly evaluate to true when:
+stops.length === 0
+
+Change only the isLastStop calculation.
+
+Required behavior:
+
+If stops are not loaded yet:
+isLastStop must be false.
+
+Example:
+
+Before:
+currentStopIndex >= stops.length - 1
+
+After:
+stops.length > 0 && currentStopIndex >= stops.length - 1
+
+Do not change currentStopIndex source.
+Do not migrate to ActiveSession.
+Do not change stop logic.
+
+==================================================
+
+FIX 3 — Handle ActiveSession termination while screen is open
+
+Problem:
+If backend terminates the active session:
+- ActiveSession receives session:snapshot with data:null.
+- shuttleSession becomes null.
+- trip-active screen currently does not react immediately.
+- ShuttleContext may remain active temporarily.
+
+Add a small safety effect only.
+
+Required behavior:
+
+When:
+- the screen was already initialized,
+- there was an active shuttle session,
+- then shuttleSession becomes null,
+
+the screen should safely exit the active trip screen and return to the shuttle home screen.
+
+Requirements:
+- Do not affect normal navigation.
+- Do not trigger on the initial loading state.
+- Do not create a navigation loop.
+- Add a ref/guard if needed so navigation happens once only.
+
+Use the existing app navigation patterns.
+
+==================================================
+
+After changes:
+
+Run:
+tsc --noEmit
+
+Return report with:
+
+1. Modified files.
+2. Exact changes made for each of the 3 fixes.
+3. Confirmation:
+   - ShuttleContext untouched.
+   - ActiveSession infrastructure untouched.
+   - Ride files untouched.
+   - Mutations untouched.
+   - Socket listeners untouched.
+4. TypeScript result.
+
+Do not perform any additional cleanup or migration.
