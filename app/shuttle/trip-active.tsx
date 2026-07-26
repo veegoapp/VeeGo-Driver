@@ -96,6 +96,11 @@ export default function ShuttleTripActiveScreen() {
   const tripId: string | undefined = _rawTripId != null ? String(_rawTripId) : undefined;
   // Prefer session direction for display; fall back to ShuttleContext.
   const direction = shuttleSession?.direction ?? activeLine?.direction;
+  // Prefer session station count for display (badge, SOS text, progress dots);
+  // fall back to ShuttleContext. isLastStop intentionally keeps stops.length
+  // (ShuttleContext computed) to avoid rendering the Finish button prematurely
+  // before the session initialises.
+  const totalStops = shuttleSession?.stations.length ?? stops.length;
   const stationId = currentStop?.id;
 
   useActiveLocationTracking({
@@ -442,7 +447,7 @@ export default function ShuttleTripActiveScreen() {
               // Passenger PII excluded — emergency responders must look up details server-side
               const lines = [
                 '🚨 SOS ALERT 🚨',
-                `Trip #${tripId ?? '—'} | Stop ${currentStopIndex + 1}/${stops.length}`,
+                `Trip #${tripId ?? '—'} | Stop ${currentStopIndex + 1}/${totalStops}`,
                 mapLink ? `📍 Location: ${mapLink}` : '📍 Location unavailable',
               ].join('\n\n');
               const phoneClean = ec.phone.replace(/\D/g, '');
@@ -450,7 +455,7 @@ export default function ShuttleTripActiveScreen() {
               if (tripId) {
                 const lat = isFinite(loc?.latitude ?? NaN) ? loc!.latitude : 0;
                 const lng = isFinite(loc?.longitude ?? NaN) ? loc!.longitude : 0;
-                const notes = `Trip #${tripId} | Stop ${currentStopIndex + 1}/${stops.length}`;
+                const notes = `Trip #${tripId} | Stop ${currentStopIndex + 1}/${totalStops}`;
                 try {
                   await endpoints.trips.sosAlert(tripId, { latitude: lat, longitude: lng, notes });
                 } catch (err: unknown) {
@@ -526,7 +531,7 @@ export default function ShuttleTripActiveScreen() {
   // ── Progress dots ──────────────────────────────────────────────────────────
   const progressDots = (
     <View style={styles.progressDots}>
-      {stops.map((_, i) => (
+      {(shuttleSession?.stations ?? stops).map((_, i) => (
         <View
           key={i}
           style={[
@@ -579,7 +584,7 @@ export default function ShuttleTripActiveScreen() {
             <GlassView style={styles.tripBadge} borderRadius={20}>
               <Users size={13} color={colors.foreground} strokeWidth={2} />
               <Text style={[styles.badgeText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-                {currentStopIndex + 1}/{stops.length}
+                {currentStopIndex + 1}/{totalStops}
               </Text>
             </GlassView>
 
