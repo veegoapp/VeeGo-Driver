@@ -42,7 +42,6 @@ const STATUS_TO_PHASE: Partial<Record<string, Phase>> = {
   driver_assigned: 'to_pickup',
   driver_arrived: 'arrived',
   active: 'in_trip',
-  completed: 'completed',
 };
 
 
@@ -155,7 +154,6 @@ export default function RideScreen() {
 
     const handleStatusChanged = (data: unknown) => {
       if (!matchesThisRide(data)) return;
-      queryClient.invalidateQueries({ queryKey: ['ride-active', rideId] });
     };
 
     const handleDeviationWarning = (data: unknown) => {
@@ -332,7 +330,6 @@ export default function RideScreen() {
       const expected = expectedStatus[phase];
       if (expected && freshRide?.status && freshRide.status !== expected && freshRide.status !== phase) {
         Alert.alert('Status Changed', 'Ride status has changed. Refreshing...');
-        queryClient.invalidateQueries({ queryKey: ['ride-active', rideId] });
         setBusy(false);
         return;
       }
@@ -340,17 +337,7 @@ export default function RideScreen() {
       if (phase === 'to_pickup') await endpoints.rides.arrived(rideId ?? '');
       else if (phase === 'arrived') await endpoints.rides.start(rideId ?? '');
       else if (phase === 'in_trip') {
-        const completeResponse = await endpoints.rides.complete(rideId ?? '');
-        // finalPrice already includes waitingCharge (finalPrice = estimatedPrice + waitingCharge)
-        // — write it into the same query cache the completion screen reads `fare` from,
-        // instead of leaving the stale pre-completion GET /rides/:id value in place.
-        const completionData = completeResponse?.data;
-        if (completionData?.finalPrice != null) {
-          queryClient.setQueryData(['ride-active', rideId], (old: unknown) => {
-            const prev = (old && typeof old === 'object') ? (old as Record<string, unknown>) : {};
-            return { ...prev, fare: completionData.finalPrice, waitingCharge: completionData.waitingCharge };
-          });
-        }
+        await endpoints.rides.complete(rideId ?? '');
         queryClient.invalidateQueries({ queryKey: ['earnings-summary'] });
         queryClient.invalidateQueries({ queryKey: ['earnings-weekly'] });
       }
@@ -382,7 +369,6 @@ export default function RideScreen() {
               await endpoints.rides.cancel(rideId ?? '');
               hasExitedRef.current = true;
               setIsExiting(true);
-              queryClient.invalidateQueries({ queryKey: ['ride-active'] });
               router.replace('/(tabs)/home');
             } catch (err: unknown) {
               const body = (err as { body?: { error?: string } })?.body;
