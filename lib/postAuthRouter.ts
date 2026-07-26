@@ -68,8 +68,65 @@ export function navigateToHome(
 }
 
 /**
+ * Silently refreshes the driver's onboarding state in the background after
+ * the fast-path startup. Updates the local routing cache so the next cold
+ * start has fresh data.
+ *
+ * Safety constraints:
+ * - Never calls router.replace() or navigates. Driver is already inside the app.
+ * - Never clears the session on network/server errors.
+ * - A 401 response is handled by the API client's existing onSessionCleared
+ *   callback, which calls clearLocalSession() in AuthContext and lets the
+ *   RootLayoutNav guard handle the redirect — no navigation here.
+ */
+async function _syncOnboardingInBackground(userId: string): Promise<void> {
+  try {
+    const onboarding = await api.get<{
+      registrationStep: RegistrationStep;
+      onboardingStatus: string;
+      serviceType: string | null;
+    }>('/driver/me/onboarding');
+
+    if (!onboarding?.serviceType) return;
+
+    // Resolve the canonical ServiceType from the backend response.
+    const type = (onboarding.serviceType ?? '').toLowerCase();
+    const appType: ServiceType =
+      type === 'shuttle' ? 'SHUTTLE'
+      : type === 'scooter' ? 'SCOOTER'
+      : type === 'delivery' ? 'DELIVERY'
+      : 'CAR';
+
+    // Update the per-user service map cache only — no navigation.
+    const serviceMapJson = await AsyncStorage.getItem('veego_service_map');
+    const map: Record<string, ServiceType> = serviceMapJson ? JSON.parse(serviceMapJson) : {};
+    map[userId] = appType;
+    await AsyncStorage.setItem('veego_service_map', JSON.stringify(map));
+
+    // Keep the device-level fallback in sync too.
+    await AsyncStorage.setItem('veego_device_service', appType);
+  } catch {
+    // Network errors and temporary server failures are silently ignored.
+    // The cache from the previous successful session remains valid.
+    // A 401 response is handled upstream by the API client (onSessionCleared →
+    // clearLocalSession → AuthContext token cleared → RootLayoutNav redirects).
+  }
+}
+
+/**
  * Called after sign-in (existing driver).
  * Routes based on registrationStep from /driver/me/onboarding.
+ *
+ * Fast path (returning approved driver):
+ *   Reads the locally-cached service type written by navigateToHome on the
+ *   previous session. If a cache entry exists the driver is navigated home
+ *   immediately — no network call blocks startup. The onboarding endpoint is
+ *   then contacted in the background to refresh the cache for the next start.
+ *
+ * Slow path (first login / fresh install / no cache):
+ *   Calls the backend synchronously to determine the correct route, identical
+ *   to the previous behaviour. On network error the driver remains on the
+ *   current screen; tokens are never cleared for transient failures.
  */
 export async function navigateAfterAuth(token: string | null): Promise<void> {
   // Defer by one frame so expo-router's navigator tree is fully initialized.
@@ -77,6 +134,33 @@ export async function navigateAfterAuth(token: string | null): Promise<void> {
 
   const userId = getUserIdFromToken(token);
 
+  // ── Fast path: use locally-cached routing from previous successful session ──
+  // veego_service_map is populated by navigateToHome whenever the backend
+  // confirms registrationStep === 'approved'. Its presence for this userId
+  // means the driver is approved and we know their service type — no network
+  // call is required to enter the app.
+  if (userId) {
+    try {
+      const serviceMapJson = await AsyncStorage.getItem('veego_service_map');
+      if (serviceMapJson) {
+        const map: Record<string, ServiceType> = JSON.parse(serviceMapJson);
+        const cachedServiceType = map[userId];
+        if (cachedServiceType) {
+          // Navigate immediately from cache — driver enters the app now.
+          navigateToHome(cachedServiceType, userId);
+          // Refresh the cache in the background. Does not block entry and
+          // must not trigger further navigation (see _syncOnboardingInBackground).
+          _syncOnboardingInBackground(userId);
+          return;
+        }
+      }
+    } catch {
+      // Malformed storage entry — fall through to the blocking API call.
+    }
+  }
+
+  // ── Slow path: no cache (first login / fresh install) ──
+  // Must call the backend to determine the correct route.
   try {
     const onboarding = await api.get<{
       registrationStep: RegistrationStep;
