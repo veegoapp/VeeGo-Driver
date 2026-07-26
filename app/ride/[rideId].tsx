@@ -79,6 +79,9 @@ export default function RideScreen() {
   // Guards the cancelled-ride exit (alert + navigate) so it only fires once,
   // whether triggered by the live socket event or a subsequent status refetch.
   const hasExitedRef = useRef(false);
+  // The ride screen can mount before ActiveSession receives the post-accept
+  // snapshot. Do not treat the normal initial null state as termination.
+  const hasObservedRideSessionRef = useRef(false);
 
   // A non-completed ride takes priority over a blocked service — only treat
   // the screen as blocked once the ride itself has reached 'completed'.
@@ -216,6 +219,12 @@ export default function RideScreen() {
       ? (session as DriverRideSession)
       : null;
 
+  useEffect(() => {
+    if (rideSession && String(rideSession.rideId) === String(rideId)) {
+      hasObservedRideSessionRef.current = true;
+    }
+  }, [rideSession, rideId]);
+
   // Phase sync from ActiveSession: advances the UI phase whenever the backend
   // pushes a session:snapshot with an updated ride status. Cancellation is handled
   // separately — by socket events and the session→null termination effect.
@@ -237,11 +246,12 @@ export default function RideScreen() {
   // Guards:
   //   initialized — avoids acting on the initial null before the first fetch
   //                 or first socket snapshot has resolved.
-  //   session !== null — only act on a null transition, not the starting state.
+  //   hasObservedRideSessionRef — only act after this screen has seen its own
+  //                 active ride, not on the normal post-accept initial null.
   //   phase !== 'completed' — the completion/rating flow owns that exit path;
   //                           do not interfere when the ride finishes normally.
   useEffect(() => {
-    if (!initialized || session !== null || phase === 'completed') return;
+    if (!initialized || session !== null || !hasObservedRideSessionRef.current || phase === 'completed') return;
     exitRide(t.ride_cancelled_title, t.ride_cancelled_msg);
   // exitRide and t are stable within the component lifecycle and intentionally
   // omitted from deps — consistent with the existing useEffect at line ~177
