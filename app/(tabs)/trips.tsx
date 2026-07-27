@@ -282,7 +282,7 @@ export default function TripsScreen() {
                       </View>
                       <View style={{ alignItems: isRTL ? 'flex-start' : 'flex-end', marginLeft: isRTL ? 0 : 12, marginRight: isRTL ? 12 : 0 }}>
                         {/* parseFloat: backend returns fare as string */}
-                        <Text style={[styles.fareText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{parseFloat(String(trip.fare ?? 0)).toFixed(2)} DT</Text>
+                        <Text style={[styles.fareText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{parseFloat(String(trip.fare ?? 0)).toFixed(2)} {t.egp}</Text>
                         <View style={[styles.starsRow, { flexDirection: R }]}>
                           {Array.from({ length: 5 }).map((_, idx) => (
                             <Star key={idx} size={12} color={idx < parseFloat(String(trip.rating ?? 0)) ? colors.accent : colors.mutedForeground + '4D'} fill={idx < parseFloat(String(trip.rating ?? 0)) ? colors.accent : 'transparent'} strokeWidth={2} />

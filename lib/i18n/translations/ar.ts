@@ -689,6 +689,9 @@ export const ar: Translations = {
   final_cancel_banner: 'إلغاء نهائي للرحلة',
   cancel_penalty_preview: 'غرامة الإلغاء: {n} جنيه',
   no_penalty_preview: 'لا توجد غرامة على هذا الإلغاء',
+  no_penalty_referral: '✓ لا غرامة',
+  checking_penalty: 'جارٍ التحقق من الغرامة...',
+  penalty_label: 'غرامة',
   passengers_admin_reassign: 'سيتم إشعار جميع الركاب وسيقوم الإداريون بإعادة التعيين.',
   choose_cancel_reason: 'اختر السبب الأكثر ملاءمةً لإلغاء رحلتك.',
   // ── Trip-active / trip-details screens ───────────────────────────────────────

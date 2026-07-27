@@ -689,6 +689,9 @@ export const en = {
   final_cancel_banner: 'Final Trip Cancellation',
   cancel_penalty_preview: 'Cancellation penalty: {n} EGP',
   no_penalty_preview: 'No penalty on this cancellation',
+  no_penalty_referral: '✓ No penalty',
+  checking_penalty: 'Checking penalty...',
+  penalty_label: 'penalty',
   passengers_admin_reassign: 'All passengers will be notified and admin will reassign.',
   choose_cancel_reason: 'Choose the most appropriate reason for cancelling your trip.',
   // ── Trip-active / trip-details screens ───────────────────────────────────────

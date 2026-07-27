@@ -110,7 +110,7 @@ export default function TripCancelScreen() {
                 }]}>
                   {hasPenalty
                     ? t.cancel_penalty_preview.replace('{n}', String(previewData!.penaltyAmount))
-                    : 'No penalty applies to this cancellation'}
+                    : t.no_penalty_line}
                 </Text>
                 {previewData?.minutesUntilDeparture != null && (
                   <Text style={{ fontSize: 11, color: hasPenalty ? '#991B1B' : '#166534', fontFamily: 'Inter_400Regular' }}>
@@ -147,7 +147,7 @@ export default function TripCancelScreen() {
                 {/* No penalty for referral */}
                 {previewData != null && (
                   <Text style={[{ fontSize: 11, color: '#15803d', fontFamily: 'Inter_700Bold', marginTop: 5, textAlign: TA }]}>
-                    ✓ No penalty
+                    {t.no_penalty_referral}
                   </Text>
                 )}
               </View>
@@ -176,20 +176,20 @@ export default function TripCancelScreen() {
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 5 }}>
                     <ActivityIndicator size="small" color="#DC2626" />
                     <Text style={{ fontSize: 11, color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }}>
-                      Checking penalty...
+                      {t.checking_penalty}
                     </Text>
                   </View>
                 )}
                 {!previewLoading && hasPenalty && (
                   <View style={[styles.penaltyTag, { backgroundColor: '#FEE2E2' }]}>
                     <Text style={{ fontSize: Typography.size.xs, color: '#DC2626', fontFamily: 'Inter_700Bold' }}>
-                      {previewData!.penaltyAmount} {t.egp} penalty
+                      {previewData!.penaltyAmount} {t.egp} {t.penalty_label}
                     </Text>
                   </View>
                 )}
                 {!previewLoading && previewData != null && !hasPenalty && (
                   <Text style={[{ fontSize: 11, color: '#15803d', fontFamily: 'Inter_700Bold', marginTop: 5, textAlign: TA }]}>
-                    No penalty for this cancellation
+                    {t.no_penalty_preview}
                   </Text>
                 )}
               </View>
