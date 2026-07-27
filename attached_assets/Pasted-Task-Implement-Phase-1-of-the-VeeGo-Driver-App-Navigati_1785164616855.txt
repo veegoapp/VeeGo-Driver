@@ -1,0 +1,106 @@
+Task: Implement Phase 1 of the VeeGo Driver App Navigation Architecture.
+
+IMPORTANT RULES:
+- Make ONLY the changes described in this task.
+- Do NOT implement GPS improvements.
+- Do NOT implement bearing smoothing.
+- Do NOT implement rerouting.
+- Do NOT implement route trimming.
+- Do NOT redesign the UI.
+- Do NOT make unrelated refactors.
+- Preserve all existing functionality.
+- Before changing code, inspect the current implementation carefully.
+
+Goal:
+Unify the route source architecture and enable the existing navigation camera system correctly.
+
+Current issue:
+The Driver App already has navigation camera logic inside MapBackdrop.native.tsx, but Ride/Scooter/Delivery do not provide a proper roadPolyline route during active navigation. The map currently has mixed responsibilities because MapBackdrop can fetch routes internally.
+
+Required changes:
+
+PART 1 — Ride / Scooter / Delivery route handling
+
+File:
+app/ride/[rideId].tsx
+
+This screen handles:
+- Car
+- Scooter
+- Delivery
+
+Implement route handling using the existing useRoadPolyline hook.
+
+Requirements:
+1. Import and use useRoadPolyline.
+2. Determine the active navigation destination based on ride phase:
+
+- to_pickup:
+  Route should be:
+  Driver current location → Pickup location
+
+- arrived:
+  Keep behavior stable. Do not introduce breaking changes.
+
+- in_trip:
+  Route should be:
+  Driver current location → Dropoff location
+
+3. Pass the generated route coordinates to MapBackdrop through the existing roadPolyline prop.
+
+4. Do not create a new routing system.
+5. Reuse the existing useRoadPolyline implementation.
+
+PART 2 — Navigation camera activation
+
+File:
+app/ride/[rideId].tsx
+
+Currently navigationMode only activates during:
+phase === "in_trip"
+
+Update the logic so active driving phases use navigation mode.
+
+Required behavior:
+
+Navigation mode should be enabled during:
+- to_pickup
+- in_trip
+
+Keep completed trips out of navigation mode.
+
+Do not change shuttle behavior.
+
+PART 3 — MapBackdrop.native.tsx
+
+Inspect before modifying.
+
+The goal is NOT to rewrite MapBackdrop.
+
+Only verify that:
+- roadPolyline has priority as the route source.
+- Existing animateCamera navigation behavior remains unchanged.
+- Existing shuttle behavior remains unchanged.
+
+Do NOT remove the internal auto route fetching yet.
+Leave cleanup for a later phase after confirming all services work correctly.
+
+PART 4 — Verification
+
+After implementation:
+
+Run:
+- TypeScript check.
+- Build validation if available.
+
+Provide a report:
+
+1. Files changed.
+2. Exact changes made.
+3. Any risks found.
+4. Confirmation that:
+   - Ride works.
+   - Scooter still uses ride screen correctly.
+   - Delivery still uses ride screen correctly.
+   - Shuttle behavior was not modified.
+5. Do not continue to Phase 2 improvements.

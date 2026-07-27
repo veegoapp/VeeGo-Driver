@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { AlertTriangle, Check, ChevronUp, Clock, Map, MessageCircle, Navigation, Phone, Share2, Shield, Star } from 'lucide-react-native';
-import React, { useCallback, useRef, useEffect, useState } from 'react';
+import React, { useCallback, useRef, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Animated, Easing, Linking, Platform, Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
@@ -15,6 +15,7 @@ import { useWaitingCharge } from '@/hooks/useWaitingCharge';
 import { useActiveLocationTracking } from '@/hooks/useActiveLocationTracking';
 import { useLocationBroadcast } from '@/hooks/useLocationBroadcast';
 import { useDriverLocation } from '@/hooks/useDriverLocation';
+import { useRoadPolyline } from '@/hooks/useRoadPolyline';
 import { endpoints } from '@/lib/api';
 import { useI18n } from '@/lib/i18nContext';
 import { useActiveSession } from '@/lib/activeSessionContext';
@@ -258,6 +259,40 @@ export default function RideScreen() {
   // that calls exitRide(t.*) with only [rideRaw] in its dependency array.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialized, session, phase]);
+
+  // ── Navigation route ─────────────────────────────────────────────────────
+  // Waypoints are derived from rideSession (available before the early return
+  // below) so this hook call is never conditional — React rules satisfied.
+  //   to_pickup : driver → pickup
+  //   in_trip   : driver → dropoff
+  //   arrived / completed : null (no fetch; arrived uses MapBackdrop overview)
+  const navWaypoints = useMemo(() => {
+    if (!driverPosition) return null;
+    if (phase === 'to_pickup') {
+      const lat = rideSession?.pickup.latitude;
+      const lng = rideSession?.pickup.longitude;
+      if (lat == null || lng == null) return null;
+      return [
+        { latitude: driverPosition.latitude, longitude: driverPosition.longitude },
+        { latitude: Number(lat), longitude: Number(lng) },
+      ];
+    }
+    if (phase === 'in_trip') {
+      const lat = rideSession?.dropoff.latitude;
+      const lng = rideSession?.dropoff.longitude;
+      if (lat == null || lng == null) return null;
+      return [
+        { latitude: driverPosition.latitude, longitude: driverPosition.longitude },
+        { latitude: Number(lat), longitude: Number(lng) },
+      ];
+    }
+    return null;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, driverPosition?.latitude, driverPosition?.longitude,
+      rideSession?.pickup.latitude, rideSession?.pickup.longitude,
+      rideSession?.dropoff.latitude, rideSession?.dropoff.longitude]);
+
+  const { coords: roadPolylineCoords } = useRoadPolyline(navWaypoints);
 
   // All hooks called above — safe to short-circuit for blocked service.
   // A non-completed ride keeps the driver in the ride flow regardless of
@@ -562,7 +597,8 @@ export default function RideScreen() {
           ? { latitude: Number(dropoffLat), longitude: Number(dropoffLng) }
           : undefined}
         driverLocation={driverPosition ?? undefined}
-        navigationMode={phase === 'in_trip'}
+        roadPolyline={roadPolylineCoords ?? undefined}
+        navigationMode={phase === 'to_pickup' || phase === 'in_trip'}
       />
 
       <View style={[styles.overlay, { paddingTop: topPad }]}>
