@@ -880,7 +880,7 @@ const styles = StyleSheet.create({
   onlineBtnText: { fontSize: 13, letterSpacing: 2, textTransform: 'uppercase' },
   statusPill: { paddingHorizontal: Spacing.lg, paddingVertical: 6 },
   statusPillText: { fontSize: Typography.size.xs },
-  requestSheet: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: Spacing.md, paddingBottom: Spacing.md, zIndex: 50 },
+  requestSheet: { position: 'absolute', bottom: 24, left: 0, right: 0, paddingHorizontal: Spacing.md, paddingBottom: Spacing.md, zIndex: 50 },
   requestCard: { padding: 20, borderWidth: 2 },
   requestHeader: { alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.md },
   requestHeaderLeft: { alignItems: 'center', gap: Spacing.sm },

@@ -707,6 +707,17 @@ export default function RideScreen() {
         </Animated.View>
       )}
 
+      {/* ── Floating Google Maps navigation button ────────────────────── */}
+      {phase !== 'completed' && (
+        <Pressable
+          onPress={handleNavigate}
+          style={[styles.floatingNavBtn, { bottom: insets.bottom + 360 }]}
+          accessibilityLabel="Open in Google Maps"
+        >
+          <Map size={22} color="#3b82f6" strokeWidth={2} />
+        </Pressable>
+      )}
+
       {phase !== 'completed' && (
         <Animated.View style={[styles.sheet, { transform: [{ translateY: sheetAnim }] }]}>
           <GlassView strong style={styles.sheetCard} borderRadius={24}>
@@ -799,14 +810,6 @@ export default function RideScreen() {
               </View>
               <View style={styles.bottomActions}>
                 <Pressable
-                  onPress={handleNavigate}
-                  style={[styles.navigateBtn, { backgroundColor: colors.secondary }]}
-                  accessibilityLabel="Open in Google Maps"
-                >
-                  <Map size={14} color={colors.primary} strokeWidth={2} />
-                  <Text style={[styles.navigateBtnText, { color: colors.primary, fontFamily: 'Inter_700Bold' }]}>Navigate</Text>
-                </Pressable>
-                <Pressable
                   onPress={handleShareTrip}
                   disabled={shareBusy}
                   style={[styles.shareBtn, { backgroundColor: colors.secondary, opacity: shareBusy ? 0.6 : 1 }]}
@@ -887,8 +890,24 @@ const styles = StyleSheet.create({
   safetyRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   safetyText: { fontSize: Typography.size.xs },
   bottomActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  navigateBtn: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, paddingHorizontal: Spacing.md, paddingVertical: 6, borderRadius: 10 },
-  navigateBtnText: { fontSize: Typography.size.xs },
+  floatingNavBtn: {
+    position: 'absolute',
+    right: 16,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(15,15,25,0.88)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 40,
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+  },
   shareBtn: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, paddingHorizontal: Spacing.md, paddingVertical: 6, borderRadius: 10 },
   shareBtnText: { fontSize: Typography.size.xs },
   sosBtn: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, backgroundColor: '#ef4444', paddingHorizontal: Spacing.md, paddingVertical: 6, borderRadius: 10 },

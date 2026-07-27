@@ -1,12 +1,11 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Pressable, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import MapView, { Circle, Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DARK_MAP_STYLE, LIGHT_MAP_STYLE } from '@/constants/mapStyle';
 import { getToken } from '@/lib/auth';
+import { useService } from '@/lib/serviceContext';
 
-const MAP_THEME_KEY = 'veego_map_theme';
 
 import type { SurgeZone } from '@/lib/types';
 export type { SurgeZone } from '@/lib/types';
@@ -141,29 +140,16 @@ export function MapBackdrop({
   // Auto-recenter timer handle — cleared on re-pan, nav exit, or unmount
   const autoRecenterTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // ── Theme management ─────────────────────────────────────────────────────
-  // savedTheme: explicit user choice persisted to AsyncStorage.
-  // null = follow system color scheme (the default).
-  const systemScheme = useColorScheme();
-  const [savedTheme, setSavedTheme] = useState<'dark' | 'light' | null>(null);
-
-  useEffect(() => {
-    AsyncStorage.getItem(MAP_THEME_KEY)
-      .then(val => { if (val === 'dark' || val === 'light') setSavedTheme(val); })
-      .catch(() => {});
-  }, []);
-
-  const effectiveTheme: 'dark' | 'light' =
-    savedTheme ?? (systemScheme === 'light' ? 'light' : 'dark');
+  // ── Theme management — follows VeeGo app theme (isDarkMode from ServiceContext) ─
+  const { isDarkMode, setIsDarkMode } = useService();
+  const effectiveTheme: 'dark' | 'light' = isDarkMode ? 'dark' : 'light';
   const mapStyle = effectiveTheme === 'dark' ? DARK_MAP_STYLE : LIGHT_MAP_STYLE;
 
   const insets = useSafeAreaInsets();
 
   const handleThemeToggle = useCallback(() => {
-    const next: 'dark' | 'light' = effectiveTheme === 'dark' ? 'light' : 'dark';
-    setSavedTheme(next);
-    AsyncStorage.setItem(MAP_THEME_KEY, next).catch(() => {});
-  }, [effectiveTheme]);
+    setIsDarkMode(!isDarkMode);
+  }, [isDarkMode, setIsDarkMode]);
 
   // ── Initial camera center ────────────────────────────────────────────────
   const initialCenter = useMemo(() => {
@@ -622,10 +608,10 @@ export function MapBackdrop({
         )}
       </MapView>
 
-      {/* ── Theme toggle button ───────────────────────────────────────────── */}
+      {/* ── Theme toggle button — bottom right ───────────────────────────── */}
       <Pressable
         onPress={handleThemeToggle}
-        style={[styles.themeToggleBtn, { top: insets.top + 12 }]}
+        style={[styles.themeToggleBtn, { bottom: insets.bottom + 162 }]}
         accessibilityLabel={effectiveTheme === 'dark' ? 'Switch to light map' : 'Switch to dark map'}
       >
         <Text style={styles.themeToggleIcon}>
@@ -633,12 +619,14 @@ export function MapBackdrop({
         </Text>
       </Pressable>
 
-      {/* ── Recenter button ───────────────────────────────────────────────── */}
-      {userPanned && (
-        <Pressable onPress={handleRecenter} style={styles.recenterBtn}>
-          <Text style={styles.recenterIcon}>⊕</Text>
-        </Pressable>
-      )}
+      {/* ── Recenter button — always visible, bottom right below theme toggle */}
+      <Pressable
+        onPress={handleRecenter}
+        style={[styles.recenterBtn, { bottom: insets.bottom + 110 }]}
+        accessibilityLabel="Recenter map"
+      >
+        <Text style={styles.recenterIcon}>⊕</Text>
+      </Pressable>
     </View>
   );
 }
@@ -781,32 +769,30 @@ const styles = StyleSheet.create({
   },
   surgeLabelFlash: { fontSize: 11, color: '#D5B23D' },
   surgeLabelText: { fontSize: 11, fontWeight: 'bold', color: 'white' },
-  // Theme toggle button
+  // Theme toggle button — bottom right, above recenter
   themeToggleBtn: {
     position: 'absolute',
-    top: 12,
-    right: 12,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(15,15,25,0.75)',
+    right: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(15,15,25,0.82)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
+    borderColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   themeToggleIcon: { fontSize: 16, lineHeight: 20 },
-  // Recenter button
+  // Recenter button — bottom right, always visible
   recenterBtn: {
     position: 'absolute',
-    bottom: 72,
-    right: 12,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    right: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: 'rgba(15,15,25,0.88)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
+    borderColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center',
     justifyContent: 'center',
   },
