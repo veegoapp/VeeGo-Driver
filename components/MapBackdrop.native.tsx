@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { Animated, Pressable, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import MapView, { Circle, Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DARK_MAP_STYLE, LIGHT_MAP_STYLE } from '@/constants/mapStyle';
@@ -37,6 +37,17 @@ function calcBearing(
   const y = Math.sin(dLng) * Math.cos(lat2);
   const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
   return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
+}
+
+/**
+ * EMA-style angular smoothing. Blends `next` toward `prev` along the
+ * shortest arc so jumps across 0°/360° are handled correctly.
+ * alpha ∈ (0,1]: higher = more responsive, lower = smoother.
+ */
+function smoothAngle(prev: number | null, next: number, alpha: number): number {
+  if (prev === null) return next;
+  const diff = ((next - prev + 540) % 360) - 180; // shortest arc, −180..+180
+  return (prev + alpha * diff + 360) % 360;
 }
 
 function surgeColor(multiplier: number): string {
@@ -82,7 +93,7 @@ export function MapBackdrop({
   approachCircle,
   focusTarget,
   navigationMode = false,
-  animDurationMs = 1200,
+  animDurationMs = 800,
 }: MapBackdropProps) {
   const mapRef = useRef<MapView>(null);
   const [mapReady, setMapReady] = useState(false);
@@ -93,6 +104,11 @@ export function MapBackdrop({
   const prevPosRef = useRef<{ latitude: number; longitude: number } | null>(null);
   const userPannedRef = useRef(false);
   const initialFitDoneRef = useRef(false);
+  // Bearing smoothing — persists smoothed value across renders
+  const smoothedBearingRef = useRef<number | null>(null);
+  // Animated marker position — driven by Animated.ValueXY for smooth interpolation
+  const animMarkerRef = useRef<Animated.ValueXY | null>(null);
+  const [markerCoord, setMarkerCoord] = useState<{ latitude: number; longitude: number } | null>(null);
 
   // ── Theme management ─────────────────────────────────────────────────────
   // savedTheme: explicit user choice persisted to AsyncStorage.
@@ -127,19 +143,52 @@ export function MapBackdrop({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Bearing tracking ─────────────────────────────────────────────────────
+  // ── Bearing tracking (with EMA smoothing) ────────────────────────────────
   useEffect(() => {
     if (!driverLocation) return;
     const prev = prevPosRef.current;
+    let rawBearing: number | null = null;
     if (
       prev &&
       (prev.latitude !== driverLocation.latitude || prev.longitude !== driverLocation.longitude)
     ) {
-      setCurrentBearing(calcBearing(prev, driverLocation));
+      rawBearing = calcBearing(prev, driverLocation);
     } else if (driverLocation.heading != null && driverLocation.heading !== 0) {
-      setCurrentBearing(driverLocation.heading);
+      rawBearing = driverLocation.heading;
+    }
+    if (rawBearing !== null) {
+      const smoothed = smoothAngle(smoothedBearingRef.current, rawBearing, 0.35);
+      smoothedBearingRef.current = smoothed;
+      setCurrentBearing(smoothed);
     }
     prevPosRef.current = { latitude: driverLocation.latitude, longitude: driverLocation.longitude };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [driverLocation?.latitude, driverLocation?.longitude]);
+
+  // ── Animated driver marker — initialise ValueXY on first fix ────────────
+  useEffect(() => {
+    if (!driverLocation || animMarkerRef.current) return;
+    const av = new Animated.ValueXY({
+      x: driverLocation.latitude,
+      y: driverLocation.longitude,
+    });
+    animMarkerRef.current = av;
+    setMarkerCoord({ latitude: driverLocation.latitude, longitude: driverLocation.longitude });
+    // Listener updates state each animation frame so the Marker re-renders smoothly
+    av.addListener(({ x, y }) =>
+      setMarkerCoord({ latitude: x, longitude: y }),
+    );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [!!driverLocation]);
+
+  // ── Animated driver marker — tween to each new GPS fix ───────────────────
+  useEffect(() => {
+    if (!driverLocation || !animMarkerRef.current) return;
+    Animated.timing(animMarkerRef.current, {
+      toValue: { x: driverLocation.latitude, y: driverLocation.longitude },
+      duration: animDurationMs,
+      useNativeDriver: false, // coordinate values can't use native driver
+    }).start();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [driverLocation?.latitude, driverLocation?.longitude]);
 
@@ -456,7 +505,7 @@ export function MapBackdrop({
         {/* ── Driver marker — navigation mode (arrow, flat, rotates) ─────── */}
         {driverLocation && navigationMode && (
           <Marker
-            coordinate={{ latitude: driverLocation.latitude, longitude: driverLocation.longitude }}
+            coordinate={markerCoord ?? { latitude: driverLocation.latitude, longitude: driverLocation.longitude }}
             anchor={{ x: 0.5, y: 0.5 }}
             flat
             rotation={currentBearing}
@@ -475,7 +524,7 @@ export function MapBackdrop({
         {/* ── Driver marker — idle mode (car icon) ──────────────────────── */}
         {driverLocation && !navigationMode && (
           <Marker
-            coordinate={{ latitude: driverLocation.latitude, longitude: driverLocation.longitude }}
+            coordinate={markerCoord ?? { latitude: driverLocation.latitude, longitude: driverLocation.longitude }}
             anchor={{ x: 0.5, y: 0.5 }}
             tracksViewChanges={false}
           >

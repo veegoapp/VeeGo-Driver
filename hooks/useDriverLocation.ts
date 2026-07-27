@@ -46,8 +46,8 @@ export function useDriverLocation(enabled = true): {
         const s = await Location.watchPositionAsync(
           {
             accuracy: Location.Accuracy.High,
-            timeInterval: 3000,
-            distanceInterval: 10,
+            timeInterval: 1000,
+            distanceInterval: 4,
           },
           (loc) => {
             setPosition({
