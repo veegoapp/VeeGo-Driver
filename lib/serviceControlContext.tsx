@@ -156,9 +156,11 @@ function extractCurrency(data: unknown): CurrencyConfig {
   if (data && typeof data === 'object') {
     const obj = data as Record<string, unknown>;
     const c = obj['currency'] as Record<string, unknown> | undefined;
-    if (c && typeof c.symbol === 'string') {
+    // Only accept backend currency when code is explicitly EGP.
+    // Any other value (USD, TND, SAR, AED, EUR, etc.) falls back to default.
+    if (c && typeof c.code === 'string' && c.code === 'EGP' && typeof c.symbol === 'string') {
       return {
-        code: typeof c.code === 'string' ? c.code : DEFAULT_CURRENCY.code,
+        code: c.code,
         symbol: c.symbol,
         symbolAr: typeof c.symbolAr === 'string' ? c.symbolAr : c.symbol,
       };

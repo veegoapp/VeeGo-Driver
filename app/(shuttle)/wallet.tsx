@@ -393,7 +393,7 @@ export default function ShuttleWalletScreen() {
                       {item.accountName ?? item.method}{item.maskedAccountNumber ? ` — ${item.maskedAccountNumber}` : ''}
                     </Text>
                     <Text style={[styles.txSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]} numberOfLines={1}>
-                      {new Date(item.createdAt).toLocaleDateString()}
+                      {new Date(item.createdAt).toLocaleDateString(isRTL ? 'ar-EG' : 'en-EG')}
                     </Text>
                   </View>
                   <View style={{ alignItems: 'flex-end', gap: Spacing.xs }}>

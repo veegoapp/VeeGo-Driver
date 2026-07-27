@@ -51,7 +51,7 @@ function formatDate(iso?: string): string {
 }
 
 function formatAmount(n: number): string {
-  return n.toLocaleString('en-US');
+  return n.toLocaleString('en-EG');
 }
 
 /** Normalise the server response — accepts root array, { data: [] }, or { bonusTargets: [] } */

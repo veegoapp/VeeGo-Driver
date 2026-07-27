@@ -209,6 +209,7 @@ function RideCard({
   R: 'row' | 'row-reverse';
   TA: 'left' | 'right';
 }) {
+  const { t } = useI18n();
   const isCompleted = ride.status === 'completed';
 
   const statusBg = isCompleted ? colors.secondary : '#ef444415';
@@ -268,7 +269,7 @@ function RideCard({
         {/* Fare + rating */}
         <View style={{ alignItems: isRTL ? 'flex-start' : 'flex-end', marginLeft: isRTL ? 0 : 8, marginRight: isRTL ? 8 : 0 }}>
           <Text style={[styles.fareText, { color: isCompleted ? colors.foreground : colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>
-            {isCompleted ? `${fare.toFixed(2)} DT` : '—'}
+            {isCompleted ? `${fare.toFixed(2)} ${t.egp}` : '—'}
           </Text>
           {isCompleted && ride.myRating != null && (
             <View style={[styles.starsRow, { flexDirection: R }]}>

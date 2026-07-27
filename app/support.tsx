@@ -295,7 +295,7 @@ export default function SupportScreen() {
                 {recentRides.map(ride => {
                   const isSelected = selectedTripId === ride.id;
                   const dateStr    = ride.completedAt
-                    ? new Date(ride.completedAt).toLocaleDateString()
+                    ? new Date(ride.completedAt).toLocaleDateString(isRTL ? 'ar-EG' : 'en-EG')
                     : '';
                   return (
                     <Pressable

@@ -163,11 +163,11 @@ export default function TripCompleteScreen() {
                   <Text style={[styles.cardAmountSmall, { color: '#d97706', fontFamily: 'Inter_700Bold' }]}>
                     {revenue.cashCollected.toLocaleString('ar-EG')}
                   </Text>
-                  <Text style={[styles.cardCurrency, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>EGP</Text>
+                  <Text style={[styles.cardCurrency, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>{t.egp}</Text>
                 </View>
                 {revenue.cashShortfall > 0 && (
                   <Text style={[{ fontSize: 11, color: '#ef4444', fontFamily: 'Inter_400Regular', marginTop: 2, textAlign: TA }]}>
-                    ناقص {revenue.cashShortfall} EGP من {revenue.cashExpected} EGP
+                    ناقص {revenue.cashShortfall} {t.egp} من {revenue.cashExpected} {t.egp}
                   </Text>
                 )}
               </View>
@@ -187,7 +187,7 @@ export default function TripCompleteScreen() {
                     <Text style={[styles.cardAmountSmall, { color: '#2563eb', fontFamily: 'Inter_700Bold' }]}>
                       {revenue.cardTotal.toLocaleString('ar-EG')}
                     </Text>
-                    <Text style={[styles.cardCurrency, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>EGP</Text>
+                    <Text style={[styles.cardCurrency, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>{t.egp}</Text>
                   </View>
                 </View>
               </GlassView>
@@ -207,7 +207,7 @@ export default function TripCompleteScreen() {
                     <Text style={[styles.cardAmountSmall, { color: '#16a34a', fontFamily: 'Inter_700Bold' }]}>
                       {revenue.walletTotal.toLocaleString('ar-EG')}
                     </Text>
-                    <Text style={[styles.cardCurrency, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>EGP</Text>
+                    <Text style={[styles.cardCurrency, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>{t.egp}</Text>
                   </View>
                 </View>
               </GlassView>
@@ -219,7 +219,7 @@ export default function TripCompleteScreen() {
                 إجمالي الرحلة
               </Text>
               <Text style={[styles.totalAmount, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-                {revenue.totalExpected.toLocaleString('ar-EG')} EGP
+                {revenue.totalExpected.toLocaleString('ar-EG')} {t.egp}
               </Text>
             </View>
 

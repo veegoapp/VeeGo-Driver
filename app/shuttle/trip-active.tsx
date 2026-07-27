@@ -2,7 +2,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { safeBack } from '@/lib/navUtils';
 import {
-  AlertTriangle, Check, ChevronLeft, Clock, Navigation2, Share2, Users, X,
+  AlertTriangle, Banknote, Check, ChevronLeft, Clock, Navigation2, Share2, Users, X,
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -764,9 +764,10 @@ export default function ShuttleTripActiveScreen() {
                       <Text style={[styles.passengerName, { fontFamily: 'Inter_600SemiBold', color: colors.foreground }]} numberOfLines={1}>{p.name}</Text>
                       <Text style={[styles.passengerPhone, { fontFamily: 'Inter_400Regular', color: colors.mutedForeground }]}>{p.phone}</Text>
                       {p.paymentMethod === 'cash' ? (
-                        <View style={styles.paymentCashBadge}>
+                        <View style={[styles.paymentCashBadge, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}>
+                          <Banknote size={11} color="#d97706" strokeWidth={2} />
                           <Text style={[styles.paymentBadgeText, { fontFamily: 'Inter_700Bold', color: '#d97706' }]}>
-                            💵 {p.fareAmount > 0 ? `${p.fareAmount} EGP` : 'Cash'}
+                            {p.fareAmount > 0 ? `${p.fareAmount} EGP` : 'Cash'}
                           </Text>
                         </View>
                       ) : p.paymentMethod === 'card' || p.paymentMethod === 'online' ? (

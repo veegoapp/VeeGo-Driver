@@ -109,7 +109,7 @@ export default function TripCancelScreen() {
                   textAlign: TA,
                 }]}>
                   {hasPenalty
-                    ? `Cancellation penalty: ${previewData!.penaltyAmount} EGP`
+                    ? t.cancel_penalty_preview.replace('{n}', String(previewData!.penaltyAmount))
                     : 'No penalty applies to this cancellation'}
                 </Text>
                 {previewData?.minutesUntilDeparture != null && (
@@ -183,7 +183,7 @@ export default function TripCancelScreen() {
                 {!previewLoading && hasPenalty && (
                   <View style={[styles.penaltyTag, { backgroundColor: '#FEE2E2' }]}>
                     <Text style={{ fontSize: Typography.size.xs, color: '#DC2626', fontFamily: 'Inter_700Bold' }}>
-                      {previewData!.penaltyAmount} EGP penalty
+                      {previewData!.penaltyAmount} {t.egp} penalty
                     </Text>
                   </View>
                 )}

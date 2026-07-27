@@ -641,7 +641,7 @@ export default function HomeScreen() {
                   )}
                   {activePromo.validUntil && (
                     <Text style={[styles.promoHomeExpiry, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-                      Valid until {new Date(activePromo.validUntil).toLocaleDateString()}
+                      Valid until {new Date(activePromo.validUntil).toLocaleDateString(isRTL ? 'ar-EG' : 'en-EG')}
                     </Text>
                   )}
                 </View>

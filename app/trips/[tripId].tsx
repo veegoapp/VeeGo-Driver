@@ -57,7 +57,7 @@ type Station = {
 export default function TripDetailScreen() {
   const { tripId } = useLocalSearchParams<{ tripId: string }>();
   const colors = useColors();
-  const { isRTL } = useI18n();
+  const { t, isRTL } = useI18n();
   const insets = useSafeAreaInsets();
   const topPad = insets.top;
   const queryClient = useQueryClient();
@@ -216,7 +216,7 @@ export default function TripDetailScreen() {
           <>
             {/* Stats row */}
             <GlassView style={styles.statsRow} borderRadius={20}>
-              <StatCell icon={<Banknote size={18} color={colors.primary} strokeWidth={2} />} label="Fare" value={`${fare.toFixed(2)} DT`} highlight colors={colors} />
+              <StatCell icon={<Banknote size={18} color={colors.primary} strokeWidth={2} />} label="Fare" value={`${fare.toFixed(2)} ${t.egp}`} highlight colors={colors} />
               <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
               <StatCell icon={<Ruler size={18} color={colors.mutedForeground} strokeWidth={2} />} label="Distance" value={distance > 0 ? `${distance.toFixed(1)} km` : '—'} colors={colors} />
               <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
