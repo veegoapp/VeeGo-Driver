@@ -1,0 +1,269 @@
+Task: Perform a final comprehensive audit of the VeeGo Driver App Navigation System.
+
+IMPORTANT:
+This is a FINAL AUDIT ONLY.
+
+Do NOT make code changes unless you find a critical bug that will break the application at runtime.
+
+Do NOT refactor.
+Do NOT redesign architecture.
+Do NOT add new features.
+
+The goal is to verify that all navigation phases work together correctly.
+
+==================================================
+
+CURRENT IMPLEMENTED STATE:
+
+PHASE 1 — Routing Architecture
+
+Completed:
+
+Ride / Scooter / Delivery:
+- app/ride/[rideId].tsx uses useRoadPolyline.
+- roadPolyline is passed to MapBackdrop.
+- navigationMode is enabled during:
+  - to_pickup
+  - in_trip
+
+Shuttle:
+- Existing routing system remains unchanged.
+- Shuttle uses its own segment routing.
+
+MapBackdrop:
+- Receives route data externally.
+- roadPolyline has priority over fallback routes.
+
+==================================================
+
+PHASE 2 — Navigation Smoothness
+
+Completed:
+
+hooks/useDriverLocation.ts:
+- timeInterval improved:
+  3000ms → 1000ms
+
+- distanceInterval improved:
+  10m → 4m
+
+components/MapBackdrop.native.tsx:
+- Camera animation improved.
+- Bearing smoothing added using EMA.
+- Driver marker movement uses animation between GPS points.
+
+==================================================
+
+PHASE 3 — Navigation Intelligence
+
+Completed:
+
+New file:
+hooks/useNavigationRoute.ts
+
+Responsibilities:
+- Remaining route calculation.
+- Route progress trimming.
+- Off-route detection.
+- Rerouting.
+
+Implemented behavior:
+
+Route trimming:
+- Completed route segment disappears behind driver.
+
+Off-route detection:
+- Driver distance from route checked.
+- Approximately 50m threshold.
+
+Rerouting:
+- Uses existing /directions endpoint.
+- Starts from current driver position.
+- Ends at active destination.
+
+Protection:
+- 15 second reroute cooldown.
+- Minimum 20m movement before another reroute.
+
+==================================================
+
+PHASE 4 — Navigation UX
+
+Completed:
+
+components/MapBackdrop.native.tsx:
+
+Look Ahead Camera:
+- Camera target shifted approximately 100m ahead of driver direction.
+- Driver marker stays at real coordinates.
+- More road visibility ahead.
+
+Auto Recenter:
+- Manual pan pauses follow mode.
+- 8 second timer restores follow automatically.
+- Manual recenter still works.
+
+==================================================
+
+AUDIT OBJECTIVES:
+
+Inspect the entire navigation flow and verify:
+
+==================================================
+
+1. CAMERA SYSTEM AUDIT
+
+Check:
+
+- Navigation camera behavior.
+- Follow mode.
+- Bearing handling.
+- Pitch.
+- Zoom.
+- Look Ahead offset.
+
+Verify:
+- No camera conflicts between:
+  - follow effect
+  - focusTarget
+  - manual recenter
+  - auto recenter
+
+Check:
+- Shuttle focusTarget behavior is safe.
+- Non-navigation screens are unaffected.
+
+==================================================
+
+2. ROUTE SYSTEM AUDIT
+
+Check:
+
+- useRoadPolyline flow.
+- useNavigationRoute flow.
+- Remaining route rendering.
+- Polyline updates.
+
+Verify:
+
+Ride:
+- to_pickup
+- in_trip
+
+Scooter:
+- same shared flow.
+
+Delivery:
+- same shared flow.
+
+Shuttle:
+- Existing behavior unchanged.
+
+Look for:
+- duplicated route fetching.
+- stale routes.
+- route replacement issues.
+
+==================================================
+
+3. REROUTING AUDIT
+
+Verify:
+
+- Off-route detection cannot trigger excessively.
+- Cooldown works.
+- Failed reroute keeps previous route.
+- Successful reroute updates displayed route.
+
+Check:
+- Network failure cases.
+- GPS noise cases.
+- Driver stopping cases.
+
+==================================================
+
+4. GPS AND PERFORMANCE AUDIT
+
+Inspect:
+
+- useDriverLocation.
+- Animated marker logic.
+- Camera animation frequency.
+
+Check for:
+
+- Memory leaks.
+- Unclean timers.
+- Unremoved listeners.
+- Animation buildup.
+- Excessive rerenders.
+- Battery concerns.
+
+==================================================
+
+5. EDGE CASE TEST REVIEW
+
+Analyze these scenarios:
+
+Scenario 1:
+Driver accepts ride but GPS is unavailable.
+
+Scenario 2:
+Driver accepts ride and internet disconnects.
+
+Scenario 3:
+Driver manually moves the map repeatedly.
+
+Scenario 4:
+Driver completes trip while auto-recenter timer exists.
+
+Scenario 5:
+Driver changes phases:
+to_pickup → arrived → in_trip
+
+Scenario 6:
+Shuttle trip with multiple stations.
+
+==================================================
+
+6. CODE QUALITY REVIEW
+
+Check:
+
+- React hooks rules.
+- Dependency arrays.
+- useEffect cleanup.
+- TypeScript safety.
+- Unnecessary complexity.
+
+==================================================
+
+FINAL REPORT FORMAT:
+
+Provide:
+
+1. Overall navigation system status:
+   - Ready
+   - Ready with minor issues
+   - Needs fixes
+
+2. Critical issues found.
+
+3. Non-critical improvements recommended.
+
+4. Files reviewed.
+
+5. Confirmation:
+
+- Phase 1 intact.
+- Phase 2 intact.
+- Phase 3 intact.
+- Phase 4 intact.
+- Shuttle unaffected.
+- No paid APIs added.
+- No backend changes required.
+
+IMPORTANT:
+Do not implement additional features.
+Do not continue to another phase.
+Only provide the final audit report.
