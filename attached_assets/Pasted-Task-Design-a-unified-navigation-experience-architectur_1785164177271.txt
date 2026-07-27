@@ -1,0 +1,110 @@
+Task: Design a unified navigation experience architecture for the VeeGo Driver App similar to Uber/Careem driver navigation.
+
+IMPORTANT:
+- Do NOT modify any code.
+- Do NOT create commits.
+- Do NOT implement fixes.
+- Only inspect the current codebase and provide a detailed technical plan.
+
+Context:
+VeeGo Driver App supports multiple services:
+- Ride
+- Scooter
+- Delivery
+- Shuttle
+
+The goal is NOT to build a full Google Maps navigation system with voice instructions.
+The goal is an Uber/Careem-style driver navigation experience.
+
+Required navigation experience:
+
+1. Navigation Camera:
+- Follow the driver's vehicle position.
+- Rotate camera based on driver heading/bearing.
+- Use a tilted perspective (pitch).
+- Maintain appropriate zoom.
+- Keep the vehicle positioned slightly lower on the screen (look-ahead style).
+- Smooth camera movement while driving.
+
+2. Route Display:
+Ride:
+- Before pickup:
+  Driver → Passenger pickup location.
+- After pickup:
+  Driver → Destination.
+
+Shuttle:
+- It is acceptable to show the complete fixed route between stations.
+- However, the driver should still have active navigation behavior:
+  - Vehicle marker movement.
+  - Follow camera.
+  - Bearing rotation.
+  - Ability to navigate between stations.
+
+Scooter and Delivery:
+- Should follow the same navigation architecture.
+
+3. Route Management:
+- Use a consistent route-fetching strategy across all services.
+- Avoid having Map components responsible for business logic or API calls.
+- Map components should mainly render:
+  - Map
+  - Route polyline
+  - Vehicle marker
+  - Camera behavior
+
+4. Rerouting:
+Investigate the best approach for:
+- Detecting when the driver leaves the route.
+- Requesting a new route from the current driver location.
+- Whether the existing Directions API integration is enough.
+
+5. Smooth Driver Movement:
+Investigate:
+- Current GPS update frequency.
+- Marker animation.
+- Heading smoothing.
+- Camera animation timing.
+
+6. Route Progress:
+Evaluate whether VeeGo should implement:
+- Remaining route only.
+- Removing completed route segments.
+- Keeping the full route visible.
+
+7. Current Implementation Audit:
+
+Please inspect:
+
+- components/MapBackdrop.native.tsx
+- app/ride/[rideId].tsx
+- app/shuttle/trip-active.tsx
+- scooter screens
+- delivery screens
+- hooks/useDriverLocation.ts
+- hooks/useRoadPolyline.ts
+- any map/navigation related files
+
+Answer:
+
+1. What navigation features already exist?
+2. What parts are missing?
+3. What parts are duplicated between services?
+4. What should be shared globally?
+5. What should remain service-specific?
+6. Should MapBackdrop be converted into a pure rendering component?
+7. Should a new NavigationManager / NavigationController layer be created?
+8. What is the cleanest architecture for production use?
+
+Provide:
+
+- Current architecture diagram (text format).
+- Recommended future architecture diagram.
+- List of files that would need changes.
+- Implementation phases ordered by priority.
+- Estimated complexity of each phase.
+- Risks and possible breaking changes.
+
+Do NOT write code.
+Do NOT modify files.
+Report only.
