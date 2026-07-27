@@ -16,6 +16,7 @@ import { useActiveLocationTracking } from '@/hooks/useActiveLocationTracking';
 import { useLocationBroadcast } from '@/hooks/useLocationBroadcast';
 import { useDriverLocation } from '@/hooks/useDriverLocation';
 import { useRoadPolyline } from '@/hooks/useRoadPolyline';
+import { useNavigationRoute } from '@/hooks/useNavigationRoute';
 import { endpoints } from '@/lib/api';
 import { useI18n } from '@/lib/i18nContext';
 import { useActiveSession } from '@/lib/activeSessionContext';
@@ -293,6 +294,36 @@ export default function RideScreen() {
       rideSession?.dropoff.latitude, rideSession?.dropoff.longitude]);
 
   const { coords: roadPolylineCoords } = useRoadPolyline(navWaypoints);
+
+  // ── Phase 3: navigation destination (fixed endpoint for rerouting) ───────
+  // Derived independently of driverPosition so it stays stable while driving.
+  const navDestination = useMemo(() => {
+    if (phase === 'to_pickup') {
+      const lat = rideSession?.pickup.latitude;
+      const lng = rideSession?.pickup.longitude;
+      if (lat == null || lng == null) return null;
+      return { latitude: Number(lat), longitude: Number(lng) };
+    }
+    if (phase === 'in_trip') {
+      const lat = rideSession?.dropoff.latitude;
+      const lng = rideSession?.dropoff.longitude;
+      if (lat == null || lng == null) return null;
+      return { latitude: Number(lat), longitude: Number(lng) };
+    }
+    return null;
+  }, [
+    phase,
+    rideSession?.pickup.latitude, rideSession?.pickup.longitude,
+    rideSession?.dropoff.latitude, rideSession?.dropoff.longitude,
+  ]);
+
+  const navActive = phase === 'to_pickup' || phase === 'in_trip';
+  const { remainingPolyline } = useNavigationRoute(
+    roadPolylineCoords,
+    driverPosition,
+    navDestination,
+    navActive,
+  );
 
   // All hooks called above — safe to short-circuit for blocked service.
   // A non-completed ride keeps the driver in the ride flow regardless of
@@ -597,7 +628,7 @@ export default function RideScreen() {
           ? { latitude: Number(dropoffLat), longitude: Number(dropoffLng) }
           : undefined}
         driverLocation={driverPosition ?? undefined}
-        roadPolyline={roadPolylineCoords ?? undefined}
+        roadPolyline={remainingPolyline ?? undefined}
         navigationMode={phase === 'to_pickup' || phase === 'in_trip'}
       />
 

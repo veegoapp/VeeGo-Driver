@@ -10,6 +10,8 @@ export { useRideSocket } from './useRideSocket';
 export type { RideRequest } from './useRideSocket';
 export { useRoadEta } from './useRoadEta';
 export type { RoadEtaResult } from './useRoadEta';
+export { useNavigationRoute } from './useNavigationRoute';
+export type { NavigationRouteResult } from './useNavigationRoute';
 export { useRoadPolyline } from './useRoadPolyline';
 export type { RoadPolylineResult } from './useRoadPolyline';
 export { useServiceGuard } from './useServiceGuard';
