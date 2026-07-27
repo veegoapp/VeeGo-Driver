@@ -1,0 +1,141 @@
+I need a complete Currency Audit for the Driver App only.
+
+Context:
+VeeGo is an Egypt-only ride/shuttle platform.
+The official currency for the entire system must be EGP only.
+There should be NO USD, TND (Tunisian Dinar), SAR, AED, EUR, or any other currency anywhere in the Driver App.
+
+IMPORTANT:
+Do NOT modify any code.
+Do NOT fix anything yet.
+This task is investigation only.
+
+Your goal:
+Trace every place in the Driver App where money/currency is displayed, formatted, stored, or received from APIs.
+
+Audit the entire Driver App and report:
+
+1) Hardcoded currencies
+Search for:
+- $
+- USD
+- TND
+- DT
+- Dinar
+- SAR
+- AED
+- EUR
+- €
+- any currency symbols
+- hardcoded money strings
+
+Report:
+- File path
+- Line number
+- Current behavior
+- Expected EGP behavior
+
+2) Money formatting system
+Find:
+- currency formatter utilities
+- Intl.NumberFormat usage
+- toLocaleString usage
+- custom money formatting functions
+
+Check:
+- Does it always use EGP?
+- Does it show the correct Arabic/English format?
+- Does it depend on device locale incorrectly?
+
+3) Driver earnings
+Audit all screens related to:
+- Earnings
+- Wallet
+- Balance
+- Trips income
+- Daily/weekly/monthly reports
+- Commission
+- Bonuses
+- Cash collection
+
+Verify:
+- Currency shown
+- Source of the amount
+- API response field used
+- Any missing currency handling
+
+4) Payment-related screens
+Audit:
+- Cash rides
+- Wallet
+- Payouts
+- Settlements
+- Transactions
+
+Check if:
+- Any currency is assumed from device locale
+- Any incorrect symbol appears
+- Any amount is displayed without currency label
+
+5) API responses consumed by Driver App
+Trace all endpoints returning money values.
+
+For every endpoint:
+- Endpoint name
+- Response currency field if exists
+- Whether app trusts backend currency or replaces it locally
+- Any risky assumptions
+
+6) Localization
+Check:
+- English translations
+- Arabic translations
+
+Search for:
+- currency names
+- currency symbols
+- money-related strings
+
+Verify they are EGP-only.
+
+7) Compare with backend expectation
+Backend is EGP-only.
+Identify any mismatch where:
+- Backend sends EGP but app displays another currency
+- App expects another currency format
+- Missing currency causes wrong display
+
+8) Final report format
+
+Provide:
+
+A) Executive summary:
+- Is Driver App fully EGP-only?
+- Yes/No
+
+B) Severity table:
+Severity:
+🔴 Critical
+🟠 High
+🟡 Medium
+🟢 Low
+
+Columns:
+Issue
+File
+Problem
+Current behavior
+Expected behavior
+Severity
+
+C) Files requiring changes (ONLY list, don't modify)
+
+D) Confirmation:
+Explicitly confirm whether:
+- Driver earnings are EGP
+- Wallet is EGP
+- Cash collection is EGP
+- No foreign currencies exist
+
+Do not make assumptions.
+Trace the actual code.
