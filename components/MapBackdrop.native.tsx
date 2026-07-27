@@ -50,6 +50,33 @@ function smoothAngle(prev: number | null, next: number, alpha: number): number {
   return (prev + alpha * diff + 360) % 360;
 }
 
+/**
+ * Returns a coordinate shifted from `origin` by `distanceM` metres in the
+ * direction of `bearingDeg` (0 = north, clockwise). Used to move the camera
+ * centre ahead of the driver so more road is visible in front of the vehicle.
+ */
+function offsetCoord(
+  origin: { latitude: number; longitude: number },
+  bearingDeg: number,
+  distanceM: number,
+): { latitude: number; longitude: number } {
+  const R = 6_371_000;
+  const d = distanceM / R;
+  const b = (bearingDeg * Math.PI) / 180;
+  const lat1 = (origin.latitude * Math.PI) / 180;
+  const lng1 = (origin.longitude * Math.PI) / 180;
+  const lat2 = Math.asin(
+    Math.sin(lat1) * Math.cos(d) + Math.cos(lat1) * Math.sin(d) * Math.cos(b),
+  );
+  const lng2 =
+    lng1 +
+    Math.atan2(
+      Math.sin(b) * Math.sin(d) * Math.cos(lat1),
+      Math.cos(d) - Math.sin(lat1) * Math.sin(lat2),
+    );
+  return { latitude: (lat2 * 180) / Math.PI, longitude: (lng2 * 180) / Math.PI };
+}
+
 function surgeColor(multiplier: number): string {
   if (multiplier >= 2.0) return 'rgba(239,68,68,0.14)';
   if (multiplier >= 1.5) return 'rgba(249,115,22,0.14)';
@@ -109,6 +136,10 @@ export function MapBackdrop({
   // Animated marker position — driven by Animated.ValueXY for smooth interpolation
   const animMarkerRef = useRef<Animated.ValueXY | null>(null);
   const [markerCoord, setMarkerCoord] = useState<{ latitude: number; longitude: number } | null>(null);
+  // Ref mirror of the navigationMode prop — lets callbacks read current value without closure capture
+  const navigationModeRef = useRef(navigationMode);
+  // Auto-recenter timer handle — cleared on re-pan, nav exit, or unmount
+  const autoRecenterTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Theme management ─────────────────────────────────────────────────────
   // savedTheme: explicit user choice persisted to AsyncStorage.
@@ -192,12 +223,41 @@ export function MapBackdrop({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [driverLocation?.latitude, driverLocation?.longitude]);
 
-  // ── Navigation mode camera follow ────────────────────────────────────────
+  // ── Sync navigationMode prop into ref (used by stable callbacks) ────────
+  useEffect(() => {
+    navigationModeRef.current = navigationMode;
+  }, [navigationMode]);
+
+  // ── Cancel auto-recenter timer when nav mode ends or on unmount ──────────
+  useEffect(() => {
+    if (!navigationMode) {
+      if (autoRecenterTimerRef.current !== null) {
+        clearTimeout(autoRecenterTimerRef.current);
+        autoRecenterTimerRef.current = null;
+      }
+    }
+    return () => {
+      if (autoRecenterTimerRef.current !== null) {
+        clearTimeout(autoRecenterTimerRef.current);
+        autoRecenterTimerRef.current = null;
+      }
+    };
+  }, [navigationMode]);
+
+  // ── Navigation mode camera follow (look-ahead offset) ────────────────────
+  // The camera centre is placed 100 m ahead of the driver in the direction of
+  // currentBearing so the driver marker sits in the lower portion of the
+  // visible map and more road is shown ahead — the Uber/Careem look.
   useEffect(() => {
     if (!navigationMode || !driverLocation || userPannedRef.current || !mapReady) return;
+    const center = offsetCoord(
+      { latitude: driverLocation.latitude, longitude: driverLocation.longitude },
+      currentBearing,
+      100,
+    );
     mapRef.current?.animateCamera(
       {
-        center: { latitude: driverLocation.latitude, longitude: driverLocation.longitude },
+        center,
         heading: currentBearing,
         pitch: 50,
         zoom: 16,
@@ -266,22 +326,49 @@ export function MapBackdrop({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pickup?.latitude, pickup?.longitude, dropoff?.latitude, dropoff?.longitude, navigationMode]);
 
-  // ── User pan detection ───────────────────────────────────────────────────
+  // ── User pan detection + auto-recenter timer ─────────────────────────────
   const handlePanDrag = useCallback(() => {
     if (!userPannedRef.current) {
       userPannedRef.current = true;
       setUserPanned(true);
     }
+    // Reset the timer on every pan gesture so 8 s is always counted from
+    // the last interaction, not from when the user first touched the map.
+    if (autoRecenterTimerRef.current !== null) {
+      clearTimeout(autoRecenterTimerRef.current);
+      autoRecenterTimerRef.current = null;
+    }
+    if (navigationModeRef.current) {
+      autoRecenterTimerRef.current = setTimeout(() => {
+        autoRecenterTimerRef.current = null;
+        userPannedRef.current = false;
+        setUserPanned(false); // re-enables camera follow on the next GPS tick
+      }, 8_000);
+    }
   }, []);
 
-  // ── Recenter ─────────────────────────────────────────────────────────────
+  // ── Recenter (manual button + called by auto-recenter) ───────────────────
   const handleRecenter = useCallback(() => {
+    // Cancel any pending auto-recenter timer since we're recentering now
+    if (autoRecenterTimerRef.current !== null) {
+      clearTimeout(autoRecenterTimerRef.current);
+      autoRecenterTimerRef.current = null;
+    }
     userPannedRef.current = false;
     setUserPanned(false);
     if (!driverLocation) return;
+    // In nav mode use the same look-ahead offset as the follow camera so the
+    // view is identical whether the user pressed Recenter or it fired automatically.
+    const center = navigationMode
+      ? offsetCoord(
+          { latitude: driverLocation.latitude, longitude: driverLocation.longitude },
+          currentBearing,
+          100,
+        )
+      : { latitude: driverLocation.latitude, longitude: driverLocation.longitude };
     mapRef.current?.animateCamera(
       {
-        center: { latitude: driverLocation.latitude, longitude: driverLocation.longitude },
+        center,
         heading: navigationMode ? currentBearing : 0,
         pitch: navigationMode ? 50 : 0,
         zoom: 16,
