@@ -136,13 +136,13 @@
   <div class="tag">VeeGo &middot; splash concept &middot; prototype only</div>
 
   <div class="stage">
-    <canvas id="orbit" aria-label="VeeGo splash animation concept: a Navigation arrow sweeping across the original 2D logo card, bottom-left to top-right" role="img"></canvas>
+    <canvas id="orbit" aria-label="VeeGo splash animation concept: a hollow Navigation arrow flying diagonally through the original 2D logo card, entering from the bottom and exiting the top" role="img"></canvas>
   </div>
 
   <div class="caption">
-    <div class="title">Navigation arrow sweeping across the original 2D logo card</div>
-    <div class="meta" id="meta">loop 2.4s &middot; bottom-left &rarr; top-right &rarr; reset</div>
-    <div class="note">Same flat rounded-square card as the current splash icon. A faint diagonal channel is etched into the card itself; the arrow rides along it as a glowing accent-green loading sweep, then fades and resets — the arrow reads as part of the card, not an object floating above it.</div>
+    <div class="title">Hollow Navigation arrow flying through the original 2D logo card</div>
+    <div class="meta" id="meta">loop 2.2s &middot; enters bottom-left &rarr; exits top-right</div>
+    <div class="note">Same flat rounded-square card as the current splash icon, no drawn track. The arrow itself is hollow (stroke only, like the real icon), larger, and simply isn't rendered outside the card's silhouette — so it materializes out of nothing as it crosses the bottom edge and vanishes the same way at the top, on a continuous, constant-speed loop.</div>
   </div>
 </div>
 
@@ -167,39 +167,25 @@
 
   var CARD_BASE = '#1e1e28';
   var ACCENT = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#55c49a';
-  var DURATION = 2400; // ms per full loop
+  var DURATION = 2200; // ms per full loop
 
-  // Diagonal travel channel, inset from the card's corners.
-  var PAD = CARD * 0.24;
-  var BL = { x: cardX + PAD, y: cardY + CARD - PAD };
-  var TR = { x: cardX + CARD - PAD, y: cardY + PAD };
+  // The arrow travels the card's own bottom-left-to-top-right diagonal,
+  // extended well past both corners. Nothing is drawn outside the card's
+  // rounded silhouette (see the clip in drawArrow), so the arrow simply
+  // isn't there yet while off past the bottom-left, and isn't there
+  // anymore once it clears the top-right — it reads as materializing out
+  // of nothing at the bottom edge and vanishing into nothing at the top.
+  var DIAG = Math.SQRT1_2; // cos/sin(45deg)
+  var MARGIN = CARD * 0.7;
+  var START = { x: cardX - DIAG * MARGIN, y: cardY + CARD + DIAG * MARGIN };
+  var END = { x: cardX + CARD + DIAG * MARGIN, y: cardY - DIAG * MARGIN };
 
-  // Exact Navigation icon polygon (lucide-react-native), 24x24 space.
+  // Exact Navigation icon polygon (lucide-react-native), 24x24 space —
+  // drawn hollow (stroke only), matching the real app icon's rendering.
   var ARROW_POINTS = [[3, 11], [22, 2], [13, 21], [11, 13]];
   // The icon's default heading (tip at (22,2), pointing NE) already matches
   // the bottom-left-to-top-right travel direction exactly, so it needs no
-  // extra rotation to "aim" along the channel.
-
-  function easeInOutCubic(x) {
-    return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
-  }
-
-  // Phased loop: fade in -> sweep BL to TR -> hold/glow at TR -> fade out.
-  function phase(p) {
-    if (p < 0.08) {
-      return { opacity: p / 0.08, progress: 0, pulse: 0 };
-    }
-    if (p < 0.75) {
-      var local = (p - 0.08) / (0.75 - 0.08);
-      return { opacity: 1, progress: easeInOutCubic(local), pulse: 0 };
-    }
-    if (p < 0.88) {
-      var hold = (p - 0.75) / (0.88 - 0.75);
-      return { opacity: 1, progress: 1, pulse: Math.sin(hold * Math.PI) };
-    }
-    var fade = (p - 0.88) / (1 - 0.88);
-    return { opacity: 1 - fade, progress: 1, pulse: 0 };
-  }
+  // extra rotation to "aim" along the path.
 
   function lerp(a, b, t) { return a + (b - a) * t; }
 
@@ -235,66 +221,34 @@
     ctx.restore();
   }
 
-  function drawChannel(progress, pulse) {
+  function drawArrow(p) {
+    var pos = { x: lerp(START.x, END.x, p), y: lerp(START.y, END.y, p) };
+    var scale = 2.7; // roughly double the previous filled version's size
+
     ctx.save();
+    // Clip to the card's own silhouette: the arrow only ever renders while
+    // physically inside it, so it appears crossing the bottom edge and
+    // disappears crossing the top edge, with nothing drawn outside.
     roundedRectPath(cardX, cardY, CARD, CARD, CARD_RADIUS);
     ctx.clip();
 
-    // Static groove etched into the card — always present, part of its design.
-    ctx.lineCap = 'round';
-    ctx.lineWidth = 7;
-    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-    ctx.beginPath();
-    ctx.moveTo(BL.x, BL.y);
-    ctx.lineTo(TR.x, TR.y);
-    ctx.stroke();
-    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(BL.x, BL.y + 1.5);
-    ctx.lineTo(TR.x, TR.y + 1.5);
-    ctx.stroke();
-
-    // Animated fill: how far the sweep has travelled along the channel.
-    if (progress > 0.001) {
-      var head = { x: lerp(BL.x, TR.x, progress), y: lerp(BL.y, TR.y, progress) };
-      ctx.lineWidth = 5;
-      ctx.strokeStyle = ACCENT;
-      ctx.shadowColor = ACCENT;
-      ctx.shadowBlur = 10 + pulse * 6;
-      ctx.beginPath();
-      ctx.moveTo(BL.x, BL.y);
-      ctx.lineTo(head.x, head.y);
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-    }
-
-    ctx.restore();
-  }
-
-  function drawArrow(progress, opacity, pulse) {
-    var pos = { x: lerp(BL.x, TR.x, progress), y: lerp(BL.y, TR.y, progress) };
-    var scale = (1 + pulse * 0.18) * 1.35;
-
-    ctx.save();
     ctx.translate(pos.x, pos.y);
     ctx.scale(scale, scale);
     ctx.translate(-12, -12); // icon centroid in its own 24x24 space
 
-    ctx.globalAlpha = opacity;
     ctx.shadowColor = ACCENT;
-    ctx.shadowBlur = 8 + pulse * 8;
+    ctx.shadowBlur = 5;
     ctx.beginPath();
     ctx.moveTo(ARROW_POINTS[0][0], ARROW_POINTS[0][1]);
     for (var i = 1; i < ARROW_POINTS.length; i++) {
       ctx.lineTo(ARROW_POINTS[i][0], ARROW_POINTS[i][1]);
     }
     ctx.closePath();
-    ctx.fillStyle = '#ffffff';
-    ctx.fill();
+    // Hollow, matching the real app icon: stroke only, no fill.
     ctx.lineJoin = 'round';
-    ctx.lineWidth = 1.4;
-    ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+    ctx.lineCap = 'round';
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#ffffff';
     ctx.stroke();
     ctx.restore();
   }
@@ -303,10 +257,7 @@
     ctx.clearRect(0, 0, LOGICAL, LOGICAL);
     drawCardShadow();
     drawCard();
-    drawChannel(phase(p).progress, phase(p).pulse);
-
-    var ph = phase(p);
-    if (ph.opacity > 0.001) drawArrow(ph.progress, ph.opacity, ph.pulse);
+    drawArrow(p);
   }
 
   var params = new URLSearchParams(location.search);
@@ -316,9 +267,9 @@
   if (staticFrame !== null) {
     render(Math.max(0, Math.min(1, parseFloat(staticFrame))));
   } else if (reduceMotion) {
-    render(0.4);
+    render(0.5);
     var noteEl = document.querySelector('.note');
-    if (noteEl) noteEl.textContent = 'Reduced motion is on, so the sweep is paused mid-travel along the channel.';
+    if (noteEl) noteEl.textContent = 'Reduced motion is on, so the arrow is paused mid-flight through the card.';
   } else {
     var start = null;
     function tick(ts) {
