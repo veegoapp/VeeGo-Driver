@@ -11,11 +11,6 @@
     "updates": {
       "enabled": false
     },
-    "splash": {
-      "image": "./assets/images/icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#1B1F2E"
-    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.veego.driver"

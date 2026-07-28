@@ -16,7 +16,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import { Stack, useRouter, useSegments } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect } from 'react';
 import { Alert, Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -38,8 +37,6 @@ import { SOCKET_EVENTS } from '@/constants/socketEvents';
 import { deleteToken, deleteRefreshToken } from '@/lib/auth';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { ServerStatusBanner } from '@/components/ServerStatusBanner';
-
-SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -358,12 +355,6 @@ export default function RootLayout() {
       });
     }
   }, []);
-
-  useEffect(() => {
-    if (fontsLoaded || fontError) {
-      SplashScreen.hideAsync();
-    }
-  }, [fontsLoaded, fontError]);
 
   if (!fontsLoaded && !fontError) return null;
 
