@@ -136,10 +136,17 @@ export default function HomeScreen() {
   const { session: activeSession, initialized: activeSessionInitialized } = useActiveSession();
   useEffect(() => {
     if (!activeSessionInitialized) return;
+    // Only redirect while Home actually has focus (real recovery: cold start,
+    // reconnect, or backing out to Home while a session is still active). If
+    // the ride screen already has focus — e.g. right after the driver's own
+    // accept, before this session:snapshot arrives — Home is already where
+    // it would be redirecting from, so skip to avoid a duplicate navigation
+    // into a second ride-screen instance with its own duplicate listeners.
+    if (!homeFocused) return;
     if (activeSession?.sessionType === 'ride') {
       router.replace(`/ride/${activeSession.rideId}`);
     }
-  }, [activeSessionInitialized, activeSession]);
+  }, [activeSessionInitialized, activeSession, homeFocused]);
 
   const queryClient = useQueryClient();
 
@@ -261,6 +268,11 @@ export default function HomeScreen() {
   }, [online]);
 
   const showRequest = (r: RideRequest) => {
+    // Ignore an overlapping ride:offer while one is already showing — the
+    // first offer stays active until accepted, declined, expired, or
+    // dismissed, instead of being silently replaced (and left un-declined).
+    if (request !== null) return;
+
     // Stop any existing timer before showing new request
     timerRef.current?.stop();
     if (countdownRef.current) clearInterval(countdownRef.current);
@@ -307,7 +319,9 @@ export default function HomeScreen() {
   }, []);
 
   const handleOfferExpired = useCallback(() => {
-    dismissRequestRef.current?.();
+    // Server already expired the offer — clear local state only, no decline
+    // call (mirrors handleRideNoLongerAvailable's silent-dismiss path).
+    dismissSilentlyRef.current?.();
   }, []);
 
   const handleRideNoLongerAvailable = useCallback(() => {
@@ -546,8 +560,17 @@ export default function HomeScreen() {
         router.push(`/ride/${rideId}`);
       });
     } catch {
+      // Backend rejected the accept (ride already taken/unavailable, etc.) —
+      // the countdown/timer above are already stopped, so leaving `request`
+      // set would freeze a dead offer card. Clear it (no decline call — the
+      // ride is already invalid) so the driver is immediately ready for the
+      // next offer, instead of restarting a countdown for a rejected ride.
       setAcceptingRide(false);
       showToastRef.current?.('Failed to accept ride. Please try again.', 'warning');
+      timerAnim.setValue(0);
+      Animated.timing(sheetAnim, { toValue: 300, duration: 250, useNativeDriver: true }).start(() => {
+        setRequest(null);
+      });
     }
   };
 
