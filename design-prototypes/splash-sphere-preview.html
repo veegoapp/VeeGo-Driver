@@ -141,7 +141,7 @@
 
   <div class="caption">
     <div class="title">Hollow Navigation arrow flying through the original 2D logo card</div>
-    <div class="meta" id="meta">loop 2.2s &middot; enters bottom-left &rarr; exits top-right</div>
+    <div class="meta" id="meta">loop 3.1s &middot; enters bottom-left &rarr; exits top-right</div>
     <div class="note">Same flat rounded-square card as the current splash icon, no drawn track. The arrow itself is hollow (stroke only, like the real icon), larger, and simply isn't rendered outside the card's silhouette — so it materializes out of nothing as it crosses the bottom edge and vanishes the same way at the top, on a continuous, constant-speed loop.</div>
   </div>
 </div>
@@ -167,7 +167,7 @@
 
   var CARD_BASE = '#1e1e28';
   var ACCENT = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#55c49a';
-  var DURATION = 2200; // ms per full loop
+  var DURATION = 3080; // ms per full loop (40% slower)
 
   // The arrow travels the card's own bottom-left-to-top-right diagonal,
   // extended well past both corners. Nothing is drawn outside the card's
@@ -223,7 +223,7 @@
 
   function drawArrow(p) {
     var pos = { x: lerp(START.x, END.x, p), y: lerp(START.y, END.y, p) };
-    var scale = 2.7; // roughly double the previous filled version's size
+    var scale = 3.51; // 30% larger than the previous size
 
     ctx.save();
     // Clip to the card's own silhouette: the arrow only ever renders while
