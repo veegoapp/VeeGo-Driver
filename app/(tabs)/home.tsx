@@ -159,13 +159,23 @@ export default function HomeScreen() {
   // One-time sync of local `online` state from the driver's real backend
   // status (already fetched via driver-checkin-status). Fixes Home showing
   // "Offline" after a fresh mount (e.g. returning from a completed ride)
-  // when the backend status was never actually changed.
+  // when the backend status was never actually changed. Also ensures the
+  // background GPS task is actually running when the server says the driver
+  // is online — a fresh Home mount otherwise leaves DRIVER_LOCATION_TASK
+  // unregistered until the driver manually retoggles.
   useEffect(() => {
     if (onlineSyncedRef.current) return;
     const status = checkinStatusRaw as { isOnline?: boolean } | undefined;
     if (status?.isOnline == null) return;
     onlineSyncedRef.current = true;
     setOnline(status.isOnline);
+    if (status.isOnline) {
+      TaskManager.isTaskRegisteredAsync(DRIVER_LOCATION_TASK)
+        .then((isRegistered) => {
+          if (!isRegistered) startLocationTracking();
+        })
+        .catch(() => {});
+    }
   }, [checkinStatusRaw]);
 
   useEffect(() => {
