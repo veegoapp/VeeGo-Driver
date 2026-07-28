@@ -140,9 +140,9 @@
   </div>
 
   <div class="caption">
-    <div class="title">Navigation arrow orbiting a 3D VeeGo sphere</div>
+    <div class="title">Navigation arrow tracing the surface of a 3D VeeGo sphere</div>
     <div class="meta" id="meta">loop 4.2s &middot; bottom-left &rarr; top-right &rarr; loop</div>
-    <div class="note">Front pass (bottom-left to top-right) renders above the sphere at full brightness; the return pass dims and recedes behind the sphere, then re-emerges — a continuous loading loop.</div>
+    <div class="note">The arrow hugs the sphere's own curved surface — visible and bright as it crosses the near face from bottom-left to top-right, then dims and disappears behind the sphere on the return pass before re-emerging — a continuous loading loop.</div>
   </div>
 </div>
 
@@ -159,7 +159,11 @@
 
   var cx = LOGICAL / 2, cy = LOGICAL / 2;
   var SPHERE_R = 92;
-  var ORBIT_RX = 152, ORBIT_RY = 66;
+  // Path is a great circle drawn ON the sphere (not an outer ring): its two
+  // "equator crossing" points sit exactly on the rim (radius = SPHERE_R),
+  // and the steep tilt (small ORBIT_RY) makes it hug the curved surface as
+  // it crosses from bottom-left, dips across the face, to top-right.
+  var ORBIT_RX = SPHERE_R, ORBIT_RY = SPHERE_R * 0.42;
   var ROT = -Math.PI / 4; // -45deg: major axis runs bottom-left to top-right
   var COS = Math.cos(ROT), SIN = Math.sin(ROT);
   var DURATION = 4200; // ms per full loop
@@ -203,17 +207,6 @@
     ctx.beginPath();
     ctx.arc(cx, sy, SPHERE_R * 1.05, 0, Math.PI * 2);
     ctx.fill();
-    ctx.restore();
-  }
-
-  function drawOrbitGuide() {
-    ctx.save();
-    ctx.strokeStyle = 'rgba(120,130,150,0.16)';
-    ctx.setLineDash([3, 7]);
-    ctx.lineWidth = 1.2;
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, ORBIT_RX, ORBIT_RY, ROT, 0, Math.PI * 2);
-    ctx.stroke();
     ctx.restore();
   }
 
@@ -273,7 +266,7 @@
     ctx.save();
     ctx.translate(pos.x, pos.y);
     ctx.rotate(heading - ARROW_DEFAULT_HEADING);
-    ctx.scale(scale * 0.78, scale * 0.78);
+    ctx.scale(scale * 1.25, scale * 1.25);
     ctx.translate(-12, -12); // icon centroid in its own 24x24 space
 
     ctx.globalAlpha = opacity;
@@ -297,7 +290,6 @@
   function render(p) {
     ctx.clearRect(0, 0, LOGICAL, LOGICAL);
     drawGroundShadow();
-    drawOrbitGuide();
 
     var front = depthOf(p) >= 0;
     if (!front) drawArrow(p);
