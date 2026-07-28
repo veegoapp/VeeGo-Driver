@@ -1,18 +1,16 @@
 import { Navigation } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Redirect, router } from 'expo-router';
-import { ArrowRight, Shield, TrendingUp, Zap } from 'lucide-react-native';
+import { Redirect } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
-  Platform,
-  Pressable,
+  Dimensions,
+  Easing,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { Animation } from '@/constants/animations';
 import { useI18n } from '@/lib/i18nContext';
@@ -20,26 +18,21 @@ import { useService } from '@/lib/serviceContext';
 import { useAuth } from '@/lib/authContext';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
-import { Radius } from '@/constants/radius';
-import { Shadows } from '@/constants/shadows';
 
-const FEATURES = [
-  { Icon: TrendingUp, label: 'Real-time earnings & instant payouts' },
-  { Icon: Zap, label: 'Smart ride matching, fewer empty miles' },
-  { Icon: Shield, label: '24/7 driver support & safety toolkit' },
-] as const;
+const { width } = Dimensions.get('window');
 
 const ONBOARDING_KEY = 'veego_has_seen_onboarding';
 
 export default function SplashScreen() {
   const colors = useColors();
-  const insets = useSafeAreaInsets();
   const {} = useService();
   const { language, isLanguageLoading } = useI18n();
   const { token, isLoading: authLoading } = useAuth();
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
-  const logoScale = useRef(new Animated.Value(0.7)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(0.88)).current;
+  const logoRotate = useRef(new Animated.Value(0)).current;
+  const barWidth = useRef(new Animated.Value(0)).current;
+  const barOpacity = useRef(new Animated.Value(0)).current;
 
   // First-launch onboarding gate — checked unconditionally (before any early
   // return below) so this hook always fires in the same order every render.
@@ -64,9 +57,23 @@ export default function SplashScreen() {
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: false }),
-      Animated.timing(slideAnim, { toValue: 0, duration: Animation.duration.slow, useNativeDriver: false }),
-      Animated.spring(logoScale, { toValue: 1, stiffness: 200, damping: 18, useNativeDriver: false }),
+      Animated.spring(opacity, { toValue: 1, damping: 22, stiffness: 100, useNativeDriver: true }),
+      Animated.spring(scale, { toValue: 1, damping: 22, stiffness: 100, useNativeDriver: true }),
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(logoRotate, { toValue: 8, duration: 1800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+          Animated.timing(logoRotate, { toValue: -8, duration: 1800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+          Animated.timing(logoRotate, { toValue: 0, duration: Animation.duration.slower, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        ])
+      ),
+      Animated.sequence([
+        Animated.delay(400),
+        Animated.timing(barOpacity, { toValue: 1, duration: Animation.duration.normal, useNativeDriver: false }),
+      ]),
+      Animated.sequence([
+        Animated.delay(500),
+        Animated.timing(barWidth, { toValue: width * 0.55, duration: 1400, easing: Easing.inOut(Easing.ease), useNativeDriver: false }),
+      ]),
     ]).start();
   }, []);
 
@@ -86,91 +93,42 @@ export default function SplashScreen() {
     return <Redirect href="/onboarding" />;
   }
 
-  const topPad = insets.top;
-  const botPad = insets.bottom;
-return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <LinearGradient
-        colors={['rgba(42,58,90,0.4)', 'transparent']}
-        style={StyleSheet.absoluteFill}
-        pointerEvents="none"
-      />
+  const rotateDeg = logoRotate.interpolate({ inputRange: [-8, 8], outputRange: ['-8deg', '8deg'] });
 
-      <Animated.View style={[styles.content, {
-        paddingTop: topPad + 20,
-        paddingBottom: botPad + 10,
-        opacity: fadeAnim,
-        transform: [{ translateY: slideAnim }],
-      }]}>
-        <Animated.View style={[styles.logoRow, { transform: [{ scale: logoScale }] }]}>
-          <View style={styles.logoIcon}>
+  return (
+    <LinearGradient colors={colors.gradientPrimary} style={styles.root}>
+      <Animated.View style={[styles.content, { opacity, transform: [{ scale }] }]}>
+        <Animated.View style={[styles.iconWrap, { transform: [{ rotate: rotateDeg }] }]}>
+          <View style={styles.iconInner}>
             <Navigation size={32} color="#ffffff" />
           </View>
-          <View>
-            <Text style={[styles.logoName, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>Vee<Text style={{ color: '#55c49a' }}>Go</Text></Text>
-            <Text style={[styles.logoSub, { color: '#1e1e28', fontFamily: 'Inter_700Bold' }]}>DRIVER</Text>
-          </View>
+          <View style={styles.iconGlow} />
         </Animated.View>
-
-        <View style={{ marginTop: 64 }}>
-          <Text style={[styles.headline, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-            Drive.{'\n'}Earn.
-          </Text>
-          <Text style={[styles.headlineAccent, { color: '#1e1e28', fontFamily: 'Inter_700Bold' }]}>
-            Move smarter.
-          </Text>
-          <Text style={[styles.subtitle, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-            Premium driver companion for the VeeGo platform. Built for the road.
-          </Text>
+        <Text style={styles.wordmark}>Vee<Text style={{ color: colors.accent }}>Go</Text></Text>
+        <Text style={styles.tagline}>DRIVER</Text>
+        <View style={[styles.barWrap, { backgroundColor: colors.border }]}>
+          <Animated.View style={[styles.bar, { width: barWidth, opacity: barOpacity, backgroundColor: colors.accent }]} />
         </View>
-
-        <View style={{ marginTop: 48, gap: 10 }}>
-          {FEATURES.map((f) => (
-            <View key={f.label} style={[styles.featureCard, { backgroundColor: colors.glass, borderColor: colors.border }]}>
-              <View style={[styles.featureIcon, { backgroundColor: 'rgba(30,30,40,0.08)' }]}>
-                <f.Icon size={18} color="#1e1e28" strokeWidth={2} />
-              </View>
-              <Text style={[styles.featureLabel, { color: colors.foreground, fontFamily: 'Inter_500Medium' }]}>{f.label}</Text>
-            </View>
-          ))}
-        </View>
-
-        <View style={{ flex: 1 }} />
-
-        <View style={{ marginTop: 40, gap: 10 }}>
-          <Pressable
-            onPress={() => router.push('/login')}
-            style={({ pressed }) => [styles.ctaBtn, { opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] }]}
-          >
-            <View style={styles.ctaBtnInner}>
-              <Text style={[styles.ctaBtnText, { color: 'white', fontFamily: 'Inter_700Bold' }]}>Start driving</Text>
-              <ArrowRight size={20} color="white" strokeWidth={2} />
-            </View>
-          </Pressable>
-</View>
       </Animated.View>
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  content: { flex: 1, paddingHorizontal: Spacing.xl },
-  logoRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
-  logoIcon: {
-    width: 56, height: 56, borderRadius: 20, backgroundColor: '#1e1e28',
+  root: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  content: { alignItems: 'center', gap: Spacing.lg },
+  iconWrap: { position: 'relative', width: 100, height: 100, alignItems: 'center', justifyContent: 'center' },
+  iconInner: {
+    width: 80, height: 80, borderRadius: 28, backgroundColor: '#1e1e28',
     alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.22, shadowRadius: 24, elevation: Shadows.large.elevation,
+    shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 14 }, shadowOpacity: 0.25, shadowRadius: 32, elevation: 10,
   },
-  logoName: { fontSize: 30, letterSpacing: -0.5 },
-  logoSub: { fontSize: 11, letterSpacing: 3.5, opacity: 0.6 },
-  headline: { fontSize: 48, lineHeight: 52, letterSpacing: -1 },
-  headlineAccent: { fontSize: 48, lineHeight: 52, letterSpacing: -1, opacity: 0.5 },
-  subtitle: { fontSize: 15, marginTop: 20, lineHeight: 24 },
-  featureCard: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, borderRadius: Radius.lg, borderWidth: 1 },
-  featureIcon: { width: 36, height: 36, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
-  featureLabel: { fontSize: Typography.size.sm, flex: 1 },
-  ctaBtn: { borderRadius: Radius.lg, overflow: 'hidden', elevation: Shadows.large.elevation, shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 16 },
-  ctaBtnInner: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm, backgroundColor: '#1e1e28', borderRadius: Radius.lg },
-  ctaBtnText: { fontSize: Typography.size.md },
+  iconGlow: {
+    position: 'absolute', width: 100, height: 100, borderRadius: 50,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  wordmark: { fontSize: 46, fontWeight: Typography.weight.bold, color: '#ffffff', letterSpacing: -2.5, fontFamily: 'Inter_700Bold' },
+  tagline: { fontSize: 13, color: 'rgba(255,255,255,0.7)', letterSpacing: 3, fontFamily: 'Inter_700Bold' },
+  barWrap: { width: 220, height: 4, borderRadius: 2, overflow: 'hidden', marginTop: Spacing.sm },
+  bar: { height: 4, borderRadius: 2 },
 });
