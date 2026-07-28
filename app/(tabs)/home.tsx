@@ -502,6 +502,19 @@ export default function HomeScreen() {
         setLocationError(null);
       }
       setOnline(next);
+      // Keep the cached driver-checkin-status in sync with what we just told
+      // the server. Without this, the cache keeps whatever isOnline value it
+      // last held (often "false" from before the driver ever went online,
+      // since nothing here invalidated it) — and because react-query returns
+      // cached data synchronously, a Home remount (e.g. returning from a
+      // completed ride) reads that stale "false" before the focus-triggered
+      // refetch resolves. The one-time online-state sync effect below then
+      // locks in that stale value, which is exactly why the toggle showed
+      // Offline and needed a manual re-tap.
+      queryClient.setQueryData(['driver-checkin-status'], (old: unknown) => ({
+        ...(old && typeof old === 'object' ? old : {}),
+        isOnline: next,
+      }));
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     } catch {
       // API failed — revert to previous state and notify driver
