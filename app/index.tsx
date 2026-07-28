@@ -4,7 +4,6 @@ import { Redirect } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
-  Dimensions,
   Easing,
   StyleSheet,
   Text,
@@ -19,9 +18,16 @@ import { useAuth } from '@/lib/authContext';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 
-const { width } = Dimensions.get('window');
-
 const ONBOARDING_KEY = 'veego_has_seen_onboarding';
+
+// Icon card is 80x80 (see iconInner). The arrow travels the card's own
+// bottom-left-to-top-right diagonal, extended past both corners; iconInner's
+// overflow:hidden + borderRadius clips it, so it isn't drawn at all until it
+// crosses the bottom edge and is gone again once it clears the top edge.
+const FLY_ICON_SIZE = 35;
+const FLY_TRANSLATE_X = [-57.1, 102.1];
+const FLY_TRANSLATE_Y = [102.1, -57.1];
+const FLY_DURATION = 2370;
 
 export default function SplashScreen() {
   const colors = useColors();
@@ -31,8 +37,7 @@ export default function SplashScreen() {
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.88)).current;
   const logoRotate = useRef(new Animated.Value(0)).current;
-  const barWidth = useRef(new Animated.Value(0)).current;
-  const barOpacity = useRef(new Animated.Value(0)).current;
+  const flyProgress = useRef(new Animated.Value(0)).current;
 
   // First-launch onboarding gate — checked unconditionally (before any early
   // return below) so this hook always fires in the same order every render.
@@ -66,14 +71,9 @@ export default function SplashScreen() {
           Animated.timing(logoRotate, { toValue: 0, duration: Animation.duration.slower, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
         ])
       ),
-      Animated.sequence([
-        Animated.delay(400),
-        Animated.timing(barOpacity, { toValue: 1, duration: Animation.duration.normal, useNativeDriver: false }),
-      ]),
-      Animated.sequence([
-        Animated.delay(500),
-        Animated.timing(barWidth, { toValue: width * 0.55, duration: 1400, easing: Easing.inOut(Easing.ease), useNativeDriver: false }),
-      ]),
+      Animated.loop(
+        Animated.timing(flyProgress, { toValue: 1, duration: FLY_DURATION, easing: Easing.linear, useNativeDriver: true })
+      ),
     ]).start();
   }, []);
 
@@ -94,21 +94,29 @@ export default function SplashScreen() {
   }
 
   const rotateDeg = logoRotate.interpolate({ inputRange: [-8, 8], outputRange: ['-8deg', '8deg'] });
+  const flyTranslateX = flyProgress.interpolate({ inputRange: [0, 1], outputRange: FLY_TRANSLATE_X });
+  const flyTranslateY = flyProgress.interpolate({ inputRange: [0, 1], outputRange: FLY_TRANSLATE_Y });
 
   return (
     <LinearGradient colors={colors.gradientPrimary} style={styles.root}>
       <Animated.View style={[styles.content, { opacity, transform: [{ scale }] }]}>
         <Animated.View style={[styles.iconWrap, { transform: [{ rotate: rotateDeg }] }]}>
           <View style={styles.iconInner}>
-            <Navigation size={32} color="#ffffff" />
+            <View style={styles.iconClip}>
+              <Animated.View
+                style={[
+                  styles.flyIcon,
+                  { transform: [{ translateX: flyTranslateX }, { translateY: flyTranslateY }] },
+                ]}
+              >
+                <Navigation size={FLY_ICON_SIZE} color="#ffffff" />
+              </Animated.View>
+            </View>
           </View>
           <View style={styles.iconGlow} />
         </Animated.View>
         <Text style={styles.wordmark}>Vee<Text style={{ color: colors.accent }}>Go</Text></Text>
         <Text style={styles.tagline}>DRIVER</Text>
-        <View style={[styles.barWrap, { backgroundColor: colors.border }]}>
-          <Animated.View style={[styles.bar, { width: barWidth, opacity: barOpacity, backgroundColor: colors.accent }]} />
-        </View>
       </Animated.View>
     </LinearGradient>
   );
@@ -123,12 +131,15 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 14 }, shadowOpacity: 0.25, shadowRadius: 32, elevation: 10,
   },
+  // Separate from iconInner: overflow:hidden here (not on the shadow-casting
+  // view above) so clipping the flying icon doesn't also clip the card's own
+  // drop shadow.
+  iconClip: { width: 80, height: 80, borderRadius: 28, overflow: 'hidden' },
+  flyIcon: { position: 'absolute', left: 0, top: 0 },
   iconGlow: {
     position: 'absolute', width: 100, height: 100, borderRadius: 50,
     backgroundColor: 'rgba(255,255,255,0.08)',
   },
   wordmark: { fontSize: 46, fontWeight: Typography.weight.bold, color: '#ffffff', letterSpacing: -2.5, fontFamily: 'Inter_700Bold' },
   tagline: { fontSize: 13, color: 'rgba(255,255,255,0.7)', letterSpacing: 3, fontFamily: 'Inter_700Bold' },
-  barWrap: { width: 220, height: 4, borderRadius: 2, overflow: 'hidden', marginTop: Spacing.sm },
-  bar: { height: 4, borderRadius: 2 },
 });
