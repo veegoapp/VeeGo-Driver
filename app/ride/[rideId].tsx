@@ -85,6 +85,13 @@ export default function RideScreen() {
   // The ride screen can mount before ActiveSession receives the post-accept
   // snapshot. Do not treat the normal initial null state as termination.
   const hasObservedRideSessionRef = useRef(false);
+  // True from the moment "Complete trip" is tapped until the request settles.
+  // The backend's completion endpoint and its session:snapshot(null) socket
+  // push race independently of the local setPhase('completed') below (which
+  // only runs after the request resolves) — if the null snapshot lands first,
+  // phase is still 'in_trip' and the termination effect below would otherwise
+  // mistake a successful completion for a cancellation.
+  const isCompletingRef = useRef(false);
 
   // A non-completed ride takes priority over a blocked service — only treat
   // the screen as blocked once the ride itself has reached 'completed'.
@@ -262,7 +269,13 @@ export default function RideScreen() {
   //   phase !== 'completed' — the completion/rating flow owns that exit path;
   //                           do not interfere when the ride finishes normally.
   useEffect(() => {
-    if (!initialized || session !== null || !hasObservedRideSessionRef.current || phase === 'completed') return;
+    if (
+      !initialized ||
+      session !== null ||
+      !hasObservedRideSessionRef.current ||
+      phase === 'completed' ||
+      isCompletingRef.current
+    ) return;
     exitRide(t.ride_cancelled_title, t.ride_cancelled_msg);
   // exitRide and t are stable within the component lifecycle and intentionally
   // omitted from deps — consistent with the existing useEffect at line ~177
@@ -440,7 +453,16 @@ export default function RideScreen() {
       if (phase === 'to_pickup') await endpoints.rides.arrived(rideId ?? '');
       else if (phase === 'arrived') await endpoints.rides.start(rideId ?? '');
       else if (phase === 'in_trip') {
-        await endpoints.rides.complete(rideId ?? '');
+        // Set before the request so the session-termination effect above
+        // doesn't mistake the backend's own end-of-ride socket push (which
+        // can arrive before this await resolves) for a cancellation.
+        isCompletingRef.current = true;
+        try {
+          await endpoints.rides.complete(rideId ?? '');
+        } catch (err) {
+          isCompletingRef.current = false;
+          throw err;
+        }
         queryClient.invalidateQueries({ queryKey: ['earnings-summary'] });
         queryClient.invalidateQueries({ queryKey: ['earnings-weekly'] });
       }
