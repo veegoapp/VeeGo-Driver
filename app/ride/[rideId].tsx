@@ -14,6 +14,7 @@ import { useService } from '@/lib/serviceContext';
 import { useWaitingCharge } from '@/hooks/useWaitingCharge';
 import { useActiveLocationTracking } from '@/hooks/useActiveLocationTracking';
 import { useLocationBroadcast } from '@/hooks/useLocationBroadcast';
+import { setActiveRideId } from '@/lib/backgroundLocationTask';
 import { useDriverLocation } from '@/hooks/useDriverLocation';
 import { useRoadPolyline } from '@/hooks/useRoadPolyline';
 import { useNavigationRoute } from '@/hooks/useNavigationRoute';
@@ -105,6 +106,14 @@ export default function RideScreen() {
     enabled: locationTrackingEnabled,
     rideId: rideId ? Number(rideId) : null,
   });
+
+  // Lets the background location task (DRIVER_LOCATION_TASK) know which ride
+  // is active, so a backgrounded update during the ride routes through the
+  // ride-scoped tracking channel instead of the generic idle-online one.
+  useEffect(() => {
+    setActiveRideId(locationTrackingEnabled && rideId ? Number(rideId) : null);
+    return () => setActiveRideId(null);
+  }, [locationTrackingEnabled, rideId]);
 
   const { position: driverPosition } = useDriverLocation(locationTrackingEnabled);
 

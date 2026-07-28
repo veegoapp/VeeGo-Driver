@@ -27,6 +27,7 @@ import { GlassView } from '@/components/GlassView';
 import { MapBackdrop } from '@/components/MapBackdrop';
 import { useColors } from '@/hooks/useColors';
 import { useDriverLocation } from '@/hooks/useDriverLocation';
+import { useLocationBroadcast } from '@/hooks/useLocationBroadcast';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useRideSocket, type RideRequest } from '@/hooks/useRideSocket';
 import { useI18n } from '@/lib/i18nContext';
@@ -49,6 +50,10 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { t, isRTL } = useI18n();
   const [online, setOnline] = useState(false);
+  // Whether Home currently has navigation focus — used to gate the idle-online
+  // realtime location broadcast below so it never overlaps with the ride
+  // screen's own driver:ride:location broadcast once a ride is accepted.
+  const [homeFocused, setHomeFocused] = useState(true);
   const [togglingOnline, setTogglingOnline] = useState(false);
   const [acceptingRide, setAcceptingRide] = useState(false);
   const [declining, setDeclining] = useState(false);
@@ -59,6 +64,13 @@ export default function HomeScreen() {
   const [promoDismissed, setPromoDismissed] = useState(false);
   const topPad = insets.top;
   const { position: driverPosition } = useDriverLocation(online);
+  // Issue B: realtime socket location while Online and idle (no active ride).
+  // Reuses the existing driver:location:update channel via useLocationBroadcast
+  // — the same hook the ride screen uses for driver:ride:location — with no
+  // rideId, so it always takes the general/idle branch. Gated on homeFocused
+  // so it stops the instant the driver navigates to an active ride, leaving
+  // driver:ride:location as the sole live channel during a ride.
+  useLocationBroadcast({ enabled: online && homeFocused });
 
   // Socket event UI state
   const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -144,6 +156,16 @@ export default function HomeScreen() {
       checkinPromptedRef.current = false;
       refetchCheckinStatus();
     }, [refetchNotifications, refetchCheckinStatus])
+  );
+
+  // Tracks whether Home is the focused screen — see useLocationBroadcast call
+  // above. Fires immediately on navigation, well before any server round trip,
+  // so the idle broadcast stops as soon as the ride screen takes over.
+  useFocusEffect(
+    useCallback(() => {
+      setHomeFocused(true);
+      return () => setHomeFocused(false);
+    }, [])
   );
 
   useEffect(() => {
