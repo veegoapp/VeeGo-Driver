@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>VeeGo — Splash Orbit Concept</title>
+<title>VeeGo — Splash Card Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <style>
   :root {
@@ -136,13 +136,13 @@
   <div class="tag">VeeGo &middot; splash concept &middot; prototype only</div>
 
   <div class="stage">
-    <canvas id="orbit" aria-label="VeeGo splash animation concept: a Navigation arrow orbiting a 3D sphere" role="img"></canvas>
+    <canvas id="orbit" aria-label="VeeGo splash animation concept: a Navigation arrow sweeping across the original 2D logo card, bottom-left to top-right" role="img"></canvas>
   </div>
 
   <div class="caption">
-    <div class="title">Navigation arrow tracing the surface of a 3D VeeGo sphere</div>
-    <div class="meta" id="meta">loop 4.2s &middot; bottom-left &rarr; top-right &rarr; loop</div>
-    <div class="note">The arrow hugs the sphere's own curved surface — visible and bright as it crosses the near face from bottom-left to top-right, then dims and disappears behind the sphere on the return pass before re-emerging — a continuous loading loop.</div>
+    <div class="title">Navigation arrow sweeping across the original 2D logo card</div>
+    <div class="meta" id="meta">loop 2.4s &middot; bottom-left &rarr; top-right &rarr; reset</div>
+    <div class="note">Same flat rounded-square card as the current splash icon. A faint diagonal channel is etched into the card itself; the arrow rides along it as a glowing accent-green loading sweep, then fades and resets — the arrow reads as part of the card, not an object floating above it.</div>
   </div>
 </div>
 
@@ -158,120 +158,132 @@
   ctx.scale(dpr, dpr);
 
   var cx = LOGICAL / 2, cy = LOGICAL / 2;
-  var SPHERE_R = 92;
-  // Path is a great circle drawn ON the sphere (not an outer ring): its two
-  // "equator crossing" points sit exactly on the rim (radius = SPHERE_R),
-  // and the steep tilt (small ORBIT_RY) makes it hug the curved surface as
-  // it crosses from bottom-left, dips across the face, to top-right.
-  var ORBIT_RX = SPHERE_R, ORBIT_RY = SPHERE_R * 0.42;
-  var ROT = -Math.PI / 4; // -45deg: major axis runs bottom-left to top-right
-  var COS = Math.cos(ROT), SIN = Math.sin(ROT);
-  var DURATION = 4200; // ms per full loop
 
-  var SPHERE_BASE = '#1e1e28';
-  var SPHERE_MID = '#34344a';
+  // The original splash icon card: flat rounded square, 80x80 at 0.35 corner
+  // radius, scaled up for legibility in this preview (same proportions).
+  var CARD = 220;
+  var CARD_RADIUS = CARD * 0.35;
+  var cardX = cx - CARD / 2, cardY = cy - CARD / 2;
+
+  var CARD_BASE = '#1e1e28';
   var ACCENT = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#55c49a';
+  var DURATION = 2400; // ms per full loop
+
+  // Diagonal travel channel, inset from the card's corners.
+  var PAD = CARD * 0.24;
+  var BL = { x: cardX + PAD, y: cardY + CARD - PAD };
+  var TR = { x: cardX + CARD - PAD, y: cardY + PAD };
 
   // Exact Navigation icon polygon (lucide-react-native), 24x24 space.
   var ARROW_POINTS = [[3, 11], [22, 2], [13, 21], [11, 13]];
-  var ARROW_DEFAULT_HEADING = -Math.PI / 4; // icon's tip (22,2) points NE by default
+  // The icon's default heading (tip at (22,2), pointing NE) already matches
+  // the bottom-left-to-top-right travel direction exactly, so it needs no
+  // extra rotation to "aim" along the channel.
 
-  function orbitPoint(p) {
-    var t;
-    if (p < 0.5) {
-      t = Math.PI - 2 * Math.PI * p; // front arc: BL (t=pi) -> TR (t=0)
-    } else {
-      t = -2 * Math.PI * (p - 0.5); // back arc: TR (t=0) -> BL (t=-pi)
+  function easeInOutCubic(x) {
+    return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+  }
+
+  // Phased loop: fade in -> sweep BL to TR -> hold/glow at TR -> fade out.
+  function phase(p) {
+    if (p < 0.08) {
+      return { opacity: p / 0.08, progress: 0, pulse: 0 };
     }
-    var cosT = Math.cos(t), sinT = Math.sin(t);
-    var x = cx + COS * (ORBIT_RX * cosT + ORBIT_RY * sinT);
-    var y = cy + COS * (ORBIT_RY * sinT - ORBIT_RX * cosT);
-    return { x: x, y: y };
+    if (p < 0.75) {
+      var local = (p - 0.08) / (0.75 - 0.08);
+      return { opacity: 1, progress: easeInOutCubic(local), pulse: 0 };
+    }
+    if (p < 0.88) {
+      var hold = (p - 0.75) / (0.88 - 0.75);
+      return { opacity: 1, progress: 1, pulse: Math.sin(hold * Math.PI) };
+    }
+    var fade = (p - 0.88) / (1 - 0.88);
+    return { opacity: 1 - fade, progress: 1, pulse: 0 };
   }
 
-  function depthOf(p) {
-    // +1 at the nearest point of the front arc, -1 at the farthest point of the back arc.
-    return Math.cos(2 * Math.PI * (p - 0.25));
-  }
+  function lerp(a, b, t) { return a + (b - a) * t; }
 
-  function drawGroundShadow() {
-    var sy = cy + SPHERE_R * 0.62;
-    var grad = ctx.createRadialGradient(cx, sy, 4, cx, sy, SPHERE_R * 1.05);
-    grad.addColorStop(0, 'rgba(10,10,16,0.30)');
-    grad.addColorStop(1, 'rgba(10,10,16,0)');
+  function drawCardShadow() {
     ctx.save();
-    ctx.translate(cx, sy);
-    ctx.scale(1, 0.32);
-    ctx.translate(-cx, -sy);
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.arc(cx, sy, SPHERE_R * 1.05, 0, Math.PI * 2);
+    ctx.shadowColor = 'rgba(20,20,30,0.35)';
+    ctx.shadowOffsetY = 14;
+    ctx.shadowBlur = 32;
+    ctx.fillStyle = CARD_BASE;
+    roundedRectPath(cardX, cardY, CARD, CARD, CARD_RADIUS);
     ctx.fill();
     ctx.restore();
   }
 
-  function drawSphere() {
-    var hlOffsetX = -SPHERE_R * 0.38, hlOffsetY = -SPHERE_R * 0.42;
-
-    ctx.save();
+  function roundedRectPath(x, y, w, h, r) {
     ctx.beginPath();
-    ctx.arc(cx, cy, SPHERE_R, 0, Math.PI * 2);
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  function drawCard() {
+    // Flat, deliberately 2D — no gradient or rim light, matching the
+    // existing app icon exactly.
+    ctx.save();
+    roundedRectPath(cardX, cardY, CARD, CARD, CARD_RADIUS);
+    ctx.clip();
+    ctx.fillStyle = CARD_BASE;
+    ctx.fillRect(cardX, cardY, CARD, CARD);
+    ctx.restore();
+  }
+
+  function drawChannel(progress, pulse) {
+    ctx.save();
+    roundedRectPath(cardX, cardY, CARD, CARD, CARD_RADIUS);
     ctx.clip();
 
-    var body = ctx.createRadialGradient(
-      cx + hlOffsetX, cy + hlOffsetY, SPHERE_R * 0.08,
-      cx, cy, SPHERE_R * 1.15
-    );
-    body.addColorStop(0, '#585c72');
-    body.addColorStop(0.35, SPHERE_MID);
-    body.addColorStop(1, SPHERE_BASE);
-    ctx.fillStyle = body;
-    ctx.fillRect(cx - SPHERE_R, cy - SPHERE_R, SPHERE_R * 2, SPHERE_R * 2);
-
-    // Soft specular highlight.
-    var spec = ctx.createRadialGradient(
-      cx + hlOffsetX, cy + hlOffsetY, 0,
-      cx + hlOffsetX, cy + hlOffsetY, SPHERE_R * 0.55
-    );
-    spec.addColorStop(0, 'rgba(255,255,255,0.35)');
-    spec.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.fillStyle = spec;
-    ctx.fillRect(cx - SPHERE_R, cy - SPHERE_R, SPHERE_R * 2, SPHERE_R * 2);
-
-    // Accent rim light, lower-right limb.
+    // Static groove etched into the card — always present, part of its design.
+    ctx.lineCap = 'round';
+    ctx.lineWidth = 7;
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
     ctx.beginPath();
-    ctx.arc(cx, cy, SPHERE_R, 0, Math.PI * 2);
-    ctx.lineWidth = SPHERE_R * 0.16;
-    ctx.strokeStyle = ACCENT;
-    ctx.globalAlpha = 0.35;
-    ctx.filter = 'blur(6px)';
+    ctx.moveTo(BL.x, BL.y);
+    ctx.lineTo(TR.x, TR.y);
     ctx.stroke();
-    ctx.filter = 'none';
-    ctx.globalAlpha = 1;
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(BL.x, BL.y + 1.5);
+    ctx.lineTo(TR.x, TR.y + 1.5);
+    ctx.stroke();
+
+    // Animated fill: how far the sweep has travelled along the channel.
+    if (progress > 0.001) {
+      var head = { x: lerp(BL.x, TR.x, progress), y: lerp(BL.y, TR.y, progress) };
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = ACCENT;
+      ctx.shadowColor = ACCENT;
+      ctx.shadowBlur = 10 + pulse * 6;
+      ctx.beginPath();
+      ctx.moveTo(BL.x, BL.y);
+      ctx.lineTo(head.x, head.y);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
 
     ctx.restore();
   }
 
-  function drawArrow(p) {
-    var pos = orbitPoint(p);
-    var eps = 0.0015;
-    var p2 = (p + eps) % 1;
-    var pos2 = orbitPoint(p2);
-    var heading = Math.atan2(pos2.y - pos.y, pos2.x - pos.x);
-
-    var depth = depthOf(p);
-    var scale = 1 + depth * 0.16;
-    var opacity = 0.5 + (depth + 1) / 2 * 0.5;
+  function drawArrow(progress, opacity, pulse) {
+    var pos = { x: lerp(BL.x, TR.x, progress), y: lerp(BL.y, TR.y, progress) };
+    var scale = (1 + pulse * 0.18) * 1.35;
 
     ctx.save();
     ctx.translate(pos.x, pos.y);
-    ctx.rotate(heading - ARROW_DEFAULT_HEADING);
-    ctx.scale(scale * 1.25, scale * 1.25);
+    ctx.scale(scale, scale);
     ctx.translate(-12, -12); // icon centroid in its own 24x24 space
 
     ctx.globalAlpha = opacity;
-    ctx.shadowColor = 'rgba(0,0,0,0.35)';
-    ctx.shadowBlur = 6;
+    ctx.shadowColor = ACCENT;
+    ctx.shadowBlur = 8 + pulse * 8;
     ctx.beginPath();
     ctx.moveTo(ARROW_POINTS[0][0], ARROW_POINTS[0][1]);
     for (var i = 1; i < ARROW_POINTS.length; i++) {
@@ -289,12 +301,12 @@
 
   function render(p) {
     ctx.clearRect(0, 0, LOGICAL, LOGICAL);
-    drawGroundShadow();
+    drawCardShadow();
+    drawCard();
+    drawChannel(phase(p).progress, phase(p).pulse);
 
-    var front = depthOf(p) >= 0;
-    if (!front) drawArrow(p);
-    drawSphere();
-    if (front) drawArrow(p);
+    var ph = phase(p);
+    if (ph.opacity > 0.001) drawArrow(ph.progress, ph.opacity, ph.pulse);
   }
 
   var params = new URLSearchParams(location.search);
@@ -304,9 +316,9 @@
   if (staticFrame !== null) {
     render(Math.max(0, Math.min(1, parseFloat(staticFrame))));
   } else if (reduceMotion) {
-    render(0.25);
+    render(0.4);
     var noteEl = document.querySelector('.note');
-    if (noteEl) noteEl.textContent = 'Reduced motion is on, so the loop is paused on a single frame (front pass, nearest point).';
+    if (noteEl) noteEl.textContent = 'Reduced motion is on, so the sweep is paused mid-travel along the channel.';
   } else {
     var start = null;
     function tick(ts) {
