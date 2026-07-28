@@ -95,6 +95,10 @@ export default function ProfileScreen() {
   const TA = isRTL ? 'right' as const : 'left' as const;
 
   const [refreshing, setRefreshing] = useState(false);
+  // Falls back to the initials placeholder when the resolved avatar URL
+  // (driver.avatar or the profile_photo document) fails to load — e.g. a
+  // broken/private storage link — instead of leaving an empty circle.
+  const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
   const { data: driverRaw, isLoading, refetch: refetchDriver } = useQuery<DriverProfile>({
     queryKey: ['driver'],
     queryFn: endpoints.driver.me as () => Promise<DriverProfile>,
@@ -129,7 +133,13 @@ export default function ProfileScreen() {
     ?? null;
 
   const driver = driverRaw;
-  const avatarUri = driver?.avatar || profilePhotoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(driver?.name ?? 'Driver')}&background=1e1e28&color=fff`;
+  const preferredAvatarUri = driver?.avatar || profilePhotoUrl || null;
+  const placeholderAvatarUri = `https://ui-avatars.com/api/?name=${encodeURIComponent(driver?.name ?? 'Driver')}&background=1e1e28&color=fff`;
+  const avatarUri = (!avatarLoadFailed && preferredAvatarUri) || placeholderAvatarUri;
+
+  React.useEffect(() => {
+    setAvatarLoadFailed(false);
+  }, [preferredAvatarUri]);
 
   const handleCopyCode = async () => {
     const code = driver?.referralCode;
@@ -158,6 +168,7 @@ export default function ProfileScreen() {
                   <Image
                     source={{ uri: avatarUri }}
                     style={[styles.avatar, { borderColor: colors.primary + '66' }]}
+                    onError={() => setAvatarLoadFailed(true)}
                   />
                   <LinearGradient colors={['#2d2d42', '#55c49a']} style={styles.awardBadge}>
                     <Award size={16} color={colors.primaryForeground} strokeWidth={2} />
