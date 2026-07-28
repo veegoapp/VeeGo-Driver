@@ -26,7 +26,7 @@ const ONBOARDING_KEY = 'veego_has_seen_onboarding';
 export default function SplashScreen() {
   const colors = useColors();
   const {} = useService();
-  const { language, isLanguageLoading } = useI18n();
+  const { isLanguageLoading } = useI18n();
   const { token, isLoading: authLoading } = useAuth();
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.88)).current;
@@ -79,10 +79,6 @@ export default function SplashScreen() {
 
   if (isLanguageLoading) {
     return null;
-  }
-
-  if (!language) {
-    return <Redirect href="/language-select" />;
   }
 
   if (!onboardingChecked) {
