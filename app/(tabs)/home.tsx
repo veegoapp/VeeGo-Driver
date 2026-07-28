@@ -70,6 +70,9 @@ export default function HomeScreen() {
   // Guards against double-navigating to /selfie when both the live socket event
   // and the GET /driver/checkin/status poll fire for the same pending check-in.
   const checkinPromptedRef = useRef(false);
+  // Guards the one-time online-state sync from the server below so later
+  // refetches (e.g. on focus) don't clobber the driver's own toggle taps.
+  const onlineSyncedRef = useRef(false);
 
   const [unreadCount, setUnreadCount] = useState(0);
   const { socket } = useSocket();
@@ -151,6 +154,18 @@ export default function HomeScreen() {
       pathname: '/selfie',
       params: { deadlineMinutes: String(computeDeadlineMinutes(status.checkInDeadline)) },
     });
+  }, [checkinStatusRaw]);
+
+  // One-time sync of local `online` state from the driver's real backend
+  // status (already fetched via driver-checkin-status). Fixes Home showing
+  // "Offline" after a fresh mount (e.g. returning from a completed ride)
+  // when the backend status was never actually changed.
+  useEffect(() => {
+    if (onlineSyncedRef.current) return;
+    const status = checkinStatusRaw as { isOnline?: boolean } | undefined;
+    if (status?.isOnline == null) return;
+    onlineSyncedRef.current = true;
+    setOnline(status.isOnline);
   }, [checkinStatusRaw]);
 
   useEffect(() => {
@@ -690,38 +705,40 @@ export default function HomeScreen() {
         </View>
       )}
 
-      <View style={[styles.onlineToggleWrap, { bottom: TAB_BAR_HEIGHT + 60 }]}>
-        <View style={styles.pulseContainer}>
-          {online && (
-            <Animated.View style={[styles.pulseRing, {
-              backgroundColor: colors.primary + '40',
-              transform: [{ scale: pulseScale }],
-              opacity: pulseOpacity,
-            }]} />
-          )}
-          <Pressable
-            onPress={handleToggleOnline}
-            disabled={togglingOnline}
-            accessibilityLabel={online ? 'Go offline' : 'Go online'}
-            style={({ pressed }) => [styles.onlineBtn, { transform: [{ scale: pressed ? 0.95 : 1 }], opacity: togglingOnline ? 0.7 : 1 }]}
-          >
-            {online ? (
-              <LinearGradient colors={['#2d2d42', '#1e1e28']} style={styles.onlineBtnGrad}>
-                <Text style={[styles.onlineBtnText, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>{t.online_status}</Text>
-              </LinearGradient>
-            ) : (
-              <View style={[styles.onlineBtnOff, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
-                <Text style={[styles.onlineBtnText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.go}</Text>
-              </View>
+      {!request && (
+        <View style={[styles.onlineToggleWrap, { bottom: TAB_BAR_HEIGHT + 60 }]}>
+          <View style={styles.pulseContainer}>
+            {online && (
+              <Animated.View style={[styles.pulseRing, {
+                backgroundColor: colors.primary + '40',
+                transform: [{ scale: pulseScale }],
+                opacity: pulseOpacity,
+              }]} />
             )}
-          </Pressable>
+            <Pressable
+              onPress={handleToggleOnline}
+              disabled={togglingOnline}
+              accessibilityLabel={online ? 'Go offline' : 'Go online'}
+              style={({ pressed }) => [styles.onlineBtn, { transform: [{ scale: pressed ? 0.95 : 1 }], opacity: togglingOnline ? 0.7 : 1 }]}
+            >
+              {online ? (
+                <LinearGradient colors={['#2d2d42', '#1e1e28']} style={styles.onlineBtnGrad}>
+                  <Text style={[styles.onlineBtnText, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>{t.online_status}</Text>
+                </LinearGradient>
+              ) : (
+                <View style={[styles.onlineBtnOff, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+                  <Text style={[styles.onlineBtnText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.go}</Text>
+                </View>
+              )}
+            </Pressable>
+          </View>
+          <GlassView style={styles.statusPill} borderRadius={20}>
+            <Text style={[styles.statusPillText, { color: colors.foreground, fontFamily: 'Inter_600SemiBold', textAlign: 'center' }]}>
+              {togglingOnline ? '...' : online ? t.youre_online : t.youre_offline}
+            </Text>
+          </GlassView>
         </View>
-        <GlassView style={styles.statusPill} borderRadius={20}>
-          <Text style={[styles.statusPillText, { color: colors.foreground, fontFamily: 'Inter_600SemiBold', textAlign: 'center' }]}>
-            {togglingOnline ? '...' : online ? t.youre_online : t.youre_offline}
-          </Text>
-        </GlassView>
-      </View>
+      )}
 
       {request && (
         <Animated.View style={[styles.requestSheet, { paddingBottom: TAB_BAR_HEIGHT_BASE + insets.bottom + Spacing.md, transform: [{ translateY: sheetAnim }] }]}>
