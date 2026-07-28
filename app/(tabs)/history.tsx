@@ -217,6 +217,11 @@ function RideCard({
   const statusLabel = isCompleted ? 'Completed' : 'Cancelled';
 
   const fare = typeof ride.fare === 'number' ? ride.fare : parseFloat(String(ride.fare ?? 0));
+  // Driver's net earning (85% after commission). Falls back to fare (gross)
+  // for older records that don't have driverEarnings yet.
+  const earnedAmount = ride.driverEarnings != null
+    ? (typeof ride.driverEarnings === 'number' ? ride.driverEarnings : parseFloat(String(ride.driverEarnings)))
+    : fare;
 
   const dateStr = (() => {
     try {
@@ -269,7 +274,7 @@ function RideCard({
         {/* Fare + rating */}
         <View style={{ alignItems: isRTL ? 'flex-start' : 'flex-end', marginLeft: isRTL ? 0 : 8, marginRight: isRTL ? 8 : 0 }}>
           <Text style={[styles.fareText, { color: isCompleted ? colors.foreground : colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>
-            {isCompleted ? `${fare.toFixed(2)} ${t.egp}` : '—'}
+            {isCompleted ? `${earnedAmount.toFixed(2)} ${t.egp}` : '—'}
           </Text>
           {isCompleted && ride.myRating != null && (
             <View style={[styles.starsRow, { flexDirection: R }]}>

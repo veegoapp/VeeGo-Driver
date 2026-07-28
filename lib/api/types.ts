@@ -158,6 +158,9 @@ export interface RideHistoryItem {
   pickupAddress: string;
   dropoffAddress: string;
   fare: number;
+  // Driver's net earning after commission (85%). Optional — older records may
+  // not have it; fare (gross, 100%) is the fallback in that case.
+  driverEarnings?: number | null;
   duration?: string;
   distance?: string;
   completedAt: string;
