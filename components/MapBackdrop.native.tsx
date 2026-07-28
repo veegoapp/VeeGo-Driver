@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import MapView, { Circle, Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
+import Svg, { Rect } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DARK_MAP_STYLE, LIGHT_MAP_STYLE } from '@/constants/mapStyle';
 import { getToken } from '@/lib/auth';
@@ -119,7 +120,7 @@ export function MapBackdrop({
   approachCircle,
   focusTarget,
   navigationMode = false,
-  animDurationMs = 800,
+  animDurationMs = 350,
 }: MapBackdropProps) {
   const mapRef = useRef<MapView>(null);
   const [mapReady, setMapReady] = useState(false);
@@ -246,8 +247,8 @@ export function MapBackdrop({
         center,
         heading: currentBearing,
         pitch: 50,
-        zoom: 16,
-        altitude: 500,
+        zoom: 18,
+        altitude: 160,
       },
       { duration: animDurationMs },
     );
@@ -260,9 +261,9 @@ export function MapBackdrop({
     mapRef.current?.animateCamera(
       {
         center: { latitude: focusTarget.latitude, longitude: focusTarget.longitude },
-        zoom: focusTarget.zoom ?? 16,
+        zoom: focusTarget.zoom ?? (navigationMode ? 18 : 16),
         pitch: navigationMode ? 50 : 0,
-        altitude: 500,
+        altitude: navigationMode ? 160 : 500,
       },
       { duration: 800 },
     );
@@ -357,8 +358,8 @@ export function MapBackdrop({
         center,
         heading: navigationMode ? currentBearing : 0,
         pitch: navigationMode ? 50 : 0,
-        zoom: 16,
-        altitude: 500,
+        zoom: navigationMode ? 18 : 16,
+        altitude: navigationMode ? 160 : 500,
       },
       { duration: 800 },
     );
@@ -442,8 +443,8 @@ export function MapBackdrop({
           center: initialCenter,
           pitch: navigationMode ? 50 : 0,
           heading: 0,
-          zoom: navigationMode ? 16 : 13,
-          altitude: navigationMode ? 500 : 2000,
+          zoom: navigationMode ? 18 : 13,
+          altitude: navigationMode ? 160 : 2000,
         }}
         onMapReady={handleMapReady}
         onPanDrag={handlePanDrag}
@@ -586,10 +587,14 @@ export function MapBackdrop({
           >
             <View style={styles.driverNavOuter}>
               <View style={styles.driverNavGlow} />
-              <View style={styles.driverNavInner}>
-                {/* Up-pointing triangle — rotation prop handles actual heading */}
-                <View style={styles.driverNavArrow} />
-              </View>
+              {/* Top-down car silhouette — nose points up; the Marker's own
+                  `rotation={currentBearing}` (flat) handles actual heading. */}
+              <Svg width={34} height={46} viewBox="0 0 34 46">
+                <Rect x="3" y="3" width="28" height="40" rx="11" fill="#ffffff" stroke="#1d4ed8" strokeWidth="2" />
+                <Rect x="8" y="9" width="18" height="13" rx="4" fill="#1d4ed8" />
+                <Rect x="10" y="27" width="14" height="9" rx="3" fill="#1d4ed8" opacity="0.55" />
+                <Rect x="14" y="2" width="6" height="6" rx="3" fill="#55c49a" />
+              </Svg>
             </View>
           </Marker>
         )}
@@ -649,28 +654,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(37,99,235,0.18)',
     borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.25)',
-  },
-  driverNavInner: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#1d4ed8',
-    borderWidth: 2.5,
-    borderColor: 'white',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  driverNavArrow: {
-    width: 0,
-    height: 0,
-    borderLeftWidth: 7,
-    borderRightWidth: 7,
-    borderBottomWidth: 13,
-    borderStyle: 'solid',
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderBottomColor: 'white',
-    marginTop: -2,
   },
   // Driver idle marker (blue circle)
   driverIdleMarker: {
