@@ -434,6 +434,39 @@ export const MapBackdrop = React.memo(function MapBackdrop({
     return () => clearTimeout(timer);
   }, [mapReady, navigationMode, focusTarget, userPanned, initialFitPoints]);
 
+  // ── One-shot recenter onto the driver's first GPS fix (no ride active) ───
+  // initialCenter/initialCamera only run at mount, when a real fix has often
+  // not arrived yet, so the map opens on DEFAULT_CENTER (Cairo). The fit-to-
+  // coordinates effect above only engages once there are 2+ points (a ride),
+  // so a plain idle Home view would otherwise stay on that fallback forever.
+  // This fires once the first fix lands to bring the camera onto the driver.
+  const initialLocationCenterRef = useRef(false);
+  useEffect(() => {
+    if (
+      !mapReady ||
+      !driverLocation ||
+      navigationMode ||
+      focusTarget ||
+      userPanned ||
+      initialFitDoneRef.current ||
+      initialLocationCenterRef.current ||
+      initialFitPoints.length >= 2
+    ) {
+      return;
+    }
+    initialLocationCenterRef.current = true;
+    mapRef.current?.animateCamera(
+      {
+        center: { latitude: driverLocation.latitude, longitude: driverLocation.longitude },
+        heading: 0,
+        pitch: 0,
+        zoom: 16,
+        altitude: 500,
+      },
+      { duration: 500 },
+    );
+  }, [mapReady, driverLocation?.latitude, driverLocation?.longitude, navigationMode, focusTarget, userPanned, initialFitPoints.length]);
+
   // Station markers are drawn when routePolyline holds station coordinates + statuses
   const hasStations = (routePolyline?.length ?? 0) >= 2 && !!stationStatuses;
 

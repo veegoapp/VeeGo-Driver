@@ -63,7 +63,10 @@ export default function HomeScreen() {
   const [countdown, setCountdown] = useState(12);
   const [promoDismissed, setPromoDismissed] = useState(false);
   const topPad = insets.top;
-  const { position: driverPosition } = useDriverLocation(online);
+  // Foreground GPS is always requested/tracked (not gated on "online") so the
+  // location permission prompt appears as soon as Home mounts and the map can
+  // center on the driver's real position instead of staying on a fallback.
+  const { position: driverPosition } = useDriverLocation(true);
   // Issue B: realtime socket location while Online and idle (no active ride).
   // Reuses the existing driver:location:update channel via useLocationBroadcast
   // — the same hook the ride screen uses for driver:ride:location — with no
