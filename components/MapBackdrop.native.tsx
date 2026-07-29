@@ -109,7 +109,12 @@ const DEFAULT_CENTER = { latitude: 30.0444, longitude: 31.2357 }; // Cairo fallb
 
 // ── Component ──────────────────────────────────────────────────────────────────
 
-export function MapBackdrop({
+// Wrapped in React.memo: this component re-renders on every driver GPS tick
+// via its own driverLocation prop (expected — the map needs the live fix),
+// but without memo it also fully re-renders whenever the parent screen
+// re-renders for unrelated reasons (button busy-states, timers, etc.) even
+// though none of its props changed.
+export const MapBackdrop = React.memo(function MapBackdrop({
   pickup,
   dropoff,
   driverLocation,
@@ -634,7 +639,7 @@ export function MapBackdrop({
       </Pressable>
     </View>
   );
-}
+});
 
 // ── Styles ─────────────────────────────────────────────────────────────────────
 

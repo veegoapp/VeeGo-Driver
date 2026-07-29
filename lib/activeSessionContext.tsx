@@ -19,6 +19,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from 'react';
 import { endpoints } from '@/lib/api';
@@ -165,8 +166,12 @@ export function ActiveSessionProvider({
   }, [socket]);
 
   // ── Context value ──────────────────────────────────────────────────────────
+  // Memoized: an inline object literal here would re-render every consumer of
+  // useActiveSession() on every provider render, regardless of whether any
+  // of these values actually changed (the callbacks below are already stable
+  // via useCallback, so this only recomputes when a real value changes).
 
-  const value: ActiveSessionContextValue = {
+  const value: ActiveSessionContextValue = useMemo(() => ({
     session,
     loading,
     error,
@@ -174,7 +179,7 @@ export function ActiveSessionProvider({
     initializeActiveSession,
     refreshActiveSession,
     clearActiveSession,
-  };
+  }), [session, loading, error, initialized, initializeActiveSession, refreshActiveSession, clearActiveSession]);
 
   return (
     <ActiveSessionContext.Provider value={value}>

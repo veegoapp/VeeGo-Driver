@@ -289,7 +289,7 @@ export default function HomeScreen() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
 
     Animated.spring(sheetAnim, { toValue: 0, stiffness: 320, damping: 32, useNativeDriver: true }).start();
-    timerRef.current = Animated.timing(timerAnim, { toValue: 0, duration: offerDurationMs, useNativeDriver: false });
+    timerRef.current = Animated.timing(timerAnim, { toValue: 0, duration: offerDurationMs, useNativeDriver: true });
     timerRef.current.start(({ finished }) => { if (finished) dismissRequest(); });
 
     // Numeric countdown
@@ -907,7 +907,7 @@ export default function HomeScreen() {
 
             <Animated.View style={[styles.timerBar, {
               backgroundColor: colors.destructive,
-              width: timerAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
+              transform: [{ scaleX: timerAnim }],
             }]} />
           </GlassView>
         </Animated.View>
@@ -997,7 +997,7 @@ const styles = StyleSheet.create({
   acceptBtn: { flex: 3, height: 56, borderRadius: Radius.lg, overflow: 'hidden', elevation: Shadows.large.elevation, shadowColor: '#2d2d42', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 12 },
   acceptBtnGrad: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
   acceptBtnText: { fontSize: 15 },
-  timerBar: { height: 4, borderRadius: 2, marginTop: Spacing.md },
+  timerBar: { height: 4, width: '100%', borderRadius: 2, marginTop: Spacing.md, transformOrigin: '0% 50%' },
   // Active Promotions card
   promoHomeInner: {},
   promoHomeBody: { alignItems: 'flex-start', gap: Spacing.md, padding: Spacing.md },

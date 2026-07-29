@@ -196,7 +196,10 @@ export default function RideHistoryTabScreen() {
   );
 }
 
-function RideCard({
+// Memoized: allRides only grows (via "Load more"), and previously-loaded
+// ride objects keep the same reference — without this, appending a new page
+// re-renders every already-rendered card, not just the new ones.
+const RideCard = React.memo(function RideCard({
   ride,
   colors,
   isRTL,
@@ -311,7 +314,7 @@ function RideCard({
       ) : null}
     </GlassView>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container:    { flex: 1 },

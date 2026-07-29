@@ -649,15 +649,28 @@ export default function RideScreen() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, pickupLat, pickupLng, dropoffLat, dropoffLng]);
 
+  // Stable object identity so MapBackdrop's React.memo isn't defeated by a
+  // fresh {latitude,longitude} literal on every RideScreen re-render (this
+  // screen re-renders often — GPS ticks, busy-state toggles, etc. — even
+  // when the pickup/dropoff coordinates themselves haven't changed).
+  const mapPickup = useMemo(
+    () => (pickupLat != null && pickupLng != null
+      ? { latitude: Number(pickupLat), longitude: Number(pickupLng) }
+      : undefined),
+    [pickupLat, pickupLng],
+  );
+  const mapDropoff = useMemo(
+    () => (dropoffLat != null && dropoffLng != null
+      ? { latitude: Number(dropoffLat), longitude: Number(dropoffLng) }
+      : undefined),
+    [dropoffLat, dropoffLng],
+  );
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <MapBackdrop
-        pickup={pickupLat != null && pickupLng != null
-          ? { latitude: Number(pickupLat), longitude: Number(pickupLng) }
-          : undefined}
-        dropoff={dropoffLat != null && dropoffLng != null
-          ? { latitude: Number(dropoffLat), longitude: Number(dropoffLng) }
-          : undefined}
+        pickup={mapPickup}
+        dropoff={mapDropoff}
         driverLocation={driverPosition ?? undefined}
         roadPolyline={remainingPolyline ?? undefined}
         navigationMode={phase === 'to_pickup' || phase === 'in_trip'}

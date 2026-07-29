@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setApiLanguage } from '../api';
@@ -49,7 +49,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
       });
   }, []);
 
-  const setLanguage = (lang: Language): void => {
+  const setLanguage = useCallback((lang: Language): void => {
     if (lang === language) return;
 
     setIsSwitchingLanguage(true);
@@ -81,13 +81,27 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
       if (switchTimerRef.current) clearTimeout(switchTimerRef.current);
       switchTimerRef.current = setTimeout(() => setIsSwitchingLanguage(false), 1400);
     })();
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [language]);
 
-  const t = makeSafeTranslations(language ?? 'en');
+  // Memoized: makeSafeTranslations builds a fresh Proxy on every call for
+  // Arabic, so without this every I18nProvider re-render (which wraps the
+  // whole app) changed `t`'s reference and defeated React.memo everywhere
+  // it's passed down as a prop.
+  const t = useMemo(() => makeSafeTranslations(language ?? 'en'), [language]);
   const isRTL = language === 'ar';
 
+  // Memoized: React Context re-renders every consumer whenever the value
+  // object's reference changes. An inline object literal here would do that
+  // on every I18nProvider render (e.g. isSwitchingLanguage toggling),
+  // regardless of whether language/t/isRTL actually changed.
+  const value = useMemo(
+    () => ({ language, isLanguageLoading, isSwitchingLanguage, setLanguage, t, isRTL }),
+    [language, isLanguageLoading, isSwitchingLanguage, setLanguage, t, isRTL],
+  );
+
   return (
-    <I18nContext.Provider value={{ language, isLanguageLoading, isSwitchingLanguage, setLanguage, t, isRTL }}>
+    <I18nContext.Provider value={value}>
       {children}
     </I18nContext.Provider>
   );

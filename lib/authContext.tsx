@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { getToken, saveToken, deleteToken, saveRefreshToken, deleteRefreshToken } from './auth';
 import { endpoints } from './api';
 import { stopLocationTracking } from './backgroundLocationTask';
@@ -24,13 +24,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const login = async (accessToken: string, refreshToken?: string) => {
+  const login = useCallback(async (accessToken: string, refreshToken?: string) => {
     await saveToken(accessToken);
     if (refreshToken) await saveRefreshToken(refreshToken);
     setToken(accessToken);
-  };
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     // Stop background GPS task before clearing credentials so no stale
     // location updates are sent after the session ends.
     await stopLocationTracking();
@@ -42,19 +42,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await deleteToken();
     await deleteRefreshToken();
     setToken(null);
-  };
+  }, []);
 
-  const clearLocalSession = async () => {
+  const clearLocalSession = useCallback(async () => {
     // Force-disconnect must not make a backend request. Stop local tracking
     // and clear credentials so the socket cannot be recreated.
     await stopLocationTracking();
     await deleteToken();
     await deleteRefreshToken();
     setToken(null);
-  };
+  }, []);
+
+  // Memoized: an inline object literal here would re-render every useAuth()
+  // consumer on every AuthProvider render, regardless of whether token/
+  // isLoading actually changed.
+  const value = useMemo(
+    () => ({ token, isLoading, login, logout, clearLocalSession }),
+    [token, isLoading, login, logout, clearLocalSession],
+  );
 
   return (
-    <AuthContext.Provider value={{ token, isLoading, login, logout, clearLocalSession }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useCallback, useContext, useState, useEffect, useMemo } from 'react';
 import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from './authContext';
@@ -113,7 +113,7 @@ export function ServiceProvider({ children }: { children: React.ReactNode }) {
   //  - Per-user map (when userId is available) — multi-account safe.
   //  - Device-level fallback — always written so navigateAfterAuth never
   //    misses the value even when the JWT has no parseable id claim.
-  const setServiceType = (t: ServiceType) => {
+  const setServiceType = useCallback((t: ServiceType) => {
     setServiceTypeState(t);
 
     // Always write device fallback
@@ -128,17 +128,25 @@ export function ServiceProvider({ children }: { children: React.ReactNode }) {
         return AsyncStorage.setItem(SERVICE_MAP_KEY, JSON.stringify(map));
       })
       .catch(() => {});
-  };
+  }, [userId]);
 
-  const setIsDarkMode = (v: boolean) => {
+  const setIsDarkMode = useCallback((v: boolean) => {
     setIsDarkModeState(v);
     AsyncStorage.setItem('veego_theme', v ? 'dark' : 'light').catch(() => {});
-  };
+  }, []);
+
+  // Memoized: an inline object literal here would re-render every consumer
+  // of useService()/useColors() on every ServiceProvider render, regardless
+  // of whether serviceType/isDarkMode actually changed.
+  const value = useMemo(
+    () => ({ serviceType, setServiceType, isDarkMode, setIsDarkMode }),
+    [serviceType, setServiceType, isDarkMode, setIsDarkMode],
+  );
 
   if (!loaded) return null;
 
   return (
-    <ServiceContext.Provider value={{ serviceType, setServiceType, isDarkMode, setIsDarkMode }}>
+    <ServiceContext.Provider value={value}>
       {children}
     </ServiceContext.Provider>
   );

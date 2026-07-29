@@ -3,6 +3,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from 'react';
 import { z } from 'zod';
@@ -346,10 +347,17 @@ export function ServiceControlProvider({ children }: { children: React.ReactNode
     [services, eligibilityRules, isLoading, error],
   );
 
+  // Memoized: an inline object literal here would re-render every consumer
+  // of useServiceControl() on every provider render, regardless of whether
+  // any of these values actually changed (getServiceStatus/refresh are
+  // already stable via useCallback above).
+  const value = useMemo(
+    () => ({ services, eligibilityRules, currency, isLoading, error, getServiceStatus, refresh }),
+    [services, eligibilityRules, currency, isLoading, error, getServiceStatus, refresh],
+  );
+
   return (
-    <ServiceControlContext.Provider
-      value={{ services, eligibilityRules, currency, isLoading, error, getServiceStatus, refresh }}
-    >
+    <ServiceControlContext.Provider value={value}>
       {children}
     </ServiceControlContext.Provider>
   );
