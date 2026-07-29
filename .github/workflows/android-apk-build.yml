@@ -1,0 +1,95 @@
+name: Android APK Build (GitHub Actions)
+
+# Manual-only, optional build path.
+# Does NOT replace or interact with EAS Build in any way.
+# EAS remains the primary/official build flow:
+#   pnpm exec eas build --platform android --profile preview
+on:
+  workflow_dispatch:
+    inputs:
+      build_variant:
+        description: "Gradle build variant to assemble"
+        required: false
+        default: "debug"
+        type: choice
+        options:
+          - debug
+          - release
+
+env:
+  # Optional: only needed for Google Maps to function at runtime in the APK.
+  # Build succeeds without it; Maps will simply be blank/non-functional.
+  GOOGLE_MAPS_API_KEY_ANDROID: ${{ secrets.GOOGLE_MAPS_API_KEY_ANDROID }}
+  GOOGLE_MAPS_API_KEY_IOS: ${{ secrets.GOOGLE_MAPS_API_KEY_IOS }}
+  EXPO_PUBLIC_API_URL: ${{ secrets.EXPO_PUBLIC_API_URL }}
+  EXPO_NO_TELEMETRY: "1"
+  CI: "1"
+
+jobs:
+  build-apk:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Generate native Android project (expo prebuild)
+        run: |
+          if [ -d "android" ]; then
+            echo "android/ already present in repo — skipping prebuild."
+          else
+            echo "android/ not found — generating via expo prebuild (managed workflow stays untouched in git)."
+            pnpm exec expo prebuild --platform android --no-install
+          fi
+
+      - name: Make gradlew executable
+        run: chmod +x android/gradlew
+
+      - name: Build APK with Gradle
+        working-directory: android
+        run: |
+          if [ "${{ inputs.build_variant }}" = "release" ]; then
+            ./gradlew assembleRelease --no-daemon
+          else
+            ./gradlew assembleDebug --no-daemon
+          fi
+
+      - name: Locate built APK
+        id: find_apk
+        run: |
+          APK_PATH=$(find android/app/build/outputs/apk -name "*.apk" | head -n 1)
+          if [ -z "$APK_PATH" ]; then
+            echo "No APK found in build outputs." >&2
+            exit 1
+          fi
+          echo "apk_path=$APK_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: veego-driver-${{ inputs.build_variant }}-apk
+          path: ${{ steps.find_apk.outputs.apk_path }}
+          retention-days: 14
