@@ -107,6 +107,53 @@ function circleCoords(
 
 const DEFAULT_CENTER = { latitude: 30.0444, longitude: 31.2357 }; // Cairo fallback
 
+// Custom Marker children that contain an <Svg> take an extra frame to paint on
+// Android before react-native-maps can snapshot them into a bitmap. With
+// tracksViewChanges locked to false from the very first render, that snapshot
+// can be taken before the Svg has painted, leaving the marker permanently
+// blank — no further re-render ever comes along to retake it. Keeping
+// tracksViewChanges true until the double-rAF after onLayout guarantees at
+// least one snapshot is taken after the Svg has actually painted, then it's
+// switched off for normal performance. State lives in its own component so a
+// fresh mount (navigationMode toggling the parent Marker in/out) always
+// starts with a fresh, unpainted flag instead of a stale "already painted".
+function DriverNavCarMarker({
+  coordinate,
+  rotation,
+}: {
+  coordinate: { latitude: number; longitude: number };
+  rotation: number;
+}) {
+  const [painted, setPainted] = useState(false);
+
+  return (
+    <Marker
+      coordinate={coordinate}
+      anchor={{ x: 0.5, y: 0.5 }}
+      flat
+      rotation={rotation}
+      tracksViewChanges={!painted}
+    >
+      <View
+        style={styles.driverNavOuter}
+        onLayout={() => {
+          requestAnimationFrame(() => requestAnimationFrame(() => setPainted(true)));
+        }}
+      >
+        <View style={styles.driverNavGlow} />
+        {/* Top-down car silhouette — nose points up; the Marker's own
+            `rotation={currentBearing}` (flat) handles actual heading. */}
+        <Svg width={34} height={46} viewBox="0 0 34 46">
+          <Rect x="3" y="3" width="28" height="40" rx="11" fill="#ffffff" stroke="#1d4ed8" strokeWidth="2" />
+          <Rect x="8" y="9" width="18" height="13" rx="4" fill="#1d4ed8" />
+          <Rect x="10" y="27" width="14" height="9" rx="3" fill="#1d4ed8" opacity="0.55" />
+          <Rect x="14" y="2" width="6" height="6" rx="3" fill="#55c49a" />
+        </Svg>
+      </View>
+    </Marker>
+  );
+}
+
 // ── Component ──────────────────────────────────────────────────────────────────
 
 // Wrapped in React.memo: this component re-renders on every driver GPS tick
@@ -616,25 +663,10 @@ export const MapBackdrop = React.memo(function MapBackdrop({
 
         {/* ── Driver marker — navigation mode (arrow, flat, rotates) ─────── */}
         {driverLocation && navigationMode && (
-          <Marker
+          <DriverNavCarMarker
             coordinate={markerCoord ?? { latitude: driverLocation.latitude, longitude: driverLocation.longitude }}
-            anchor={{ x: 0.5, y: 0.5 }}
-            flat
             rotation={currentBearing}
-            tracksViewChanges={false}
-          >
-            <View style={styles.driverNavOuter}>
-              <View style={styles.driverNavGlow} />
-              {/* Top-down car silhouette — nose points up; the Marker's own
-                  `rotation={currentBearing}` (flat) handles actual heading. */}
-              <Svg width={34} height={46} viewBox="0 0 34 46">
-                <Rect x="3" y="3" width="28" height="40" rx="11" fill="#ffffff" stroke="#1d4ed8" strokeWidth="2" />
-                <Rect x="8" y="9" width="18" height="13" rx="4" fill="#1d4ed8" />
-                <Rect x="10" y="27" width="14" height="9" rx="3" fill="#1d4ed8" opacity="0.55" />
-                <Rect x="14" y="2" width="6" height="6" rx="3" fill="#55c49a" />
-              </Svg>
-            </View>
-          </Marker>
+          />
         )}
 
         {/* ── Driver marker — idle mode (car icon) ──────────────────────── */}
