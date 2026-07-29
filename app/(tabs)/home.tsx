@@ -723,7 +723,16 @@ export default function HomeScreen() {
                 <View style={[styles.divider, { backgroundColor: colors.border }]} />
                 <StatItem label={t.trips} value={todayTripsCount != null ? String(todayTripsCount) : '—'} colors={colors} isRTL={isRTL} />
                 <View style={[styles.divider, { backgroundColor: colors.border }]} />
-                <StatItem label={t.online_status} value={earningsData?.online ? `${earningsData.online}h` : '—'} colors={colors} isRTL={isRTL} />
+                <StatItem
+                  label={t.online_status}
+                  value={
+                    typeof earningsData?.summary?.online === 'number'
+                      ? `${Math.floor(Math.round(earningsData.summary.online * 60) / 60)}h ${Math.round(earningsData.summary.online * 60) % 60}m`
+                      : '—'
+                  }
+                  colors={colors}
+                  isRTL={isRTL}
+                />
               </View>
             )}
           </GlassView>
