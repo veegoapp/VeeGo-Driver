@@ -5,7 +5,7 @@ import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import { DRIVER_LOCATION_TASK } from '@/lib/backgroundLocationTask';
 import { AlertCircle, Bell, Check, CheckCircle, Star, Tag, TrendingUp, X } from 'lucide-react-native';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSocket } from '@/lib/socketContext';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
@@ -103,6 +103,28 @@ export default function HomeScreen() {
     queryKey: ['earnings-summary'],
     queryFn: () => endpoints.earnings.summary(),
   });
+  // The earnings-summary response has no trips count (only totalEarnings/
+  // totalPaid/etc — see EarningsSummary type in earnings.tsx), so the Home
+  // stats pill's TRIPS figure is derived here instead: fetch completed ride
+  // history and count entries whose completedAt falls on today's local date.
+  const { data: tripHistoryRaw } = useQuery({
+    queryKey: ['today-trips-history'],
+    queryFn: () => endpoints.rides.history(1, 100, 'completed'),
+    staleTime: 30000,
+  });
+  const todayTripsCount = useMemo(() => {
+    const items = (tripHistoryRaw as { data?: { completedAt: string }[] } | undefined)?.data;
+    if (!Array.isArray(items)) return null;
+    const now = new Date();
+    return items.filter((r) => {
+      const d = new Date(r.completedAt);
+      return (
+        d.getFullYear() === now.getFullYear() &&
+        d.getMonth() === now.getMonth() &&
+        d.getDate() === now.getDate()
+      );
+    }).length;
+  }, [tripHistoryRaw]);
   const { data: promotionsRaw } = useQuery({
     queryKey: ['driver-promotions'],
     queryFn: () => endpoints.driver.promotions(),
@@ -699,7 +721,7 @@ export default function HomeScreen() {
                 {/* backend returns totalEarnings as a string — parseFloat for numeric formatting */}
                 <StatItem label={t.today} value={`${parseFloat(String(earningsData?.summary?.totalEarnings ?? 0)).toFixed(2)} ${t.egp}`} highlight colors={colors} isRTL={isRTL} />
                 <View style={[styles.divider, { backgroundColor: colors.border }]} />
-                <StatItem label={t.trips} value={String(earningsData?.trips ?? '—')} colors={colors} isRTL={isRTL} />
+                <StatItem label={t.trips} value={todayTripsCount != null ? String(todayTripsCount) : '—'} colors={colors} isRTL={isRTL} />
                 <View style={[styles.divider, { backgroundColor: colors.border }]} />
                 <StatItem label={t.online_status} value={earningsData?.online ? `${earningsData.online}h` : '—'} colors={colors} isRTL={isRTL} />
               </View>
