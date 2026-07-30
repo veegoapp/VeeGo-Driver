@@ -5,6 +5,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
+  FlatList,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -85,114 +86,118 @@ export default function RideHistoryTabScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <ScrollView
+      <FlatList
+        data={allRides}
+        keyExtractor={(ride) => ride.id}
         contentContainerStyle={{
           paddingTop: topPad + 8,
           paddingHorizontal: 20,
           paddingBottom: tabBarHeight + 24,
         }}
         showsVerticalScrollIndicator={false}
-      >
-        {/* Page title */}
-        <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-          {t.ride_history_label}
-        </Text>
-
-        {/* Filter chips */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={{ marginTop: Spacing.lg }}
-          contentContainerStyle={{ gap: Spacing.sm, paddingRight: Spacing.xs }}
-        >
-          {FILTER_KEYS.map(key => (
-            <Pressable key={key} onPress={() => setFilter(key)}>
-              {key === filter ? (
-                <LinearGradient
-                  colors={['#2d2d42', '#1e1e28']}
-                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                  style={styles.chip}
-                >
-                  <Text style={[styles.chipText, { color: '#fff', fontFamily: 'Inter_700Bold' }]}>
-                    {filterLabels[key]}
-                  </Text>
-                </LinearGradient>
-              ) : (
-                <GlassView style={styles.chip} borderRadius={20}>
-                  <Text style={[styles.chipText, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>
-                    {filterLabels[key]}
-                  </Text>
-                </GlassView>
-              )}
-            </Pressable>
-          ))}
-        </ScrollView>
-
-        {/* List */}
-        {isLoading && page === 1 ? (
-          <View style={{ marginTop: 60, alignItems: 'center' }}>
-            <AppLoader />
-          </View>
-        ) : isError ? (
-          <View style={{ marginTop: 60, alignItems: 'center', gap: Spacing.sm }}>
-            <Text style={{ fontSize: Typography.size.xxl }}>⚠️</Text>
-            <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: Typography.size.sm, textAlign: 'center' }}>
-              Failed to load ride history.{'\n'}Please try again.
+        ListHeaderComponent={
+          <>
+            {/* Page title */}
+            <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
+              {t.ride_history_label}
             </Text>
-          </View>
-        ) : allRides.length === 0 ? (
-          <View style={{ marginTop: 60, alignItems: 'center', gap: Spacing.sm }}>
-            <Text style={{ fontSize: 36 }}>🚗</Text>
-            <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: Typography.size.md }}>
-              No rides yet
-            </Text>
-            <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13, textAlign: 'center' }}>
-              {filter === 'all'
-                ? 'Your completed rides will appear here.'
-                : `No ${filter} rides found.`}
-            </Text>
-          </View>
-        ) : (
-          <View style={{ marginTop: Spacing.lg, gap: 10 }}>
-            {allRides.map((ride, i) => (
-              <Animated.View
-                key={ride.id}
-                style={{
-                  opacity: cardAnims[i] ?? 1,
-                  transform: [{
-                    translateY: (cardAnims[i] ?? new Animated.Value(1)).interpolate({
-                      inputRange: [0, 1], outputRange: [14, 0],
-                    }),
-                  }],
-                }}
-              >
-                <RideCard ride={ride} colors={colors} isRTL={isRTL} R={R} TA={TA} />
-              </Animated.View>
-            ))}
 
-            {hasMore && !isLoading && (
-              <Pressable
-                onPress={() => setPage(p => p + 1)}
-                style={{
-                  marginTop: Spacing.xs, marginBottom: Spacing.sm, alignItems: 'center',
-                  paddingVertical: 14, borderRadius: Radius.lg,
-                  backgroundColor: 'rgba(61,82,213,0.08)',
-                }}
-              >
-                <Text style={{ color: '#55c49a', fontFamily: 'Inter_600SemiBold', fontSize: Typography.size.sm }}>
-                  Load more
-                </Text>
-              </Pressable>
-            )}
+            {/* Filter chips */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{ marginTop: Spacing.lg }}
+              contentContainerStyle={{ gap: Spacing.sm, paddingRight: Spacing.xs }}
+            >
+              {FILTER_KEYS.map(key => (
+                <Pressable key={key} onPress={() => setFilter(key)}>
+                  {key === filter ? (
+                    <LinearGradient
+                      colors={['#2d2d42', '#1e1e28']}
+                      start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                      style={styles.chip}
+                    >
+                      <Text style={[styles.chipText, { color: '#fff', fontFamily: 'Inter_700Bold' }]}>
+                        {filterLabels[key]}
+                      </Text>
+                    </LinearGradient>
+                  ) : (
+                    <GlassView style={styles.chip} borderRadius={20}>
+                      <Text style={[styles.chipText, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>
+                        {filterLabels[key]}
+                      </Text>
+                    </GlassView>
+                  )}
+                </Pressable>
+              ))}
+            </ScrollView>
 
-            {isLoading && page > 1 && (
-              <View style={{ alignItems: 'center', paddingVertical: 20 }}>
-                <ActivityIndicator color="#55c49a" />
+            {isLoading && page === 1 ? (
+              <View style={{ marginTop: 60, alignItems: 'center' }}>
+                <AppLoader />
               </View>
-            )}
-          </View>
+            ) : isError ? (
+              <View style={{ marginTop: 60, alignItems: 'center', gap: Spacing.sm }}>
+                <Text style={{ fontSize: Typography.size.xxl }}>⚠️</Text>
+                <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: Typography.size.sm, textAlign: 'center' }}>
+                  Failed to load ride history.{'\n'}Please try again.
+                </Text>
+              </View>
+            ) : null}
+          </>
+        }
+        ListEmptyComponent={
+          !isLoading && !isError ? (
+            <View style={{ marginTop: 60, alignItems: 'center', gap: Spacing.sm }}>
+              <Text style={{ fontSize: 36 }}>🚗</Text>
+              <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: Typography.size.md }}>
+                No rides yet
+              </Text>
+              <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13, textAlign: 'center' }}>
+                {filter === 'all'
+                  ? 'Your completed rides will appear here.'
+                  : `No ${filter} rides found.`}
+              </Text>
+            </View>
+          ) : null
+        }
+        renderItem={({ item: ride, index: i }) => (
+          <Animated.View
+            style={{
+              marginTop: i === 0 ? Spacing.lg : 0,
+              marginBottom: 10,
+              opacity: cardAnims[i] ?? 1,
+              transform: [{
+                translateY: (cardAnims[i] ?? new Animated.Value(1)).interpolate({
+                  inputRange: [0, 1], outputRange: [14, 0],
+                }),
+              }],
+            }}
+          >
+            <RideCard ride={ride} colors={colors} isRTL={isRTL} R={R} TA={TA} />
+          </Animated.View>
         )}
-      </ScrollView>
+        ListFooterComponent={
+          hasMore && !isLoading ? (
+            <Pressable
+              onPress={() => setPage(p => p + 1)}
+              style={{
+                marginTop: Spacing.xs, marginBottom: Spacing.sm, alignItems: 'center',
+                paddingVertical: 14, borderRadius: Radius.lg,
+                backgroundColor: 'rgba(61,82,213,0.08)',
+              }}
+            >
+              <Text style={{ color: '#55c49a', fontFamily: 'Inter_600SemiBold', fontSize: Typography.size.sm }}>
+                Load more
+              </Text>
+            </Pressable>
+          ) : isLoading && page > 1 ? (
+            <View style={{ alignItems: 'center', paddingVertical: 20 }}>
+              <ActivityIndicator color="#55c49a" />
+            </View>
+          ) : null
+        }
+      />
     </View>
   );
 }

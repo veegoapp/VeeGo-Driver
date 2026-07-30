@@ -5,9 +5,9 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import {
   ActivityIndicator,
   Animated,
+  FlatList,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -159,115 +159,117 @@ export default function TripHistoryScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <ScrollView
+      <FlatList
+        data={allTrips}
+        keyExtractor={(trip) => trip.id}
         contentContainerStyle={{ paddingTop: topPad + 8, paddingBottom: Math.max(insets.bottom, 24) + 32, paddingHorizontal: 20 }}
         showsVerticalScrollIndicator={false}
-      >
-        {/* ── Header ──────────────────────────────────────────────────── */}
-        <View style={[styles.headerRow, { flexDirection: R, marginBottom: Spacing.xs }]}>
-          <Pressable
-            onPress={() => router.back()}
-            hitSlop={12}
-            style={({ pressed }) => [styles.backBtn, { backgroundColor: pressed ? colors.secondary : colors.secondary + '99' }]}
-          >
-            <ArrowLeft size={20} color={colors.foreground} strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
-          </Pressable>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
-              {t.trip_history}
-            </Text>
-            <Text style={[styles.pageSubtitle, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>
-              {t.history_subtitle}
-            </Text>
-          </View>
-          <Pressable
-            onPress={() => router.push('/shuttle/history-export' as any)}
-            hitSlop={12}
-            style={({ pressed }) => [styles.backBtn, { backgroundColor: pressed ? colors.secondary : colors.secondary + '99' }]}
-          >
-            <Download size={20} color={colors.foreground} strokeWidth={2} />
-          </Pressable>
-        </View>
-
-        {/* ── Summary banner ─────────────────────────────────────────── */}
-        {!isLoading && !isError && allTrips.length > 0 && (
-          <Animated.View style={{ opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }], marginBottom: 20 }}>
-            <LinearGradient colors={colors.gradientPrimary} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.summaryCard}>
-              <View style={[styles.summaryRow, { flexDirection: R }]}>
-                <View style={styles.summaryIconWrap}>
-                  <TrendingUp size={22} color="#fff" strokeWidth={2} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.summaryLabel, { fontFamily: 'Inter_700Bold', textAlign: TA }]}>
-                    {displayTotal} {t.history_subtitle}
-                  </Text>
-                  <View style={[{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'baseline', gap: 6, marginTop: 2 }]}>
-                    <Text style={[styles.summaryAmount, { fontFamily: 'Inter_700Bold' }]}>
-                      {totalEarned.toLocaleString('ar-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </Text>
-                    <Text style={[styles.summaryCurrency, { fontFamily: 'Inter_600SemiBold' }]}>{t.egp}</Text>
-                  </View>
-                  {serverTotal != null && allTrips.length < serverTotal && (
-                    <Text style={[{ fontSize: 10, color: 'rgba(255,255,255,0.5)', fontFamily: 'Inter_400Regular', marginTop: 2, textAlign: TA }]}>
-                      {allTrips.length} / {serverTotal} {t.loaded_label}
-                    </Text>
-                  )}
-                </View>
+        ListHeaderComponent={
+          <>
+            {/* ── Header ──────────────────────────────────────────────────── */}
+            <View style={[styles.headerRow, { flexDirection: R, marginBottom: Spacing.xs }]}>
+              <Pressable
+                onPress={() => router.back()}
+                hitSlop={12}
+                style={({ pressed }) => [styles.backBtn, { backgroundColor: pressed ? colors.secondary : colors.secondary + '99' }]}
+              >
+                <ArrowLeft size={20} color={colors.foreground} strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
+              </Pressable>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
+                  {t.trip_history}
+                </Text>
+                <Text style={[styles.pageSubtitle, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>
+                  {t.history_subtitle}
+                </Text>
               </View>
-            </LinearGradient>
-          </Animated.View>
-        )}
+              <Pressable
+                onPress={() => router.push('/shuttle/history-export' as any)}
+                hitSlop={12}
+                style={({ pressed }) => [styles.backBtn, { backgroundColor: pressed ? colors.secondary : colors.secondary + '99' }]}
+              >
+                <Download size={20} color={colors.foreground} strokeWidth={2} />
+              </Pressable>
+            </View>
 
-        {/* ── Initial loading ───────────────────────────────────────────── */}
-        {isLoading && page === 1 && (
-          <View style={styles.centered}>
-            <AppLoader />
+            {/* ── Summary banner ─────────────────────────────────────────── */}
+            {!isLoading && !isError && allTrips.length > 0 && (
+              <Animated.View style={{ opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }], marginBottom: 20 }}>
+                <LinearGradient colors={colors.gradientPrimary} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.summaryCard}>
+                  <View style={[styles.summaryRow, { flexDirection: R }]}>
+                    <View style={styles.summaryIconWrap}>
+                      <TrendingUp size={22} color="#fff" strokeWidth={2} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.summaryLabel, { fontFamily: 'Inter_700Bold', textAlign: TA }]}>
+                        {displayTotal} {t.history_subtitle}
+                      </Text>
+                      <View style={[{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'baseline', gap: 6, marginTop: 2 }]}>
+                        <Text style={[styles.summaryAmount, { fontFamily: 'Inter_700Bold' }]}>
+                          {totalEarned.toLocaleString('ar-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </Text>
+                        <Text style={[styles.summaryCurrency, { fontFamily: 'Inter_600SemiBold' }]}>{t.egp}</Text>
+                      </View>
+                      {serverTotal != null && allTrips.length < serverTotal && (
+                        <Text style={[{ fontSize: 10, color: 'rgba(255,255,255,0.5)', fontFamily: 'Inter_400Regular', marginTop: 2, textAlign: TA }]}>
+                          {allTrips.length} / {serverTotal} {t.loaded_label}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                </LinearGradient>
+              </Animated.View>
+            )}
+
+            {/* ── Initial loading ───────────────────────────────────────────── */}
+            {isLoading && page === 1 && (
+              <View style={styles.centered}>
+                <AppLoader />
+              </View>
+            )}
+
+            {/* ── Error ────────────────────────────────────────────────────── */}
+            {isError && !isLoading && allTrips.length === 0 && (
+              <GlassView style={styles.emptyCard} borderRadius={20}>
+                <Clock size={40} color={colors.mutedForeground} strokeWidth={1.5} />
+                <Text style={[styles.emptyTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: 'center' }]}>
+                  {t.load_failed}
+                </Text>
+                <Pressable onPress={handleRefresh} style={({ pressed }) => [styles.retryBtn, { backgroundColor: pressed ? '#1e1e2820' : '#1e1e2812', borderColor: '#1e1e2825' }]}>
+                  <Text style={[{ fontFamily: 'Inter_700Bold', fontSize: 13, color: '#2d2d42' }]}>{t.back}</Text>
+                </Pressable>
+              </GlassView>
+            )}
+          </>
+        }
+        ListEmptyComponent={
+          !isLoading && !isError ? (
+            <GlassView style={styles.emptyCard} borderRadius={20}>
+              <Clock size={40} color={colors.mutedForeground} strokeWidth={1.5} />
+              <Text style={[styles.emptyTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: 'center', marginTop: Spacing.lg }]}>
+                {t.no_trip_history}
+              </Text>
+              <Text style={[styles.emptySub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: 'center', marginTop: 6 }]}>
+                {t.no_trip_history_sub}
+              </Text>
+            </GlassView>
+          ) : null
+        }
+        renderItem={({ item: trip, index: idx }) => (
+          <View style={{ marginBottom: 10 }}>
+            <TripCard
+              trip={trip}
+              idx={idx}
+              locale={locale}
+              isRTL={isRTL}
+              colors={colors}
+              t={t}
+            />
           </View>
         )}
-
-        {/* ── Error ────────────────────────────────────────────────────── */}
-        {isError && !isLoading && allTrips.length === 0 && (
-          <GlassView style={styles.emptyCard} borderRadius={20}>
-            <Clock size={40} color={colors.mutedForeground} strokeWidth={1.5} />
-            <Text style={[styles.emptyTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: 'center' }]}>
-              {t.load_failed}
-            </Text>
-            <Pressable onPress={handleRefresh} style={({ pressed }) => [styles.retryBtn, { backgroundColor: pressed ? '#1e1e2820' : '#1e1e2812', borderColor: '#1e1e2825' }]}>
-              <Text style={[{ fontFamily: 'Inter_700Bold', fontSize: 13, color: '#2d2d42' }]}>{t.back}</Text>
-            </Pressable>
-          </GlassView>
-        )}
-
-        {/* ── Empty state ───────────────────────────────────────────────── */}
-        {!isLoading && !isError && allTrips.length === 0 && (
-          <GlassView style={styles.emptyCard} borderRadius={20}>
-            <Clock size={40} color={colors.mutedForeground} strokeWidth={1.5} />
-            <Text style={[styles.emptyTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: 'center', marginTop: Spacing.lg }]}>
-              {t.no_trip_history}
-            </Text>
-            <Text style={[styles.emptySub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: 'center', marginTop: 6 }]}>
-              {t.no_trip_history_sub}
-            </Text>
-          </GlassView>
-        )}
-
-        {/* ── Trip cards ────────────────────────────────────────────────── */}
-        {allTrips.length > 0 && (
-          <View style={{ gap: 10 }}>
-            {allTrips.map((trip, idx) => (
-              <TripCard
-                key={trip.id}
-                trip={trip}
-                idx={idx}
-                locale={locale}
-                isRTL={isRTL}
-                colors={colors}
-                t={t}
-              />
-            ))}
-
-            {/* ── Load More ───────────────────────────────────────────── */}
-            {hasNextPage && (
+        ListFooterComponent={
+          allTrips.length > 0 ? (
+            hasNextPage ? (
               <Pressable
                 onPress={handleLoadMore}
                 disabled={loadingMore}
@@ -291,23 +293,23 @@ export default function TripHistoryScreen() {
                   </>
                 )}
               </Pressable>
-            )}
-
-            {/* ── End of list marker ──────────────────────────────────── */}
-            {!hasNextPage && allTrips.length > 0 && serverTotal != null && (
+            ) : serverTotal != null ? (
               <Text style={[styles.endLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
                 {t.all_trips_shown.replace('{n}', String(serverTotal))}
               </Text>
-            )}
-          </View>
-        )}
-      </ScrollView>
+            ) : null
+          ) : null
+        }
+      />
     </View>
   );
 }
 
 // ── TripCard ───────────────────────────────────────────────────────────────────
-function TripCard({
+// Memoized: allTrips only grows (via "Load more"), and previously-loaded trip
+// objects keep the same reference — without this, appending a new page
+// re-renders every already-rendered card, not just the new ones.
+const TripCard = React.memo(function TripCard({
   trip,
   idx,
   locale,
@@ -403,7 +405,7 @@ function TripCard({
       </Pressable>
     </Animated.View>
   );
-}
+});
 
 // ── Styles ─────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({

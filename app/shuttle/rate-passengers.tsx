@@ -4,7 +4,6 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Image,
   Platform,
   Pressable,
   ScrollView,
@@ -12,6 +11,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
@@ -172,7 +172,7 @@ export default function RatePassengersScreen() {
               <GlassView key={p.id} style={s.card} borderRadius={20}>
                 <View style={s.cardRow}>
                   {p.avatar ? (
-                    <Image source={{ uri: p.avatar }} style={[s.avatar, { borderColor: colors.border }]} />
+                    <Image source={{ uri: p.avatar }} style={[s.avatar, { borderColor: colors.border }]} contentFit="cover" />
                   ) : (
                     <View style={[s.avatarFallback, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
                       <Text style={{ fontSize: Typography.size.lg }}>👤</Text>

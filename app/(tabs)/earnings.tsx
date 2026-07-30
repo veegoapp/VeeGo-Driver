@@ -2,7 +2,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { ChevronRight, Download, TrendingDown, TrendingUp } from 'lucide-react-native';
 import { FeatherIcon } from '@/lib/iconMap';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Pressable,
@@ -133,11 +133,21 @@ export default function EarningsScreen() {
   // Driver's cut vs the company's cut over the currently loaded period rides
   // — derived from real fare/driverEarnings per ride rather than an assumed
   // fixed commission rate, so it stays correct if the rate ever varies.
-  const grossTotal = rides.reduce((s, r) => s + toNum(r.fare), 0);
-  const driverTotal = rides.reduce((s, r) => s + (r.driverEarnings != null ? toNum(r.driverEarnings) : toNum(r.fare)), 0);
-  const companyTotal = Math.max(0, grossTotal - driverTotal);
-  const driverPct = grossTotal > 0 ? (driverTotal / grossTotal) * 100 : 0;
-  const companyPct = grossTotal > 0 ? (companyTotal / grossTotal) * 100 : 0;
+  // Memoized: rides only changes when the period-rides query resolves, but
+  // this component re-renders often (animations, period-chip taps) — without
+  // this, the same reduce() over every loaded ride reran on each of those.
+  const { grossTotal, driverTotal, companyTotal, driverPct, companyPct } = useMemo(() => {
+    const gross = rides.reduce((s, r) => s + toNum(r.fare), 0);
+    const driver = rides.reduce((s, r) => s + (r.driverEarnings != null ? toNum(r.driverEarnings) : toNum(r.fare)), 0);
+    const company = Math.max(0, gross - driver);
+    return {
+      grossTotal: gross,
+      driverTotal: driver,
+      companyTotal: company,
+      driverPct: gross > 0 ? (driver / gross) * 100 : 0,
+      companyPct: gross > 0 ? (company / gross) * 100 : 0,
+    };
+  }, [rides]);
 
   const barAnims = useRef(Array.from({ length: 12 }, () => new Animated.Value(0))).current;
   const heroAnim = useRef(new Animated.Value(0)).current;

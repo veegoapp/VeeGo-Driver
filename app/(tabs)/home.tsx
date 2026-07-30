@@ -14,13 +14,13 @@ import {
   ActivityIndicator,
   Animated,
   Easing,
-  Image,
   Platform,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { SurgeZone } from '@/lib/types';
 import { GlassView } from '@/components/GlassView';
@@ -45,6 +45,23 @@ export const TAB_BAR_HEIGHT = 96;
 // The backend's actual round timeout is otherwise read from the payload.
 const OFFER_TIMEOUT_MS = 12000;
 
+// Foreground GPS is always requested/tracked (not gated on "online") so the
+// location permission prompt appears as soon as Home mounts and the map can
+// center on the driver's real position instead of staying on a fallback.
+// Isolated into its own component (rather than calling useDriverLocation
+// directly in HomeScreen) so the ~1 GPS tick/second this hook produces only
+// re-renders this small map layer — not the header, stats pill, promo card,
+// and request sheet that make up the rest of HomeScreen.
+const DriverMapLayer = React.memo(function DriverMapLayer({ surgeZones }: { surgeZones: SurgeZone[] }) {
+  const { position: driverPosition } = useDriverLocation(true);
+  return (
+    <MapBackdrop
+      driverLocation={driverPosition ?? undefined}
+      surgeZones={surgeZones}
+    />
+  );
+});
+
 export default function HomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -63,10 +80,6 @@ export default function HomeScreen() {
   const [countdown, setCountdown] = useState(12);
   const [promoDismissed, setPromoDismissed] = useState(false);
   const topPad = insets.top;
-  // Foreground GPS is always requested/tracked (not gated on "online") so the
-  // location permission prompt appears as soon as Home mounts and the map can
-  // center on the driver's real position instead of staying on a fallback.
-  const { position: driverPosition } = useDriverLocation(true);
   // Issue B: realtime socket location while Online and idle (no active ride).
   // Reuses the existing driver:location:update channel via useLocationBroadcast
   // — the same hook the ride screen uses for driver:ride:location — with no
@@ -614,10 +627,7 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <MapBackdrop
-        driverLocation={driverPosition ?? undefined}
-        surgeZones={surgeZones}
-      />
+      <DriverMapLayer surgeZones={surgeZones} />
 
       {/* Reconnecting banner */}
       <Animated.View
@@ -675,7 +685,7 @@ export default function HomeScreen() {
           <Pressable onPress={() => router.push('/(tabs)/profile')} style={styles.avatarPill}>
             <GlassView style={styles.avatarPillGlass} borderRadius={24}>
               <View style={[styles.avatarPillInner, { flexDirection: R }]}>
-                <Image source={driverData?.avatar ? { uri: driverData.avatar } : undefined} style={[styles.avatar, { borderColor: colors.primary + '66' }]} />
+                <Image source={driverData?.avatar ? { uri: driverData.avatar } : undefined} style={[styles.avatar, { borderColor: colors.primary + '66' }]} contentFit="cover" />
                 <View>
                   <Text style={[styles.hiText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>{t.hi}, {(driverData?.name ?? '—').split(' ')[0]}</Text>
                   <View style={[styles.ratingRow, { flexDirection: R }]}>
@@ -876,7 +886,7 @@ export default function HomeScreen() {
                 </Text>
               </View>
               <View style={[styles.riderInfo, { flexDirection: R }]}>
-                <Image source={{ uri: request.rider.avatar }} style={styles.riderAvatar} />
+                <Image source={{ uri: request.rider.avatar }} style={styles.riderAvatar} contentFit="cover" />
                 <View>
                   <Text style={[styles.riderName, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{request.rider.name}</Text>
                   {request.rider.rating != null && (

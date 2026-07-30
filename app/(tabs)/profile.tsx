@@ -4,7 +4,8 @@ import { router } from 'expo-router';
 import { Award, ChevronRight, Copy, LogOut, Moon, Star, Sun } from 'lucide-react-native';
 import { FeatherIcon } from '@/lib/iconMap';
 import React, { useState, useCallback } from 'react';
-import { Alert, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Image } from 'expo-image';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
@@ -168,6 +169,7 @@ export default function ProfileScreen() {
                   <Image
                     source={{ uri: avatarUri }}
                     style={[styles.avatar, { borderColor: colors.primary + '66' }]}
+                    contentFit="cover"
                     onError={() => setAvatarLoadFailed(true)}
                   />
                   <LinearGradient colors={['#2d2d42', '#55c49a']} style={styles.awardBadge}>

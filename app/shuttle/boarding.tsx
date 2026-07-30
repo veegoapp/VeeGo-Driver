@@ -3,7 +3,8 @@ import { router } from 'expo-router';
 import { safeBack } from '@/lib/navUtils';
 import { AlertCircle, Check, ChevronLeft, Package, Phone, Tag, Users, X } from 'lucide-react-native';
 import React, { useRef, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Animated, Image, Platform, Pressable, ScrollView, StyleSheet, Text, View, ImageErrorEventData, NativeSyntheticEvent } from 'react-native';
+import { ActivityIndicator, Alert, Animated, Platform, Pressable, ScrollView, StyleSheet, Text, View, ImageErrorEventData, NativeSyntheticEvent } from 'react-native';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
@@ -260,6 +261,7 @@ export default function ShuttleBoardingScreen() {
                               : colors.border,
                           },
                         ]}
+                        contentFit="cover"
                         onError={() => setAvatarErrors(prev => ({ ...prev, [p.id]: true }))}
                       />
                     ) : (

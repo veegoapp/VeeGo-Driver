@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  FlatList,
   Modal,
   Platform,
   Pressable,
@@ -211,119 +212,125 @@ export default function TripsScreen() {
         </View>
       </Modal>
 
-      <ScrollView
+      <FlatList
+        data={tripsData}
+        keyExtractor={(trip) => trip.id}
         contentContainerStyle={{ paddingTop: topPad + 8, paddingBottom: tabBarHeight + 24, paddingHorizontal: 20 }}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
-      >
-        <View style={[styles.header, { flexDirection: R }]}>
-          <View>
-            <Text style={[styles.sectionLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.history}</Text>
-            <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.your_trips}</Text>
-          </View>
-          <GlassView style={styles.filterBtn} borderRadius={20}>
-            <Sliders size={16} color={colors.foreground} strokeWidth={2} />
-          </GlassView>
-        </View>
+        ListHeaderComponent={
+          <>
+            <View style={[styles.header, { flexDirection: R }]}>
+              <View>
+                <Text style={[styles.sectionLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.history}</Text>
+                <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.your_trips}</Text>
+              </View>
+              <GlassView style={styles.filterBtn} borderRadius={20}>
+                <Sliders size={16} color={colors.foreground} strokeWidth={2} />
+              </GlassView>
+            </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: Spacing.lg }} contentContainerStyle={{ gap: Spacing.sm, paddingRight: Spacing.xs }}>
-          {FILTER_KEYS.map(key => (
-            <Pressable key={key} onPress={() => setFilter(key)}>
-              {key === filter ? (
-                <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[styles.chip, { elevation: 6, shadowColor: '#2d2d42', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.35, shadowRadius: 8 }]}>
-                  <Text style={[styles.chipText, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>{filterLabels[key]}</Text>
-                </LinearGradient>
-              ) : (
-                <GlassView style={styles.chip} borderRadius={20}>
-                  <Text style={[styles.chipText, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>{filterLabels[key]}</Text>
-                </GlassView>
-              )}
-            </Pressable>
-          ))}
-        </ScrollView>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: Spacing.lg }} contentContainerStyle={{ gap: Spacing.sm, paddingRight: Spacing.xs }}>
+              {FILTER_KEYS.map(key => (
+                <Pressable key={key} onPress={() => setFilter(key)}>
+                  {key === filter ? (
+                    <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[styles.chip, { elevation: 6, shadowColor: '#2d2d42', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.35, shadowRadius: 8 }]}>
+                      <Text style={[styles.chipText, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>{filterLabels[key]}</Text>
+                    </LinearGradient>
+                  ) : (
+                    <GlassView style={styles.chip} borderRadius={20}>
+                      <Text style={[styles.chipText, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>{filterLabels[key]}</Text>
+                    </GlassView>
+                  )}
+                </Pressable>
+              ))}
+            </ScrollView>
 
-        {isLoading ? (
-          <View style={{ marginTop: 60, alignItems: 'center' }}>
-            <AppLoader />
-          </View>
-        ) : isError ? (
-          <View style={{ marginTop: 60, alignItems: 'center' }}>
-            <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: Typography.size.sm }}>{t.trips_load_fail}</Text>
-          </View>
-        ) : tripsData.length === 0 ? (
-          <View style={{ marginTop: 60, alignItems: 'center', gap: Spacing.sm }}>
-            <Car size={52} color={colors.mutedForeground} strokeWidth={1.5} style={{ opacity: 0.45 }} />
-            <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: Typography.size.md }}>{t.trips_empty_title}</Text>
-            <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13 }}>
-              {filter === 'all' ? t.no_trip_history_sub : `${filterLabels[filter]}`}
-            </Text>
-          </View>
-        ) : (
-          <View style={{ marginTop: 20, gap: 10 }}>
-            {tripsData.map((trip, i) => (
-              <Animated.View key={trip.id} style={{ opacity: cardAnims[i], transform: [{ translateY: cardAnims[i].interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }] }}>
-                <Pressable onPress={() => router.push(`/trips/${trip.id}`)}>
-                  <GlassView style={styles.tripCard} borderRadius={20}>
-                    {/* Trip route info */}
-                    <View style={[styles.tripRow, { flexDirection: R }]}>
-                      <View style={{ flex: 1, minWidth: 0 }}>
-                        <Text style={[styles.tripMeta, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold', textAlign: TA }]}>{trip.date} · {trip.distance}</Text>
-                        <View style={[styles.tripRoute, { flexDirection: R }]}>
-                          <View style={styles.routeDots}>
-                            <View style={[styles.dotTop, { backgroundColor: colors.primary }]} />
-                            <View style={[styles.routeLine, { backgroundColor: colors.border }]} />
-                            <View style={[styles.dotBottom, { backgroundColor: colors.accent }]} />
-                          </View>
-                          <View style={{ flex: 1, gap: 6 }}>
-                            <Text style={[styles.routeText, { color: colors.foreground, fontFamily: 'Inter_600SemiBold', textAlign: TA }]} numberOfLines={1}>{trip.from}</Text>
-                            <Text style={[styles.routeText, { color: colors.foreground, fontFamily: 'Inter_600SemiBold', textAlign: TA }]} numberOfLines={1}>{trip.to}</Text>
-                          </View>
-                        </View>
+            {isLoading ? (
+              <View style={{ marginTop: 60, alignItems: 'center' }}>
+                <AppLoader />
+              </View>
+            ) : isError ? (
+              <View style={{ marginTop: 60, alignItems: 'center' }}>
+                <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: Typography.size.sm }}>{t.trips_load_fail}</Text>
+              </View>
+            ) : null}
+          </>
+        }
+        ListEmptyComponent={
+          !isLoading && !isError ? (
+            <View style={{ marginTop: 60, alignItems: 'center', gap: Spacing.sm }}>
+              <Car size={52} color={colors.mutedForeground} strokeWidth={1.5} style={{ opacity: 0.45 }} />
+              <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: Typography.size.md }}>{t.trips_empty_title}</Text>
+              <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13 }}>
+                {filter === 'all' ? t.no_trip_history_sub : `${filterLabels[filter]}`}
+              </Text>
+            </View>
+          ) : null
+        }
+        renderItem={({ item: trip, index: i }) => (
+          <Animated.View style={{ marginTop: i === 0 ? 20 : 0, marginBottom: 10, opacity: cardAnims[i], transform: [{ translateY: cardAnims[i].interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }] }}>
+            <Pressable onPress={() => router.push(`/trips/${trip.id}`)}>
+              <GlassView style={styles.tripCard} borderRadius={20}>
+                {/* Trip route info */}
+                <View style={[styles.tripRow, { flexDirection: R }]}>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={[styles.tripMeta, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold', textAlign: TA }]}>{trip.date} · {trip.distance}</Text>
+                    <View style={[styles.tripRoute, { flexDirection: R }]}>
+                      <View style={styles.routeDots}>
+                        <View style={[styles.dotTop, { backgroundColor: colors.primary }]} />
+                        <View style={[styles.routeLine, { backgroundColor: colors.border }]} />
+                        <View style={[styles.dotBottom, { backgroundColor: colors.accent }]} />
                       </View>
-                      <View style={{ alignItems: isRTL ? 'flex-start' : 'flex-end', marginLeft: isRTL ? 0 : 12, marginRight: isRTL ? 12 : 0 }}>
-                        {/* parseFloat: backend returns fare as string */}
-                        <Text style={[styles.fareText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{parseFloat(String(trip.fare ?? 0)).toFixed(2)} {t.egp}</Text>
-                        <View style={[styles.starsRow, { flexDirection: R }]}>
-                          {Array.from({ length: 5 }).map((_, idx) => (
-                            <Star key={idx} size={12} color={idx < parseFloat(String(trip.rating ?? 0)) ? colors.accent : colors.mutedForeground + '4D'} fill={idx < parseFloat(String(trip.rating ?? 0)) ? colors.accent : 'transparent'} strokeWidth={2} />
-                          ))}
-                        </View>
-                        <StatusBadge status={trip.status} colors={colors} />
-                        <ChevronRight size={14} color={colors.mutedForeground} style={{ marginTop: Spacing.xs, transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
+                      <View style={{ flex: 1, gap: 6 }}>
+                        <Text style={[styles.routeText, { color: colors.foreground, fontFamily: 'Inter_600SemiBold', textAlign: TA }]} numberOfLines={1}>{trip.from}</Text>
+                        <Text style={[styles.routeText, { color: colors.foreground, fontFamily: 'Inter_600SemiBold', textAlign: TA }]} numberOfLines={1}>{trip.to}</Text>
                       </View>
                     </View>
+                  </View>
+                  <View style={{ alignItems: isRTL ? 'flex-start' : 'flex-end', marginLeft: isRTL ? 0 : 12, marginRight: isRTL ? 12 : 0 }}>
+                    {/* parseFloat: backend returns fare as string */}
+                    <Text style={[styles.fareText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{parseFloat(String(trip.fare ?? 0)).toFixed(2)} {t.egp}</Text>
+                    <View style={[styles.starsRow, { flexDirection: R }]}>
+                      {Array.from({ length: 5 }).map((_, idx) => (
+                        <Star key={idx} size={12} color={idx < parseFloat(String(trip.rating ?? 0)) ? colors.accent : colors.mutedForeground + '4D'} fill={idx < parseFloat(String(trip.rating ?? 0)) ? colors.accent : 'transparent'} strokeWidth={2} />
+                      ))}
+                    </View>
+                    <StatusBadge status={trip.status} colors={colors} />
+                    <ChevronRight size={14} color={colors.mutedForeground} style={{ marginTop: Spacing.xs, transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
+                  </View>
+                </View>
 
-                    {/* Task 2: lifecycle action buttons based on status */}
-                    <TripActionBar
-                      trip={trip}
-                      colors={colors}
-                      isRTL={isRTL}
-                      onAccept={() => handleAccept(trip.id)}
-                      onReject={() => handleReject(trip.id)}
-                      onStart={() => handleStart(trip.id)}
-                      onComplete={() => handleComplete(trip.id)}
-                      onCancel={() => setCancelTarget(trip.id)}
-                    />
-                  </GlassView>
-                </Pressable>
-              </Animated.View>
-            ))}
-            {hasMore && !isLoading && (
-              <Pressable
-                onPress={() => setPage(p => p + 1)}
-                style={{ marginTop: Spacing.sm, marginBottom: Spacing.lg, alignItems: 'center', paddingVertical: 14, borderRadius: Radius.lg, backgroundColor: 'rgba(61,82,213,0.08)' }}
-              >
-                <Text style={{ color: '#55c49a', fontFamily: 'Inter_600SemiBold', fontSize: Typography.size.sm }}>{t.load_more_label}</Text>
-              </Pressable>
-            )}
-            {isLoading && page > 1 && (
-              <View style={{ alignItems: 'center', paddingVertical: 20 }}>
-                <ActivityIndicator color="#55c49a" />
-              </View>
-            )}
-          </View>
+                {/* Task 2: lifecycle action buttons based on status */}
+                <TripActionBar
+                  trip={trip}
+                  colors={colors}
+                  isRTL={isRTL}
+                  onAccept={() => handleAccept(trip.id)}
+                  onReject={() => handleReject(trip.id)}
+                  onStart={() => handleStart(trip.id)}
+                  onComplete={() => handleComplete(trip.id)}
+                  onCancel={() => setCancelTarget(trip.id)}
+                />
+              </GlassView>
+            </Pressable>
+          </Animated.View>
         )}
-      </ScrollView>
+        ListFooterComponent={
+          hasMore && !isLoading ? (
+            <Pressable
+              onPress={() => setPage(p => p + 1)}
+              style={{ marginTop: Spacing.sm, marginBottom: Spacing.lg, alignItems: 'center', paddingVertical: 14, borderRadius: Radius.lg, backgroundColor: 'rgba(61,82,213,0.08)' }}
+            >
+              <Text style={{ color: '#55c49a', fontFamily: 'Inter_600SemiBold', fontSize: Typography.size.sm }}>{t.load_more_label}</Text>
+            </Pressable>
+          ) : isLoading && page > 1 ? (
+            <View style={{ alignItems: 'center', paddingVertical: 20 }}>
+              <ActivityIndicator color="#55c49a" />
+            </View>
+          ) : null
+        }
+      />
     </View>
   );
 }
