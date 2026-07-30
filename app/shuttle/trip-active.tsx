@@ -167,22 +167,24 @@ export default function ShuttleTripActiveScreen() {
     }
   }, [proximityM]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Approaching alert sound — plays 3× when driver enters 250m zone ───────
+  // ── Approaching alert sound — plays once when driver enters 250m zone ─────
   useEffect(() => {
     if (phase !== 'approaching') return;
     let cancelled = false;
     (async () => {
       await Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
-      for (let i = 0; i < 3; i++) {
-        if (cancelled) break;
-        const { sound } = await Audio.Sound.createAsync(
-          require('@/assets/sounds/approaching.wav'),
-          { shouldPlay: false, volume: 1.0, rate: 0.25, shouldCorrectPitch: true },
-        );
-        await sound.playAsync();
-        await new Promise<void>(res => setTimeout(res, 2400));
+      const { sound } = await Audio.Sound.createAsync(
+        require('@/assets/sounds/shuttle-approaching.wav'),
+        { shouldPlay: false, volume: 1.0 },
+      );
+      if (cancelled) {
         sound.unloadAsync();
+        return;
       }
+      sound.setOnPlaybackStatusUpdate(status => {
+        if (status.isLoaded && status.didJustFinish) sound.unloadAsync();
+      });
+      await sound.playAsync();
     })();
     return () => { cancelled = true; };
   }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
