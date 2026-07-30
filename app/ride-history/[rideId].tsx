@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, Clock, MapPin, Star } from 'lucide-react-native';
+import { ArrowLeft, Clock, MapPin, Star, TrendingDown, TrendingUp } from 'lucide-react-native';
 import React, { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -148,6 +148,44 @@ export default function RideHistoryDetailScreen() {
           </View>
         </GlassView>
 
+        {/* Payment method + driver/company split — split % is computed from
+            this ride's own fare/driverEarnings, not an assumed fixed rate. */}
+        {isCompleted && (
+          <GlassView style={styles.card} borderRadius={20}>
+            <View style={[{ flexDirection: R, alignItems: 'center', justifyContent: 'space-between' }]}>
+              <Text style={[{ fontSize: Typography.size.sm, color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>
+                Payment method
+              </Text>
+              <Text style={[{ fontSize: Typography.size.sm, color: colors.foreground, fontFamily: 'Inter_700Bold', textTransform: 'capitalize' }]}>
+                {ride.paymentMethod ?? '—'}
+              </Text>
+            </View>
+
+            <View style={[styles.splitRow, { flexDirection: R }]}>
+              <View style={[styles.rowIcon, { backgroundColor: '#F0FDF4' }]}>
+                <TrendingUp size={15} color="#16A34A" strokeWidth={2} />
+              </View>
+              <Text style={[{ flex: 1, fontSize: Typography.size.sm, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>
+                Your share {fare > 0 ? `(${((earnedAmount / fare) * 100).toFixed(0)}%)` : ''}
+              </Text>
+              <Text style={[{ fontSize: Typography.size.sm, color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
+                {earnedAmount.toFixed(2)} {t.egp}
+              </Text>
+            </View>
+            <View style={[styles.splitRow, { flexDirection: R }]}>
+              <View style={[styles.rowIcon, { backgroundColor: '#FFF7ED' }]}>
+                <TrendingDown size={15} color="#EA580C" strokeWidth={2} />
+              </View>
+              <Text style={[{ flex: 1, fontSize: Typography.size.sm, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>
+                Company share {fare > 0 ? `(${(100 - (earnedAmount / fare) * 100).toFixed(0)}%)` : ''}
+              </Text>
+              <Text style={[{ fontSize: Typography.size.sm, color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
+                {Math.max(0, fare - earnedAmount).toFixed(2)} {t.egp}
+              </Text>
+            </View>
+          </GlassView>
+        )}
+
         {/* Rider */}
         {ride.riderName && (
           <GlassView style={[styles.card, { flexDirection: R, alignItems: 'center', gap: Spacing.sm }]} borderRadius={20}>
@@ -209,4 +247,6 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 10, letterSpacing: 0.6, textTransform: 'uppercase' },
   centeredState: { marginTop: 40, alignItems: 'center', padding: Spacing.xxl, gap: 10 },
   stateTitle: { fontSize: Typography.size.md, textAlign: 'center' },
+  splitRow: { alignItems: 'center', gap: Spacing.sm, marginTop: Spacing.md },
+  rowIcon: { width: 28, height: 28, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
 });

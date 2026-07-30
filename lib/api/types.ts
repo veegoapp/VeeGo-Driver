@@ -167,6 +167,9 @@ export interface RideHistoryItem {
   status: 'completed' | 'cancelled';
   riderRating?: number;
   myRating?: number;
+  // Not yet returned by GET /driver/rides/history — backend TODO. Falls back
+  // to '—' in the UI until the field is added.
+  paymentMethod?: string;
 }
 
 // ─── Station ETAs ─────────────────────────────────────────────────────────────

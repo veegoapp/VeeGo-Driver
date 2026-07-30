@@ -1,11 +1,10 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { Download } from 'lucide-react-native';
+import { ChevronRight, Download, TrendingDown, TrendingUp } from 'lucide-react-native';
 import { FeatherIcon } from '@/lib/iconMap';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -18,7 +17,7 @@ import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { AppLoader } from '@/components/ui/AppLoader';
 import { useI18n } from '@/lib/i18nContext';
-import { endpoints } from '@/lib/api';
+import { endpoints, type RideHistoryItem } from '@/lib/api';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
@@ -51,6 +50,54 @@ const PERIOD_HERO_LABELS: Record<PeriodKey, string> = {
   current_month: 'TOTAL THIS MONTH',
 };
 
+const toNum = (v: unknown): number => (typeof v === 'number' ? v : parseFloat(String(v ?? 0)));
+
+// Local-time boundaries for each filter tab. The history endpoint has no
+// date-range param, so this is used to filter/paginate ride history
+// client-side (see fetchRidesInRange below) rather than trust a backend
+// period cut that doesn't exist for that endpoint.
+function getPeriodRange(period: PeriodKey): { start: Date; end: Date } {
+  const now = new Date();
+  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  if (period === 'today') {
+    return { start: startOfDay(now), end: now };
+  }
+  const day = now.getDay(); // 0 = Sunday
+  const mondayOffset = (day + 6) % 7;
+  const thisMonday = startOfDay(now);
+  thisMonday.setDate(thisMonday.getDate() - mondayOffset);
+  if (period === 'this_week') {
+    return { start: thisMonday, end: now };
+  }
+  if (period === 'last_week') {
+    const lastMonday = new Date(thisMonday);
+    lastMonday.setDate(lastMonday.getDate() - 7);
+    return { start: lastMonday, end: new Date(thisMonday.getTime() - 1) };
+  }
+  return { start: new Date(now.getFullYear(), now.getMonth(), 1), end: now };
+}
+
+// Ride history is paginated with no date filter, so pages are walked
+// newest-first until a ride older than `start` is hit — bounded to 20 pages
+// (1000 rides) as a safety cap for exceptionally busy drivers.
+async function fetchRidesInRange(start: Date, end: Date): Promise<RideHistoryItem[]> {
+  const results: RideHistoryItem[] = [];
+  const limit = 50;
+  for (let page = 1; page <= 20; page++) {
+    const res = await endpoints.rides.history(page, limit, 'completed') as { data?: RideHistoryItem[] };
+    const items = res?.data ?? [];
+    if (items.length === 0) break;
+    let hitOlder = false;
+    for (const r of items) {
+      const d = new Date(r.completedAt);
+      if (d >= start && d <= end) results.push(r);
+      if (d < start) hitOlder = true;
+    }
+    if (hitOlder || items.length < limit) break;
+  }
+  return results;
+}
+
 export default function EarningsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -71,27 +118,51 @@ export default function EarningsScreen() {
     queryKey: ['earnings-summary', period],
     queryFn: () => endpoints.earnings.summary(period),
   });
+  const { data: periodRides, isLoading: ridesLoading } = useQuery({
+    queryKey: ['earnings-period-rides', period],
+    queryFn: () => {
+      const { start, end } = getPeriodRange(period);
+      return fetchRidesInRange(start, end);
+    },
+  });
 
   const weekEarnings = ((weeklyRaw as { weeklyBreakdown?: WeekDay[] } | undefined)?.weeklyBreakdown ?? []);
   const summary = summaryRaw as EarningsSummary | undefined;
-  const WEEK_TOTAL = weekEarnings.reduce((s, d) => s + (d.total_earned ?? 0), 0);
-  const MAX = weekEarnings.length ? Math.max(...weekEarnings.map(d => d.total_earned ?? 0)) : 1;
+  const rides = periodRides ?? [];
+
+  // Driver's cut vs the company's cut over the currently loaded period rides
+  // — derived from real fare/driverEarnings per ride rather than an assumed
+  // fixed commission rate, so it stays correct if the rate ever varies.
+  const grossTotal = rides.reduce((s, r) => s + toNum(r.fare), 0);
+  const driverTotal = rides.reduce((s, r) => s + (r.driverEarnings != null ? toNum(r.driverEarnings) : toNum(r.fare)), 0);
+  const companyTotal = Math.max(0, grossTotal - driverTotal);
+  const driverPct = grossTotal > 0 ? (driverTotal / grossTotal) * 100 : 0;
+  const companyPct = grossTotal > 0 ? (companyTotal / grossTotal) * 100 : 0;
 
   const barAnims = useRef(Array.from({ length: 12 }, () => new Animated.Value(0))).current;
   const heroAnim = useRef(new Animated.Value(0)).current;
+  const trendMax = weekEarnings.length ? Math.max(...weekEarnings.map(d => d.total_earned ?? 0)) : 1;
 
   const isLoading = weeklyLoading || summaryLoading;
   const isError = weeklyError || summaryError;
 
   useEffect(() => {
+    Animated.spring(heroAnim, { toValue: 1, useNativeDriver: true, stiffness: 200, damping: 20 }).start();
+  }, [period]);
+
+  useEffect(() => {
     if (!weekEarnings.length) return;
-    Animated.parallel([
-      Animated.spring(heroAnim, { toValue: 1, useNativeDriver: true, stiffness: 200, damping: 20 }),
-      Animated.stagger(50, weekEarnings.map((d, i) =>
-        Animated.spring(barAnims[i], { toValue: (d.total_earned ?? 0) / MAX, useNativeDriver: false, stiffness: 200 })
-      )),
-    ]).start();
+    Animated.stagger(50, weekEarnings.map((d, i) =>
+      Animated.spring(barAnims[i], { toValue: (d.total_earned ?? 0) / trendMax, useNativeDriver: false, stiffness: 200 })
+    )).start();
   }, [weekEarnings.length]);
+
+  const handleTripPress = (ride: RideHistoryItem) => {
+    router.push({
+      pathname: '/ride-history/[rideId]',
+      params: { rideId: ride.id, ride: JSON.stringify(ride) },
+    });
+  };
 
   if (isLoading) {
     return (
@@ -149,30 +220,51 @@ export default function EarningsScreen() {
           ))}
         </ScrollView>
 
+        {/* Hero — now strictly reflects the selected period (was pinned to a
+            separate 4-week query before, so it never matched the tabs) */}
         <Animated.View style={[styles.heroCard, { opacity: heroAnim, transform: [{ translateY: heroAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
           <LinearGradient colors={['#2d2d42', '#55c49a']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroGrad}>
             <View style={styles.heroBlobTop} />
             <View style={styles.heroContent}>
               <Text style={[styles.heroLabel, { color: colors.primaryForeground + 'CC', fontFamily: 'Inter_700Bold', textAlign: TA }]}>{PERIOD_HERO_LABELS[period]}</Text>
               <View style={[styles.heroAmountRow, { flexDirection: R }]}>
-                <Text style={[styles.heroAmount, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>{WEEK_TOTAL.toFixed(2)}</Text>
+                <Text style={[styles.heroAmount, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>
+                  {parseFloat(String(summary?.summary?.totalEarnings ?? 0)).toFixed(2)}
+                </Text>
                 <Text style={[styles.heroCurrency, { color: colors.primaryForeground + 'CC', fontFamily: 'Inter_700Bold' }]}>{t.egp}</Text>
-              </View>
-
-              <View style={[styles.barChart, { flexDirection: R }]}>
-                {weekEarnings.map((d, i) => (
-                  <View key={d.week_start ?? String(i)} style={styles.barWrapper}>
-                    <Animated.View style={[styles.bar, {
-                      backgroundColor: colors.primaryForeground + 'D9',
-                      height: barAnims[i].interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
-                    }]} />
-                    <Text style={[styles.barDay, { color: colors.primaryForeground + 'CC', fontFamily: 'Inter_700Bold' }]}>{(d.week_start ?? '').slice(5)}</Text>
-                  </View>
-                ))}
               </View>
             </View>
           </LinearGradient>
         </Animated.View>
+
+        {/* Driver vs company split — derived from real fare/driverEarnings on
+            the rides loaded for this period, not an assumed fixed rate. */}
+        <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>Your Share vs Company</Text>
+        <GlassView style={styles.summaryCard} borderRadius={20}>
+          <View style={styles.summaryInner}>
+            <View style={[styles.splitBarTrack, { backgroundColor: colors.secondary }]}>
+              <View style={[styles.splitBarFill, { width: `${grossTotal > 0 ? driverPct : 50}%`, backgroundColor: '#55c49a' }]} />
+            </View>
+            <SplitRow
+              icon={<TrendingUp size={16} color="#16A34A" strokeWidth={2} />}
+              iconBg="#F0FDF4"
+              label="Your share"
+              amount={`${driverTotal.toFixed(2)} ${t.egp}`}
+              pct={grossTotal > 0 ? `${driverPct.toFixed(0)}%` : '—'}
+              colors={colors}
+              isRTL={isRTL}
+            />
+            <SplitRow
+              icon={<TrendingDown size={16} color="#EA580C" strokeWidth={2} />}
+              iconBg="#FFF7ED"
+              label="Company share"
+              amount={`${companyTotal.toFixed(2)} ${t.egp}`}
+              pct={grossTotal > 0 ? `${companyPct.toFixed(0)}%` : '—'}
+              colors={colors}
+              isRTL={isRTL}
+            />
+          </View>
+        </GlassView>
 
         <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{PERIOD_LABELS[period]} · {summary?.recentEarnings?.length ?? 0} {t.trips}</Text>
         <GlassView style={styles.summaryCard} borderRadius={20}>
@@ -184,6 +276,64 @@ export default function EarningsScreen() {
             <EarningsRow label={t.net_earnings} value={`${parseFloat(String(summary?.summary?.totalEarnings ?? 0)).toFixed(2)} ${t.egp}`} bold colors={colors} isRTL={isRTL} />
           </View>
         </GlassView>
+
+        {/* Last 4 weeks trend — a fixed comparison widget, deliberately
+            decoupled from the period tabs above (it's weekly data at a
+            different granularity than "Today"/"This Month" etc). */}
+        <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>Last 4 Weeks</Text>
+        <GlassView style={styles.trendCard} borderRadius={20}>
+          {weekEarnings.length < 2 ? (
+            <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: Typography.size.sm, textAlign: 'center', paddingVertical: Spacing.lg }}>
+              Not enough weeks of data yet to show a trend.
+            </Text>
+          ) : (
+            <View style={[styles.barChart, { flexDirection: R }]}>
+              {weekEarnings.map((d, i) => (
+                <View key={d.week_start ?? String(i)} style={styles.barWrapper}>
+                  <Animated.View style={[styles.bar, {
+                    backgroundColor: colors.accent,
+                    height: barAnims[i].interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
+                  }]} />
+                  <Text style={[styles.barDay, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>{(d.week_start ?? '').slice(5)}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+        </GlassView>
+
+        {/* Trips — simple per-ride cards for the selected period; tap opens
+            the full detail screen (route, payment type, driver/company split). */}
+        <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.trips}</Text>
+        {ridesLoading ? (
+          <View style={{ paddingVertical: Spacing.lg, alignItems: 'center' }}>
+            <AppLoader />
+          </View>
+        ) : rides.length === 0 ? (
+          <GlassView style={[styles.summaryCard, { padding: Spacing.lg, alignItems: 'center' }]} borderRadius={20}>
+            <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: Typography.size.sm }}>No trips in this period.</Text>
+          </GlassView>
+        ) : (
+          <View style={{ gap: Spacing.sm }}>
+            {rides.map(ride => (
+              <Pressable key={ride.id} onPress={() => handleTripPress(ride)}>
+                <GlassView style={[styles.tripCard, { flexDirection: R }]} borderRadius={16}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.tripDate, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold', textAlign: TA }]}>
+                      {new Date(ride.completedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                    <Text style={[styles.tripAddress, { color: colors.foreground, fontFamily: 'Inter_600SemiBold', textAlign: TA }]} numberOfLines={1}>
+                      {ride.pickupAddress ?? '—'}
+                    </Text>
+                  </View>
+                  <Text style={[styles.tripFare, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
+                    {toNum(ride.fare).toFixed(2)} {t.egp}
+                  </Text>
+                  <ChevronRight size={16} color={colors.mutedForeground} strokeWidth={2} style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined} />
+                </GlassView>
+              </Pressable>
+            ))}
+          </View>
+        )}
 
       </ScrollView>
     </View>
@@ -206,6 +356,22 @@ function EarningsRow({ icon, label, value, accent, bold, colors, isRTL }: { icon
   );
 }
 
+function SplitRow({ icon, iconBg, label, amount, pct, colors, isRTL }: {
+  icon: React.ReactNode; iconBg: string; label: string; amount: string; pct: string;
+  colors: ReturnType<typeof useColors>; isRTL: boolean;
+}) {
+  const R = isRTL ? 'row-reverse' as const : 'row' as const;
+  const TA = isRTL ? 'right' as const : 'left' as const;
+  return (
+    <View style={[styles.earningsRow, { flexDirection: R }]}>
+      <View style={[styles.rowIcon, { backgroundColor: iconBg }]}>{icon}</View>
+      <Text style={[styles.rowLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', flex: 1, textAlign: TA }]}>{label}</Text>
+      <Text style={[styles.splitPct, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>{pct}</Text>
+      <Text style={[styles.rowValue, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{amount}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { alignItems: 'center', justifyContent: 'space-between' },
@@ -221,8 +387,8 @@ const styles = StyleSheet.create({
   heroAmountRow: { alignItems: 'flex-end', gap: Spacing.sm, marginTop: Spacing.xs },
   heroAmount: { fontSize: 48, lineHeight: 52 },
   heroCurrency: { fontSize: 20, marginBottom: Spacing.xs },
-  heroChange: { fontSize: Typography.size.xs, marginTop: Spacing.xs },
-  barChart: { alignItems: 'flex-end', height: 96, marginTop: Spacing.xl, gap: Spacing.xs },
+  trendCard: { padding: Spacing.lg },
+  barChart: { alignItems: 'flex-end', height: 96, gap: Spacing.xs },
   barWrapper: { flex: 1, alignItems: 'center', height: '100%', justifyContent: 'flex-end' },
   bar: { width: '100%', borderRadius: 4 },
   barDay: { fontSize: 10, marginTop: 6 },
@@ -233,7 +399,14 @@ const styles = StyleSheet.create({
   rowIcon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   rowLabel: { fontSize: Typography.size.sm },
   rowValue: { fontSize: Typography.size.sm },
+  splitPct: { fontSize: 12, marginRight: Spacing.xs },
+  splitBarTrack: { height: 8, borderRadius: 4, overflow: 'hidden' },
+  splitBarFill: { height: '100%', borderRadius: 4 },
   divider: { height: 1, marginVertical: Spacing.xs },
   periodChip: { paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm, borderRadius: 20 },
   periodChipText: { fontSize: Typography.size.xs },
+  tripCard: { padding: Spacing.md, alignItems: 'center', gap: Spacing.sm },
+  tripDate: { fontSize: 11 },
+  tripAddress: { fontSize: Typography.size.sm, marginTop: 2 },
+  tripFare: { fontSize: Typography.size.sm },
 });
