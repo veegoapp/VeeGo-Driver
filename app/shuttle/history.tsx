@@ -192,7 +192,7 @@ export default function TripHistoryScreen() {
         {/* ── Summary banner ─────────────────────────────────────────── */}
         {!isLoading && !isError && allTrips.length > 0 && (
           <Animated.View style={{ opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }], marginBottom: 20 }}>
-            <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.summaryCard}>
+            <LinearGradient colors={colors.gradientPrimary} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.summaryCard}>
               <View style={[styles.summaryRow, { flexDirection: R }]}>
                 <View style={styles.summaryIconWrap}>
                   <TrendingUp size={22} color="#fff" strokeWidth={2} />

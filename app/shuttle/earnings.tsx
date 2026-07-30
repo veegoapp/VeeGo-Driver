@@ -18,7 +18,7 @@ import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
 import type { FinancialAnalytics } from '@/lib/api';
 import { Typography } from '@/constants/typography';
-import { VeeGoCard } from '@/components/ui/VeeGoCard';
+import { GlassView } from '@/components/GlassView';
 import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
 
@@ -197,16 +197,9 @@ export default function EarningsScreen() {
         {/* ── Summary cards ───────────────────────────────────────────── */}
         {!isLoading && !isError && (
           <>
-            <VeeGoCard
-              variant="outlined"
-              style={{
-                borderRadius: Radius.lg,
-                borderColor: colors.border,
-                backgroundColor: colors.card,
-                padding: 0,
-                overflow: 'hidden',
-                marginBottom: Spacing.xs,
-              }}
+            <GlassView
+              borderRadius={Radius.lg}
+              style={{ padding: 0, overflow: 'hidden', marginBottom: Spacing.xs }}
             >
               {/* Total Cash Collected */}
               <View style={[styles.summaryRow, { borderBottomColor: colors.border }]}>
@@ -252,7 +245,7 @@ export default function EarningsScreen() {
                   </Text>
                 </View>
               </View>
-            </VeeGoCard>
+            </GlassView>
 
             {/* ── Transaction ledger ──────────────────────────────────── */}
             <Text style={[styles.sectionTitle, { color: colors.foreground, textAlign: TA }]}>

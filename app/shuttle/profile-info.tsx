@@ -22,6 +22,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { useColors } from '@/hooks/useColors';
 import { AppLoader } from '@/components/ui/AppLoader';
+import { GlassView } from '@/components/GlassView';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
 import { Typography } from '@/constants/typography';
@@ -90,7 +91,7 @@ export default function ShuttleProfileInfoScreen() {
               <Text style={[styles.sectionLabel, { color: colors.mutedForeground, textAlign: TA }]}>
                 {t.personal_info}
               </Text>
-              <View style={[styles.card, { borderColor: BORDER_COLOR }]}>
+              <GlassView borderRadius={Radius.lg} style={styles.card}>
                 {/* Name — locked */}
                 <View style={[styles.fieldRow, { flexDirection: R }]}>
                   <View style={[styles.iconWrap, { backgroundColor: colors.secondary }]}>
@@ -160,7 +161,7 @@ export default function ShuttleProfileInfoScreen() {
                   </View>
                   <Lock size={14} color={colors.mutedForeground} strokeWidth={2} />
                 </View>
-              </View>
+              </GlassView>
 
               <Text style={[styles.lockedHint, { color: colors.mutedForeground, textAlign: TA }]}>
                 {t.locked_field_hint}
@@ -172,33 +173,27 @@ export default function ShuttleProfileInfoScreen() {
               </Text>
               <Pressable
                 onPress={() => router.push('/forgot-password' as never)}
-                style={({ pressed }) => [
-                  styles.card,
-                  styles.fieldRow,
-                  {
-                    flexDirection: R,
-                    borderColor: BORDER_COLOR,
-                    backgroundColor: pressed ? colors.secondary : colors.card ?? '#fff',
-                  },
-                ]}
+                style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}
               >
-                <View style={[styles.iconWrap, { backgroundColor: colors.secondary }]}>
-                  <KeyRound size={17} color={colors.mutedForeground} strokeWidth={2} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.fieldValue, { color: colors.foreground, textAlign: TA }]}>
-                    {t.change_password}
-                  </Text>
-                  <Text style={[styles.fieldLabel, { color: colors.mutedForeground, textAlign: TA }]}>
-                    {t.change_password_sub}
-                  </Text>
-                </View>
-                <ChevronRight
-                  size={18}
-                  color={colors.mutedForeground}
-                  strokeWidth={2}
-                  style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined}
-                />
+                <GlassView borderRadius={Radius.lg} style={[styles.card, styles.fieldRow, { flexDirection: R }]}>
+                  <View style={[styles.iconWrap, { backgroundColor: colors.secondary }]}>
+                    <KeyRound size={17} color={colors.mutedForeground} strokeWidth={2} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.fieldValue, { color: colors.foreground, textAlign: TA }]}>
+                      {t.change_password}
+                    </Text>
+                    <Text style={[styles.fieldLabel, { color: colors.mutedForeground, textAlign: TA }]}>
+                      {t.change_password_sub}
+                    </Text>
+                  </View>
+                  <ChevronRight
+                    size={18}
+                    color={colors.mutedForeground}
+                    strokeWidth={2}
+                    style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined}
+                  />
+                </GlassView>
               </Pressable>
             </>
           )}
@@ -233,9 +228,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xs,
   },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: Radius.lg,
-    borderWidth: 1,
     overflow: 'hidden',
   },
   fieldRow: {
