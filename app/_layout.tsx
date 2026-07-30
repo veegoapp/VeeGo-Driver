@@ -247,13 +247,19 @@ function RootLayoutNav() {
               // Refresh succeeded: update AuthContext state. The effect will
               // re-fire with the new token and continue the authenticated flow.
               await login(newToken);
-            } else {
-              // Refresh token is also gone or rejected — clear the session.
+            } else if (newToken === null) {
+              // Refresh token itself was rejected (or none exists) — the
+              // session is genuinely over.
               queryClient.clear();
               await deleteToken();
               await deleteRefreshToken();
               setTimeout(() => router.replace('/login'), 0);
             }
+            // newToken === undefined: a network/server hiccup during
+            // refresh, not a rejection — a server outage used to log every
+            // driver out the moment their access token expired. Leave the
+            // session as-is; this effect re-fires on the next token/segments
+            // change and will retry then.
           })();
           return;
         }

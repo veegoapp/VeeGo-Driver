@@ -58,14 +58,24 @@ export function setOnSessionCleared(cb: SessionClearedCallback) {
 }
 
 // Single-flight refresh — only one refresh request may exist at a time.
-let _refreshPromise: Promise<string | null> | null = null;
+//
+// Return value distinguishes a genuine rejection from a transient failure:
+//   string    — refreshed successfully, here's the new access token
+//   null      — the refresh token itself was rejected (or none exists) —
+//               the session is genuinely over, safe to log out
+//   undefined — network error, timeout, or a server/5xx hiccup — we don't
+//               know whether the refresh token is still good, so callers
+//               must NOT log the user out over this (a server outage or
+//               dropped connection used to force every session back to
+//               the login screen the instant an access token expired)
+let _refreshPromise: Promise<string | null | undefined> | null = null;
 
-export async function refreshAccessToken(): Promise<string | null> {
+export async function refreshAccessToken(): Promise<string | null | undefined> {
   if (_refreshPromise) {
     return _refreshPromise;
   }
 
-  _refreshPromise = (async (): Promise<string | null> => {
+  _refreshPromise = (async (): Promise<string | null | undefined> => {
     const refreshToken = await getRefreshToken();
     if (!refreshToken) {
       return null;
@@ -81,7 +91,10 @@ export async function refreshAccessToken(): Promise<string | null> {
       });
       clearTimeout(timeout);
       if (!response.ok) {
-        return null;
+        // 401/403 = the refresh token itself was rejected. Anything else
+        // (5xx, 429, ...) is the server having a bad moment, not a verdict
+        // on the token.
+        return (response.status === 401 || response.status === 403) ? null : undefined;
       }
       const data = await response.json();
       if (data.accessToken) {
@@ -91,9 +104,9 @@ export async function refreshAccessToken(): Promise<string | null> {
         }
         return data.accessToken;
       }
-      return null;
+      return undefined;
     } catch {
-      return null;
+      return undefined;
     }
   })();
 
@@ -162,9 +175,16 @@ export async function request<T>(
     if (newToken) {
       return request<T>(method, path, body, true);
     }
-    await deleteToken();
-    await deleteRefreshToken();
-    _onSessionCleared?.();
+    if (newToken === null) {
+      // Refresh token itself was rejected (or none exists) — session is
+      // genuinely over.
+      await deleteToken();
+      await deleteRefreshToken();
+      _onSessionCleared?.();
+    }
+    // newToken === undefined: transient network/server failure while
+    // refreshing — don't wipe the session over a dropped connection or a
+    // server hiccup; the access token may still be good once it clears.
     throw new ApiError(401, 'Unauthorized', null);
   }
 
