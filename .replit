@@ -1,4 +1,4 @@
-modules = ["nodejs-20", "bash"]
+modules = ["nodejs-20", "web", "bash"]
 
 [agent]
 expertMode = true
@@ -62,3 +62,10 @@ externalPort = 3000
 [nix]
 channel = "stable-25_05"
 packages = ["eas-cli", "nix-output-monitor"]
+
+[userenv]
+
+[userenv.shared]
+EXPO_PUBLIC_API_URL = ""
+GOOGLE_MAPS_API_KEY_ANDROID = ""
+EXPO_PUBLIC_CERT_PIN_SHA256 = ""
