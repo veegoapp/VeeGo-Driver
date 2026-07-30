@@ -1,4 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
 import { Clock, MapPin, Star } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -236,7 +237,15 @@ const RideCard = React.memo(function RideCard({
     }
   })();
 
+  const handlePress = () => {
+    router.push({
+      pathname: '/ride-history/[rideId]',
+      params: { rideId: ride.id, ride: JSON.stringify(ride) },
+    });
+  };
+
   return (
+    <Pressable onPress={handlePress}>
     <GlassView style={styles.card} borderRadius={20}>
       {/* Top row: date + status badge */}
       <View style={[{ flexDirection: R, alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.md }]}>
@@ -313,6 +322,7 @@ const RideCard = React.memo(function RideCard({
         </View>
       ) : null}
     </GlassView>
+    </Pressable>
   );
 });
 

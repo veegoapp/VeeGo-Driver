@@ -330,6 +330,7 @@ function RootLayoutNav() {
         <Stack.Screen name="shuttle/history-export" />
         <Stack.Screen name="ride/chat" />
         <Stack.Screen name="trips/[tripId]" />
+        <Stack.Screen name="ride-history/[rideId]" />
         <Stack.Screen name="+not-found" />
       </Stack>
     </>
