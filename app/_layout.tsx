@@ -24,7 +24,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { I18nProvider, useI18n } from '@/lib/i18nContext';
 import { useQueryClient } from '@tanstack/react-query';
-import { ServiceProvider } from '@/lib/serviceContext';
+import { ServiceProvider, useService } from '@/lib/serviceContext';
 import { ServiceControlProvider } from '@/lib/serviceControlContext';
 import { AuthProvider, useAuth } from '@/lib/authContext';
 import { SocketProvider, useSocket } from '@/lib/socketContext';
@@ -167,6 +167,16 @@ function LanguageCacheInvalidator() {
   }, [language]);
 
   return null;
+}
+
+// Driver accounts are permanently locked to one service type at signup and
+// can never switch interfaces, so the Shuttle interface (context, polling,
+// queries) has no reason to exist for CAR/SCOOTER/DELIVERY accounts and
+// vice versa. Only mount ShuttleProvider for shuttle accounts.
+function ShuttleGate({ children }: { children: React.ReactNode }) {
+  const { serviceType } = useService();
+  if (serviceType !== 'SHUTTLE') return <>{children}</>;
+  return <ShuttleProvider>{children}</ShuttleProvider>;
 }
 
 function RootLayoutNav() {
@@ -378,11 +388,11 @@ export default function RootLayout() {
                     <ReferralProvider>
                       <SocketProvider>
                         <ActiveSessionProvider>
-                          <ShuttleProvider>
+                          <ShuttleGate>
                             <ServiceControlProvider>
                               <RootLayoutNav />
                             </ServiceControlProvider>
-                          </ShuttleProvider>
+                          </ShuttleGate>
                         </ActiveSessionProvider>
                       </SocketProvider>
                     </ReferralProvider>
