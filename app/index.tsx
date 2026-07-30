@@ -1,6 +1,6 @@
 import { Navigation } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Redirect } from 'expo-router';
+import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
@@ -55,6 +55,16 @@ export default function SplashScreen() {
       .finally(() => setOnboardingChecked(true));
   }, [authLoading, token]);
 
+  // Let the splash actually render before sending a first-run driver to
+  // onboarding — redirecting the instant the AsyncStorage check resolves
+  // meant this screen never appeared on a fresh install, which is the one
+  // moment it matters most. Delay matches the Passenger app's splash hold.
+  useEffect(() => {
+    if (!onboardingChecked || hasSeenOnboarding) return;
+    const timer = setTimeout(() => router.replace('/onboarding'), 2200);
+    return () => clearTimeout(timer);
+  }, [onboardingChecked, hasSeenOnboarding]);
+
   useEffect(() => {
     Animated.parallel([
       Animated.spring(opacity, { toValue: 1, damping: 22, stiffness: 100, useNativeDriver: true }),
@@ -83,10 +93,6 @@ export default function SplashScreen() {
 
   if (!onboardingChecked) {
     return null;
-  }
-
-  if (!hasSeenOnboarding) {
-    return <Redirect href="/onboarding" />;
   }
 
   const rotateDeg = logoRotate.interpolate({ inputRange: [-8, 8], outputRange: ['-8deg', '8deg'] });
