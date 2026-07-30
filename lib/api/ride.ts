@@ -10,9 +10,13 @@ export const ridesEndpoints = {
   decline: (rideId: string) => api.patch(`/driver/rides/${rideId}/decline`),
   cancel: (rideId: string) => api.patch(`/driver/rides/${rideId}/cancel`),
   start: (rideId: string) => api.patch(`/driver/rides/${rideId}/start`),
-  complete: (rideId: string) =>
-    api.patch<{ data: { rideId: number; finalPrice: number; driverCut: number; waitingCharge: number } }>(
-      `/driver/rides/${rideId}/complete`
+  // amountReceived: cash actually handed to the driver — only send it when it
+  // differs from the fare (driver had no change). The server re-derives and
+  // caps the resulting change; this is just transport, not the source of truth.
+  complete: (rideId: string, amountReceived?: number) =>
+    api.patch<{ data: { rideId: number; finalPrice: number; driverCut: number; waitingCharge: number; changeAmount: number } }>(
+      `/driver/rides/${rideId}/complete`,
+      amountReceived !== undefined ? { amountReceived } : undefined
     ),
   active: () => api.get('/driver/rides/active'),
   ratePassenger: (rideId: string, stars: number, comment?: string) =>
