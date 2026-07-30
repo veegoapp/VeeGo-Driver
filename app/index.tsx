@@ -55,15 +55,29 @@ export default function SplashScreen() {
       .finally(() => setOnboardingChecked(true));
   }, [authLoading, token]);
 
-  // Let the splash actually render before sending a first-run driver to
-  // onboarding — redirecting the instant the AsyncStorage check resolves
-  // meant this screen never appeared on a fresh install, which is the one
-  // moment it matters most. Delay matches the Passenger app's splash hold.
+  // Let the splash actually render before navigating on — redirecting the
+  // instant the AsyncStorage check resolves meant this screen never
+  // appeared on a fresh install, which is the one moment it matters most.
+  // Delay matches the Passenger app's splash hold.
+  //
+  // Destination: first-run drivers go to onboarding. Returning drivers who
+  // already saw onboarding but hold no token go to login — previously
+  // nothing sent them anywhere from here (RootLayoutNav's redirect-to-login
+  // effect explicitly skips 'index', since it's a PRE_AUTH_SCREEN), so a
+  // logged-out driver on a device that had already completed onboarding
+  // was stuck on this splash forever. Authenticated drivers (token set)
+  // are left alone — RootLayoutNav's navigateAfterAuth already handles them.
   useEffect(() => {
-    if (!onboardingChecked || hasSeenOnboarding) return;
-    const timer = setTimeout(() => router.replace('/onboarding'), 2200);
-    return () => clearTimeout(timer);
-  }, [onboardingChecked, hasSeenOnboarding]);
+    if (!onboardingChecked || authLoading) return;
+    if (!hasSeenOnboarding) {
+      const timer = setTimeout(() => router.replace('/onboarding'), 2200);
+      return () => clearTimeout(timer);
+    }
+    if (!token) {
+      const timer = setTimeout(() => router.replace('/login'), 2200);
+      return () => clearTimeout(timer);
+    }
+  }, [onboardingChecked, hasSeenOnboarding, authLoading, token]);
 
   useEffect(() => {
     Animated.parallel([
