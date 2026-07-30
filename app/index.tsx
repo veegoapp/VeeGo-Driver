@@ -106,7 +106,7 @@ export default function SplashScreen() {
           </View>
           <View style={styles.iconGlow} />
         </Animated.View>
-        <Text style={styles.wordmark}>Vee<Text style={{ color: colors.accent }}>Go</Text></Text>
+        <Text style={styles.wordmark}>Vee<Text style={{ color: '#507BE9' }}>Go</Text></Text>
         <Text style={styles.tagline}>DRIVER</Text>
         <View style={[styles.barWrap, { backgroundColor: colors.border }]}>
           <Animated.View style={[styles.bar, { width: barWidth, opacity: barOpacity, backgroundColor: colors.accent }]} />

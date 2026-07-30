@@ -65,7 +65,7 @@ export default function LanguageSelectScreen() {
           </View>
           <View>
             <Text style={styles.logoName}>
-              Vee<Text style={{ color: '#55c49a' }}>Go</Text>
+              Vee<Text style={{ color: '#507BE9' }}>Go</Text>
             </Text>
             <Text style={styles.logoSub}>DRIVER</Text>
           </View>

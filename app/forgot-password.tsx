@@ -70,7 +70,7 @@ export default function ForgotPasswordScreen() {
             <View style={s.logoIcon}>
               <Navigation size={28} color="#ffffff" />
             </View>
-            <Text style={s.wordmark}>Vee<Text style={{ color: '#55c49a' }}>Go</Text></Text>
+            <Text style={s.wordmark}>Vee<Text style={{ color: '#507BE9' }}>Go</Text></Text>
           </View>
 
           <View style={s.card}>

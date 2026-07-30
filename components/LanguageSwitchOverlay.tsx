@@ -37,7 +37,7 @@ export function LanguageSwitchOverlay() {
             <Text style={overlayStyles.logoArrow}>➤</Text>
           </View>
           <Text style={overlayStyles.logoText}>
-            Vee<Text style={{ color: '#55c49a' }}>Go</Text>
+            Vee<Text style={{ color: '#507BE9' }}>Go</Text>
           </Text>
         </View>
 

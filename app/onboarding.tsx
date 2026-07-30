@@ -190,7 +190,7 @@ export default function OnboardingScreen() {
           <View style={[s.logoIcon, { backgroundColor: colors.foreground }]}>
             <Navigation size={32} color={colors.background} />
           </View>
-          <Text style={[s.logoText, { color: colors.foreground }]}>Vee<Text style={{ color: MINT }}>Go</Text></Text>
+          <Text style={[s.logoText, { color: colors.foreground }]}>Vee<Text style={{ color: '#507BE9' }}>Go</Text></Text>
           <View style={[s.driverBadge, { backgroundColor: colors.muted }]}>
             <Text style={[s.driverBadgeText, { color: colors.foreground }]}>DRIVER</Text>
           </View>
