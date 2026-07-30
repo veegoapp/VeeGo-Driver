@@ -361,7 +361,7 @@ export default function ShuttleBoardingScreen() {
       <View style={[styles.bottomAction, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: botPad + 12 }]}>
         {total > 0 && checkedIn === total ? (
           <Pressable onPress={() => handleDepart()} disabled={isDeparting} style={[styles.departBtn, { opacity: isDeparting ? 0.7 : 1 }]}>
-            <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.departBtnGrad}>
+            <LinearGradient colors={colors.gradientPrimary} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.departBtnGrad}>
               {isDeparting
                 ? <ActivityIndicator size="small" color={colors.primaryForeground} />
                 : <Check size={20} color={colors.primaryForeground} strokeWidth={2} />

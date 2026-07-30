@@ -240,7 +240,7 @@ export default function TripCompleteScreen() {
           style={({ pressed }) => [{ borderRadius: 18, overflow: 'hidden', opacity: pressed ? 0.88 : 1, width: '100%' }]}
         >
           <LinearGradient
-            colors={['#2d2d42', '#1e1e28']}
+            colors={colors.gradientPrimary}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.ctaBtn}
