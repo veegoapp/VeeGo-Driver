@@ -368,7 +368,7 @@ export default function RootLayout() {
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#2d2d42',
-        sound: 'trip-request.wav',
+        sound: 'trip_request.wav',
       });
     }
   }, []);
