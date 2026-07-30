@@ -1,8 +1,8 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
-import { AlertTriangle, Check, ChevronUp, Clock, Map, MessageCircle, Navigation, Phone, Share2, Shield, Star } from 'lucide-react-native';
+import { AlertTriangle, Check, ChevronUp, Clock, Delete, Map, MessageCircle, Navigation, Phone, Share2, Shield, Star } from 'lucide-react-native';
 import React, { useCallback, useRef, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Animated, Easing, Linking, Platform, Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Animated, Easing, Linking, Modal, Platform, Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { MapBackdrop } from '@/components/MapBackdrop';
@@ -47,6 +47,13 @@ const STATUS_TO_PHASE: Partial<Record<string, Phase>> = {
   active: 'in_trip',
 };
 
+const KEYPAD_ROWS = [
+  ['1', '2', '3'],
+  ['4', '5', '6'],
+  ['7', '8', '9'],
+  ['.', '0', 'back'],
+];
+
 
 export default function RideScreen() {
   const colors = useColors();
@@ -76,6 +83,12 @@ export default function RideScreen() {
   const [shareBusy, setShareBusy] = useState(false);
   const [shareLink, setShareLink] = useState<{ id: number; url: string } | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  // "Other amount" change flow (cash rides only — see handleCompleteWithChange).
+  const [amountSheetOpen, setAmountSheetOpen] = useState(false);
+  const [amountInput, setAmountInput] = useState('');
+  const [confirmChangeOpen, setConfirmChangeOpen] = useState(false);
+  const [submittingChange, setSubmittingChange] = useState(false);
+  const [creditedChange, setCreditedChange] = useState(0);
   // Reactive counterpart to hasExitedRef — lets location broadcasting stop
   // as soon as the ride is exiting, without waiting for unmount.
   const [isExiting, setIsExiting] = useState(false);
@@ -475,6 +488,70 @@ export default function RideScreen() {
     }
   };
 
+  // "Other amount" flow: driver received more cash than the fare and has no
+  // change on hand — the difference gets credited to the rider's wallet
+  // instead. Server re-derives and caps the change (1–99 EGP, cash rides
+  // only); the client-side numbers below are display-only.
+  const fareAmount = parseFloat(String(displayFare ?? 0));
+  const parsedAmountReceived = parseFloat(amountInput) || 0;
+  const computedChange = Math.round((parsedAmountReceived - fareAmount) * 100) / 100;
+
+  const handleOpenAmountSheet = () => {
+    setAmountInput('');
+    setAmountSheetOpen(true);
+  };
+
+  const handleKeypadDigit = (d: string) => {
+    setAmountInput((prev) => {
+      if (d === '.' && prev.includes('.')) return prev;
+      if (prev.length >= 7) return prev;
+      return prev + d;
+    });
+  };
+
+  const handleKeypadBackspace = () => setAmountInput((prev) => prev.slice(0, -1));
+
+  const handleKeypadCancel = () => {
+    setAmountSheetOpen(false);
+    setAmountInput('');
+  };
+
+  const handleKeypadOk = () => {
+    if (parsedAmountReceived <= 0) return;
+    setAmountSheetOpen(false);
+    setConfirmChangeOpen(true);
+  };
+
+  const handleCancelConfirmChange = () => {
+    setConfirmChangeOpen(false);
+    setAmountInput('');
+  };
+
+  const handleConfirmChange = async () => {
+    setSubmittingChange(true);
+    try {
+      isCompletingRef.current = true;
+      let result;
+      try {
+        result = await endpoints.rides.complete(rideId ?? '', parsedAmountReceived);
+      } catch (err) {
+        isCompletingRef.current = false;
+        throw err;
+      }
+      queryClient.invalidateQueries({ queryKey: ['earnings-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['earnings-weekly'] });
+      setCreditedChange(result.data.changeAmount ?? 0);
+      setConfirmChangeOpen(false);
+      setAmountInput('');
+      setPhase('completed');
+    } catch (err: unknown) {
+      const body = (err as { body?: { error?: string } })?.body;
+      Alert.alert(t.action_failed_title, body?.error ?? t.try_again_msg);
+    } finally {
+      setSubmittingChange(false);
+    }
+  };
+
   // Driver-initiated cancel — only reachable while phase is 'to_pickup' or
   // 'arrived' (see the CTA sheet below); once the ride is 'in_trip' this
   // action is not offered.
@@ -702,6 +779,11 @@ export default function RideScreen() {
           <Text style={[styles.completedTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.trip_done_title}</Text>
           <Text style={[styles.fareEarned, { color: colors.primary, fontFamily: 'Inter_700Bold' }]}>+{parseFloat(String(displayFare ?? 0)).toFixed(2)} {t.egp}</Text>
           <Text style={[styles.fareNote, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{t.added_to_earnings}</Text>
+          {creditedChange > 0 && (
+            <Text style={[styles.fareNote, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
+              {t.change_credited_note.replace('{amount}', creditedChange.toFixed(2)).replace('{egp}', t.egp)}
+            </Text>
+          )}
 
           <GlassView style={styles.ratingCard} borderRadius={16}>
             <View style={styles.ratingCardHeader}>
@@ -829,8 +911,24 @@ export default function RideScreen() {
               <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[styles.ctaBtnGrad, { opacity: busy ? 0.7 : 1 }]}>
                 <ChevronUp size={20} color={colors.primaryForeground} strokeWidth={2} />
                 <Text style={[styles.ctaBtnText, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>{p.cta}</Text>
+                {phase === 'in_trip' && (
+                  <Text style={[styles.ctaBtnFare, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>
+                    · {fareAmount.toFixed(2)} {t.egp}
+                  </Text>
+                )}
               </LinearGradient>
             </Pressable>
+
+            {phase === 'in_trip' && paymentMethod === 'cash' && (
+              <Pressable
+                onPress={handleOpenAmountSheet}
+                disabled={busy}
+                style={[styles.otherAmountBtn, { backgroundColor: colors.secondary, borderColor: colors.border, opacity: busy ? 0.6 : 1 }]}
+                accessibilityLabel="Other amount received"
+              >
+                <Text style={[styles.otherAmountBtnText, { color: colors.foreground, fontFamily: 'Inter_600SemiBold' }]}>{t.other_amount_btn}</Text>
+              </Pressable>
+            )}
 
             {(phase === 'to_pickup' || phase === 'arrived') && (
               <Pressable
@@ -878,6 +976,89 @@ export default function RideScreen() {
           </GlassView>
         </Animated.View>
       )}
+
+      {/* ── "Other amount" numeric keypad ─────────────────────────────── */}
+      <Modal visible={amountSheetOpen} transparent animationType="slide" onRequestClose={handleKeypadCancel}>
+        <View style={styles.modalBackdrop}>
+          <GlassView strong style={styles.modalCard} borderRadius={24}>
+            <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
+            <Text style={[styles.modalTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.amount_received_title}</Text>
+            <Text style={[styles.amountDisplay, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
+              {amountInput || '0'} {t.egp}
+            </Text>
+
+            {KEYPAD_ROWS.map((row, ri) => (
+              <View key={ri} style={styles.keypadRow}>
+                {row.map((key) => (
+                  <Pressable
+                    key={key}
+                    onPress={() => (key === 'back' ? handleKeypadBackspace() : handleKeypadDigit(key))}
+                    style={[styles.keypadKey, { backgroundColor: colors.secondary }]}
+                  >
+                    {key === 'back' ? (
+                      <Delete size={20} color={colors.foreground} strokeWidth={2} />
+                    ) : (
+                      <Text style={[styles.keypadKeyText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{key}</Text>
+                    )}
+                  </Pressable>
+                ))}
+              </View>
+            ))}
+
+            <View style={styles.modalActionsRow}>
+              <Pressable onPress={handleKeypadCancel} style={[styles.modalCancelBtn, { backgroundColor: colors.secondary }]}>
+                <Text style={[styles.modalCancelBtnText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.cancel}</Text>
+              </Pressable>
+              <Pressable
+                onPress={handleKeypadOk}
+                disabled={parsedAmountReceived <= 0}
+                style={[styles.modalConfirmBtn, { opacity: parsedAmountReceived <= 0 ? 0.5 : 1 }]}
+              >
+                <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.modalConfirmBtnGrad}>
+                  <Text style={[styles.modalConfirmBtnText, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>{t.ok}</Text>
+                </LinearGradient>
+              </Pressable>
+            </View>
+          </GlassView>
+        </View>
+      </Modal>
+
+      {/* ── Confirm change → wallet ────────────────────────────────────── */}
+      <Modal visible={confirmChangeOpen} transparent animationType="fade" onRequestClose={handleCancelConfirmChange}>
+        <View style={styles.modalBackdrop}>
+          <GlassView strong style={styles.modalCard} borderRadius={24}>
+            <Text style={[styles.modalTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.confirm_change_title}</Text>
+
+            <View style={styles.summaryRow}>
+              <Text style={[styles.summaryLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{t.ride_amount_label}</Text>
+              <Text style={[styles.summaryValue, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{fareAmount.toFixed(2)} {t.egp}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={[styles.summaryLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{t.amount_received_label}</Text>
+              <Text style={[styles.summaryValue, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{parsedAmountReceived.toFixed(2)} {t.egp}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={[styles.summaryLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{t.change_to_wallet_label}</Text>
+              <Text style={[styles.summaryValue, { color: colors.primary, fontFamily: 'Inter_700Bold' }]}>{Math.max(0, computedChange).toFixed(2)} {t.egp}</Text>
+            </View>
+
+            <View style={styles.modalActionsRow}>
+              <Pressable onPress={handleCancelConfirmChange} disabled={submittingChange} style={[styles.modalCancelBtn, { backgroundColor: colors.secondary, opacity: submittingChange ? 0.6 : 1 }]}>
+                <Text style={[styles.modalCancelBtnText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.cancel}</Text>
+              </Pressable>
+              <Pressable onPress={handleConfirmChange} disabled={submittingChange} style={[styles.modalConfirmBtn, { opacity: submittingChange ? 0.7 : 1 }]}>
+                <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.modalConfirmBtnGrad}>
+                  {submittingChange ? (
+                    <ActivityIndicator color={colors.primaryForeground} />
+                  ) : (
+                    <Text style={[styles.modalConfirmBtnText, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>{t.confirm}</Text>
+                  )}
+                </LinearGradient>
+              </Pressable>
+            </View>
+          </GlassView>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -928,8 +1109,27 @@ const styles = StyleSheet.create({
   ctaBtn: { marginTop: Spacing.md, borderRadius: Radius.lg, overflow: 'hidden', elevation: Shadows.large.elevation, shadowColor: '#2d2d42', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 12 },
   ctaBtnGrad: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
   ctaBtnText: { fontSize: Typography.size.md },
+  ctaBtnFare: { fontSize: Typography.size.md },
+  otherAmountBtn: { marginTop: Spacing.sm, height: 44, borderRadius: Radius.md, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  otherAmountBtnText: { fontSize: Typography.size.sm },
   cancelRideBtn: { alignItems: 'center', justifyContent: 'center', paddingVertical: 10, marginTop: Spacing.xs },
   cancelRideBtnText: { fontSize: Typography.size.sm },
+  modalBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' },
+  modalCard: { padding: 20, paddingBottom: 32 },
+  modalTitle: { fontSize: Typography.size.md, textAlign: 'center', marginBottom: Spacing.md },
+  amountDisplay: { fontSize: 34, textAlign: 'center', marginBottom: Spacing.lg },
+  keypadRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.sm },
+  keypadKey: { flex: 1, height: 52, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
+  keypadKeyText: { fontSize: Typography.size.lg },
+  modalActionsRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.md },
+  modalCancelBtn: { flex: 1, height: 52, borderRadius: Radius.lg, alignItems: 'center', justifyContent: 'center' },
+  modalCancelBtnText: { fontSize: Typography.size.md },
+  modalConfirmBtn: { flex: 1, borderRadius: Radius.lg, overflow: 'hidden' },
+  modalConfirmBtnGrad: { height: 52, alignItems: 'center', justifyContent: 'center' },
+  modalConfirmBtnText: { fontSize: Typography.size.md },
+  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10 },
+  summaryLabel: { fontSize: Typography.size.sm },
+  summaryValue: { fontSize: Typography.size.md },
   bottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: Spacing.md },
   safetyRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   safetyText: { fontSize: Typography.size.xs },
