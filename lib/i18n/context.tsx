@@ -33,15 +33,21 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   const [isSwitchingLanguage, setIsSwitchingLanguage] = useState(false);
   const switchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Load persisted language on mount and sync I18nManager silently (no alert at boot)
+  // Load persisted language on mount and sync I18nManager silently (no alert at boot).
+  // If no language is stored yet (first launch), default to Arabic so the
+  // language-select screen is never shown as a mandatory first-run step.
+  // The driver can still change the language at any time from Settings.
   useEffect(() => {
     AsyncStorage.getItem(LANG_STORAGE_KEY)
       .then((stored) => {
-        if (stored === 'ar' || stored === 'en') {
-          setLanguageState(stored);
-          applyRTLEngine(stored);
-          setApiLanguage(stored);
+        const lang: Language = (stored === 'ar' || stored === 'en') ? stored : 'ar';
+        if (!stored) {
+          // Persist the default so subsequent cold-starts don't re-evaluate.
+          AsyncStorage.setItem(LANG_STORAGE_KEY, lang).catch(() => {});
         }
+        setLanguageState(lang);
+        applyRTLEngine(lang);
+        setApiLanguage(lang);
       })
       .catch(() => {})
       .finally(() => {
