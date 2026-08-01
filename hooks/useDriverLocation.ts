@@ -37,8 +37,10 @@ export function useDriverLocation(enabled = true): {
 
     (async () => {
       try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (!active) return; // unmounted while awaiting permission
+        // Check only — never prompt here. Permission is requested once by
+        // startLocationTracking() when the driver taps GO for the first time.
+        const { status } = await Location.getForegroundPermissionsAsync();
+        if (!active) return;
         if (status !== 'granted') {
           setPermissionDenied(true);
           return;

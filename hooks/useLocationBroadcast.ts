@@ -98,7 +98,9 @@ export function useLocationBroadcast({ enabled, tripId, rideId }: Options): void
 
     (async () => {
       try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
+        // Check only — never prompt here. Permission is requested once by
+        // startLocationTracking() when the driver taps GO for the first time.
+        const { status } = await Location.getForegroundPermissionsAsync();
         if (status !== 'granted' || cancelled) return;
         permissionGrantedRef.current = true;
 
