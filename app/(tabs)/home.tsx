@@ -63,11 +63,17 @@ const DriverMapLayer = React.memo(function DriverMapLayer({ surgeZones }: { surg
   );
 });
 
+// Module-level: survives HomeScreen remounts (e.g. returning from a completed
+// ride). React state resets to its initial value on every remount — this
+// variable lets the component start with the last known online state so the
+// driver doesn't have to re-tap GO after every trip.
+let _persistedOnline: boolean | null = null;
+
 export default function HomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { t, isRTL } = useI18n();
-  const [online, setOnline] = useState(false);
+  const [online, setOnline] = useState<boolean>(() => _persistedOnline ?? false);
   // Whether Home currently has navigation focus — used to gate the idle-online
   // realtime location broadcast below so it never overlaps with the ride
   // screen's own driver:ride:location broadcast once a ride is accepted.
@@ -236,6 +242,7 @@ export default function HomeScreen() {
     const status = checkinStatusRaw as { isOnline?: boolean } | undefined;
     if (status?.isOnline == null) return;
     onlineSyncedRef.current = true;
+    _persistedOnline = status.isOnline;
     setOnline(status.isOnline);
     if (status.isOnline) {
       TaskManager.isTaskRegisteredAsync(DRIVER_LOCATION_TASK)
@@ -554,6 +561,7 @@ export default function HomeScreen() {
         stopLocationTracking();
         setLocationError(null);
       }
+      _persistedOnline = next;
       setOnline(next);
       // Keep the cached driver-checkin-status in sync with what we just told
       // the server. Without this, the cache keeps whatever isOnline value it
