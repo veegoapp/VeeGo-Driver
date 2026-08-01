@@ -98,7 +98,6 @@ export default function HomeScreen() {
   // Socket event UI state
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [toastType, setToastType] = useState<'warning' | 'success'>('warning');
-  const statusDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSubmittedStatusRef = useRef<string | null>(null);
   const toastAnim = useRef(new Animated.Value(-80)).current;
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -540,12 +539,13 @@ export default function HomeScreen() {
     const next = !online;
     const nextStatus = next ? 'online' : 'offline';
 
-    // Debounce: skip if same status already submitted within 2 s
+    // Guard: drop if the same status was already submitted successfully and
+    // the local state hasn't changed since (prevents a second tap while the
+    // previous API round-trip is still resolving — togglingOnline handles
+    // the in-flight case, this covers the instant-re-tap after success).
     if (nextStatus === lastSubmittedStatusRef.current) return;
-    if (statusDebounceRef.current) clearTimeout(statusDebounceRef.current);
 
     setTogglingOnline(true);
-    statusDebounceRef.current = setTimeout(async () => {
     try {
       await (next ? endpoints.driver.goOnline() : endpoints.driver.goOffline());
       lastSubmittedStatusRef.current = nextStatus;
@@ -554,7 +554,6 @@ export default function HomeScreen() {
         const ok = await startLocationTracking();
         if (!ok) {
           await endpoints.driver.goOffline().catch(() => {});
-          setTogglingOnline(false);
           return;
         }
       } else {
@@ -583,7 +582,6 @@ export default function HomeScreen() {
     } finally {
       setTogglingOnline(false);
     }
-    }, 2000); // 2 s debounce
   };
 
   const showToast = (msg: string, type: 'warning' | 'success') => {
