@@ -40,7 +40,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     AsyncStorage.getItem(LANG_STORAGE_KEY)
       .then((stored) => {
-        const lang: Language = (stored === 'ar' || stored === 'en') ? stored : 'ar';
+        const lang: Language = (stored === 'ar' || stored === 'en') ? stored : 'en';
         if (!stored) {
           // Persist the default so subsequent cold-starts don't re-evaluate.
           AsyncStorage.setItem(LANG_STORAGE_KEY, lang).catch(() => {});
