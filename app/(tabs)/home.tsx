@@ -47,14 +47,24 @@ export const TAB_BAR_HEIGHT = 96;
 const OFFER_TIMEOUT_MS = 12000;
 
 // Foreground GPS is always requested/tracked (not gated on "online") so the
-// location permission prompt appears as soon as Home mounts and the map can
-// center on the driver's real position instead of staying on a fallback.
+// map can center on the driver's real position instead of staying on a fallback.
 // Isolated into its own component (rather than calling useDriverLocation
 // directly in HomeScreen) so the ~1 GPS tick/second this hook produces only
 // re-renders this small map layer — not the header, stats pill, promo card,
 // and request sheet that make up the rest of HomeScreen.
+//
+// On mount we also request foreground location permission once so the map
+// centres on the driver's real position immediately — even before they tap
+// GO. The request is a no-op if permission was already granted. Background
+// tracking is still only started when the driver taps GO (startLocationTracking).
 const DriverMapLayer = React.memo(function DriverMapLayer({ surgeZones }: { surgeZones: SurgeZone[] }) {
   const { position: driverPosition } = useDriverLocation(true);
+
+  useEffect(() => {
+    Location.requestForegroundPermissionsAsync().catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <MapBackdrop
       driverLocation={driverPosition ?? undefined}
