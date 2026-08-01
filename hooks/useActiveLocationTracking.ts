@@ -84,7 +84,9 @@ async function captureSnapshot(
   isOfflineSync: boolean,
 ): Promise<LocationSnapshot | null> {
   try {
-    const { status } = await Location.requestForegroundPermissionsAsync();
+    // Check only — never prompt here. Permission is requested once by
+    // startLocationTracking() when the driver taps GO for the first time.
+    const { status } = await Location.getForegroundPermissionsAsync();
     if (status !== 'granted') return null;
 
     const pos = await Location.getCurrentPositionAsync({
