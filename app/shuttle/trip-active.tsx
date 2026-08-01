@@ -172,19 +172,20 @@ export default function ShuttleTripActiveScreen() {
     if (phase !== 'approaching') return;
     let cancelled = false;
     (async () => {
-      await Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
-      const { sound } = await Audio.Sound.createAsync(
-        require('@/assets/sounds/shuttle-approaching.wav'),
-        { shouldPlay: false, volume: 1.0 },
-      );
-      if (cancelled) {
-        sound.unloadAsync();
-        return;
-      }
-      sound.setOnPlaybackStatusUpdate(status => {
-        if (status.isLoaded && status.didJustFinish) sound.unloadAsync();
-      });
-      await sound.playAsync();
+      try {
+        await Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
+        const { sound } = await Audio.Sound.createAsync(
+          require('@/assets/sounds/shuttle-approaching.wav'),
+          { shouldPlay: true, volume: 1.0 },
+        );
+        if (cancelled) {
+          sound.unloadAsync();
+          return;
+        }
+        sound.setOnPlaybackStatusUpdate(status => {
+          if (status.isLoaded && status.didJustFinish) sound.unloadAsync();
+        });
+      } catch {}
     })();
     return () => { cancelled = true; };
   }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps

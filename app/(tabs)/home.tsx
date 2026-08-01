@@ -1,6 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import { Audio } from 'expo-av';
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import { DRIVER_LOCATION_TASK } from '@/lib/backgroundLocationTask';
@@ -325,6 +326,20 @@ export default function HomeScreen() {
     timerAnim.setValue(1);
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+
+    // Play ride-request alert sound
+    (async () => {
+      try {
+        await Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
+        const { sound } = await Audio.Sound.createAsync(
+          require('@/assets/sounds/trip_request.wav'),
+          { shouldPlay: true, volume: 1.0 },
+        );
+        sound.setOnPlaybackStatusUpdate(status => {
+          if (status.isLoaded && status.didJustFinish) sound.unloadAsync();
+        });
+      } catch {}
+    })();
 
     Animated.spring(sheetAnim, { toValue: 0, stiffness: 320, damping: 32, useNativeDriver: true }).start();
     timerRef.current = Animated.timing(timerAnim, { toValue: 0, duration: offerDurationMs, useNativeDriver: true });
