@@ -303,8 +303,8 @@ function RootLayoutNav() {
       <ActiveSessionInitBridge />
 
       <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
-        <Stack.Screen name="language-select" />
         <Stack.Screen name="index" />
+        <Stack.Screen name="language-select" />
         <Stack.Screen name="login" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="(shuttle)" options={{ animation: 'slide_from_right' }} />
