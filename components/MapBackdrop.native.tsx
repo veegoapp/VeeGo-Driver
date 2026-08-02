@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import MapView, { Circle, Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
-import Svg, { Rect } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DARK_MAP_STYLE, LIGHT_MAP_STYLE } from '@/constants/mapStyle';
 import { getToken } from '@/lib/auth';
@@ -140,15 +139,13 @@ function DriverNavCarMarker({
           requestAnimationFrame(() => requestAnimationFrame(() => setPainted(true)));
         }}
       >
-        <View style={styles.driverNavGlow} />
-        {/* Top-down car silhouette — nose points up; the Marker's own
+        {/* Car marker image — nose points up; the Marker's own
             `rotation={currentBearing}` (flat) handles actual heading. */}
-        <Svg width={34} height={46} viewBox="0 0 34 46">
-          <Rect x="3" y="3" width="28" height="40" rx="11" fill="#ffffff" stroke="#1d4ed8" strokeWidth="2" />
-          <Rect x="8" y="9" width="18" height="13" rx="4" fill="#1d4ed8" />
-          <Rect x="10" y="27" width="14" height="9" rx="3" fill="#1d4ed8" opacity="0.55" />
-          <Rect x="14" y="2" width="6" height="6" rx="3" fill="#55c49a" />
-        </Svg>
+        <Image
+          source={require('@/assets/images/car-marker.png')}
+          style={styles.carMarkerImage}
+          resizeMode="contain"
+        />
       </View>
     </Marker>
   );
@@ -744,21 +741,16 @@ export const MapBackdrop = React.memo(function MapBackdrop({
 // ── Styles ─────────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  // Driver nav marker (arrow pointing up, rotated by bearing)
+  // Driver nav marker (car image, rotated by bearing)
   driverNavOuter: {
-    width: 56,
-    height: 56,
+    width: 72,
+    height: 72,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  driverNavGlow: {
-    position: 'absolute',
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: 'rgba(37,99,235,0.18)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.25)',
+  carMarkerImage: {
+    width: 72,
+    height: 72,
   },
   // Driver idle marker (blue circle)
   driverIdleMarker: {
