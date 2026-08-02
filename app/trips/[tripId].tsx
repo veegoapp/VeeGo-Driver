@@ -26,6 +26,8 @@ import { endpoints } from '@/lib/api';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
+import { useService } from '@/lib/serviceContext';
+import { StaticRouteMap } from '@/components/shared/StaticRouteMap';
 
 // Task 3: updated TripDetail to match backend spec
 type TripDetail = {
@@ -44,6 +46,11 @@ type TripDetail = {
   pickup?: string;
   destination?: string;
   riderRating?: number | string;
+  // Coordinates for the static route map card
+  pickupLat?: number | null;
+  pickupLng?: number | null;
+  dropoffLat?: number | null;
+  dropoffLng?: number | null;
 };
 
 // Task 3: station shape from GET /driver/trips/:id/stations
@@ -58,6 +65,7 @@ type Station = {
 export default function TripDetailScreen() {
   const { tripId } = useLocalSearchParams<{ tripId: string }>();
   const colors = useColors();
+  const { isDarkMode } = useService();
   const { t, isRTL } = useI18n();
   const insets = useSafeAreaInsets();
   const topPad = insets.top;
@@ -231,6 +239,18 @@ export default function TripDetailScreen() {
                 <View style={[styles.routeLine, { backgroundColor: colors.border }]} />
                 <RouteRow icon={<Navigation size={16} color={colors.foreground} strokeWidth={2} />} label="Destination" value={data.destination ?? '—'} colors={colors} />
               </GlassView>
+            )}
+
+            {/* Static route map card — shown only when coordinates are available */}
+            {(data.pickupLat != null || data.dropoffLat != null) && (
+              <View style={[styles.mapCard, { shadowColor: isDarkMode ? '#000' : '#000' }]}>
+                <StaticRouteMap
+                  pickup={data.pickupLat != null ? { latitude: data.pickupLat!, longitude: data.pickupLng! } : undefined}
+                  dropoff={data.dropoffLat != null ? { latitude: data.dropoffLat!, longitude: data.dropoffLng! } : undefined}
+                  darkMode={isDarkMode}
+                  style={{ borderRadius: 20 }}
+                />
+              </View>
             )}
 
             {/* Bookings count */}
@@ -461,6 +481,17 @@ const styles = StyleSheet.create({
   stationMeta: { fontSize: 11, marginTop: 2 },
   stationBtn: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center', minWidth: 64 },
   stationBtnText: { fontSize: Typography.size.xs },
+  // Static route map card
+  mapCard: {
+    marginTop: Spacing.lg,
+    borderRadius: 20,
+    overflow: 'hidden',
+    height: 240,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  },
   // Modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: Spacing.xl },
   modalCard: { width: '100%', padding: Spacing.xl, gap: Spacing.md },

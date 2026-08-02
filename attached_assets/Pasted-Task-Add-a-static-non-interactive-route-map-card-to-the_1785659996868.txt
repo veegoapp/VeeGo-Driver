@@ -1,0 +1,245 @@
+Task: Add a static (non-interactive) route map card to the driver app's Trip Detail screen
+
+What to build
+In the Trip Detail screen, add a map card that displays a non-interactive, frozen map showing the route between the trip's pickup and dropoff points — exactly like a screenshot. The driver cannot pan or zoom it. It should only appear when both pickup and dropoff coordinates are available.
+
+How it should look
+A rounded card (same border radius as the other cards on the screen), height 240
+Shows the route as a blue dashed polyline between a green pickup marker and a red dropoff marker
+Light/dark theme-aware custom map styles (see below)
+All interactions disabled: scrollEnabled={false}, zoomEnabled={false}, pitchEnabled={false}, rotateEnabled={false}
+Files to create
+1. src/utils/googleDirections.ts
+This utility fetches a road-snapped route from the backend. The backend proxies Google Directions so no API key is needed in the app.
+
+import api from '../api/client'; // adjust the import path to match your project's axios instance
+export interface LatLng {
+  latitude: number;
+  longitude: number;
+}
+export interface DirectionsResult {
+  coords: LatLng[];
+  durationSeconds: number | null;
+}
+function decodePolyline(encoded: string): LatLng[] {
+  const result: LatLng[] = [];
+  let index = 0, lat = 0, lng = 0;
+  while (index < encoded.length) {
+    let b: number, shift = 0, value = 0;
+    do { b = encoded.charCodeAt(index++) - 63; value |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+    lat += value & 1 ? ~(value >> 1) : value >> 1;
+    shift = 0; value = 0;
+    do { b = encoded.charCodeAt(index++) - 63; value |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+    lng += value & 1 ? ~(value >> 1) : value >> 1;
+    result.push({ latitude: lat / 1e5, longitude: lng / 1e5 });
+  }
+  return result;
+}
+export async function fetchGoogleRoute(
+  origin: LatLng,
+  waypoints: LatLng[],
+): Promise<DirectionsResult | null> {
+  if (waypoints.length === 0) return null;
+  const destination = waypoints[waypoints.length - 1];
+  const middle = waypoints.slice(0, -1);
+  try {
+    const { data: raw } = await api.get('/directions', {
+      params: {
+        origin: `${origin.latitude},${origin.longitude}`,
+        destination: `${destination.latitude},${destination.longitude}`,
+        ...(middle.length > 0 ? { waypoints: middle.map(p => `${p.latitude},${p.longitude}`).join('|') } : {}),
+      },
+      timeout: 8000,
+    });
+    const data = raw?.data ?? raw;
+    if (Array.isArray(data?.polyline) && data.polyline.length > 0) {
+      return {
+        coords: data.polyline.map((pt: any) => ({ latitude: pt.latitude, longitude: pt.longitude })),
+        durationSeconds: typeof data.durationS === 'number' ? data.durationS : null,
+      };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+Backend contract: GET /api/directions?origin=lat,lng&destination=lat,lng&waypoints=lat,lng|... Response: { polyline: [{latitude, longitude},...], durationS: number, distanceM: number } (or wrapped as { data: { polyline, durationS, distanceM } })
+
+2. constants/mapStyles.ts
+export const LIGHT_MAP_STYLE = [
+  { elementType: 'geometry',           stylers: [{ color: '#f3f4f6' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#f3f4f6' }] },
+  { elementType: 'labels.text.fill',   stylers: [{ color: '#374151' }] },
+  { featureType: 'road', elementType: 'geometry',        stylers: [{ color: '#ffffff' }] },
+  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#e5e7eb' }] },
+  { featureType: 'road', elementType: 'labels.text.fill',stylers: [{ color: '#374151' }] },
+  { featureType: 'road.highway', elementType: 'geometry',        stylers: [{ color: '#fde68a' }] },
+  { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#f59e0b' }] },
+  { featureType: 'road.highway', elementType: 'labels.text.fill',stylers: [{ color: '#1f2937' }] },
+  { featureType: 'water', elementType: 'geometry',        stylers: [{ color: '#bfdbfe' }] },
+  { featureType: 'water', elementType: 'labels.text.fill',stylers: [{ color: '#2563eb' }] },
+  { featureType: 'landscape', elementType: 'geometry',            stylers: [{ color: '#f3f4f6' }] },
+  { featureType: 'landscape.man_made', elementType: 'geometry.fill', stylers: [{ color: '#e9eaec' }] },
+  { featureType: 'poi', elementType: 'geometry',        stylers: [{ color: '#e5e7eb' }] },
+  { featureType: 'poi', elementType: 'labels.text.fill',stylers: [{ color: '#6b7280' }] },
+  { featureType: 'poi.park', elementType: 'geometry',        stylers: [{ color: '#d1fae5' }] },
+  { featureType: 'poi.park', elementType: 'labels.text.fill',stylers: [{ color: '#065f46' }] },
+  { featureType: 'transit', elementType: 'geometry',        stylers: [{ color: '#e5e7eb' }] },
+  { featureType: 'transit.station', elementType: 'labels.text.fill', stylers: [{ color: '#6b7280' }] },
+  { featureType: 'administrative', elementType: 'geometry',        stylers: [{ color: '#d1d5db' }] },
+  { featureType: 'administrative.country', elementType: 'labels.text.fill', stylers: [{ color: '#374151' }] },
+  { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#1f2937' }] },
+  { featureType: 'administrative.neighborhood', elementType: 'labels.text.fill', stylers: [{ color: '#6b7280' }] },
+];
+export const DARK_MAP_STYLE = [
+  { elementType: 'geometry',           stylers: [{ color: '#0d0e22' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#0d0e22' }] },
+  { elementType: 'labels.text.fill',   stylers: [{ color: '#8a8aaa' }] },
+  { featureType: 'road', elementType: 'geometry',        stylers: [{ color: '#1e2140' }] },
+  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#111827' }] },
+  { featureType: 'road', elementType: 'labels.text.fill',stylers: [{ color: '#9ca3af' }] },
+  { featureType: 'road.highway', elementType: 'geometry',        stylers: [{ color: '#2d3155' }] },
+  { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#1a1e3c' }] },
+  { featureType: 'road.highway', elementType: 'labels.text.fill',stylers: [{ color: '#d1d5db' }] },
+  { featureType: 'water', elementType: 'geometry',        stylers: [{ color: '#0c1428' }] },
+  { featureType: 'water', elementType: 'labels.text.fill',stylers: [{ color: '#4b5563' }] },
+  { featureType: 'landscape', elementType: 'geometry',            stylers: [{ color: '#101224' }] },
+  { featureType: 'landscape.man_made', elementType: 'geometry.fill', stylers: [{ color: '#141630' }] },
+  { featureType: 'poi', elementType: 'geometry',        stylers: [{ color: '#0e1128' }] },
+  { featureType: 'poi', elementType: 'labels.text.fill',stylers: [{ color: '#6b7280' }] },
+  { featureType: 'poi.park', elementType: 'geometry',        stylers: [{ color: '#0d2218' }] },
+  { featureType: 'poi.park', elementType: 'labels.text.fill',stylers: [{ color: '#4ade80' }] },
+  { featureType: 'transit', elementType: 'geometry',        stylers: [{ color: '#1a1e3c' }] },
+  { featureType: 'transit.station', elementType: 'labels.text.fill', stylers: [{ color: '#6b7280' }] },
+  { featureType: 'administrative', elementType: 'geometry',        stylers: [{ color: '#1e2140' }] },
+  { featureType: 'administrative.country', elementType: 'labels.text.fill', stylers: [{ color: '#9ca3af' }] },
+  { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#d1d5db' }] },
+  { featureType: 'administrative.neighborhood', elementType: 'labels.text.fill', stylers: [{ color: '#9ca3af' }] },
+];
+
+3. components/shared/StaticRouteMap.native.tsx
+import React, { useEffect, useMemo, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
+import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
+import { fetchGoogleRoute } from '@/src/utils/googleDirections'; // adjust path
+import { DARK_MAP_STYLE, LIGHT_MAP_STYLE } from '@/constants/mapStyles'; // adjust path
+interface LatLng { latitude: number; longitude: number; }
+interface StaticRouteMapProps {
+  pickup?: LatLng;
+  dropoff?: LatLng;
+  darkMode?: boolean;
+  style?: object;
+}
+const CAIRO: LatLng = { latitude: 30.0444, longitude: 31.2357 };
+const DELTA = { latitudeDelta: 0.04, longitudeDelta: 0.04 };
+function centroid(points: LatLng[]): LatLng {
+  const n = points.length;
+  return {
+    latitude: points.reduce((s, p) => s + p.latitude, 0) / n,
+    longitude: points.reduce((s, p) => s + p.longitude, 0) / n,
+  };
+}
+export function StaticRouteMap({ pickup, dropoff, darkMode = false, style }: StaticRouteMapProps) {
+  const center = useMemo(() => {
+    const pts = [pickup, dropoff].filter(Boolean) as LatLng[];
+    return pts.length > 0 ? centroid(pts) : CAIRO;
+  }, [pickup, dropoff]);
+  const straightLine = useMemo(() => {
+    const pts: LatLng[] = [];
+    if (pickup) pts.push(pickup);
+    if (dropoff) pts.push(dropoff);
+    return pts;
+  }, [pickup, dropoff]);
+  const [routeCoords, setRouteCoords] = useState<LatLng[]>(straightLine);
+  useEffect(() => {
+    if (!pickup || !dropoff) { setRouteCoords(straightLine); return; }
+    let cancelled = false;
+    setRouteCoords(straightLine);
+    fetchGoogleRoute(pickup, [dropoff]).then((result) => {
+      if (cancelled) return;
+      if (result?.coords?.length) setRouteCoords(result.coords);
+    });
+    return () => { cancelled = true; };
+  }, [pickup?.latitude, pickup?.longitude, dropoff?.latitude, dropoff?.longitude]);
+  return (
+    <View style={[StyleSheet.absoluteFillObject, style]}>
+      <MapView
+        provider={PROVIDER_GOOGLE}
+        style={StyleSheet.absoluteFillObject}
+        initialRegion={{ ...center, ...DELTA }}
+        showsUserLocation={false}
+        showsCompass={false}
+        toolbarEnabled={false}
+        scrollEnabled={false}
+        zoomEnabled={false}
+        pitchEnabled={false}
+        rotateEnabled={false}
+        customMapStyle={darkMode ? DARK_MAP_STYLE : LIGHT_MAP_STYLE}
+      >
+        {pickup && <Marker coordinate={pickup} pinColor="#22c55e" />}
+        {dropoff && <Marker coordinate={dropoff} pinColor="#ef4444" />}
+        {routeCoords.length >= 2 && (
+          <Polyline
+            coordinates={routeCoords}
+            strokeColor="#2563eb"
+            strokeWidth={3}
+            lineDashPattern={[8, 4]}
+          />
+        )}
+      </MapView>
+    </View>
+  );
+}
+
+Changes in the Trip Detail screen
+Find the trip detail screen file. It likely has a rideDetail or tripDetail object with pickupLat, pickupLng, dropoffLat, dropoffLng fields (or similar names — check the actual data shape).
+
+Add this map card below the main info card and above the driver info card:
+
+import { StaticRouteMap } from '@/components/shared/StaticRouteMap';
+// Inside the render, derive coords from the trip object:
+const hasMapCoords = (trip.pickupLat != null && trip.pickupLng != null)
+                  || (trip.dropoffLat != null && trip.dropoffLng != null);
+const ridePickup  = trip.pickupLat  != null ? { latitude: trip.pickupLat,  longitude: trip.pickupLng  } : undefined;
+const rideDropoff = trip.dropoffLat != null ? { latitude: trip.dropoffLat, longitude: trip.dropoffLng } : undefined;
+// In JSX:
+{hasMapCoords && (
+  <View style={{
+    marginHorizontal: 20,
+    borderRadius: 20,
+    overflow: 'hidden',
+    height: 240,
+    marginBottom: 16,
+    // shadow (iOS)
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    // elevation (Android)
+    elevation: 4,
+  }}>
+    <StaticRouteMap
+      pickup={ridePickup}
+      dropoff={rideDropoff}
+      darkMode={/* your darkMode boolean */}
+      style={{ borderRadius: 20 }}
+    />
+  </View>
+)}
+
+Dependencies required
+Make sure react-native-maps is installed (npm install react-native-maps or yarn add react-native-maps). If it's already there, no action needed.
+
+For iOS, PROVIDER_GOOGLE also requires a Google Maps API key registered in app.json / app.config.js:
+
+"ios": { "config": { "googleMapsApiKey": "YOUR_KEY" } },
+"android": { "config": { "googleMaps": { "apiKey": "YOUR_KEY" } } }
+
+The Directions API key never goes in the app — it stays on the backend only.
+
+Done looks like
+Trip Detail screen shows a frozen map card with a blue dashed route line, green pickup pin, red dropoff pin
+Card is visible only when coordinates exist on the trip
+Map cannot be scrolled or zoomed by the driver
+Works in both light and dark mode
