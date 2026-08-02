@@ -1,5 +1,5 @@
-import * as Location from 'expo-location';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { useGPS } from './useGPSProvider';
 
 export type DriverPosition = {
   latitude: number;
@@ -23,59 +23,29 @@ export function haversineMeters(
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+/**
+ * Returns the live driver GPS position from the shared GPS provider.
+ *
+ * Public API is unchanged — all existing callers (home.tsx, ride/[rideId].tsx,
+ * shuttle/trip-active.tsx) work without modification.
+ *
+ * Internally this hook no longer owns a watchPositionAsync subscription.
+ * It registers as a consumer with GPSProvider (starting the shared subscription
+ * if not already running) and reads the resulting position from context.
+ * When `enabled` is false the hook unregisters and returns null, so GPS is
+ * not running for screens that are off or in a non-tracking state.
+ */
 export function useDriverLocation(enabled = true): {
   position: DriverPosition | null;
   permissionDenied: boolean;
 } {
-  const [position, setPosition] = useState<DriverPosition | null>(null);
-  const [permissionDenied, setPermissionDenied] = useState(false);
+  const { position, permissionDenied, subscribe } = useGPS();
 
   useEffect(() => {
     if (!enabled) return;
-    let sub: Location.LocationSubscription | null = null;
-    let active = true; // guards against stale assignment after unmount
+    // subscribe() returns the unregister fn; React calls it on cleanup.
+    return subscribe();
+  }, [enabled, subscribe]);
 
-    (async () => {
-      try {
-        // Check only — never prompt here. Permission is requested once by
-        // startLocationTracking() when the driver taps GO for the first time.
-        const { status } = await Location.getForegroundPermissionsAsync();
-        if (!active) return;
-        if (status !== 'granted') {
-          setPermissionDenied(true);
-          return;
-        }
-        const s = await Location.watchPositionAsync(
-          {
-            accuracy: Location.Accuracy.High,
-            timeInterval: 1000,
-            distanceInterval: 4,
-          },
-          (loc) => {
-            setPosition({
-              latitude: loc.coords.latitude,
-              longitude: loc.coords.longitude,
-              heading: loc.coords.heading ?? null,
-              speed: loc.coords.speed ?? null,
-            });
-          }
-        );
-        if (!active) {
-          // unmounted while watchPositionAsync was resolving — remove immediately
-          s.remove();
-          return;
-        }
-        sub = s;
-      } catch {
-        // expo-location may not be available in Expo Go; fail silently
-      }
-    })();
-
-    return () => {
-      active = false;
-      sub?.remove();
-    };
-  }, [enabled]);
-
-  return { position, permissionDenied };
+  return { position: enabled ? position : null, permissionDenied };
 }

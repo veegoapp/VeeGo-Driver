@@ -1,4 +1,5 @@
 export { useActiveLocationTracking } from './useActiveLocationTracking';
+export { useGPS, GPSProvider } from './useGPSProvider';
 export { useCodeLockout, formatLockoutCountdown } from './useCodeLockout';
 export { useColors } from './useColors';
 export { useDriverLocation, haversineMeters } from './useDriverLocation';

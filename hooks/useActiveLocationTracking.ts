@@ -1,8 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
-import * as Location from 'expo-location';
 import { useEffect, useRef } from 'react';
 import { endpoints, type LocationSnapshot } from '@/lib/api';
+import { useGPS } from './useGPSProvider';
 
 const PENDING_KEY = 'veego_pending_locations';
 const INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
@@ -39,14 +39,6 @@ async function appendPending(snapshot: LocationSnapshot): Promise<void> {
   }
 }
 
-async function clearPending(): Promise<void> {
-  try {
-    await AsyncStorage.removeItem(PENDING_KEY);
-  } catch {
-    // ignore
-  }
-}
-
 async function syncPending(): Promise<void> {
   const pending = await readPending();
   if (pending.length === 0) return;
@@ -78,45 +70,27 @@ async function syncPending(): Promise<void> {
   }
 }
 
-async function captureSnapshot(
-  tripId: number | null | undefined,
-  rideId: number | null | undefined,
-  isOfflineSync: boolean,
-): Promise<LocationSnapshot | null> {
-  try {
-    // Check only — never prompt here. Permission is requested once by
-    // startLocationTracking() when the driver taps GO for the first time.
-    const { status } = await Location.getForegroundPermissionsAsync();
-    if (status !== 'granted') return null;
-
-    const pos = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.High,
-    });
-
-    return {
-      entityType: 'driver',
-      latitude: pos.coords.latitude,
-      longitude: pos.coords.longitude,
-      speed: pos.coords.speed ?? undefined,
-      heading: pos.coords.heading ?? undefined,
-      accuracy: pos.coords.accuracy ?? undefined,
-      // Use wall-clock time rather than the GPS hardware timestamp so the
-      // value is always a fresh ISO string, never stale or device-clock-skewed.
-      recordedAt: new Date().toISOString(),
-      // Only include tripId / rideId when they are valid positive integers.
-      // Sending null, undefined, or 0 fails backend payload validation.
-      ...(tripId != null && tripId > 0 ? { tripId } : {}),
-      ...(rideId != null && rideId > 0 ? { rideId } : {}),
-      isOfflineSync,
-    };
-  } catch {
-    return null;
-  }
-}
-
+/**
+ * Persists driver location at 5-minute intervals for auditing and offline
+ * recovery. Position is read from the shared GPSProvider instead of calling
+ * getCurrentPositionAsync independently.
+ *
+ * All existing behavior is preserved:
+ *   - 5-minute persistence interval
+ *   - offline queue (AsyncStorage) with chunked batch sync
+ *   - NetInfo reconnect flush
+ *   - all existing API contracts (sendLocation / sendBatch)
+ *   - payload fixes: recordedAt uses new Date().toISOString(),
+ *     rideId/tripId omitted unless valid positive integers
+ */
 export function useActiveLocationTracking({ enabled, tripId, rideId }: Options): void {
+  const { position, subscribe } = useGPS();
+
   const tripIdRef = useRef(tripId);
   const rideIdRef = useRef(rideId);
+  // Mirror position into a ref so the setInterval tick closure always reads
+  // the latest fix without needing to be recreated on every GPS update.
+  const positionRef = useRef(position);
 
   useEffect(() => {
     tripIdRef.current = tripId;
@@ -124,11 +98,41 @@ export function useActiveLocationTracking({ enabled, tripId, rideId }: Options):
   }, [tripId, rideId]);
 
   useEffect(() => {
+    positionRef.current = position;
+  }, [position]);
+
+  // Register with the GPS provider while enabled.
+  useEffect(() => {
+    if (!enabled) return;
+    return subscribe();
+  }, [enabled, subscribe]);
+
+  useEffect(() => {
     if (!enabled) return;
 
     async function tick() {
-      const snapshot = await captureSnapshot(tripIdRef.current, rideIdRef.current, false);
-      if (!snapshot) return;
+      const pos = positionRef.current;
+      if (!pos) return; // no GPS fix available yet
+
+      const snapshot: LocationSnapshot = {
+        entityType: 'driver',
+        latitude: pos.latitude,
+        longitude: pos.longitude,
+        speed: pos.speed != null && pos.speed >= 0 ? pos.speed : undefined,
+        heading: pos.heading != null && pos.heading >= 0 ? pos.heading : undefined,
+        // Wall-clock time — not the GPS hardware timestamp — for consistent
+        // ISO strings that always pass backend validation.
+        recordedAt: new Date().toISOString(),
+        // Only include tripId / rideId when they are valid positive integers.
+        // Sending null, undefined, or 0 fails backend payload validation.
+        ...(tripIdRef.current != null && tripIdRef.current > 0
+          ? { tripId: tripIdRef.current }
+          : {}),
+        ...(rideIdRef.current != null && rideIdRef.current > 0
+          ? { rideId: rideIdRef.current }
+          : {}),
+        isOfflineSync: false,
+      };
 
       const netState = await NetInfo.fetch();
       const isOnline = netState.isConnected && netState.isInternetReachable !== false;

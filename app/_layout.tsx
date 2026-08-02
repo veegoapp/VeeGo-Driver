@@ -37,6 +37,7 @@ import { setOnAccountSuspended, setOnSessionCleared, refreshAccessToken, endpoin
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
 import { deleteToken, deleteRefreshToken } from '@/lib/auth';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { GPSProvider } from '@/hooks/useGPSProvider';
 import { ServerStatusBanner } from '@/components/ServerStatusBanner';
 import { AppAlert } from '@/components/ui';
 
@@ -389,7 +390,9 @@ export default function RootLayout() {
                         <ActiveSessionProvider>
                           <ShuttleGate>
                             <ServiceControlProvider>
-                              <RootLayoutNav />
+                              <GPSProvider>
+                                <RootLayoutNav />
+                              </GPSProvider>
                             </ServiceControlProvider>
                           </ShuttleGate>
                         </ActiveSessionProvider>
