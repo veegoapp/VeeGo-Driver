@@ -4,6 +4,7 @@ import MapView, { Circle, Marker, Polyline, PROVIDER_GOOGLE } from 'react-native
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DARK_MAP_STYLE, LIGHT_MAP_STYLE } from '@/constants/mapStyle';
 import { getToken } from '@/lib/auth';
+import { haversineMeters } from '@/hooks/useDriverLocation';
 import { useService } from '@/lib/serviceContext';
 
 
@@ -231,7 +232,7 @@ export const MapBackdrop = React.memo(function MapBackdrop({
   approachCircle,
   focusTarget,
   navigationMode = false,
-  animDurationMs = 350,
+  animDurationMs = 700,
 }: MapBackdropProps) {
   const mapRef = useRef<MapView>(null);
   const [mapReady, setMapReady] = useState(false);
@@ -244,6 +245,11 @@ export const MapBackdrop = React.memo(function MapBackdrop({
   const initialFitDoneRef = useRef(false);
   // Bearing smoothing — persists smoothed value across renders
   const smoothedBearingRef = useRef<number | null>(null);
+  // Last driver position from which a navigation-follow animateCamera was fired.
+  // Used to gate camera updates behind a minimum-movement threshold so that
+  // stationary GPS noise and back-to-back 1 Hz ticks don't queue overlapping
+  // animations. Reset to null whenever navigation mode is entered.
+  const prevCameraPositionRef = useRef<{ latitude: number; longitude: number } | null>(null);
   // Ref mirror of the navigationMode prop — lets callbacks read current value without closure capture
   const navigationModeRef = useRef(navigationMode);
   // Auto-recenter timer handle — cleared on re-pan, nav exit, or unmount
@@ -294,6 +300,9 @@ export const MapBackdrop = React.memo(function MapBackdrop({
   // ── Sync navigationMode prop into ref (used by stable callbacks) ────────
   useEffect(() => {
     navigationModeRef.current = navigationMode;
+    // Reset camera position tracking on navigation mode entry so the first
+    // GPS fix after entering nav mode always triggers a camera update.
+    if (navigationMode) prevCameraPositionRef.current = null;
   }, [navigationMode]);
 
   // ── Cancel auto-recenter timer when nav mode ends or on unmount ──────────
@@ -317,20 +326,44 @@ export const MapBackdrop = React.memo(function MapBackdrop({
   // the smoothed bearing so the driver marker sits in the lower portion of the
   // visible map and more road is shown ahead — the Uber/Careem look.
   //
-  // We read bearing from smoothedBearingRef (updated synchronously by the
-  // bearing effect above, which shares the same deps) instead of currentBearing
-  // state. This prevents a second animateCamera call: without the ref, a GPS
-  // tick first triggers this effect (position change) then triggers it again
-  // when setCurrentBearing causes currentBearing to update — two overlapping
-  // camera animations per second in nav mode.
+  // Camera decision priority (explicit):
+  //   1. focusTarget — when set, its dedicated effect owns the camera and this
+  //      effect yields immediately. focusTarget is read without being added to
+  //      deps because its own effect handles the camera on focusTarget changes;
+  //      this guard only prevents nav-follow from overriding it on GPS ticks.
+  //   2. Navigation follow (this effect) — fires on GPS ticks while navigating.
+  //   3. Initial fit — fitToCoordinates, handled by a separate effect below.
+  //
+  // Minimum-movement gate: animateCamera is skipped when the driver has moved
+  // less than NAV_CAMERA_MIN_MOVE_M since the last camera update. This stops
+  // stationary GPS noise and back-to-back 1 Hz ticks from queuing overlapping
+  // animations that produce visible camera stutter.
+  //
+  // Bearing note: read from smoothedBearingRef (updated synchronously by the
+  // bearing effect above) instead of currentBearing state, preventing a second
+  // animateCamera call per GPS tick when setCurrentBearing causes a re-render.
+  const NAV_CAMERA_MIN_MOVE_M = 3;
   useEffect(() => {
     if (!navigationMode || !driverLocation || userPannedRef.current || !mapReady) return;
+    // Priority 1: focusTarget owns the camera — yield.
+    if (focusTarget) return;
+    // Skip if the driver hasn't moved far enough to justify a new camera frame.
+    if (prevCameraPositionRef.current) {
+      const moved = haversineMeters(
+        prevCameraPositionRef.current.latitude,
+        prevCameraPositionRef.current.longitude,
+        driverLocation.latitude,
+        driverLocation.longitude,
+      );
+      if (moved < NAV_CAMERA_MIN_MOVE_M) return;
+    }
     const bearing = smoothedBearingRef.current ?? 0;
     const center = offsetCoord(
       { latitude: driverLocation.latitude, longitude: driverLocation.longitude },
       bearing,
       100,
     );
+    prevCameraPositionRef.current = { latitude: driverLocation.latitude, longitude: driverLocation.longitude };
     mapRef.current?.animateCamera(
       {
         center,
@@ -343,9 +376,9 @@ export const MapBackdrop = React.memo(function MapBackdrop({
     );
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [driverLocation?.latitude, driverLocation?.longitude, navigationMode, mapReady]);
-  // Note: currentBearing intentionally omitted from deps — bearing is read
-  // from smoothedBearingRef which is already up-to-date by the time this
-  // effect runs (effects fire in declaration order for the same deps).
+  // focusTarget intentionally omitted — its own effect handles the camera when
+  // focusTarget changes; this effect only guards against firing alongside it.
+  // currentBearing intentionally omitted — bearing is read from smoothedBearingRef.
 
   // ── Focus target camera control ──────────────────────────────────────────
   useEffect(() => {

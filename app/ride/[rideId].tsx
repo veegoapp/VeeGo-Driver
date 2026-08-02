@@ -744,6 +744,21 @@ export default function RideScreen() {
     [dropoffLat, dropoffLng],
   );
 
+  // ── Arrived-phase camera reset ─────────────────────────────────────────────
+  // When the driver arrives at pickup the screen transitions from navigationMode
+  // (zoom 18, 50° pitch, look-ahead) to a static overview. Without an explicit
+  // camera command the map stays locked at the nav-mode zoom and heading.
+  // Passing focusTarget to MapBackdrop on 'arrived' triggers its focusTarget
+  // effect: animateCamera to zoom 15, pitch 0, centred on the pickup pin —
+  // a clean, stable view while the driver waits for the rider.
+  const arrivedFocusTarget = useMemo(
+    () => (phase === 'arrived' && pickupLat != null && pickupLng != null
+      ? { latitude: Number(pickupLat), longitude: Number(pickupLng), zoom: 17 }
+      : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [phase, pickupLat, pickupLng],
+  );
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <MapBackdrop
@@ -752,6 +767,7 @@ export default function RideScreen() {
         driverLocation={driverPosition ?? undefined}
         roadPolyline={remainingPolyline ?? undefined}
         navigationMode={phase === 'to_pickup' || phase === 'in_trip'}
+        focusTarget={arrivedFocusTarget}
       />
 
       <View style={[styles.overlay, { paddingTop: topPad }]}>
