@@ -100,9 +100,13 @@ async function captureSnapshot(
       speed: pos.coords.speed ?? undefined,
       heading: pos.coords.heading ?? undefined,
       accuracy: pos.coords.accuracy ?? undefined,
-      recordedAt: new Date(pos.timestamp).toISOString(),
-      tripId: tripId ?? null,
-      rideId: rideId ?? null,
+      // Use wall-clock time rather than the GPS hardware timestamp so the
+      // value is always a fresh ISO string, never stale or device-clock-skewed.
+      recordedAt: new Date().toISOString(),
+      // Only include tripId / rideId when they are valid positive integers.
+      // Sending null, undefined, or 0 fails backend payload validation.
+      ...(tripId != null && tripId > 0 ? { tripId } : {}),
+      ...(rideId != null && rideId > 0 ? { rideId } : {}),
       isOfflineSync,
     };
   } catch {
