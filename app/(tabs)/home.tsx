@@ -346,7 +346,13 @@ export default function HomeScreen() {
     // Play ride-request alert sound
     (async () => {
       try {
-        await Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
+        await Audio.setAudioModeAsync({
+          playsInSilentModeIOS: true,
+          allowsRecordingIOS: false,
+          staysActiveInBackground: false,
+          shouldDuckAndroid: true,
+          playThroughEarpieceAndroid: false,
+        });
         const { sound } = await Audio.Sound.createAsync(
           require('@/assets/sounds/trip_request.wav'),
           { shouldPlay: true, volume: 1.0 },
@@ -354,7 +360,9 @@ export default function HomeScreen() {
         sound.setOnPlaybackStatusUpdate(status => {
           if (status.isLoaded && status.didJustFinish) sound.unloadAsync();
         });
-      } catch {}
+      } catch (e) {
+        if (__DEV__) console.error('[VeeGo] trip_request sound error:', e);
+      }
     })();
 
     Animated.spring(sheetAnim, { toValue: 0, stiffness: 320, damping: 32, useNativeDriver: true }).start();

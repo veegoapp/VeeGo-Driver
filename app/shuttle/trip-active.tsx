@@ -174,7 +174,13 @@ export default function ShuttleTripActiveScreen() {
     let cancelled = false;
     (async () => {
       try {
-        await Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
+        await Audio.setAudioModeAsync({
+          playsInSilentModeIOS: true,
+          allowsRecordingIOS: false,
+          staysActiveInBackground: false,
+          shouldDuckAndroid: true,
+          playThroughEarpieceAndroid: false,
+        });
         const { sound } = await Audio.Sound.createAsync(
           require('@/assets/sounds/shuttle-approaching.wav'),
           { shouldPlay: true, volume: 1.0 },
@@ -186,7 +192,9 @@ export default function ShuttleTripActiveScreen() {
         sound.setOnPlaybackStatusUpdate(status => {
           if (status.isLoaded && status.didJustFinish) sound.unloadAsync();
         });
-      } catch {}
+      } catch (e) {
+        if (__DEV__) console.error('[VeeGo] shuttle-approaching sound error:', e);
+      }
     })();
     return () => { cancelled = true; };
   }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
