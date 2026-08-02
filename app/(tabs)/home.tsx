@@ -117,6 +117,10 @@ export default function HomeScreen() {
   // Guards the one-time online-state sync from the server below so later
   // refetches (e.g. on focus) don't clobber the driver's own toggle taps.
   const onlineSyncedRef = useRef(false);
+  // Persistent ref for the trip-request alert sound — keeps the Sound object
+  // alive (preventing premature GC under JSI/New Architecture on Android) and
+  // allows the previous instance to be unloaded before a new one is created.
+  const tripRequestSoundRef = useRef<Audio.Sound | null>(null);
 
   const [unreadCount, setUnreadCount] = useState(0);
   const { socket } = useSocket();
@@ -374,6 +378,12 @@ export default function HomeScreen() {
     // Play ride-request alert sound
     (async () => {
       try {
+        // Unload any previous instance before creating a new one so the Sound
+        // object is not left dangling and the ref always holds the current one.
+        if (tripRequestSoundRef.current) {
+          await tripRequestSoundRef.current.unloadAsync().catch(() => {});
+          tripRequestSoundRef.current = null;
+        }
         await Audio.setAudioModeAsync({
           playsInSilentModeIOS: true,
           allowsRecordingIOS: false,
@@ -385,8 +395,13 @@ export default function HomeScreen() {
           require('@/assets/sounds/trip_request.wav'),
           { shouldPlay: true, volume: 1.0 },
         );
+        // Store in ref to keep the object alive (prevents GC under JSI/New Arch).
+        tripRequestSoundRef.current = sound;
         sound.setOnPlaybackStatusUpdate(status => {
-          if (status.isLoaded && status.didJustFinish) sound.unloadAsync();
+          if (status.isLoaded && status.didJustFinish) {
+            sound.unloadAsync().catch(() => {});
+            if (tripRequestSoundRef.current === sound) tripRequestSoundRef.current = null;
+          }
         });
       } catch (e) {
         if (__DEV__) console.error('[VeeGo] trip_request sound error:', e);
