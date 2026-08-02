@@ -134,7 +134,7 @@ export default function HomeScreen() {
         return result;
       } catch (err: unknown) {
         const e = err as any;
-        console.error('[Home:driver] ✗ failed:', { status: e?.status, message: e?.message, body: e?.body, stack: e?.stack });
+        console.error('[Home:driver] ✗ failed:', { name: e?.name, message: e?.message, status: e?.status, statusText: e?.statusText, body: e?.body, stack: e?.stack }, e);
         throw err;
       }
     },
@@ -149,7 +149,7 @@ export default function HomeScreen() {
         return result;
       } catch (err: unknown) {
         const e = err as any;
-        console.error('[Home:earnings] ✗ failed:', { status: e?.status, message: e?.message, body: e?.body, stack: e?.stack });
+        console.error('[Home:earnings] ✗ failed:', { name: e?.name, message: e?.message, status: e?.status, statusText: e?.statusText, body: e?.body, stack: e?.stack }, e);
         throw err;
       }
     },

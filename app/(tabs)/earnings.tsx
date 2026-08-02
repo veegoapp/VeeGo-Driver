@@ -100,7 +100,7 @@ async function fetchRidesInRange(start: Date, end: Date): Promise<RideHistoryIte
       if (hitOlder || items.length < limit) break;
     } catch (err: unknown) {
       const e = err as any;
-      console.error(`[Earnings:rides] ✗ page ${page} failed:`, { status: e?.status, message: e?.message, body: e?.body, stack: e?.stack });
+      console.error(`[Earnings:rides] ✗ page ${page} failed:`, { name: e?.name, message: e?.message, status: e?.status, statusText: e?.statusText, body: e?.body, stack: e?.stack }, e);
       throw err;
     }
   }
@@ -130,7 +130,7 @@ export default function EarningsScreen() {
         return result;
       } catch (err: unknown) {
         const e = err as any;
-        console.error('[Earnings:weekly] ✗ failed:', { status: e?.status, message: e?.message, body: e?.body, stack: e?.stack });
+        console.error('[Earnings:weekly] ✗ failed:', { name: e?.name, message: e?.message, status: e?.status, statusText: e?.statusText, body: e?.body, stack: e?.stack }, e);
         throw err;
       }
     },
@@ -145,7 +145,7 @@ export default function EarningsScreen() {
         return result;
       } catch (err: unknown) {
         const e = err as any;
-        console.error('[Earnings:summary] ✗ failed:', { status: e?.status, message: e?.message, body: e?.body, stack: e?.stack });
+        console.error('[Earnings:summary] ✗ failed:', { name: e?.name, message: e?.message, status: e?.status, statusText: e?.statusText, body: e?.body, stack: e?.stack }, e);
         throw err;
       }
     },
