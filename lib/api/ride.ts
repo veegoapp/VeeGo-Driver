@@ -59,8 +59,8 @@ export const safetyEndpoints = {
 };
 
 export const earningsEndpoints = {
-  summary: (period?: string) => api.get(`/driver/earnings/summary${period ? `?period=${period}` : ''}`),
-  weekly: (weeks = 4) => api.get(`/driver/earnings/weekly?weeks=${weeks}`),
+  summary: (period?: string) => api.get(`/earnings/summary${period ? `?period=${period}` : ''}`),
+  weekly: (weeks = 4) => api.get(`/earnings/weekly?weeks=${weeks}`),
 };
 
 export const walletEndpoints = {

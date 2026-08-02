@@ -123,7 +123,7 @@ export default function EarningsScreen() {
   const { data: weeklyRaw, isLoading: weeklyLoading, isError: weeklyError, refetch: refetchWeekly } = useQuery({
     queryKey: ['earnings-weekly'],
     queryFn: async () => {
-      console.log('[Earnings:weekly] → GET /driver/earnings/weekly?weeks=4');
+      console.log('[Earnings:weekly] → GET /earnings/weekly?weeks=4');
       try {
         const result = await endpoints.earnings.weekly();
         console.log('[Earnings:weekly] ✓ success:', { weeks: (result as any)?.weeklyBreakdown?.length });
@@ -138,7 +138,7 @@ export default function EarningsScreen() {
   const { data: summaryRaw, isLoading: summaryLoading, isError: summaryError, refetch: refetchSummary } = useQuery({
     queryKey: ['earnings-summary', period],
     queryFn: async () => {
-      console.log(`[Earnings:summary] → GET /driver/earnings/summary?period=${period}`);
+      console.log(`[Earnings:summary] → GET /earnings/summary?period=${period}`);
       try {
         const result = await endpoints.earnings.summary(period);
         console.log('[Earnings:summary] ✓ success:', { totalEarnings: (result as any)?.summary?.totalEarnings, period });

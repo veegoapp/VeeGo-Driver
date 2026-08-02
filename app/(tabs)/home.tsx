@@ -142,7 +142,7 @@ export default function HomeScreen() {
   const { data: earningsRaw, isLoading: earningsLoading, isError: earningsError, refetch: refetchEarnings } = useQuery({
     queryKey: ['earnings-summary', 'today'],
     queryFn: async () => {
-      console.log('[Home:earnings] → GET /driver/earnings/summary?period=today');
+      console.log('[Home:earnings] → GET /earnings/summary?period=today');
       try {
         const result = await endpoints.earnings.summary('today');
         console.log('[Home:earnings] ✓ success:', { totalEarnings: (result as any)?.summary?.totalEarnings, online: (result as any)?.summary?.online });
