@@ -427,6 +427,8 @@ export default function HomeScreen() {
   useEffect(() => {
     return () => {
       if (countdownRef.current) clearInterval(countdownRef.current);
+      tripRequestSoundRef.current?.unloadAsync().catch(() => {});
+      tripRequestSoundRef.current = null;
     };
   }, []);
 
