@@ -55,7 +55,6 @@ const queryClient = new QueryClient({
 // Redirecting here would kick the user back to login right after registration.
 const PRE_AUTH_SCREENS = new Set([
   'login',
-  'language-select',
   'index',
 ]);
 
