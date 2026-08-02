@@ -368,7 +368,7 @@ export const MapBackdrop = React.memo(function MapBackdrop({
       {
         center,
         heading: bearing,
-        pitch: 50,
+        pitch: 25,
         zoom: 18,
         altitude: 160,
       },
@@ -387,7 +387,7 @@ export const MapBackdrop = React.memo(function MapBackdrop({
       {
         center: { latitude: focusTarget.latitude, longitude: focusTarget.longitude },
         zoom: focusTarget.zoom ?? (navigationMode ? 18 : 16),
-        pitch: navigationMode ? 50 : 0,
+        pitch: navigationMode ? 25 : 0,
         altitude: navigationMode ? 160 : 500,
       },
       { duration: 800 },
@@ -482,7 +482,7 @@ export const MapBackdrop = React.memo(function MapBackdrop({
       {
         center,
         heading: navigationMode ? currentBearing : 0,
-        pitch: navigationMode ? 50 : 0,
+        pitch: navigationMode ? 25 : 0,
         zoom: navigationMode ? 18 : 16,
         altitude: navigationMode ? 160 : 500,
       },
@@ -599,7 +599,7 @@ export const MapBackdrop = React.memo(function MapBackdrop({
         customMapStyle={mapStyle}
         initialCamera={{
           center: initialCenter,
-          pitch: navigationMode ? 50 : 0,
+          pitch: navigationMode ? 25 : 0,
           heading: 0,
           zoom: navigationMode ? 18 : 13,
           altitude: navigationMode ? 160 : 2000,
