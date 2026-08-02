@@ -129,8 +129,8 @@ export default function HomeScreen() {
     queryFn: endpoints.driver.me,
   });
   const { data: earningsRaw, isLoading: earningsLoading, isError: earningsError, refetch: refetchEarnings } = useQuery({
-    queryKey: ['earnings-summary'],
-    queryFn: () => endpoints.earnings.summary(),
+    queryKey: ['earnings-summary', 'today'],
+    queryFn: () => endpoints.earnings.summary('today'),
   });
   // The earnings-summary response has no trips count (only totalEarnings/
   // totalPaid/etc — see EarningsSummary type in earnings.tsx), so the Home
