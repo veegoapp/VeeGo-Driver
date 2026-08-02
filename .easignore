@@ -4,11 +4,21 @@ node_modules/
 # ── Replit-specific runtime & store (not needed on EAS servers) ──────────────
 .local/
 .cache/
+.config/
 .replit
 .replitignore
 
 # ── Replit agent memory & skills ─────────────────────────────────────────────
 .agents/
+
+# ── Claude AI settings ────────────────────────────────────────────────────────
+.claude/
+
+# ── GitHub CI workflows (EAS has its own pipeline) ───────────────────────────
+.github/
+
+# ── Design preview files (not part of the app bundle) ────────────────────────
+design-prototypes/
 
 # ── Local build output (Replit static-build only, not an Expo/EAS artifact) ──
 static-build/
@@ -28,8 +38,9 @@ VeeGo_Driver_Production_UX_Audit.md
 driver-audit-verification-report.md
 driver-local-fixes-report.md
 
-# ── Local environment file (values are supplied via EAS Secrets instead) ──────
+# ── Environment files (values are supplied via EAS Secrets instead) ───────────
 .env
+.env.example
 
 # ── Misc ──────────────────────────────────────────────────────────────────────
 *.log
