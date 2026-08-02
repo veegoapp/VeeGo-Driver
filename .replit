@@ -66,6 +66,6 @@ packages = ["eas-cli", "nix-output-monitor"]
 [userenv]
 
 [userenv.shared]
-EXPO_PUBLIC_API_URL = ""
-GOOGLE_MAPS_API_KEY_ANDROID = ""
-EXPO_PUBLIC_CERT_PIN_SHA256 = ""
+EXPO_PUBLIC_API_URL = "https://veegobackend.onrender.com/api"
+GOOGLE_MAPS_API_KEY_ANDROID = "AIzaSyD7aLMAdzUuK7kUZygpFZYPh2bEPxseqvk"
+EXPO_PUBLIC_CERT_PIN_SHA256 = "NnfKqDbhvUeabxD97xg7r9JvWoGY7BJjg8XThNJxVbk=,kIdp6NNEd8wsugYyyIYFsi1ylMCED3hZbSR8ZFsa/A4="

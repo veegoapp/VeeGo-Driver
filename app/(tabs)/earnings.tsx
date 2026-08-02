@@ -81,20 +81,30 @@ function getPeriodRange(period: PeriodKey): { start: Date; end: Date } {
 // newest-first until a ride older than `start` is hit — bounded to 20 pages
 // (1000 rides) as a safety cap for exceptionally busy drivers.
 async function fetchRidesInRange(start: Date, end: Date): Promise<RideHistoryItem[]> {
+  console.log('[Earnings:rides] → fetchRidesInRange', { start: start.toISOString(), end: end.toISOString() });
   const results: RideHistoryItem[] = [];
   const limit = 50;
   for (let page = 1; page <= 20; page++) {
-    const res = await endpoints.rides.history(page, limit, 'completed') as { data?: RideHistoryItem[] };
-    const items = res?.data ?? [];
-    if (items.length === 0) break;
-    let hitOlder = false;
-    for (const r of items) {
-      const d = new Date(r.completedAt);
-      if (d >= start && d <= end) results.push(r);
-      if (d < start) hitOlder = true;
+    console.log(`[Earnings:rides] → GET /driver/rides/history?page=${page}&limit=${limit}&status=completed`);
+    try {
+      const res = await endpoints.rides.history(page, limit, 'completed') as { data?: RideHistoryItem[] };
+      const items = res?.data ?? [];
+      console.log(`[Earnings:rides] ✓ page ${page}:`, { count: items.length });
+      if (items.length === 0) break;
+      let hitOlder = false;
+      for (const r of items) {
+        const d = new Date(r.completedAt);
+        if (d >= start && d <= end) results.push(r);
+        if (d < start) hitOlder = true;
+      }
+      if (hitOlder || items.length < limit) break;
+    } catch (err: unknown) {
+      const e = err as any;
+      console.error(`[Earnings:rides] ✗ page ${page} failed:`, { status: e?.status, message: e?.message, body: e?.body, stack: e?.stack });
+      throw err;
     }
-    if (hitOlder || items.length < limit) break;
   }
+  console.log('[Earnings:rides] ✓ total collected:', results.length);
   return results;
 }
 
@@ -112,11 +122,33 @@ export default function EarningsScreen() {
 
   const { data: weeklyRaw, isLoading: weeklyLoading, isError: weeklyError, refetch: refetchWeekly } = useQuery({
     queryKey: ['earnings-weekly'],
-    queryFn: () => endpoints.earnings.weekly(),
+    queryFn: async () => {
+      console.log('[Earnings:weekly] → GET /driver/earnings/weekly?weeks=4');
+      try {
+        const result = await endpoints.earnings.weekly();
+        console.log('[Earnings:weekly] ✓ success:', { weeks: (result as any)?.weeklyBreakdown?.length });
+        return result;
+      } catch (err: unknown) {
+        const e = err as any;
+        console.error('[Earnings:weekly] ✗ failed:', { status: e?.status, message: e?.message, body: e?.body, stack: e?.stack });
+        throw err;
+      }
+    },
   });
   const { data: summaryRaw, isLoading: summaryLoading, isError: summaryError, refetch: refetchSummary } = useQuery({
     queryKey: ['earnings-summary', period],
-    queryFn: () => endpoints.earnings.summary(period),
+    queryFn: async () => {
+      console.log(`[Earnings:summary] → GET /driver/earnings/summary?period=${period}`);
+      try {
+        const result = await endpoints.earnings.summary(period);
+        console.log('[Earnings:summary] ✓ success:', { totalEarnings: (result as any)?.summary?.totalEarnings, period });
+        return result;
+      } catch (err: unknown) {
+        const e = err as any;
+        console.error('[Earnings:summary] ✗ failed:', { status: e?.status, message: e?.message, body: e?.body, stack: e?.stack });
+        throw err;
+      }
+    },
   });
   const { data: periodRides, isLoading: ridesLoading } = useQuery({
     queryKey: ['earnings-period-rides', period],
@@ -155,6 +187,12 @@ export default function EarningsScreen() {
 
   const isLoading = weeklyLoading || summaryLoading;
   const isError = weeklyError || summaryError;
+
+  // Debug: log when "Failed to load earnings" screen renders
+  useEffect(() => {
+    if (weeklyError) console.error('[Earnings:screen] weeklyError → rendering "Failed to load earnings. Please try again."', { weeklyError });
+    if (summaryError) console.error('[Earnings:screen] summaryError → rendering "Failed to load earnings. Please try again."', { summaryError });
+  }, [weeklyError, summaryError]);
 
   useEffect(() => {
     Animated.spring(heroAnim, { toValue: 1, useNativeDriver: true, stiffness: 200, damping: 20 }).start();

@@ -126,11 +126,33 @@ export default function HomeScreen() {
 
   const { data: driverRaw, isLoading: driverLoading, isError: driverError, refetch: refetchDriver } = useQuery({
     queryKey: ['driver'],
-    queryFn: endpoints.driver.me,
+    queryFn: async () => {
+      console.log('[Home:driver] → GET /driver/me');
+      try {
+        const result = await endpoints.driver.me();
+        console.log('[Home:driver] ✓ success:', { id: (result as any)?.id, name: (result as any)?.name, rating: (result as any)?.rating });
+        return result;
+      } catch (err: unknown) {
+        const e = err as any;
+        console.error('[Home:driver] ✗ failed:', { status: e?.status, message: e?.message, body: e?.body, stack: e?.stack });
+        throw err;
+      }
+    },
   });
   const { data: earningsRaw, isLoading: earningsLoading, isError: earningsError, refetch: refetchEarnings } = useQuery({
     queryKey: ['earnings-summary', 'today'],
-    queryFn: () => endpoints.earnings.summary('today'),
+    queryFn: async () => {
+      console.log('[Home:earnings] → GET /driver/earnings/summary?period=today');
+      try {
+        const result = await endpoints.earnings.summary('today');
+        console.log('[Home:earnings] ✓ success:', { totalEarnings: (result as any)?.summary?.totalEarnings, online: (result as any)?.summary?.online });
+        return result;
+      } catch (err: unknown) {
+        const e = err as any;
+        console.error('[Home:earnings] ✗ failed:', { status: e?.status, message: e?.message, body: e?.body, stack: e?.stack });
+        throw err;
+      }
+    },
   });
   // The earnings-summary response has no trips count (only totalEarnings/
   // totalPaid/etc — see EarningsSummary type in earnings.tsx), so the Home
@@ -183,6 +205,12 @@ export default function HomeScreen() {
   const earningsData = earningsRaw as any;
   const statsLoading = driverLoading || earningsLoading;
   const statsError = driverError || earningsError;
+
+  // Debug: log when the "Failed to load. Tap to retry." pill renders
+  useEffect(() => {
+    if (driverError) console.error('[Home:stats-pill] driverError → rendering "Failed to load. Tap to retry."', { driverError });
+    if (earningsError) console.error('[Home:stats-pill] earningsError → rendering "Failed to load. Tap to retry."', { earningsError });
+  }, [driverError, earningsError]);
 
   // ActiveSession: navigate to the active ride on cold-start recovery.
   // Waits for initialized before acting so a null session is not mistaken
