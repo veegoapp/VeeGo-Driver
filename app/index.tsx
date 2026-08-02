@@ -1,7 +1,7 @@
 import { Navigation } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   Animated,
   Dimensions,
@@ -10,7 +10,6 @@ import {
   Text,
   View,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColors } from '@/hooks/useColors';
 import { Animation } from '@/constants/animations';
 import { useI18n } from '@/lib/i18nContext';
@@ -20,8 +19,6 @@ import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 
 const { width } = Dimensions.get('window');
-
-const ONBOARDING_KEY = 'veego_has_seen_onboarding';
 
 export default function SplashScreen() {
   const colors = useColors();
@@ -34,34 +31,15 @@ export default function SplashScreen() {
   const barWidth = useRef(new Animated.Value(0)).current;
   const barOpacity = useRef(new Animated.Value(0)).current;
 
-  const [onboardingChecked, setOnboardingChecked] = useState(false);
-  const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
-
+  // After the splash animation finishes, always go straight to login.
+  // Onboarding screens have been removed from the app.
   useEffect(() => {
     if (authLoading) return;
-    if (token) {
-      AsyncStorage.setItem(ONBOARDING_KEY, '1').catch(() => {});
-      setHasSeenOnboarding(true);
-      setOnboardingChecked(true);
-      return;
-    }
-    AsyncStorage.getItem(ONBOARDING_KEY)
-      .then((v) => setHasSeenOnboarding(v === '1'))
-      .catch(() => setHasSeenOnboarding(false))
-      .finally(() => setOnboardingChecked(true));
-  }, [authLoading, token]);
-
-  useEffect(() => {
-    if (!onboardingChecked || authLoading) return;
-    if (!hasSeenOnboarding) {
-      const timer = setTimeout(() => router.replace('/onboarding'), 2200);
-      return () => clearTimeout(timer);
-    }
     if (!token) {
       const timer = setTimeout(() => router.replace('/login'), 2200);
       return () => clearTimeout(timer);
     }
-  }, [onboardingChecked, hasSeenOnboarding, authLoading, token]);
+  }, [authLoading, token]);
 
   useEffect(() => {
     Animated.parallel([
@@ -86,8 +64,6 @@ export default function SplashScreen() {
   }, []);
 
   if (isLanguageLoading) return null;
-  if (!onboardingChecked) return null;
-
   const rotateDeg = logoRotate.interpolate({ inputRange: [-8, 8], outputRange: ['-8deg', '8deg'] });
 
   return (

@@ -56,7 +56,6 @@ const queryClient = new QueryClient({
 const PRE_AUTH_SCREENS = new Set([
   'login',
   'language-select',
-  'onboarding',
   'index',
 ]);
 
@@ -328,7 +327,6 @@ function RootLayoutNav() {
         <Stack.Screen name="shuttle/trip-complete" />
         <Stack.Screen name="shuttle/history" />
         <Stack.Screen name="shuttle/earnings" />
-        <Stack.Screen name="onboarding" />
         <Stack.Screen name="register-info" />
         <Stack.Screen name="selfie" />
         <Stack.Screen name="suspended" />
