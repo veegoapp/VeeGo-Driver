@@ -1,3 +1,4 @@
+import { showAlert } from '@/lib/alert';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { AlertTriangle, ArrowRight, Bell, Calendar, ChevronRight, Clock, GitBranch, Navigation, RefreshCw, Users, Wifi, WifiOff, X } from 'lucide-react-native';
@@ -211,10 +212,10 @@ export default function ShuttleHomeScreen() {
     mutationFn: (id: string) => endpoints.shuttle.confirmRenewal(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
-      Alert.alert(t.renewal_confirmed_title, t.renewal_confirmed_msg, [{ text: t.ok }]);
+      showAlert(t.renewal_confirmed_title, t.renewal_confirmed_msg, [{ text: t.ok }]);
     },
     onError: () => {
-      Alert.alert(t.renewal_failed_title, t.renewal_failed_error, [{ text: t.ok }]);
+      showAlert(t.renewal_failed_title, t.renewal_failed_error, [{ text: t.ok }]);
     },
   });
 
@@ -260,7 +261,7 @@ export default function ShuttleHomeScreen() {
   // Fix 2: handle navigation to active trip — block if check-in is still pending
   const handleNavigateToActiveTrip = () => {
     if (shuttleCheckinRequired) {
-      Alert.alert(
+      showAlert(
         t.checkin_required_title,
         t.checkin_required_body,
         [
@@ -296,7 +297,7 @@ export default function ShuttleHomeScreen() {
       setOnline(next);
     } catch {
       // API failed — keep current state so UI stays in sync with backend
-      Alert.alert(t.error, 'Failed to update status. Please try again.');
+      showAlert(t.error, 'Failed to update status. Please try again.');
     } finally {
       setOnlineLoading(false);
     }

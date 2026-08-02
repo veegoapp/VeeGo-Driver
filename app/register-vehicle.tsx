@@ -1,3 +1,4 @@
+import { showAlert } from '@/lib/alert';
 import { ArrowLeft, ArrowRight, ChevronDown, RefreshCw, X, Info, Search } from 'lucide-react-native';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -187,7 +188,7 @@ export default function RegisterVehicleScreen() {
         console.warn('[register-vehicle] 403 on models — using static fallback.');
         setModels(getFallbackModels(brandId));
       } else {
-        Alert.alert(t.error, t.reg_models_err);
+        showAlert(t.error, t.reg_models_err);
       }
     } finally {
       setLoadingModels(false);
@@ -212,7 +213,7 @@ export default function RegisterVehicleScreen() {
         setYears(getFallbackYears());
       } else {
         console.error('[register-vehicle] modelWithYears failed:', err);
-        Alert.alert(t.error, t.reg_years_err);
+        showAlert(t.error, t.reg_years_err);
       }
     } finally {
       setLoadingYears(false);
@@ -267,7 +268,7 @@ export default function RegisterVehicleScreen() {
         const body = err.body as { error?: string } | null;
         if (body?.error) msg = body.error;
       }
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     } finally {
       setSubmitting(false);
     }

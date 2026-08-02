@@ -1,8 +1,9 @@
+import { showAlert } from '@/lib/alert';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { AlertTriangle, Check, ChevronUp, Clock, Delete, Map, MessageCircle, Navigation, Phone, Share2, Shield, Star } from 'lucide-react-native';
 import React, { useCallback, useRef, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Animated, Easing, Linking, Modal, Platform, Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Animated, Easing, Linking, Modal, Platform, Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { MapBackdrop } from '@/components/MapBackdrop';
@@ -145,7 +146,7 @@ export default function RideScreen() {
     if (hasExitedRef.current) return;
     hasExitedRef.current = true;
     setIsExiting(true);
-    Alert.alert(
+    showAlert(
       title,
       message,
       [{ text: t.ok, onPress: () => router.replace('/(tabs)/home') }],
@@ -213,7 +214,7 @@ export default function RideScreen() {
     const handleDeviationWarning = (data: unknown) => {
       try {
         if (!matchesThisRide(data)) return;
-        Alert.alert(t.route_deviation_title, t.route_deviation_msg);
+        showAlert(t.route_deviation_title, t.route_deviation_msg);
       } catch {
         // Never let a malformed deviation payload crash the ride screen.
       }
@@ -458,7 +459,7 @@ export default function RideScreen() {
       };
       const expected = expectedStatus[phase];
       if (!rideSession || (expected && rideSession.status !== expected)) {
-        Alert.alert('Status Changed', 'Ride status has changed. Refreshing...');
+        showAlert('Status Changed', 'Ride status has changed. Refreshing...');
         setBusy(false);
         return;
       }
@@ -482,7 +483,7 @@ export default function RideScreen() {
       setPhase(p.next);
     } catch (err: unknown) {
       const body = (err as { body?: { error?: string } })?.body;
-      Alert.alert(t.action_failed_title, body?.error ?? t.try_again_msg);
+      showAlert(t.action_failed_title, body?.error ?? t.try_again_msg);
     } finally {
       setBusy(false);
     }
@@ -546,7 +547,7 @@ export default function RideScreen() {
       setPhase('completed');
     } catch (err: unknown) {
       const body = (err as { body?: { error?: string } })?.body;
-      Alert.alert(t.action_failed_title, body?.error ?? t.try_again_msg);
+      showAlert(t.action_failed_title, body?.error ?? t.try_again_msg);
     } finally {
       setSubmittingChange(false);
     }
@@ -557,7 +558,7 @@ export default function RideScreen() {
   // action is not offered.
   const handleCancelRide = () => {
     if (cancelling) return;
-    Alert.alert(
+    showAlert(
       t.cancel_ride,
       t.cancel_ride_confirm_msg,
       [
@@ -574,7 +575,7 @@ export default function RideScreen() {
               router.replace('/(tabs)/home');
             } catch (err: unknown) {
               const body = (err as { body?: { error?: string } })?.body;
-              Alert.alert(t.action_failed_title, body?.error ?? t.try_again_msg);
+              showAlert(t.action_failed_title, body?.error ?? t.try_again_msg);
             } finally {
               setCancelling(false);
             }
@@ -612,9 +613,9 @@ export default function RideScreen() {
       } else {
         await endpoints.rides.sos(rideId ?? '', { latitude, longitude });
       }
-      Alert.alert(t.sos_sent_title, t.sos_sent_msg);
+      showAlert(t.sos_sent_title, t.sos_sent_msg);
     } catch {
-      Alert.alert(t.sos_failed_title, t.sos_failed_msg);
+      showAlert(t.sos_failed_title, t.sos_failed_msg);
     } finally {
       setSosBusy(false);
     }
@@ -631,9 +632,9 @@ export default function RideScreen() {
     try {
       await endpoints.tripShare.revoke(shareLink.id);
       setShareLink(null);
-      Alert.alert(t.trip_share_revoked_title, t.trip_share_revoked_msg);
+      showAlert(t.trip_share_revoked_title, t.trip_share_revoked_msg);
     } catch {
-      Alert.alert(t.action_failed_title, t.trip_share_revoke_error);
+      showAlert(t.action_failed_title, t.trip_share_revoke_error);
     } finally {
       setShareBusy(false);
     }
@@ -645,7 +646,7 @@ export default function RideScreen() {
     if (shareLink) {
       // A link is already active — offer to copy/share it again or stop
       // sharing, instead of silently revoking on tap.
-      Alert.alert(t.trip_share_active_title, t.trip_share_active_msg, [
+      showAlert(t.trip_share_active_title, t.trip_share_active_msg, [
         { text: t.trip_share_copy_btn, onPress: () => { copyShareLink(shareLink.url); } },
         { text: t.trip_share_send_btn, onPress: () => { Share.share({ message: shareLink.url }).catch(() => {}); } },
         { text: t.trip_share_revoke_btn, style: 'destructive', onPress: handleRevokeShareTrip },
@@ -660,12 +661,12 @@ export default function RideScreen() {
       if (numericRideId == null || isNaN(numericRideId)) return;
       const result = await endpoints.tripShare.create({ rideId: numericRideId });
       setShareLink({ id: result.id, url: result.url });
-      Alert.alert(t.trip_share_created_title, t.trip_share_created_msg, [
+      showAlert(t.trip_share_created_title, t.trip_share_created_msg, [
         { text: t.trip_share_copy_btn, onPress: () => { copyShareLink(result.url); } },
         { text: t.ok, style: 'default', onPress: () => { Share.share({ message: result.url }).catch(() => {}); } },
       ]);
     } catch {
-      Alert.alert(t.action_failed_title, t.trip_share_error);
+      showAlert(t.action_failed_title, t.trip_share_error);
     } finally {
       setShareBusy(false);
     }

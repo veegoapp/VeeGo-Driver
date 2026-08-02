@@ -1,3 +1,4 @@
+import { showAlert } from '@/lib/alert';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ChevronLeft, Star } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
@@ -72,7 +73,7 @@ export default function RatePassengersScreen() {
           }))
         );
       } catch {
-        Alert.alert(t.error, t.load_passengers_err);
+        showAlert(t.error, t.load_passengers_err);
       } finally {
         setLoading(false);
       }
@@ -114,7 +115,7 @@ export default function RatePassengersScreen() {
         router.back();
       }, 2000);
     } else {
-      Alert.alert(t.partial_rating_err_title, t.partial_rating_err_msg);
+      showAlert(t.partial_rating_err_title, t.partial_rating_err_msg);
     }
   };
 

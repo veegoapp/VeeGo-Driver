@@ -1,3 +1,4 @@
+import { showAlert } from '@/lib/alert';
 import Constants from 'expo-constants';
 import * as ImagePicker from 'expo-image-picker';
 import * as Clipboard from 'expo-clipboard';
@@ -157,7 +158,7 @@ export default function ShuttleProfileScreen() {
   const handleSelectPhoto = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert(t.camera_required, t.camera_required_sub);
+      showAlert(t.camera_required, t.camera_required_sub);
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -173,11 +174,11 @@ export default function ShuttleProfileScreen() {
 
   const handleSubmitAvatarRequest = async () => {
     if (!avatarReason.trim() || avatarReason.trim().length < 5) {
-      Alert.alert('', t.change_photo_reason_label);
+      showAlert('', t.change_photo_reason_label);
       return;
     }
     if (!selectedImageUri) {
-      Alert.alert('', t.select_new_photo);
+      showAlert('', t.select_new_photo);
       return;
     }
 
@@ -194,9 +195,9 @@ export default function ShuttleProfileScreen() {
 
       await endpoints.driver.requestAvatarChange(formData);
       setShowAvatarModal(false);
-      Alert.alert('', t.avatar_request_sent);
+      showAlert('', t.avatar_request_sent);
     } catch {
-      Alert.alert('', t.avatar_request_error);
+      showAlert('', t.avatar_request_error);
     } finally {
       setAvatarSubmitting(false);
     }

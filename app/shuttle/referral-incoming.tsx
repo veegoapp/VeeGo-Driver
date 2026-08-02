@@ -1,3 +1,4 @@
+import { showAlert } from '@/lib/alert';
 /**
  * ReferralIncomingScreen
  *
@@ -97,7 +98,7 @@ export default function ReferralIncomingScreen() {
       await endpoints.shuttle.acceptReferral(referralId!);
       setResolved('accepted');
     } catch {
-      Alert.alert('', t.accept_trip_failed);
+      showAlert('', t.accept_trip_failed);
     } finally {
       setAccepting(false);
     }
@@ -109,7 +110,7 @@ export default function ReferralIncomingScreen() {
       await endpoints.shuttle.declineReferral(referralId!);
       setResolved('declined');
     } catch {
-      Alert.alert('', t.decline_trip_failed);
+      showAlert('', t.decline_trip_failed);
     } finally {
       setDeclining(false);
     }

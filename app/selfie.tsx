@@ -1,3 +1,4 @@
+import { showAlert } from '@/lib/alert';
 import { ArrowLeft, Camera, Check, CheckCircle, CheckCircle2, Settings } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -92,7 +93,7 @@ export default function SelfieScreen() {
     const handleRejected = (data?: { message?: string }) => {
       if (settledRef.current) return;
       setPhoto(null);
-      Alert.alert(t.no_face_detected_title, data?.message ?? t.no_face_detected_msg);
+      showAlert(t.no_face_detected_title, data?.message ?? t.no_face_detected_msg);
     };
 
     socket.on(SOCKET_EVENTS.DRIVER_CHECKIN_APPROVED, handleApproved);
@@ -131,7 +132,7 @@ export default function SelfieScreen() {
   const handleConfirm = async () => {
     if (!photo || isUploading) return;
     if (checkinMode && timedOut) {
-      Alert.alert(t.timeout_alert_title, shuttleCheckinMode ? t.timeout_alert_body : t.periodic_timeout_alert_body);
+      showAlert(t.timeout_alert_title, shuttleCheckinMode ? t.timeout_alert_body : t.periodic_timeout_alert_body);
       return;
     }
     setIsUploading(true);
@@ -148,7 +149,7 @@ export default function SelfieScreen() {
         const result = await response.json() as { faceDetected?: boolean; message?: string };
         if (result.faceDetected === false) {
           setPhoto(null);
-          Alert.alert(t.no_face_detected_title, result.message ?? t.no_face_detected_msg);
+          showAlert(t.no_face_detected_title, result.message ?? t.no_face_detected_msg);
           return;
         }
         settledRef.current = true;
@@ -163,7 +164,7 @@ export default function SelfieScreen() {
         }, 1200);
       }
     } catch {
-      Alert.alert(t.selfie_upload_failed_title, t.selfie_upload_failed_msg);
+      showAlert(t.selfie_upload_failed_title, t.selfie_upload_failed_msg);
     } finally {
       setIsUploading(false);
     }

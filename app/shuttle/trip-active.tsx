@@ -1,3 +1,4 @@
+import { showAlert } from '@/lib/alert';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { safeBack } from '@/lib/navUtils';
@@ -259,7 +260,7 @@ export default function ShuttleTripActiveScreen() {
     const unsub = navigation.addListener('beforeRemove', (e: any) => {
       if (isFinishingRef.current) return; // intentional finish — let it through
       e.preventDefault();
-      Alert.alert(
+      showAlert(
         t.trip_active_exit_title,
         t.trip_active_exit_body,
         [
@@ -344,7 +345,7 @@ export default function ShuttleTripActiveScreen() {
       setTimerActive(true);
       if (nextCoords) setFocusTarget({ latitude: nextCoords.latitude, longitude: nextCoords.longitude, zoom: 16 });
     } catch {
-      if (tripId) Alert.alert(t.error, t.station_action_error);
+      if (tripId) showAlert(t.error, t.station_action_error);
     } finally {
       setIsArrivingLoading(false);
     }
@@ -388,7 +389,7 @@ export default function ShuttleTripActiveScreen() {
 
         if (failed.length > 0) {
           setFailedStationActions(failed);
-          Alert.alert(
+          showAlert(
             t.boarding_partial_fail_title,
             t.boarding_partial_fail_msg.replace('{names}', failed.map(f => f.name).join(', ')),
             [
@@ -405,7 +406,7 @@ export default function ShuttleTripActiveScreen() {
       }
       nextStop();
     } catch {
-      Alert.alert(t.error, t.station_action_error);
+      showAlert(t.error, t.station_action_error);
       return;
     } finally {
       setIsNextLoading(false);
@@ -445,7 +446,7 @@ export default function ShuttleTripActiveScreen() {
     const raw = await AsyncStorage.getItem('veego_emergency_contact');
     const ec = raw ? (() => { try { return JSON.parse(raw); } catch { return null; } })() : null;
 
-    Alert.alert(
+    showAlert(
       t.sos_confirm_title,
       t.sos_confirm_body,
       [
@@ -459,7 +460,7 @@ export default function ShuttleTripActiveScreen() {
           style: 'destructive',
           onPress: async () => {
             if (!ec?.phone) {
-              Alert.alert(t.sos_confirm_title, t.sos_no_contact_set);
+              showAlert(t.sos_confirm_title, t.sos_no_contact_set);
               return;
             }
             try {
@@ -489,7 +490,7 @@ export default function ShuttleTripActiveScreen() {
                 }
               }
             } catch {
-              Alert.alert(t.sos_confirm_title, t.whatsapp_emergency_no_contact);
+              showAlert(t.sos_confirm_title, t.whatsapp_emergency_no_contact);
             }
           },
         },
@@ -509,9 +510,9 @@ export default function ShuttleTripActiveScreen() {
     try {
       await endpoints.tripShare.revoke(shareLink.id);
       setShareLink(null);
-      Alert.alert(t.trip_share_revoked_title, t.trip_share_revoked_msg);
+      showAlert(t.trip_share_revoked_title, t.trip_share_revoked_msg);
     } catch {
-      Alert.alert(t.error, t.trip_share_revoke_error);
+      showAlert(t.error, t.trip_share_revoke_error);
     } finally {
       setShareBusy(false);
     }
@@ -523,7 +524,7 @@ export default function ShuttleTripActiveScreen() {
     if (shareLink) {
       // A link is already active — offer to copy/share it again or stop
       // sharing, instead of silently revoking on tap.
-      Alert.alert(t.trip_share_active_title, t.trip_share_active_msg, [
+      showAlert(t.trip_share_active_title, t.trip_share_active_msg, [
         { text: t.trip_share_copy_btn, onPress: () => { copyShareLink(shareLink.url); } },
         { text: t.trip_share_send_btn, onPress: () => { Share.share({ message: shareLink.url }).catch(() => {}); } },
         { text: t.trip_share_revoke_btn, style: 'destructive', onPress: handleRevokeShareTrip },
@@ -538,12 +539,12 @@ export default function ShuttleTripActiveScreen() {
       if (numericTripId == null || isNaN(numericTripId)) return;
       const result = await endpoints.tripShare.create({ tripId: numericTripId });
       setShareLink({ id: result.id, url: result.url });
-      Alert.alert(t.trip_share_created_title, t.trip_share_created_msg, [
+      showAlert(t.trip_share_created_title, t.trip_share_created_msg, [
         { text: t.trip_share_copy_btn, onPress: () => { copyShareLink(result.url); } },
         { text: t.ok, style: 'default', onPress: () => { Share.share({ message: result.url }).catch(() => {}); } },
       ]);
     } catch {
-      Alert.alert(t.error, t.trip_share_error);
+      showAlert(t.error, t.trip_share_error);
     } finally {
       setShareBusy(false);
     }

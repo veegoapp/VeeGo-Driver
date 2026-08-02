@@ -1,3 +1,4 @@
+export { AppAlert } from './AppAlert';
 export { AppLoader } from './AppLoader';
 export { VeeGoBadge } from './VeeGoBadge';
 export type { VeeGoBadgeProps, VeeGoBadgeVariant } from './VeeGoBadge';

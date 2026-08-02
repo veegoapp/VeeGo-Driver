@@ -1,3 +1,4 @@
+import { showAlert } from '@/lib/alert';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Banknote, Check, Clock, MapPin, Navigation, Ruler, Star, Users } from 'lucide-react-native';
@@ -96,7 +97,7 @@ export default function TripDetailScreen() {
       await queryClient.invalidateQueries({ queryKey: ['trip', tripId] });
       await queryClient.invalidateQueries({ queryKey: ['trips'] });
     } catch {
-      Alert.alert('Error', `Could not ${action} trip. Please try again.`);
+      showAlert('Error', `Could not ${action} trip. Please try again.`);
     } finally {
       setActionBusy(null);
     }
@@ -112,7 +113,7 @@ export default function TripDetailScreen() {
       setShowCancel(false);
       setCancelReason('');
     } catch {
-      Alert.alert('Error', 'Could not cancel trip. Please try again.');
+      showAlert('Error', 'Could not cancel trip. Please try again.');
     } finally {
       setCancelBusy(false);
     }
@@ -125,7 +126,7 @@ export default function TripDetailScreen() {
       await endpoints.trips.stationArrived(tripId, stationId);
       queryClient.invalidateQueries({ queryKey: ['trip-stations', tripId] });
     } catch {
-      Alert.alert('Error', 'Could not mark station as arrived.');
+      showAlert('Error', 'Could not mark station as arrived.');
     } finally {
       setStationBusy(null);
     }
@@ -137,7 +138,7 @@ export default function TripDetailScreen() {
       await endpoints.trips.stationCompleted(tripId, stationId);
       queryClient.invalidateQueries({ queryKey: ['trip-stations', tripId] });
     } catch {
-      Alert.alert('Error', 'Could not mark station as done.');
+      showAlert('Error', 'Could not mark station as done.');
     } finally {
       setStationBusy(null);
     }

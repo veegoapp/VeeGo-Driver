@@ -1,3 +1,4 @@
+import { showAlert } from '@/lib/alert';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ChevronLeft, AlertTriangle, Check } from 'lucide-react-native';
 import React, { useState } from 'react';
@@ -81,18 +82,18 @@ export default function DirectCancelScreen() {
         (typeof body?.error === 'string' ? body.error : null) ??
         (typeof body?.message === 'string' ? body.message : null) ??
         t.cancel_trip_failed;
-      Alert.alert('', msg);
+      showAlert('', msg);
     },
   });
 
   const handleConfirmCancel = () => {
     if (!selectedReason) {
-      Alert.alert('', t.select_reason_first);
+      showAlert('', t.select_reason_first);
       return;
     }
     if (cancelMutation.isPending) return;
 
-    Alert.alert(
+    showAlert(
       t.confirm_final_cancel_title,
       t.confirm_final_cancel_body,
       [

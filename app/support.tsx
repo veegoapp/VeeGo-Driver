@@ -1,3 +1,4 @@
+import { showAlert } from '@/lib/alert';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import {
@@ -6,7 +7,7 @@ import {
 } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
-  ActivityIndicator, Alert, Image, Pressable, ScrollView,
+  ActivityIndicator, Image, Pressable, ScrollView,
   StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -88,7 +89,7 @@ export default function SupportScreen() {
     if (attachments.length >= MAX_ATTACHMENTS) return;
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert(t.camera_required, t.camera_required_sub);
+      showAlert(t.camera_required, t.camera_required_sub);
       return;
     }
     const result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.85 });
@@ -140,7 +141,7 @@ export default function SupportScreen() {
       setFailedCount(failed);
       setSubmitted(true);
     } catch {
-      Alert.alert(t.error, t.support_err);
+      showAlert(t.error, t.support_err);
     } finally {
       setIsSubmitting(false);
     }

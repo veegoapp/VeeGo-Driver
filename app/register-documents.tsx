@@ -1,3 +1,4 @@
+import { showAlert } from '@/lib/alert';
 import {
   CheckCircle2, Camera, CreditCard, Car, FileText,
   Award, AlertCircle, ArrowRight, User, Settings,
@@ -177,7 +178,7 @@ export default function RegisterDocumentsScreen() {
         const body = err.body as { error?: string } | null;
         if (body?.error) msg = body.error;
       }
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     } finally {
       setSubmitting(false);
     }

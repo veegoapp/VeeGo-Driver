@@ -1,9 +1,10 @@
+import { showAlert } from '@/lib/alert';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { safeBack } from '@/lib/navUtils';
 import { AlertCircle, Check, ChevronLeft, Package, Phone, Tag, Users, X } from 'lucide-react-native';
 import React, { useRef, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Animated, Platform, Pressable, ScrollView, StyleSheet, Text, View, ImageErrorEventData, NativeSyntheticEvent } from 'react-native';
+import { ActivityIndicator, Animated, Platform, Pressable, ScrollView, StyleSheet, Text, View, ImageErrorEventData, NativeSyntheticEvent } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlassView } from '@/components/GlassView';
@@ -94,7 +95,7 @@ export default function ShuttleBoardingScreen() {
   // Task 1: no-show handler with confirmation alert
   const handleNoShow = (passengerId: string) => {
     if (actionState[passengerId] || loadingPassengerId) return;
-    Alert.alert(
+    showAlert(
       t.no_show_confirm_title,
       t.no_show_confirm_msg,
       [
@@ -108,7 +109,7 @@ export default function ShuttleBoardingScreen() {
               await endpoints.shuttle.noShowBooking(passengerId);
               setActionState(prev => ({ ...prev, [passengerId]: 'absent' }));
             } catch {
-              Alert.alert(t.error, t.no_show_error);
+              showAlert(t.error, t.no_show_error);
             } finally {
               setLoadingPassengerId(null);
             }
@@ -122,7 +123,7 @@ export default function ShuttleBoardingScreen() {
     if (isDeparting) return;
     const stationId = currentStop?.id;
     if (!stationId) {
-      Alert.alert(t.error, t.station_action_error);
+      showAlert(t.error, t.station_action_error);
       return;
     }
     setIsDeparting(true);
@@ -143,7 +144,7 @@ export default function ShuttleBoardingScreen() {
 
       if (failedIds.length > 0) {
         const names = failedIds.map(id => currentStopPassengers.find(p => p.id === id)?.name ?? id).join(', ');
-        Alert.alert(
+        showAlert(
           t.boarding_partial_fail_title,
           t.boarding_partial_fail_msg.replace('{names}', names),
           [

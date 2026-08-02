@@ -1,3 +1,4 @@
+import { showAlert } from '@/lib/alert';
 import { User } from 'lucide-react-native';
 import { ArrowLeft, ArrowRight } from 'lucide-react-native';
 import { router } from 'expo-router';
@@ -41,7 +42,7 @@ export default function RegisterInfoScreen() {
       });
       router.push('/register-vehicle');
     } catch {
-      Alert.alert(t.error, t.reg_info_err);
+      showAlert(t.error, t.reg_info_err);
     } finally {
       setIsSubmitting(false);
     }

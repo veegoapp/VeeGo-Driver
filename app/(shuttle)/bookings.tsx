@@ -1,3 +1,4 @@
+import { showAlert } from '@/lib/alert';
 import { router } from 'expo-router';
 import {
   AlertTriangle, Calendar, CheckCircle, Clock,
@@ -5,7 +6,7 @@ import {
 } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Alert, Modal, Platform, Pressable,
+  ActivityIndicator, Modal, Platform, Pressable,
   RefreshControl, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -191,7 +192,7 @@ export default function BookingsScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
       refetch();
-      Alert.alert('', t.renewal_confirmed_success);
+      showAlert('', t.renewal_confirmed_success);
     },
     onError: (err) => {
       const apiErr = err instanceof ApiError ? err : null;
@@ -201,7 +202,7 @@ export default function BookingsScreen() {
         (typeof body?.message === 'string' ? body.message : null) ??
         (apiErr?.status === 409 ? t.renewal_conflict_error : null) ??
         t.renewal_failed_error;
-      Alert.alert('', msg);
+      showAlert('', msg);
     },
   });
 
@@ -219,17 +220,17 @@ export default function BookingsScreen() {
         (typeof body?.error === 'string' ? body.error : null) ??
         (typeof body?.message === 'string' ? body.message : null) ??
         t.decline_renewal_failed;
-      Alert.alert('', msg);
+      showAlert('', msg);
     },
   });
 
   const handleConfirmRenewal = (booking: ShuttleBooking) => {
     if (booking.status !== 'pending_renewal') {
-      Alert.alert('', t.renewal_not_available);
+      showAlert('', t.renewal_not_available);
       return;
     }
     if (confirmRenewalMutation.isPending || declineRenewalMutation.isPending) return;
-    Alert.alert(
+    showAlert(
       t.confirm_renewal_title,
       t.confirm_renewal_body,
       [

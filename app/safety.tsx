@@ -1,3 +1,4 @@
+import { showAlert } from '@/lib/alert';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { ArrowLeft, Phone, Save, Shield, User } from 'lucide-react-native';
@@ -69,13 +70,13 @@ export default function SafetyScreen() {
       ecSavedTimer.current = setTimeout(() => setEcSaved(false), 3000);
     },
     onError: () => {
-      Alert.alert(t.error, t.emergency_contact_save_err);
+      showAlert(t.error, t.emergency_contact_save_err);
     },
   });
 
   const handleSaveContact = () => {
     if (!ecName.trim() || !ecPhone.trim()) {
-      Alert.alert(t.error, t.emergency_contact_save_err);
+      showAlert(t.error, t.emergency_contact_save_err);
       return;
     }
     saveMutation.mutate({ name: ecName.trim(), phone: ecPhone.trim() });
@@ -85,7 +86,7 @@ export default function SafetyScreen() {
     if (!savedContact?.phone) return;
     const phoneClean = savedContact.phone.replace(/\D/g, '');
     Linking.openURL(`whatsapp://send?phone=${phoneClean}`).catch(() =>
-      Alert.alert('WhatsApp', t.whatsapp_emergency_no_contact)
+      showAlert('WhatsApp', t.whatsapp_emergency_no_contact)
     );
   };
 

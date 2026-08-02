@@ -1,3 +1,4 @@
+import { showAlert } from '@/lib/alert';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Check, ChevronLeft, Send, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
@@ -55,7 +56,7 @@ export default function ReferralRequestScreen() {
 
   const handleSubmit = async () => {
     if (!driverCode.trim() || !isValidCode) {
-      Alert.alert('', t.referral_code_placeholder);
+      showAlert('', t.referral_code_placeholder);
       return;
     }
     setLoading(true);
@@ -64,7 +65,7 @@ export default function ReferralRequestScreen() {
       if (result?.referralId) setPendingReferralId(String(result.referralId));
       setSubmitted(true);
     } catch {
-      Alert.alert('', t.referral_send_failed);
+      showAlert('', t.referral_send_failed);
     } finally {
       setLoading(false);
     }

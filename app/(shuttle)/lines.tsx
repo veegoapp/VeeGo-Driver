@@ -1,3 +1,4 @@
+import { showAlert } from '@/lib/alert';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   Calendar, CheckCircle, Clock, GitBranch, MapPin, Search,
@@ -5,7 +6,7 @@ import {
 } from 'lucide-react-native';
 import React, { useRef, useEffect, useState } from 'react';
 import {
-  ActivityIndicator, Alert, Animated, Modal, Platform, Pressable,
+  ActivityIndicator, Animated, Modal, Platform, Pressable,
   RefreshControl, ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -225,7 +226,7 @@ export default function ShuttleLinesScreen() {
     },
     onError: (err: unknown) => {
       if (err instanceof ApiError && err.status === 409) {
-        Alert.alert(
+        showAlert(
           'Slot Taken',
           'This slot was just claimed by another driver. Please choose a different time or week.',
           [{ text: 'OK' }]
@@ -236,10 +237,10 @@ export default function ShuttleLinesScreen() {
           (typeof body?.message === 'string' ? body.message : null) ??
           (typeof body?.error === 'string' ? body.error : null) ??
           'Invalid booking request.';
-        Alert.alert('Booking Failed', msg, [{ text: 'OK' }]);
+        showAlert('Booking Failed', msg, [{ text: 'OK' }]);
       } else {
         const detail = err instanceof ApiError ? ` (${(err as ApiError).status})` : '';
-        Alert.alert('Booking Failed', `Could not complete the booking${detail}. Please try again.`, [{ text: 'OK' }]);
+        showAlert('Booking Failed', `Could not complete the booking${detail}. Please try again.`, [{ text: 'OK' }]);
       }
     },
   });

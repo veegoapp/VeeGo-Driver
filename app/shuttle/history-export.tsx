@@ -1,3 +1,4 @@
+import { showAlert } from '@/lib/alert';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { router } from 'expo-router';
@@ -294,13 +295,13 @@ export default function HistoryExportScreen() {
           UTI: 'com.adobe.pdf',
         });
       } else {
-        Alert.alert(
+        showAlert(
           t.export_pdf_ready,
           t.export_saved_to.replace('{uri}', uri),
         );
       }
     } catch (err) {
-      Alert.alert(t.export_error, t.export_failed);
+      showAlert(t.export_error, t.export_failed);
     } finally {
       setGenerating(false);
     }

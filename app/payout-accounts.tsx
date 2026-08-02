@@ -1,3 +1,4 @@
+import { showAlert } from '@/lib/alert';
 import { router } from 'expo-router';
 import { ArrowLeft, Briefcase, CreditCard, Phone, Plus, Star, Trash2, X } from 'lucide-react-native';
 import React, { useState } from 'react';
@@ -104,7 +105,7 @@ export default function PayoutAccountsScreen() {
       setAddVisible(false);
       resetForm();
     } catch {
-      Alert.alert(t.error, t.add_method_error);
+      showAlert(t.error, t.add_method_error);
     } finally {
       setIsAdding(false);
     }
@@ -116,14 +117,14 @@ export default function PayoutAccountsScreen() {
       await endpoints.wallet.setDefaultPayoutAccount(id);
       await queryClient.invalidateQueries({ queryKey: ['payout-accounts'] });
     } catch {
-      Alert.alert(t.error, t.error);
+      showAlert(t.error, t.error);
     } finally {
       setBusyId(null);
     }
   };
 
   const handleDelete = (account: PayoutAccount) => {
-    Alert.alert(t.remove_method_confirm, account.accountName, [
+    showAlert(t.remove_method_confirm, account.accountName, [
       { text: t.cancel, style: 'cancel' },
       {
         text: t.remove_method,
@@ -134,7 +135,7 @@ export default function PayoutAccountsScreen() {
             await endpoints.wallet.deletePayoutAccount(account.id);
             await queryClient.invalidateQueries({ queryKey: ['payout-accounts'] });
           } catch {
-            Alert.alert(t.error, t.remove_method_error);
+            showAlert(t.error, t.remove_method_error);
           } finally {
             setBusyId(null);
           }

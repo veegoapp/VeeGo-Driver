@@ -1,3 +1,4 @@
+import { showAlert } from '@/lib/alert';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Calendar, ChevronLeft, Clock, MapPin, Users } from 'lucide-react-native';
@@ -342,7 +343,7 @@ export default function TripDetailsScreen() {
                 router.push('/shuttle/trip-active' as any);
               } catch {
                 setStartedTripId(null);
-                Alert.alert('', t.start_trip_failed);
+                showAlert('', t.start_trip_failed);
               } finally {
                 setStarting(false);
               }

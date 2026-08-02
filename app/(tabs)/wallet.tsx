@@ -1,8 +1,9 @@
+import { showAlert } from '@/lib/alert';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { ArrowDownLeft, ArrowUpRight, X } from 'lucide-react-native';
 import React, { useRef, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Animated, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Animated, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { GlassView } from '@/components/GlassView';
@@ -90,7 +91,7 @@ export default function WalletScreen() {
 
   const handlePayoutOpen = () => {
     if (payoutAccounts.length === 0) {
-      Alert.alert(t.error, (t as any).no_payout_methods ?? 'Please add a payout account first.');
+      showAlert(t.error, (t as any).no_payout_methods ?? 'Please add a payout account first.');
       router.push('/payout-accounts' as any);
       return;
     }
@@ -101,13 +102,13 @@ export default function WalletScreen() {
   const handlePayoutConfirm = async () => {
     const amount = parseFloat(payoutAmount);
     if (!amount || amount <= 0) {
-      Alert.alert(t.invalid_amount_title, t.invalid_amount_msg);
+      showAlert(t.invalid_amount_title, t.invalid_amount_msg);
       return;
     }
     // Prefer the driver's default account, falling back to the first active one.
     const selectedAccount = payoutAccounts.find(a => a.isDefault) ?? payoutAccounts[0] ?? null;
     if (!selectedAccount) {
-      Alert.alert(t.error, (t as any).no_payout_methods ?? 'Please add a payout account first.');
+      showAlert(t.error, (t as any).no_payout_methods ?? 'Please add a payout account first.');
       return;
     }
     setIsPayingOut(true);
@@ -118,9 +119,9 @@ export default function WalletScreen() {
       setPayoutVisible(false);
       setPayoutAmount('');
       // Payout request is pending admin confirmation — not yet paid.
-      Alert.alert(t.payout_success_title, t.payout_pending_msg);
+      showAlert(t.payout_success_title, t.payout_pending_msg);
     } catch {
-      Alert.alert(t.error, t.payout_fail_msg);
+      showAlert(t.error, t.payout_fail_msg);
     } finally {
       setIsPayingOut(false);
     }

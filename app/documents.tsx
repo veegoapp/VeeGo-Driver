@@ -1,3 +1,4 @@
+import { showAlert } from '@/lib/alert';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import {
@@ -136,7 +137,7 @@ export default function DocumentsScreen() {
     if (source === 'camera') {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert(t.doc_permission_title, t.doc_permission_msg);
+        showAlert(t.doc_permission_title, t.doc_permission_msg);
         return;
       }
       result = await ImagePicker.launchCameraAsync({
@@ -145,7 +146,7 @@ export default function DocumentsScreen() {
     } else {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert(t.doc_permission_title, t.doc_permission_msg);
+        showAlert(t.doc_permission_title, t.doc_permission_msg);
         return;
       }
       result = await ImagePicker.launchImageLibraryAsync({
@@ -158,7 +159,7 @@ export default function DocumentsScreen() {
   };
 
   const handleUploadPress = (docType: string) => {
-    Alert.alert(t.doc_upload_btn, undefined, [
+    showAlert(t.doc_upload_btn, undefined, [
       { text: t.doc_take_photo, onPress: () => pickAndUpload(docType, 'camera') },
       { text: t.doc_choose_gallery, onPress: () => pickAndUpload(docType, 'gallery') },
       { text: t.cancel, style: 'cancel' },

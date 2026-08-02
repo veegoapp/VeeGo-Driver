@@ -1,3 +1,4 @@
+import { showAlert } from '@/lib/alert';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Car, Check, ChevronRight, Sliders, Star, X } from 'lucide-react-native';
@@ -122,7 +123,7 @@ export default function TripsScreen() {
       await endpoints.trips.accept(tripId);
       queryClient.invalidateQueries({ queryKey: ['trips'] });
     } catch {
-      Alert.alert(t.error, t.trip_accept_error);
+      showAlert(t.error, t.trip_accept_error);
     }
   };
 
@@ -131,7 +132,7 @@ export default function TripsScreen() {
       await endpoints.trips.reject(tripId);
       queryClient.invalidateQueries({ queryKey: ['trips'] });
     } catch {
-      Alert.alert(t.error, t.trip_reject_error);
+      showAlert(t.error, t.trip_reject_error);
     }
   };
 
@@ -140,7 +141,7 @@ export default function TripsScreen() {
       await endpoints.trips.start(tripId);
       queryClient.invalidateQueries({ queryKey: ['trips'] });
     } catch {
-      Alert.alert(t.error, t.trip_start_error);
+      showAlert(t.error, t.trip_start_error);
     }
   };
 
@@ -149,7 +150,7 @@ export default function TripsScreen() {
       await endpoints.trips.complete(tripId);
       queryClient.invalidateQueries({ queryKey: ['trips'] });
     } catch {
-      Alert.alert(t.error, t.trip_complete_error);
+      showAlert(t.error, t.trip_complete_error);
     }
   };
 
@@ -162,7 +163,7 @@ export default function TripsScreen() {
       setCancelTarget(null);
       setCancelReason('');
     } catch {
-      Alert.alert(t.error, t.trip_cancel_error);
+      showAlert(t.error, t.trip_cancel_error);
     } finally {
       setCancelBusy(false);
     }

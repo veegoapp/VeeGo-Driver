@@ -1,10 +1,11 @@
+import { showAlert } from '@/lib/alert';
 import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Award, ChevronRight, Copy, LogOut, Moon, Star, Sun } from 'lucide-react-native';
 import { FeatherIcon } from '@/lib/iconMap';
 import React, { useState, useCallback } from 'react';
-import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -71,7 +72,7 @@ export default function ProfileScreen() {
       setTermsData(data);
       setTermsModalVisible(true);
     } catch {
-      Alert.alert('', 'Failed to load terms. Please try again.');
+      showAlert('', 'Failed to load terms. Please try again.');
     } finally {
       setTermsLoading(false);
     }
@@ -86,7 +87,7 @@ export default function ProfileScreen() {
       setAcceptedVersion(termsData.version);
       setTermsModalVisible(false);
     } catch {
-      Alert.alert(t.error, 'Failed to accept terms. Please try again.');
+      showAlert(t.error, 'Failed to accept terms. Please try again.');
     } finally {
       setTermsAcceptLoading(false);
     }

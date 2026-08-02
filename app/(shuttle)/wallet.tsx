@@ -1,8 +1,9 @@
+import { showAlert } from '@/lib/alert';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowDownLeft, ArrowUpRight, FileText, Wallet, Wrench, X, Zap, Phone, CreditCard } from 'lucide-react-native';
 import React, { useRef, useEffect, useState } from 'react';
 import {
-  ActivityIndicator, Alert, Animated, KeyboardAvoidingView,
+  ActivityIndicator, Animated, KeyboardAvoidingView,
   LayoutChangeEvent, Modal, Platform, Pressable, ScrollView,
   StyleSheet, Text, TextInput, View,
 } from 'react-native';
@@ -199,11 +200,11 @@ export default function ShuttleWalletScreen() {
   const handlePayoutSubmit = async () => {
     const amount = parseFloat(payoutAmount);
     if (!amount || amount <= 0) {
-      Alert.alert(t.invalid_amount_title, t.invalid_amount_msg);
+      showAlert(t.invalid_amount_title, t.invalid_amount_msg);
       return;
     }
     if (!selectedAccount) {
-      Alert.alert(t.select_method_title, t.select_method_msg);
+      showAlert(t.select_method_title, t.select_method_msg);
       return;
     }
     setIsPayingOut(true);
@@ -211,16 +212,16 @@ export default function ShuttleWalletScreen() {
       const res = await endpoints.wallet.payout(amount, selectedAccount.id) as { ok?: boolean; message?: string; error?: string; available?: number } | undefined;
       if (res && res.error) {
         const note = res.available != null ? ` (${t.available}: ${res.available.toFixed(2)} ${t.egp})` : '';
-        Alert.alert(t.error, `${res.error}${note}`);
+        showAlert(t.error, `${res.error}${note}`);
         return;
       }
       await queryClient.invalidateQueries({ queryKey: ['wallet-balance'] });
       await queryClient.invalidateQueries({ queryKey: ['wallet-transactions'] });
       setPayoutVisible(false);
       // Payout request is pending admin confirmation — not yet paid.
-      Alert.alert('✓', res?.message ?? t.payout_pending_msg);
+      showAlert('✓', res?.message ?? t.payout_pending_msg);
     } catch {
-      Alert.alert(t.error, t.payout_failed_msg);
+      showAlert(t.error, t.payout_failed_msg);
     } finally {
       setIsPayingOut(false);
     }

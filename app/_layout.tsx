@@ -1,3 +1,4 @@
+import { showAlert } from '@/lib/alert';
 // Register background location task before any React rendering
 import '@/lib/backgroundLocationTask';
 
@@ -17,7 +18,7 @@ import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import React, { useEffect } from 'react';
-import { Alert, Platform } from 'react-native';
+import { Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -37,6 +38,7 @@ import { SOCKET_EVENTS } from '@/constants/socketEvents';
 import { deleteToken, deleteRefreshToken } from '@/lib/auth';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { ServerStatusBanner } from '@/components/ServerStatusBanner';
+import { AppAlert } from '@/components/ui';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -110,7 +112,7 @@ function SosAcknowledgementBridge() {
   useEffect(() => {
     if (!socket) return;
     const handle = (data?: { ok?: boolean; message?: string; triggeredAt?: string }) => {
-      Alert.alert(t.sos_ack_title, data?.message ?? t.sos_ack_msg);
+      showAlert(t.sos_ack_title, data?.message ?? t.sos_ack_msg);
     };
     socket.on(SOCKET_EVENTS.DRIVER_SOS_ACK, handle);
     return () => { socket.off(SOCKET_EVENTS.DRIVER_SOS_ACK, handle); };
@@ -400,6 +402,7 @@ export default function RootLayout() {
                 </I18nProvider>
               </KeyboardProvider>
               <ServerStatusBanner />
+              <AppAlert />
             </GestureHandlerRootView>
           </QueryClientProvider>
         </ErrorBoundary>
