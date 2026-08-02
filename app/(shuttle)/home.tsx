@@ -295,8 +295,9 @@ export default function ShuttleHomeScreen() {
         await endpoints.driver.goOffline();
       }
       setOnline(next);
-    } catch {
+    } catch (err) {
       // API failed — keep current state so UI stays in sync with backend
+      console.error('[StatusToggle] Failed to update driver status:', err);
       showAlert(t.error, 'Failed to update status. Please try again.');
     } finally {
       setOnlineLoading(false);

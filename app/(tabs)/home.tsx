@@ -594,8 +594,9 @@ export default function HomeScreen() {
         isOnline: next,
       }));
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    } catch {
+    } catch (err) {
       // API failed — revert to previous state and notify driver
+      console.error('[StatusToggle] Failed to update driver status:', err);
       showToastRef.current?.('Failed to update status. Please try again.', 'warning');
     } finally {
       setTogglingOnline(false);
