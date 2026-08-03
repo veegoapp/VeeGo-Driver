@@ -185,6 +185,11 @@ function RootLayoutNav() {
   const { isLanguageLoading } = useI18n();
   const router = useRouter();
   const segments = useSegments();
+  // Tracks how many times a transient refresh failure has been retried so we
+  // can schedule a re-attempt without leaving the driver stuck on the splash
+  // screen indefinitely. Capped at MAX_REFRESH_RETRIES to prevent loops.
+  const [refreshAttempt, setRefreshAttempt] = React.useState(0);
+  const retryTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setOnAccountSuspended(() => {
@@ -265,14 +270,32 @@ function RootLayoutNav() {
               await deleteToken();
               await deleteRefreshToken();
               setTimeout(() => router.replace('/login'), 0);
+            } else {
+              // newToken === undefined: transient network/server hiccup during
+              // refresh, not a token rejection. A server outage used to log every
+              // driver out the moment their access token expired; we do not clear
+              // the session over a dropped connection or a temporary 5xx.
+              //
+              // Schedule a retry so the driver is not permanently stuck on the
+              // splash screen. Without this, the effect's deps ([token, isLoading,
+              // segments]) do not change after an undefined result, so the effect
+              // never re-fires and navigation never happens.
+              // Cap at 3 attempts to prevent an infinite retry loop.
+              if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+              if (refreshAttempt < 3) {
+                retryTimerRef.current = setTimeout(
+                  () => setRefreshAttempt((n) => n + 1),
+                  3000,
+                );
+              }
             }
-            // newToken === undefined: a network/server hiccup during
-            // refresh, not a rejection — a server outage used to log every
-            // driver out the moment their access token expired. Leave the
-            // session as-is; this effect re-fires on the next token/segments
-            // change and will retry then.
           })();
-          return;
+          return () => {
+            if (retryTimerRef.current) {
+              clearTimeout(retryTimerRef.current);
+              retryTimerRef.current = null;
+            }
+          };
         }
       }
     } catch {}
@@ -291,7 +314,7 @@ function RootLayoutNav() {
     if (inPreAuthZone) {
       navigateAfterAuth(token);
     }
-  }, [token, isLoading, segments]);
+  }, [token, isLoading, segments, refreshAttempt]);
 
   if (isLoading || isLanguageLoading) return null;
 

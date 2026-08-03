@@ -18,10 +18,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    getToken().then((t) => {
-      setToken(t);
-      setIsLoading(false);
-    });
+    getToken()
+      .then((t) => {
+        setToken(t);
+        setIsLoading(false);
+      })
+      .catch(() => {
+        // SecureStore rejected (e.g. corrupted keychain entry, OS keychain
+        // locked during device startup, keychain unavailable after OS upgrade).
+        // Treat as unauthenticated so isLoading always clears and the driver
+        // reaches the login screen rather than freezing on the splash screen.
+        setToken(null);
+        setIsLoading(false);
+      });
   }, []);
 
   const login = useCallback(async (accessToken: string, refreshToken?: string) => {

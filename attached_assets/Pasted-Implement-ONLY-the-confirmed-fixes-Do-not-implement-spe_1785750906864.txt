@@ -1,0 +1,106 @@
+Implement ONLY the confirmed fixes. Do not implement speculative workarounds.
+
+Issue:
+The Driver app can freeze on the splash screen when reopening the app after it has been closed for some time. Clearing app data fixes the issue.
+
+====================================================
+IMPLEMENT THESE TWO FIXES ONLY
+====================================================
+
+1) lib/authContext.tsx
+
+Current issue:
+getToken() is called without any error handling.
+
+If SecureStore.getItemAsync() throws, isLoading never becomes false and the app can stay permanently on the splash screen.
+
+Requirements:
+- Add proper try/catch (or .catch()) handling.
+- Always clear the loading state.
+- If SecureStore fails, treat the user as unauthenticated:
+  - setToken(null)
+  - setIsLoading(false)
+- Do not change any other authentication logic.
+
+----------------------------------------------------
+
+2) app/_layout.tsx
+
+Current issue:
+refreshAccessToken() may return undefined during transient network failures.
+
+The auth guard exits without navigating anywhere and never retries.
+
+Requirements:
+- Handle the undefined case correctly.
+- Implement a proper retry mechanism.
+- Retry only transient failures.
+- Prevent navigation loops.
+- Prevent duplicate retries.
+- Clean up any timers.
+- Do not change the existing successful login flow.
+- Do not change logout behavior.
+
+====================================================
+DO NOT IMPLEMENT THESE YET
+====================================================
+
+Do NOT modify:
+
+- app/index.tsx
+- lib/postAuthRouter.ts
+
+Instead, analyze them and answer the questions below.
+
+====================================================
+QUESTIONS
+====================================================
+
+Question 1:
+
+Regarding app/index.tsx:
+
+Would adding a fallback timer that calls navigateAfterAuth() create any possibility of:
+
+- duplicate navigation
+- race conditions
+- conflicting redirects
+- navigation loops
+
+Explain using the actual startup flow of this project.
+Do not answer theoretically.
+
+----------------------------------------------------
+
+Question 2:
+
+Regarding lib/postAuthRouter.ts:
+
+The investigation suggested retrying navigateAfterAuth() after network/server errors.
+
+Before implementing that:
+
+- Is retry actually the correct architectural solution?
+
+OR
+
+- Should the caller (_layout.tsx) own the retry logic instead?
+
+Explain which layer should own retries and why.
+
+Also explain:
+
+- what risks exist if retries are implemented inside postAuthRouter instead of the caller.
+
+====================================================
+AFTER FINISHING
+====================================================
+
+Run the TypeScript check.
+
+Return:
+
+1. Exactly what files changed.
+2. Exactly what code was modified.
+3. Confirmation that TypeScript passes.
+4. Detailed answers to Question 1 and Question 2 only.
