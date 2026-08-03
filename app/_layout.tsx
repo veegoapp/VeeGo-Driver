@@ -287,6 +287,13 @@ function RootLayoutNav() {
                   () => setRefreshAttempt((n) => n + 1),
                   3000,
                 );
+              } else {
+                // Retry cap reached — refresh never succeeded or definitively
+                // failed. Do not leave the driver stuck on the splash screen
+                // forever: treat it the same as a rejected refresh token.
+                queryClient.clear();
+                await clearLocalSession();
+                setTimeout(() => router.replace('/login'), 0);
               }
             }
           })();
