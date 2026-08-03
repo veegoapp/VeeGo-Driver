@@ -191,7 +191,7 @@ export default function ShuttleTripActiveScreen() {
           playThroughEarpieceAndroid: false,
         });
         const { sound } = await Audio.Sound.createAsync(
-          require('@/assets/sounds/shuttle-approaching.wav'),
+          require('@/assets/sounds/shuttle_approaching.wav'),
           { shouldPlay: true, volume: 1.0 },
         );
         if (cancelled) {
