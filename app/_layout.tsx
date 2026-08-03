@@ -391,6 +391,13 @@ export default function RootLayout() {
         lightColor: '#2d2d42',
         sound: 'trip_request.wav',
       });
+      Notifications.setNotificationChannelAsync('shuttle-alerts', {
+        name: 'Shuttle Alerts',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#2d2d42',
+        sound: 'shuttle_approaching.wav',
+      });
     }
   }, []);
 

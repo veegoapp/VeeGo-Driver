@@ -13,7 +13,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MapBackdrop } from '@/components/MapBackdrop';
 import { useNavigation } from 'expo-router';
-import { Audio } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
@@ -154,10 +153,6 @@ export default function ShuttleTripActiveScreen() {
   // Fix 3: track whether an active shuttle session was ever present on this screen
   const hasHadSessionRef = useRef(false);
   const sessionTerminatedNavRef = useRef(false);
-  // Persistent ref for the approaching-station alert sound — prevents premature
-  // GC of the Sound object under JSI/New Architecture on Android and allows
-  // clean unload before a new instance is created.
-  const approachingSoundRef = useRef<Audio.Sound | null>(null);
   const [stationTimeoutVisible, setStationTimeoutVisible] = useState(false);
   const [stationEtas, setStationEtas] = useState<StationEtaResponse | null>(null);
 
@@ -171,55 +166,6 @@ export default function ShuttleTripActiveScreen() {
       if (next !== phase) setPhase(next);
     }
   }, [proximityM]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Approaching alert sound — plays once when driver enters 250m zone ─────
-  useEffect(() => {
-    if (phase !== 'approaching') return;
-    let cancelled = false;
-    (async () => {
-      try {
-        // Unload any previous instance before creating a new one.
-        if (approachingSoundRef.current) {
-          await approachingSoundRef.current.unloadAsync().catch(() => {});
-          approachingSoundRef.current = null;
-        }
-        await Audio.setAudioModeAsync({
-          playsInSilentModeIOS: true,
-          allowsRecordingIOS: false,
-          staysActiveInBackground: false,
-          shouldDuckAndroid: true,
-          playThroughEarpieceAndroid: false,
-        });
-        const { sound } = await Audio.Sound.createAsync(
-          require('@/assets/sounds/shuttle_approaching.wav'),
-          { shouldPlay: true, volume: 1.0 },
-        );
-        if (cancelled) {
-          sound.unloadAsync().catch(() => {});
-          return;
-        }
-        // Store in ref to keep the object alive (prevents GC under JSI/New Arch).
-        approachingSoundRef.current = sound;
-        sound.setOnPlaybackStatusUpdate(status => {
-          if (status.isLoaded && status.didJustFinish) {
-            sound.unloadAsync().catch(() => {});
-            if (approachingSoundRef.current === sound) approachingSoundRef.current = null;
-          }
-        });
-      } catch (e) {
-        if (__DEV__) console.error('[VeeGo] shuttle-approaching sound error:', e);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Sound cleanup on unmount ───────────────────────────────────────────────
-  useEffect(() => {
-    return () => {
-      approachingSoundRef.current?.unloadAsync().catch(() => {});
-      approachingSoundRef.current = null;
-    };
-  }, []);
 
   // ── GPS location updates to backend every 10 s during active trip ─────────
   useEffect(() => {
