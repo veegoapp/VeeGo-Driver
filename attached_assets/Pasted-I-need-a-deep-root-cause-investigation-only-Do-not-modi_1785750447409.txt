@@ -1,0 +1,65 @@
+I need a deep root cause investigation only. Do not modify any files.
+
+Problem:
+The Driver app freezes on the splash screen when reopening the app after it has been closed for some time.
+
+Observed behavior:
+- Fresh install / first launch works normally.
+- After using the app, closing it, and opening it again later (for example the next day), the app gets stuck on the splash screen.
+- Clearing the app data fixes the issue and the app starts normally again.
+- The issue appears during app startup before reaching the main screen.
+
+Goal:
+Find the real root cause. Do not assume any previous theories are correct.
+
+Please audit the complete application startup lifecycle:
+
+1. Splash screen and initialization flow:
+- Find the splash screen implementation.
+- Identify every loading state involved before navigation.
+- Find all conditions that can prevent leaving the splash screen.
+- Check for missing state resets or promises that never resolve.
+
+2. App bootstrap sequence:
+Trace the exact order of:
+- App mount
+- Providers initialization
+- Authentication restore
+- Driver session loading
+- Local storage reads
+- Remote API calls
+- Socket initialization
+- Navigation decision
+
+3. Persistent storage audit:
+Check all AsyncStorage / SecureStore / persisted state usage:
+- What data is saved between launches?
+- What data is restored on startup?
+- Can stale or invalid data block startup?
+- Can old session data create an infinite loading state?
+
+4. Navigation audit:
+Check:
+- Root layout
+- Route guards
+- Redirect logic
+- Initial route selection
+- Any loops between screens
+
+5. Error handling audit:
+Look for:
+- async functions without proper finally blocks
+- loading states that are not cleared on errors
+- silent failures
+- await calls that can hang indefinitely
+
+6. Compare first launch vs returning launch:
+Identify what exists on the second launch that does not exist on the first launch.
+
+Do not make any code changes.
+
+Return:
+- Ranked list of possible root causes.
+- The most likely cause with evidence.
+- Exact files and line numbers involved.
+- The minimum fix plan after the investigation.
