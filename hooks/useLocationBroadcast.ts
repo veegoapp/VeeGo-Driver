@@ -21,9 +21,10 @@ interface Options {
  * BROADCAST_INTERVAL_MS (5 s). Position is read from the shared GPSProvider
  * instead of independently polling getCurrentPositionAsync.
  *
- * All existing behavior is preserved:
+ * Behavior:
  *   - socket vs REST fallback
- *   - rideId-scoped driver:ride:location vs general driver:location:update
+ *   - rideId-scoped driver:ride:location (now includes heading) vs general
+ *     driver:location:update
  *   - background task suppression for the REST idle path
  *   - tripId inclusion for shuttle trips
  *   - 5 s rate limit
@@ -86,20 +87,25 @@ export function useLocationBroadcast({ enabled, tripId, rideId }: Options): void
     const { latitude, longitude, speed, heading } = position;
     const currentRideId = rideIdRef.current ?? undefined;
     const sock = socketRef.current;
+    const speedKmh = speed != null && speed >= 0 ? Math.round(speed * 3.6) : undefined;
+    const headingDeg = heading != null && heading >= 0 ? Math.round(heading) : undefined;
 
     // Active-ride mode: use the confirmed driver:ride:location contract
-    // exactly (rideId, latitude, longitude) — socket-only. No REST fallback
+    // (rideId, latitude, longitude, heading) — socket-only. No REST fallback
     // exists for this contract; useActiveLocationTracking already covers
     // the disconnected/offline case for rides via its own REST channel.
+    // heading is included so the passenger app's driver marker (and, once the
+    // backend forwards it, the camera bearing) can track the driver's facing
+    // direction instead of always rendering north-up.
     if (currentRideId != null) {
       if (sock?.connected) {
-        sock.emit(SOCKET_EVENTS.DRIVER_RIDE_LOCATION, { rideId: currentRideId, latitude, longitude });
+        const ridePayload: Record<string, unknown> = { rideId: currentRideId, latitude, longitude };
+        if (headingDeg !== undefined) ridePayload.heading = headingDeg;
+        sock.emit(SOCKET_EVENTS.DRIVER_RIDE_LOCATION, ridePayload);
       }
       return;
     }
 
-    const speedKmh = speed != null && speed >= 0 ? Math.round(speed * 3.6) : undefined;
-    const headingDeg = heading != null && heading >= 0 ? Math.round(heading) : undefined;
     const currentTripId = tripIdRef.current ?? undefined;
 
     // Try socket first (real-time), fall back to REST when disconnected.
