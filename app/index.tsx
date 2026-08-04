@@ -39,6 +39,14 @@ export default function SplashScreen() {
       const timer = setTimeout(() => router.replace('/login'), 2200);
       return () => clearTimeout(timer);
     }
+
+    // Safety-net backstop: normally _layout.tsx's auth guard effect calls
+    // navigateAfterAuth() and replaces this screen once the token is
+    // validated. If that navigation ever hangs or races (e.g. a provider
+    // remount interrupts it), fall back to login rather than leaving the
+    // driver stuck on the splash screen indefinitely.
+    const backstop = setTimeout(() => router.replace('/login'), 9000);
+    return () => clearTimeout(backstop);
   }, [authLoading, token]);
 
   useEffect(() => {
