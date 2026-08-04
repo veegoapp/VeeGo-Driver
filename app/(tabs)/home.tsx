@@ -28,6 +28,7 @@ import { GlassView } from '@/components/GlassView';
 import { MapBackdrop } from '@/components/MapBackdrop';
 import { useColors } from '@/hooks/useColors';
 import { useDriverLocation } from '@/hooks/useDriverLocation';
+import { useGPSPermissionRecheck } from '@/hooks/useGPSProvider';
 import { useLocationBroadcast } from '@/hooks/useLocationBroadcast';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useRideSocket, type RideRequest } from '@/hooks/useRideSocket';
@@ -61,17 +62,15 @@ const OFFER_TIMEOUT_MS = 12000;
 // Returning null here fully unmounts MapBackdrop (and everything inside it)
 // instead of just hiding it, so those loops actually stop.
 //
-// On mount we also request foreground location permission once so the map
-// centres on the driver's real position immediately — even before they tap
-// GO. The request is a no-op if permission was already granted. Background
-// tracking is still only started when the driver taps GO (startLocationTracking).
+// Foreground permission is requested exactly once, from startLocationTracking()
+// when the driver taps GO — this component only ever *checks* status (via
+// useDriverLocation -> GPSProvider) and never prompts on its own. It used to
+// also fire its own requestForegroundPermissionsAsync() here on every mount,
+// racing GPSProvider's own permission check with no synchronization between
+// them; removed in favor of GPSProvider re-checking on its own (see
+// useGPSProvider.tsx) once startLocationTracking()'s request resolves.
 const DriverMapLayer = React.memo(function DriverMapLayer({ surgeZones, focused }: { surgeZones: SurgeZone[]; focused: boolean }) {
   const { position: driverPosition } = useDriverLocation(focused);
-
-  useEffect(() => {
-    Location.requestForegroundPermissionsAsync().catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   if (!focused) return null;
 
@@ -93,6 +92,7 @@ export default function HomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { t, isRTL } = useI18n();
+  const recheckGPSPermission = useGPSPermissionRecheck();
   const [online, setOnline] = useState<boolean>(() => _persistedOnline ?? false);
   // Whether Home currently has navigation focus — used to gate the idle-online
   // realtime location broadcast below so it never overlaps with the ride
@@ -124,9 +124,6 @@ export default function HomeScreen() {
   // Guards against double-navigating to /selfie when both the live socket event
   // and the GET /driver/checkin/status poll fire for the same pending check-in.
   const checkinPromptedRef = useRef(false);
-  // Guards the one-time online-state sync from the server below so later
-  // refetches (e.g. on focus) don't clobber the driver's own toggle taps.
-  const onlineSyncedRef = useRef(false);
   // Persistent ref for the trip-request alert sound — keeps the Sound object
   // alive (preventing premature GC under JSI/New Architecture on Android) and
   // allows the previous instance to be unloaded before a new one is created.
@@ -252,25 +249,64 @@ export default function HomeScreen() {
     setUnreadCount(count);
   }, [notificationsRaw]);
 
-  useFocusEffect(
-    useCallback(() => {
-      refetchNotifications();
-      // Returning to this screen (e.g. backed out of /selfie) — allow another prompt.
-      checkinPromptedRef.current = false;
-      refetchCheckinStatus();
-    }, [refetchNotifications, refetchCheckinStatus])
-  );
-
   // Tracks whether Home is the focused screen — see useLocationBroadcast call
   // above. Fires immediately on navigation, well before any server round trip,
   // so the idle broadcast stops as soon as the ride screen takes over.
+  //
+  // Also reconciles local `online` state, the checkin-required prompt, and
+  // the background GPS task's registration against the server on every visit
+  // — not just once at cold start. This runs every time Home regains focus
+  // (returning from a completed ride, backing out of /selfie, reconnect,
+  // etc.), so drift between local state and the server (e.g. the background
+  // task not actually running even though the driver is marked online) gets
+  // caught and corrected each time, instead of only on the very first check.
+  //
+  // refetchCheckinStatus()'s resolved value is used directly here rather than
+  // relying on the reactive checkinStatusRaw dependency: react-query's
+  // structural sharing keeps the same object reference when a refetch
+  // returns data that's deeply equal to what's already cached, which would
+  // silently skip this reconciliation (including the task-registration
+  // check, which is orthogonal to whether isOnline's value itself changed).
   useFocusEffect(
     useCallback(() => {
       setHomeFocused(true);
+      refetchNotifications();
+      // Returning to this screen — allow another check-in prompt.
+      checkinPromptedRef.current = false;
+
+      refetchCheckinStatus().then((result) => {
+        const status = result.data as { isOnline?: boolean; checkInRequired?: boolean; checkInDeadline?: string | null } | undefined;
+        if (!status) return;
+
+        if (status.isOnline != null) {
+          _persistedOnline = status.isOnline;
+          setOnline(status.isOnline);
+          if (status.isOnline) {
+            TaskManager.isTaskRegisteredAsync(DRIVER_LOCATION_TASK)
+              .then((isRegistered) => {
+                if (!isRegistered) startLocationTracking();
+              })
+              .catch(() => {});
+          }
+        }
+
+        if (status.checkInRequired && !checkinPromptedRef.current) {
+          checkinPromptedRef.current = true;
+          router.push({
+            pathname: '/selfie',
+            params: { deadlineMinutes: String(computeDeadlineMinutes(status.checkInDeadline)) },
+          });
+        }
+      }).catch(() => {});
+
       return () => setHomeFocused(false);
-    }, [])
+    }, [refetchNotifications, refetchCheckinStatus])
   );
 
+  // The reconnect-triggered refetchCheckinStatus() below (fired on socketConnected,
+  // independent of focus) is fire-and-forget — this reactive effect is what
+  // actually acts on that refetched data to show the prompt, without
+  // duplicating the focus-driven fetch above.
   useEffect(() => {
     const status = checkinStatusRaw as { checkInRequired?: boolean; checkInDeadline?: string | null } | undefined;
     if (!status?.checkInRequired || checkinPromptedRef.current) return;
@@ -279,29 +315,6 @@ export default function HomeScreen() {
       pathname: '/selfie',
       params: { deadlineMinutes: String(computeDeadlineMinutes(status.checkInDeadline)) },
     });
-  }, [checkinStatusRaw]);
-
-  // One-time sync of local `online` state from the driver's real backend
-  // status (already fetched via driver-checkin-status). Fixes Home showing
-  // "Offline" after a fresh mount (e.g. returning from a completed ride)
-  // when the backend status was never actually changed. Also ensures the
-  // background GPS task is actually running when the server says the driver
-  // is online — a fresh Home mount otherwise leaves DRIVER_LOCATION_TASK
-  // unregistered until the driver manually retoggles.
-  useEffect(() => {
-    if (onlineSyncedRef.current) return;
-    const status = checkinStatusRaw as { isOnline?: boolean } | undefined;
-    if (status?.isOnline == null) return;
-    onlineSyncedRef.current = true;
-    _persistedOnline = status.isOnline;
-    setOnline(status.isOnline);
-    if (status.isOnline) {
-      TaskManager.isTaskRegisteredAsync(DRIVER_LOCATION_TASK)
-        .then((isRegistered) => {
-          if (!isRegistered) startLocationTracking();
-        })
-        .catch(() => {});
-    }
   }, [checkinStatusRaw]);
 
   useEffect(() => {
@@ -519,16 +532,29 @@ export default function HomeScreen() {
     }
   }, [token]);
 
-  // Start GPS tracking using background location task — returns false if permission denied
+  // Start GPS tracking using background location task — returns false if permission denied.
+  // Check-first: only calls the request* (OS-prompting) APIs when the stored
+  // status isn't already 'granted', instead of unconditionally requesting on
+  // every GO tap.
   const startLocationTracking = async (): Promise<boolean> => {
-    const { status: fgStatus } = await Location.requestForegroundPermissionsAsync();
+    let fgStatus = (await Location.getForegroundPermissionsAsync()).status;
+    if (fgStatus !== 'granted') {
+      fgStatus = (await Location.requestForegroundPermissionsAsync()).status;
+    }
     if (fgStatus !== 'granted') {
       setLocationError('Location permission is required to receive rides. Please enable it in Settings.');
       return false;
     }
     setLocationError(null);
-    // Request background permission (soft — don't block on denial)
-    await Location.requestBackgroundPermissionsAsync().catch(() => {});
+    // Signal GPSProvider to re-check immediately — closes the race where its
+    // one-time check (on consumer registration) ran before this request
+    // resolved and permanently concluded "denied" for this mount.
+    recheckGPSPermission();
+    // Background permission (soft — don't block on denial), same check-first pattern.
+    const bgStatus = (await Location.getBackgroundPermissionsAsync()).status;
+    if (bgStatus !== 'granted') {
+      await Location.requestBackgroundPermissionsAsync().catch(() => {});
+    }
     try {
       const isRegistered = await TaskManager.isTaskRegisteredAsync(DRIVER_LOCATION_TASK);
       if (!isRegistered) {

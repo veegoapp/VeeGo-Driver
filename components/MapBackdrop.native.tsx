@@ -604,17 +604,27 @@ export const MapBackdrop = React.memo(function MapBackdrop({
     return () => clearTimeout(timer);
   }, [mapReady, navigationMode, focusTarget, userPanned, initialFitPoints]);
 
-  // ── One-shot recenter onto the driver's first GPS fix (no ride active) ───
+  // ── Recenter onto the driver's first GPS fix (no ride active) ────────────
   // initialCenter/initialCamera only run at mount, when a real fix has often
   // not arrived yet, so the map opens on DEFAULT_CENTER (Cairo). The fit-to-
   // coordinates effect above only engages once there are 2+ points (a ride),
   // so a plain idle Home view would otherwise stay on that fallback forever.
-  // This fires once the first fix lands to bring the camera onto the driver.
+  // This fires once a fix lands to bring the camera onto the driver.
+  //
+  // Re-arms (rather than firing only once ever) whenever driverLocation goes
+  // back to null: e.g. permission was denied when this mounted and granted
+  // moments later (GPSProvider now re-checks and delivers a fix once that
+  // happens — see useGPSProvider.tsx), or GPS was briefly lost and regained.
+  // Without the re-arm, only the very first null->value transition in this
+  // component's lifetime would ever recenter the camera.
   const initialLocationCenterRef = useRef(false);
   useEffect(() => {
+    if (!driverLocation) {
+      initialLocationCenterRef.current = false;
+      return;
+    }
     if (
       !mapReady ||
-      !driverLocation ||
       navigationMode ||
       focusTarget ||
       userPanned ||

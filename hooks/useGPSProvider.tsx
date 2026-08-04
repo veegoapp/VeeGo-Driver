@@ -7,6 +7,7 @@ import React, {
   useMemo,
   useState,
 } from 'react';
+import { AppState, type AppStateStatus } from 'react-native';
 import type { DriverPosition } from './useDriverLocation';
 
 // ── GPS Context ────────────────────────────────────────────────────────────────
@@ -20,12 +21,21 @@ type GPSContextValue = {
    * stops when the last consumer unregisters.
    */
   subscribe: () => () => void;
+  /**
+   * Forces an immediate permission re-check and, if now granted, (re)starts
+   * the shared subscription — without waiting for an isActive transition or
+   * an AppState foreground event. Call this right after a permission request
+   * resolves (e.g. from startLocationTracking()) so the subscription starts
+   * deterministically instead of relying on indirect signals.
+   */
+  recheckPermission: () => void;
 };
 
 const GPSContext = createContext<GPSContextValue>({
   position: null,
   permissionDenied: false,
   subscribe: () => () => {},
+  recheckPermission: () => {},
 });
 
 // ── Provider ──────────────────────────────────────────────────────────────────
@@ -52,6 +62,26 @@ export function GPSProvider({ children }: { children: React.ReactNode }) {
   // re-runs on the 0↔1 boundary, not on every increment/decrement.
   const isActive = activeCount > 0;
 
+  // Bumped by recheckPermission() and by the AppState listener below to force
+  // the subscription effect to re-run its permission check even when isActive
+  // hasn't changed. Without this, a consumer that mounted (and registered)
+  // before permission was ever granted would have its one-time check
+  // permanently conclude "denied" — nothing would re-check it after the
+  // driver actually answers the OS prompt later, since isActive itself never
+  // flips again just because permission changed.
+  const [recheckTick, setRecheckTick] = useState(0);
+  const recheckPermission = useCallback(() => setRecheckTick((t) => t + 1), []);
+
+  // Passive safety net: re-check whenever the app returns to the foreground.
+  // Covers permission changes made outside this component's own request flow
+  // (e.g. via the OS Settings app) that recheckPermission() wouldn't catch.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state: AppStateStatus) => {
+      if (state === 'active') setRecheckTick((t) => t + 1);
+    });
+    return () => sub.remove();
+  }, []);
+
   // ── Single watchPositionAsync — starts when any consumer is active ────────
   useEffect(() => {
     if (!isActive) return;
@@ -62,13 +92,15 @@ export function GPSProvider({ children }: { children: React.ReactNode }) {
     (async () => {
       try {
         // Check only — never prompt. Permission is requested once by
-        // startLocationTracking() when the driver first taps GO.
+        // startLocationTracking() when the driver first taps GO, which then
+        // calls recheckPermission() to re-run this check immediately.
         const { status } = await Location.getForegroundPermissionsAsync();
         if (!mounted) return;
         if (status !== 'granted') {
           setPermissionDenied(true);
           return;
         }
+        setPermissionDenied(false);
         const s = await Location.watchPositionAsync(
           {
             accuracy: Location.Accuracy.High,
@@ -102,7 +134,7 @@ export function GPSProvider({ children }: { children: React.ReactNode }) {
       // clearing it would cause a momentary null flicker. The value becomes
       // naturally stale but is never actively wrong.
     };
-  }, [isActive]);
+  }, [isActive, recheckTick]);
 
   // ── Consumer registration ─────────────────────────────────────────────────
   const subscribe = useCallback((): (() => void) => {
@@ -111,8 +143,8 @@ export function GPSProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ position, permissionDenied, subscribe }),
-    [position, permissionDenied, subscribe],
+    () => ({ position, permissionDenied, subscribe, recheckPermission }),
+    [position, permissionDenied, subscribe, recheckPermission],
   );
 
   return <GPSContext.Provider value={value}>{children}</GPSContext.Provider>;
@@ -127,4 +159,14 @@ export function GPSProvider({ children }: { children: React.ReactNode }) {
  */
 export function useGPS(): GPSContextValue {
   return useContext(GPSContext);
+}
+
+/**
+ * Screen-facing hook exposing only the ability to force a GPS permission
+ * re-check — for callers (like home.tsx's startLocationTracking) that need
+ * to signal GPSProvider after a permission request resolves, without pulling
+ * in the full useGPS() context (position/subscribe are internal concerns).
+ */
+export function useGPSPermissionRecheck(): () => void {
+  return useContext(GPSContext).recheckPermission;
 }
