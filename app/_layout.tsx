@@ -384,14 +384,19 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (Constants.appOwnership !== 'expo' && Platform.OS === 'android') {
-      Notifications.setNotificationChannelAsync('ride-requests', {
+      // NOTE: Android notification channels are IMMUTABLE once created — editing
+      // an existing channel's sound has no effect on devices where the old
+      // channel already exists. The `-v2` suffix forces a brand-new channel so
+      // the custom sound actually takes effect (fixes silent background alerts).
+      // The backend push payloads (channelId) must match these ids exactly.
+      Notifications.setNotificationChannelAsync('ride-requests-v2', {
         name: 'Ride Requests',
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#2d2d42',
         sound: 'trip_request.wav',
       });
-      Notifications.setNotificationChannelAsync('shuttle-alerts', {
+      Notifications.setNotificationChannelAsync('shuttle-alerts-v2', {
         name: 'Shuttle Alerts',
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 250, 250, 250],

@@ -839,14 +839,14 @@ export const MapBackdrop = React.memo(function MapBackdrop({
 const styles = StyleSheet.create({
   // Driver nav marker (car image, rotated by bearing)
   driverNavOuter: {
-    width: 72,
-    height: 72,
+    width: 100,
+    height: 100,
     alignItems: 'center',
     justifyContent: 'center',
   },
   carMarkerImage: {
-    width: 72,
-    height: 72,
+    width: 100,
+    height: 100,
   },
   // Driver idle marker (blue circle)
   driverIdleMarker: {
