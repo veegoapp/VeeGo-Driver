@@ -34,13 +34,17 @@ export function ServiceProvider({ children }: { children: React.ReactNode }) {
 
   const [serviceType, setServiceTypeState] = useState<ServiceType>('SHUTTLE');
   const [isDarkMode, setIsDarkModeState] = useState<boolean>(false);
-  const [loaded, setLoaded] = useState(false);
 
   // Re-load whenever the logged-in user changes (login / logout / account switch).
   // On logout userId becomes null → service type resets to initial state.
   // On a new login userId changes → the new user's stored choice is loaded.
+  //
+  // Deliberately does NOT gate rendering on this reload (no `loaded` flag /
+  // `return null`): this provider wraps RootLayoutNav, and unmounting it here
+  // while a stored token is being loaded on relaunch tore down the auth-guard
+  // effect mid-flight, stranding the driver on the splash screen. Previous
+  // state stays mounted and visible while the reload resolves in the background.
   useEffect(() => {
-    setLoaded(false);
     setServiceTypeState('SHUTTLE');
 
     Promise.all([
@@ -84,9 +88,7 @@ export function ServiceProvider({ children }: { children: React.ReactNode }) {
       }
       // If no stored preference exists for this user, leave as-is — the bridge
       // event from navigateToHome will update the state once the backend responds.
-
-      setLoaded(true);
-    }).catch(() => setLoaded(true));
+    }).catch(() => {});
   }, [userId]);
 
   // Subscribe to the backend bridge so navigateToHome can push the authoritative
@@ -142,8 +144,6 @@ export function ServiceProvider({ children }: { children: React.ReactNode }) {
     () => ({ serviceType, setServiceType, isDarkMode, setIsDarkMode }),
     [serviceType, setServiceType, isDarkMode, setIsDarkMode],
   );
-
-  if (!loaded) return null;
 
   return (
     <ServiceContext.Provider value={value}>
