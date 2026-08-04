@@ -46,24 +46,34 @@ export const TAB_BAR_HEIGHT = 96;
 // The backend's actual round timeout is otherwise read from the payload.
 const OFFER_TIMEOUT_MS = 12000;
 
-// Foreground GPS is always requested/tracked (not gated on "online") so the
-// map can center on the driver's real position instead of staying on a fallback.
-// Isolated into its own component (rather than calling useDriverLocation
-// directly in HomeScreen) so the ~1 GPS tick/second this hook produces only
-// re-renders this small map layer — not the header, stats pill, promo card,
-// and request sheet that make up the rest of HomeScreen.
+// Foreground GPS is always requested/tracked while Home has focus (not gated
+// on "online") so the map can center on the driver's real position instead of
+// staying on a fallback. Isolated into its own component (rather than calling
+// useDriverLocation directly in HomeScreen) so the ~1 GPS tick/second this
+// hook produces only re-renders this small map layer — not the header, stats
+// pill, promo card, and request sheet that make up the rest of HomeScreen.
+//
+// `focused` gates both the GPS subscription and the MapView itself: when an
+// active ride screen is pushed over Home, expo-router keeps Home mounted
+// underneath it, so without this gate Home's MapView, its AnimatedDriverMarker
+// glide loop, and its bearing-tracking effect kept running the entire ride —
+// a second full map instance alongside the ride screen's own MapBackdrop.
+// Returning null here fully unmounts MapBackdrop (and everything inside it)
+// instead of just hiding it, so those loops actually stop.
 //
 // On mount we also request foreground location permission once so the map
 // centres on the driver's real position immediately — even before they tap
 // GO. The request is a no-op if permission was already granted. Background
 // tracking is still only started when the driver taps GO (startLocationTracking).
-const DriverMapLayer = React.memo(function DriverMapLayer({ surgeZones }: { surgeZones: SurgeZone[] }) {
-  const { position: driverPosition } = useDriverLocation(true);
+const DriverMapLayer = React.memo(function DriverMapLayer({ surgeZones, focused }: { surgeZones: SurgeZone[]; focused: boolean }) {
+  const { position: driverPosition } = useDriverLocation(focused);
 
   useEffect(() => {
     Location.requestForegroundPermissionsAsync().catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  if (!focused) return null;
 
   return (
     <MapBackdrop
@@ -712,7 +722,7 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <DriverMapLayer surgeZones={surgeZones} />
+      <DriverMapLayer surgeZones={surgeZones} focused={homeFocused} />
 
       {/* Reconnecting banner */}
       <Animated.View

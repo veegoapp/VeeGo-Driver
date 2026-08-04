@@ -25,43 +25,68 @@ const REROUTE_COOLDOWN_MS = 15_000;
  */
 const REROUTE_MIN_MOVE_M = 20;
 
-/** Network timeout for reroute fetches. */
+/** Network timeout for /directions fetches (both the initial leg fetch and reroutes). */
 const FETCH_TIMEOUT_MS = 8_000;
 
-/**
- * After a successful internal reroute, external polyline updates (from
- * useRoadPolyline) are suppressed for this duration so the freshly
- * computed route is not immediately overwritten by the old result.
- */
-const REROUTE_LOCK_MS = 12_000;
+type DirectionsResult = { polyline: Coord[] } | null;
+
+/** Shared /directions fetch used by both the initial leg fetch and reroutes. */
+async function fetchDirections(
+  origin: Coord,
+  destination: Coord,
+  signal: AbortSignal,
+): Promise<DirectionsResult> {
+  const base = process.env.EXPO_PUBLIC_API_URL ?? '';
+  const url =
+    `${base}/directions` +
+    `?origin=${origin.latitude},${origin.longitude}` +
+    `&destination=${destination.latitude},${destination.longitude}`;
+  const token = await getToken();
+  const res = await fetch(url, { signal, headers: { Authorization: `Bearer ${token ?? ''}` } });
+  if (!res.ok) throw new Error('non-ok');
+  const data: unknown = await res.json();
+  const poly =
+    data != null &&
+    typeof data === 'object' &&
+    'polyline' in data &&
+    Array.isArray((data as { polyline: unknown }).polyline)
+      ? ((data as { polyline: Coord[] }).polyline)
+      : null;
+  return poly && poly.length >= 2 ? { polyline: poly } : null;
+}
 
 /**
- * Manages active navigation intelligence on top of a road-snapped route.
+ * Manages active navigation intelligence for a ride leg — owns the full
+ * /directions lifecycle for that leg (this used to be split across this hook
+ * and useRoadPolyline, called separately from app/ride/[rideId].tsx; that
+ * split caused a duplicate fetcher because useRoadPolyline's waypoint key
+ * included the live driver position, refetching on nearly every GPS tick).
  *
  * Responsibilities:
- *  1. Route progress — trims `fullPolyline` to the remaining portion ahead
- *     of the driver's closest position on the route.
- *  2. Off-route detection — flags when the driver is > 50 m from the route.
- *  3. Rerouting — when off-route, fetches a new route from the current
- *     driver position to `destination` via the existing /directions endpoint.
- *     Throttled by a 15 s cooldown and a 20 m minimum-movement guard.
+ *  1. Initial route fetch — driverPos → destination, fetched once per leg
+ *     (keyed on `destination`, not on every driverPos tick).
+ *  2. Route progress — trims the route to the remaining portion ahead of the
+ *     driver's closest position on the route.
+ *  3. Off-route detection — flags when the driver is > 50 m from the route.
+ *  4. Rerouting — when off-route, fetches a new route from the current
+ *     driver position to `destination`. Throttled by a 15 s cooldown and a
+ *     20 m minimum-movement guard.
  *
  * Parameters:
- *  - `fullPolyline`  Road-snapped route coordinates (from useRoadPolyline).
  *  - `driverPos`     Live driver GPS position.
  *  - `destination`   Fixed endpoint of the current navigation leg.
  *  - `enabled`       False outside navigation phases (arrived, completed, shuttle…).
  *
  * Does NOT modify routing architecture, authentication, trip state, or
- * any backend API. Shuttle behavior is unaffected (pass enabled=false).
+ * any backend API. Shuttle behavior is unaffected (pass enabled=false; the
+ * shuttle screen still owns its own route fetch via useRoadPolyline).
  */
 export function useNavigationRoute(
-  fullPolyline: Coord[] | null | undefined,
   driverPos: { latitude: number; longitude: number } | null,
   destination: { latitude: number; longitude: number } | null,
   enabled: boolean,
 ): NavigationRouteResult {
-  // Internal "current route" — seeded by fullPolyline, replaced on reroute.
+  // Internal "current route" — set by the initial leg fetch, replaced on reroute.
   const [currentRoute, setCurrentRoute] = useState<Coord[] | null>(null);
   const [remainingPolyline, setRemainingPolyline] = useState<Coord[] | null>(null);
   const [isOffRoute, setIsOffRoute] = useState(false);
@@ -71,18 +96,47 @@ export function useNavigationRoute(
   const isReroutingRef = useRef(false);
   const lastReroutedAt = useRef<number>(0);
   const rerouteOriginRef = useRef<Coord | null>(null);
-  const rerouteLockUntil = useRef<number>(0);
   const abortRef = useRef<AbortController | null>(null);
 
-  // ── Accept external polyline updates unless a reroute just completed ────
-  // After an internal reroute we lock external updates for REROUTE_LOCK_MS so
-  // the freshly computed route isn't immediately overwritten by the old hook.
+  // Key of the destination the initial leg fetch below last ran for — guards
+  // against refetching on every driverPos tick; only a genuine destination
+  // change (new leg) triggers another initial fetch.
+  const lastLegDestKeyRef = useRef<string | null>(null);
+
+  // ── Initial leg fetch — driverPos → destination, once per leg ───────────
+  // Folds in what useRoadPolyline used to do from the ride screen. Keyed on
+  // destination (not driverPos), plus a one-shot retry once driverPos becomes
+  // available if it wasn't yet when the destination first appeared.
   useEffect(() => {
-    if (!fullPolyline?.length) return;
-    if (Date.now() < rerouteLockUntil.current) return;
-    setCurrentRoute(fullPolyline);
+    if (!enabled || !destination || !driverPos) return;
+
+    const destKey = `${destination.latitude.toFixed(5)},${destination.longitude.toFixed(5)}`;
+    if (destKey === lastLegDestKeyRef.current) return;
+    lastLegDestKeyRef.current = destKey;
+
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
+    const origin = { latitude: driverPos.latitude, longitude: driverPos.longitude };
+
+    fetchDirections(origin, destination, ctrl.signal)
+      .then((result) => {
+        if (result) setCurrentRoute(result.polyline);
+      })
+      .catch(() => {
+        // Leg fetch failed — remainingPolyline stays null; off-route reroute
+        // logic below will pick it up once a driver position is off-route,
+        // and this effect will retry on the next genuine destination change.
+      })
+      .finally(() => clearTimeout(timer));
+
+    return () => {
+      ctrl.abort();
+      clearTimeout(timer);
+    };
+  // driverPos's lat/lng are intentionally excluded — only whether a position
+  // exists yet matters here (one-shot retry), not its continuous value.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fullPolyline]);
+  }, [enabled, destination?.latitude, destination?.longitude, driverPos != null]);
 
   // ── Reset when navigation is disabled (phase change, completed, etc.) ───
   useEffect(() => {
@@ -90,6 +144,7 @@ export function useNavigationRoute(
     setCurrentRoute(null);
     setRemainingPolyline(null);
     setIsOffRoute(false);
+    lastLegDestKeyRef.current = null;
     abortRef.current?.abort();
   }, [enabled]);
 
@@ -147,32 +202,14 @@ export function useNavigationRoute(
     abortRef.current = ctrl;
     const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
 
-    const base = process.env.EXPO_PUBLIC_API_URL ?? '';
-    const url =
-      `${base}/directions` +
-      `?origin=${driverPos.latitude},${driverPos.longitude}` +
-      `&destination=${destination.latitude},${destination.longitude}`;
-
-    getToken()
-      .then(token =>
-        fetch(url, {
-          signal: ctrl.signal,
-          headers: { Authorization: `Bearer ${token ?? ''}` },
-        }),
-      )
-      .then(r => (r.ok ? r.json() : Promise.reject(new Error('non-ok'))))
-      .then((data: unknown) => {
-        const poly =
-          data != null &&
-          typeof data === 'object' &&
-          'polyline' in data &&
-          Array.isArray((data as { polyline: unknown }).polyline)
-            ? ((data as { polyline: Coord[] }).polyline)
-            : null;
-        if (poly && poly.length >= 2) {
-          // Suppress external polyline updates for REROUTE_LOCK_MS
-          rerouteLockUntil.current = Date.now() + REROUTE_LOCK_MS;
-          setCurrentRoute(poly);
+    fetchDirections(
+      { latitude: driverPos.latitude, longitude: driverPos.longitude },
+      destination,
+      ctrl.signal,
+    )
+      .then((result) => {
+        if (result) {
+          setCurrentRoute(result.polyline);
           setIsOffRoute(false);
         }
       })

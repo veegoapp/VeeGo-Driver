@@ -17,7 +17,6 @@ import { useActiveLocationTracking } from '@/hooks/useActiveLocationTracking';
 import { useLocationBroadcast } from '@/hooks/useLocationBroadcast';
 import { setActiveRideId } from '@/lib/backgroundLocationTask';
 import { useDriverLocation } from '@/hooks/useDriverLocation';
-import { useRoadPolyline } from '@/hooks/useRoadPolyline';
 import { useNavigationRoute } from '@/hooks/useNavigationRoute';
 import { endpoints } from '@/lib/api';
 import { useI18n } from '@/lib/i18nContext';
@@ -298,38 +297,14 @@ export default function RideScreen() {
   }, [initialized, session, phase]);
 
   // ── Navigation route ─────────────────────────────────────────────────────
-  // Waypoints are derived from rideSession (available before the early return
-  // below) so this hook call is never conditional — React rules satisfied.
+  // Route fetching (initial leg fetch + off-route reroute) is fully owned by
+  // useNavigationRoute now — it used to be split with a separate useRoadPolyline
+  // call here, keyed off the live driverPosition, which refetched /directions
+  // on nearly every GPS tick. navDestination below is the only input this
+  // screen still derives; useNavigationRoute takes driverPosition directly.
   //   to_pickup : driver → pickup
   //   in_trip   : driver → dropoff
-  //   arrived / completed : null (no fetch; arrived uses MapBackdrop overview)
-  const navWaypoints = useMemo(() => {
-    if (!driverPosition) return null;
-    if (phase === 'to_pickup') {
-      const lat = rideSession?.pickup.latitude;
-      const lng = rideSession?.pickup.longitude;
-      if (lat == null || lng == null) return null;
-      return [
-        { latitude: driverPosition.latitude, longitude: driverPosition.longitude },
-        { latitude: Number(lat), longitude: Number(lng) },
-      ];
-    }
-    if (phase === 'in_trip') {
-      const lat = rideSession?.dropoff.latitude;
-      const lng = rideSession?.dropoff.longitude;
-      if (lat == null || lng == null) return null;
-      return [
-        { latitude: driverPosition.latitude, longitude: driverPosition.longitude },
-        { latitude: Number(lat), longitude: Number(lng) },
-      ];
-    }
-    return null;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, driverPosition?.latitude, driverPosition?.longitude,
-      rideSession?.pickup.latitude, rideSession?.pickup.longitude,
-      rideSession?.dropoff.latitude, rideSession?.dropoff.longitude]);
-
-  const { coords: roadPolylineCoords } = useRoadPolyline(navWaypoints);
+  //   arrived / completed : no destination (no fetch; arrived uses MapBackdrop overview)
 
   // ── Phase 3: navigation destination (fixed endpoint for rerouting) ───────
   // Derived independently of driverPosition so it stays stable while driving.
@@ -355,7 +330,6 @@ export default function RideScreen() {
 
   const navActive = phase === 'to_pickup' || phase === 'in_trip';
   const { remainingPolyline } = useNavigationRoute(
-    roadPolylineCoords,
     driverPosition,
     navDestination,
     navActive,
