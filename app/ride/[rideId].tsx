@@ -335,13 +335,6 @@ export default function RideScreen() {
     navActive,
   );
 
-  // All hooks called above — safe to short-circuit for blocked service.
-  // A non-completed ride keeps the driver in the ride flow regardless of
-  // service-block state; normal blocking resumes once the ride completes.
-  if (blockedForScreen) {
-    return <ServiceBlockedScreen status={serviceStatus} serviceName={SERVICE_NAMES[serviceType] ?? serviceType} />;
-  }
-
   const p = PHASE_COPY[phase];
 
   // ── ActiveSession fields ────────────────────────────────────────────────────
@@ -732,6 +725,19 @@ export default function RideScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [phase, pickupLat, pickupLng],
   );
+
+  // Short-circuit render for a blocked service ONLY here — after every hook
+  // above has run unconditionally. Bailing out earlier (before hooks like
+  // the completedAnim/checkScale effects, handleNavigate, mapPickup,
+  // mapDropoff, arrivedFocusTarget) called a different number of hooks
+  // between renders whenever isBlocked flipped true in the same render that
+  // phase reached 'completed' — a hard "Rendered fewer hooks than expected"
+  // React crash on exactly the trip-completion/rating screen. A non-completed
+  // ride still keeps the driver in the ride flow regardless of service-block
+  // state; normal blocking resumes once the ride completes.
+  if (blockedForScreen) {
+    return <ServiceBlockedScreen status={serviceStatus} serviceName={SERVICE_NAMES[serviceType] ?? serviceType} />;
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

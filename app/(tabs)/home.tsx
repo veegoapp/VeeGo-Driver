@@ -653,6 +653,12 @@ export default function HomeScreen() {
         const ok = await startLocationTracking();
         if (!ok) {
           await endpoints.driver.goOffline().catch(() => {});
+          // Without this, lastSubmittedStatusRef stays 'online' (set above)
+          // while `online` state itself never flipped true — the next GO tap
+          // computes nextStatus === 'online' again, matches the stale ref,
+          // and the idempotency guard above silently no-ops it forever, even
+          // after the driver later grants permission.
+          lastSubmittedStatusRef.current = 'offline';
           return;
         }
       } else {
