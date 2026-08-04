@@ -32,6 +32,10 @@ type EarningsSummary = {
     totalPaid: string;
     totalPending: string;
     totalConfirmed: string;
+    // Reconciled server-side from financial_snapshots (covers cash + non-cash
+    // rides and peak bonuses in one place) — see GET /earnings/summary.
+    driverShare: string;
+    companyShare: string;
   };
   recentEarnings: { amount: string; [key: string]: unknown }[];
 };
@@ -50,31 +54,48 @@ const PERIOD_HERO_LABELS: Record<PeriodKey, string> = {
   current_month: 'TOTAL THIS MONTH',
 };
 
-const toNum = (v: unknown): number => (typeof v === 'number' ? v : parseFloat(String(v ?? 0)));
+// NaN-safe: a malformed/missing numeric field (bad fare string, absent
+// driverEarnings) falls back to 0 instead of poisoning downstream sums.
+const toNum = (v: unknown): number => {
+  const n = typeof v === 'number' ? v : parseFloat(String(v ?? 0));
+  return Number.isFinite(n) ? n : 0;
+};
 
-// Local-time boundaries for each filter tab. The history endpoint has no
-// date-range param, so this is used to filter/paginate ride history
-// client-side (see fetchRidesInRange below) rather than trust a backend
-// period cut that doesn't exist for that endpoint.
+// Africa/Cairo is fixed UTC+2 year-round (no DST since 2014) — the same
+// offset the backend uses for its `AT TIME ZONE 'Africa/Cairo'` period
+// truncation in GET /earnings/summary. Boundaries here are computed in
+// Cairo-local time (not the device's timezone) so a driver's day/week/month
+// cutoffs agree with the server's, instead of drifting for anyone whose
+// device isn't set to Cairo time. The history endpoint has no date-range
+// param, so this is used to filter/paginate ride history client-side (see
+// fetchRidesInRange below) for the Trips list only.
+const CAIRO_OFFSET_MS = 2 * 60 * 60 * 1000;
+
 function getPeriodRange(period: PeriodKey): { start: Date; end: Date } {
   const now = new Date();
-  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const cairoNowMs = now.getTime() + CAIRO_OFFSET_MS;
+  // Absolute UTC instant of Cairo-local midnight for the day `cairoMs` falls on.
+  const startOfCairoDay = (cairoMs: number) => {
+    const shifted = new Date(cairoMs);
+    const cairoMidnightUtcMs = Date.UTC(shifted.getUTCFullYear(), shifted.getUTCMonth(), shifted.getUTCDate());
+    return new Date(cairoMidnightUtcMs - CAIRO_OFFSET_MS);
+  };
   if (period === 'today') {
-    return { start: startOfDay(now), end: now };
+    return { start: startOfCairoDay(cairoNowMs), end: now };
   }
-  const day = now.getDay(); // 0 = Sunday
-  const mondayOffset = (day + 6) % 7;
-  const thisMonday = startOfDay(now);
-  thisMonday.setDate(thisMonday.getDate() - mondayOffset);
+  const cairoDay = new Date(cairoNowMs).getUTCDay(); // 0 = Sunday, Cairo-local
+  const mondayOffset = (cairoDay + 6) % 7;
+  const thisMonday = new Date(startOfCairoDay(cairoNowMs).getTime() - mondayOffset * 86_400_000);
   if (period === 'this_week') {
     return { start: thisMonday, end: now };
   }
   if (period === 'last_week') {
-    const lastMonday = new Date(thisMonday);
-    lastMonday.setDate(lastMonday.getDate() - 7);
+    const lastMonday = new Date(thisMonday.getTime() - 7 * 86_400_000);
     return { start: lastMonday, end: new Date(thisMonday.getTime() - 1) };
   }
-  return { start: new Date(now.getFullYear(), now.getMonth(), 1), end: now };
+  const cairoNow = new Date(cairoNowMs);
+  const monthStart = new Date(Date.UTC(cairoNow.getUTCFullYear(), cairoNow.getUTCMonth(), 1) - CAIRO_OFFSET_MS);
+  return { start: monthStart, end: now };
 }
 
 // Ride history is paginated with no date filter, so pages are walked
@@ -162,16 +183,19 @@ export default function EarningsScreen() {
   const summary = summaryRaw as EarningsSummary | undefined;
   const rides = periodRides ?? [];
 
-  // Driver's cut vs the company's cut over the currently loaded period rides
-  // — derived from real fare/driverEarnings per ride rather than an assumed
-  // fixed commission rate, so it stays correct if the rate ever varies.
-  // Memoized: rides only changes when the period-rides query resolves, but
-  // this component re-renders often (animations, period-chip taps) — without
-  // this, the same reduce() over every loaded ride reran on each of those.
+  // Driver's cut vs the company's cut for the selected period — sourced
+  // directly from GET /earnings/summary (driverShare/companyShare), which
+  // the backend reconciles from financial_snapshots (cash + non-cash rides
+  // and peak bonuses all accounted for in one place). Previously this was
+  // recomputed client-side from the period-filtered rides list, which could
+  // never be made to agree with the hero/Confirmed/Paid-Out cards above it —
+  // those come from a different backend source (the wallet ledger, which
+  // omits cash-ride earnings since the driver already holds that cash) and a
+  // different date-range implementation (device-local vs server Cairo-local).
   const { grossTotal, driverTotal, companyTotal, driverPct, companyPct } = useMemo(() => {
-    const gross = rides.reduce((s, r) => s + toNum(r.fare), 0);
-    const driver = rides.reduce((s, r) => s + (r.driverEarnings != null ? toNum(r.driverEarnings) : toNum(r.fare)), 0);
-    const company = Math.max(0, gross - driver);
+    const driver = toNum(summary?.summary?.driverShare);
+    const company = toNum(summary?.summary?.companyShare);
+    const gross = driver + company;
     return {
       grossTotal: gross,
       driverTotal: driver,
@@ -179,7 +203,7 @@ export default function EarningsScreen() {
       driverPct: gross > 0 ? (driver / gross) * 100 : 0,
       companyPct: gross > 0 ? (company / gross) * 100 : 0,
     };
-  }, [rides]);
+  }, [summary]);
 
   const barAnims = useRef(Array.from({ length: 12 }, () => new Animated.Value(0))).current;
   const heroAnim = useRef(new Animated.Value(0)).current;
