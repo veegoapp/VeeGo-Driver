@@ -105,6 +105,13 @@ export default function RideScreen() {
   // Reactive counterpart to hasExitedRef — lets location broadcasting stop
   // as soon as the ride is exiting, without waiting for unmount.
   const [isExiting, setIsExiting] = useState(false);
+  // Google-Maps-style navigation: the trip card collapses to a peek at the
+  // bottom while actively driving (to_pickup / in_trip) so the car marker sits
+  // in the lower third and the road ahead fills the screen. It auto-expands
+  // when waiting for the rider ('arrived') and can be re-expanded by tapping
+  // the card handle (e.g. on reaching the destination to end the ride).
+  const [sheetCollapsed, setSheetCollapsed] = useState(false);
+  const [sheetHeight, setSheetHeight] = useState(0);
   // Guards the cancelled-ride exit (alert + navigate) so it only fires once,
   // whether triggered by the live socket event or a subsequent status refetch.
   const hasExitedRef = useRef(false);
@@ -322,7 +329,11 @@ export default function RideScreen() {
   // ── Phase 3: navigation destination (fixed endpoint for rerouting) ───────
   // Derived independently of driverPosition so it stays stable while driving.
   const navDestination = useMemo(() => {
-    if (phase === 'to_pickup') {
+    // driver_assigned (to_pickup) AND driver_arrived (arrived) both route the
+    // directions polyline driver → pickup. Keeping 'arrived' in this branch
+    // prevents MapBackdrop's non-nav autoPolyline (pickup → dropoff) from
+    // drawing the full trip route while the driver is still at/near pickup.
+    if (phase === 'to_pickup' || phase === 'arrived') {
       const lat = rideSession?.pickup.latitude;
       const lng = rideSession?.pickup.longitude;
       if (lat == null || lng == null) return null;
@@ -341,7 +352,7 @@ export default function RideScreen() {
     rideSession?.dropoff.latitude, rideSession?.dropoff.longitude,
   ]);
 
-  const navActive = phase === 'to_pickup' || phase === 'in_trip';
+  const navActive = phase === 'to_pickup' || phase === 'arrived' || phase === 'in_trip';
   const { remainingPolyline } = useNavigationRoute(
     driverPosition,
     navDestination,
@@ -394,6 +405,9 @@ export default function RideScreen() {
   }
 
   const sheetAnim = useRef(new Animated.Value(100)).current;
+  // 0 = expanded, 1 = collapsed. Drives the extra downward translate that
+  // hides all of the card except the top peek during active navigation.
+  const collapseAnim = useRef(new Animated.Value(0)).current;
   const completedAnim = useRef(new Animated.Value(0)).current;
   const checkScale = useRef(new Animated.Value(0.5)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -401,6 +415,23 @@ export default function RideScreen() {
   useEffect(() => {
     Animated.spring(sheetAnim, { toValue: 0, stiffness: 200, damping: 20, useNativeDriver: true }).start();
   }, []);
+
+  const toggleSheet = useCallback(() => setSheetCollapsed((c) => !c), []);
+
+  // Auto-collapse while actively navigating (to_pickup / in_trip); auto-expand
+  // when arrived (waiting for rider) so the phase controls are reachable.
+  useEffect(() => {
+    setSheetCollapsed(phase === 'to_pickup' || phase === 'in_trip');
+  }, [phase]);
+
+  useEffect(() => {
+    Animated.spring(collapseAnim, {
+      toValue: sheetCollapsed ? 1 : 0,
+      stiffness: 200,
+      damping: 24,
+      useNativeDriver: true,
+    }).start();
+  }, [sheetCollapsed]);
 
   useEffect(() => {
     if (phase === 'completed') {
@@ -881,9 +912,34 @@ export default function RideScreen() {
       )}
 
       {phase !== 'completed' && (
-        <Animated.View style={[styles.sheet, { transform: [{ translateY: sheetAnim }] }]}>
+        <Animated.View
+          onLayout={(e) => setSheetHeight(e.nativeEvent.layout.height)}
+          style={[
+            styles.sheet,
+            {
+              transform: [
+                { translateY: sheetAnim },
+                {
+                  translateY: collapseAnim.interpolate({
+                    inputRange: [0, 1],
+                    // Slide the card down until only the top peek (handle +
+                    // rider row) remains visible above the bottom edge.
+                    outputRange: [0, Math.max(0, sheetHeight - 120)],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
           <GlassView strong style={styles.sheetCard} borderRadius={24}>
-            <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
+            <Pressable
+              onPress={toggleSheet}
+              hitSlop={16}
+              accessibilityRole="button"
+              accessibilityLabel={sheetCollapsed ? 'Expand trip card' : 'Collapse trip card'}
+            >
+              <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
+            </Pressable>
 
             <View style={styles.riderRow}>
               <View style={[styles.riderAvatar, { justifyContent: 'center', alignItems: 'center', backgroundColor: colors.secondary }]}>
