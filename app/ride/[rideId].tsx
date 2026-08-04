@@ -101,6 +101,7 @@ export default function RideScreen() {
     walletDeduction: number;
     netCashPayable: number;
   } | null>(null);
+  const [viewDetailsOpen, setViewDetailsOpen] = useState(false);
   // Reactive counterpart to hasExitedRef — lets location broadcasting stop
   // as soon as the ride is exiting, without waiting for unmount.
   const [isExiting, setIsExiting] = useState(false);
@@ -809,6 +810,11 @@ export default function RideScreen() {
           <Text style={[styles.fareNote, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
             {completionResult != null && completionResult.netCashPayable > 0 ? t.cash_to_collect : t.added_to_earnings}
           </Text>
+          {completionResult != null && (
+            <Pressable onPress={() => setViewDetailsOpen(true)} style={styles.viewDetailsBtn} accessibilityLabel={t.view_details}>
+              <Text style={[styles.viewDetailsBtnText, { color: colors.primary, fontFamily: 'Inter_600SemiBold' }]}>{t.view_details}</Text>
+            </Pressable>
+          )}
           {creditedChange > 0 && (
             <Text style={[styles.fareNote, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
               {t.change_credited_note.replace('{amount}', creditedChange.toFixed(2)).replace('{egp}', t.egp)}
@@ -1089,6 +1095,44 @@ export default function RideScreen() {
           </GlassView>
         </View>
       </Modal>
+
+      {/* ── Fare breakdown ("View details") ───────────────────────────── */}
+      <Modal visible={viewDetailsOpen} transparent animationType="fade" onRequestClose={() => setViewDetailsOpen(false)}>
+        <View style={styles.modalBackdrop}>
+          <GlassView strong style={styles.modalCard} borderRadius={24}>
+            <Text style={[styles.modalTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.fare_breakdown_title}</Text>
+
+            {completionResult != null && (
+              <>
+                <View style={styles.summaryRow}>
+                  <Text style={[styles.summaryLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{t.gross_fare_label}</Text>
+                  <Text style={[styles.summaryValue, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{completionResult.grossFare.toFixed(2)} {t.egp}</Text>
+                </View>
+                {completionResult.promoDiscount > 0 && (
+                  <View style={styles.summaryRow}>
+                    <Text style={[styles.summaryLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{t.promo_discount_label}</Text>
+                    <Text style={[styles.summaryValue, { color: '#22c55e', fontFamily: 'Inter_700Bold' }]}>-{completionResult.promoDiscount.toFixed(2)} {t.egp}</Text>
+                  </View>
+                )}
+                {completionResult.walletDeduction > 0 && (
+                  <View style={styles.summaryRow}>
+                    <Text style={[styles.summaryLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{t.wallet_deduction_label}</Text>
+                    <Text style={[styles.summaryValue, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>-{completionResult.walletDeduction.toFixed(2)} {t.egp}</Text>
+                  </View>
+                )}
+                <View style={[styles.summaryRow, styles.summaryRowTotal, { borderTopColor: colors.border }]}>
+                  <Text style={[styles.summaryLabel, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.net_cash_payable_label}</Text>
+                  <Text style={[styles.summaryValueHighlight, { color: colors.primary, fontFamily: 'Inter_700Bold' }]}>{completionResult.netCashPayable.toFixed(2)} {t.egp}</Text>
+                </View>
+              </>
+            )}
+
+            <Pressable onPress={() => setViewDetailsOpen(false)} style={[styles.modalCancelBtn, { backgroundColor: colors.secondary, marginTop: Spacing.md }]}>
+              <Text style={[styles.modalCancelBtnText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.close_btn}</Text>
+            </Pressable>
+          </GlassView>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -1158,8 +1202,12 @@ const styles = StyleSheet.create({
   modalConfirmBtnGrad: { height: 52, alignItems: 'center', justifyContent: 'center' },
   modalConfirmBtnText: { fontSize: Typography.size.md },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10 },
+  summaryRowTotal: { borderTopWidth: 1, marginTop: 4, paddingTop: 14 },
   summaryLabel: { fontSize: Typography.size.sm },
   summaryValue: { fontSize: Typography.size.md },
+  summaryValueHighlight: { fontSize: Typography.size.lg },
+  viewDetailsBtn: { marginTop: Spacing.xs, paddingVertical: 6, paddingHorizontal: 10 },
+  viewDetailsBtnText: { fontSize: Typography.size.sm, textDecorationLine: 'underline' },
   bottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: Spacing.md },
   safetyRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   safetyText: { fontSize: Typography.size.xs },
