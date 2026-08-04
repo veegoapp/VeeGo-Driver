@@ -89,6 +89,18 @@ export default function RideScreen() {
   const [confirmChangeOpen, setConfirmChangeOpen] = useState(false);
   const [submittingChange, setSubmittingChange] = useState(false);
   const [creditedChange, setCreditedChange] = useState(0);
+  // Captured directly from the completion API response — ActiveSession is
+  // nulled out (session:snapshot { data: null }) the moment the ride
+  // completes, so rideSession/displayFare can't be trusted for the
+  // completed-phase display; this is the actual source of truth for it.
+  const [completionResult, setCompletionResult] = useState<{
+    finalPrice: number;
+    driverCut: number;
+    grossFare: number;
+    promoDiscount: number;
+    walletDeduction: number;
+    netCashPayable: number;
+  } | null>(null);
   // Reactive counterpart to hasExitedRef — lets location broadcasting stop
   // as soon as the ride is exiting, without waiting for unmount.
   const [isExiting, setIsExiting] = useState(false);
@@ -438,12 +450,21 @@ export default function RideScreen() {
         // doesn't mistake the backend's own end-of-ride socket push (which
         // can arrive before this await resolves) for a cancellation.
         isCompletingRef.current = true;
+        let completeResult;
         try {
-          await endpoints.rides.complete(rideId ?? '');
+          completeResult = await endpoints.rides.complete(rideId ?? '');
         } catch (err) {
           isCompletingRef.current = false;
           throw err;
         }
+        setCompletionResult({
+          finalPrice: completeResult.data.finalPrice,
+          driverCut: completeResult.data.driverCut,
+          grossFare: completeResult.data.grossFare,
+          promoDiscount: completeResult.data.promoDiscount,
+          walletDeduction: completeResult.data.walletDeduction,
+          netCashPayable: completeResult.data.netCashPayable,
+        });
         queryClient.invalidateQueries({ queryKey: ['earnings-summary'] });
         queryClient.invalidateQueries({ queryKey: ['earnings-weekly'] });
       }
@@ -509,6 +530,14 @@ export default function RideScreen() {
       queryClient.invalidateQueries({ queryKey: ['earnings-summary'] });
       queryClient.invalidateQueries({ queryKey: ['earnings-weekly'] });
       setCreditedChange(result.data.changeAmount ?? 0);
+      setCompletionResult({
+        finalPrice: result.data.finalPrice,
+        driverCut: result.data.driverCut,
+        grossFare: result.data.grossFare,
+        promoDiscount: result.data.promoDiscount,
+        walletDeduction: result.data.walletDeduction,
+        netCashPayable: result.data.netCashPayable,
+      });
       setConfirmChangeOpen(false);
       setAmountInput('');
       setPhase('completed');
@@ -774,8 +803,12 @@ export default function RideScreen() {
             </LinearGradient>
           </Animated.View>
           <Text style={[styles.completedTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.trip_done_title}</Text>
-          <Text style={[styles.fareEarned, { color: colors.primary, fontFamily: 'Inter_700Bold' }]}>+{parseFloat(String(displayFare ?? 0)).toFixed(2)} {t.egp}</Text>
-          <Text style={[styles.fareNote, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{t.added_to_earnings}</Text>
+          <Text style={[styles.fareEarned, { color: colors.primary, fontFamily: 'Inter_700Bold' }]}>
+            {completionResult != null ? `${completionResult.netCashPayable.toFixed(2)} ${t.egp}` : '—'}
+          </Text>
+          <Text style={[styles.fareNote, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
+            {completionResult != null && completionResult.netCashPayable > 0 ? t.cash_to_collect : t.added_to_earnings}
+          </Text>
           {creditedChange > 0 && (
             <Text style={[styles.fareNote, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
               {t.change_credited_note.replace('{amount}', creditedChange.toFixed(2)).replace('{egp}', t.egp)}

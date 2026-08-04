@@ -14,7 +14,21 @@ export const ridesEndpoints = {
   // differs from the fare (driver had no change). The server re-derives and
   // caps the resulting change; this is just transport, not the source of truth.
   complete: (rideId: string, amountReceived?: number) =>
-    api.patch<{ data: { rideId: number; finalPrice: number; driverCut: number; waitingCharge: number; changeAmount: number } }>(
+    api.patch<{ data: {
+      rideId: number;
+      finalPrice: number;
+      driverCut: number;
+      waitingCharge: number;
+      changeAmount: number;
+      /** Original trip price before any promo discount. */
+      grossFare: number;
+      /** EGP amount knocked off by a promo code, 0 when none was used. */
+      promoDiscount: number;
+      /** Portion of the fare paid from the passenger's wallet, 0 for cash rides. */
+      walletDeduction: number;
+      /** Cash the passenger still owes in person — the amount to actually collect. */
+      netCashPayable: number;
+    } }>(
       `/driver/rides/${rideId}/complete`,
       amountReceived !== undefined ? { amountReceived } : undefined
     ),

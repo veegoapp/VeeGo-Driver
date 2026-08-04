@@ -969,6 +969,7 @@ export const en = {
   sos_failed_msg: 'Could not send SOS. Please call emergency services: 197',
   trip_done_title: 'Trip completed!',
   added_to_earnings: "Added to today's earnings",
+  cash_to_collect: 'Cash to collect from rider',
   rate_rider_label: 'Rate {name}',
   rating_comment_placeholder: 'Add a comment (optional)',
   skip_btn: 'Skip',

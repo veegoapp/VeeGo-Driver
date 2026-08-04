@@ -969,6 +969,7 @@ export const ar: Translations = {
   sos_failed_msg: 'لم نتمكن من إرسال نداء الاستغاثة. يرجى الاتصال بالطوارئ: 197',
   trip_done_title: 'اكتملت الرحلة!',
   added_to_earnings: 'أُضيف لأرباح اليوم',
+  cash_to_collect: 'المبلغ النقدي المطلوب تحصيله من الراكب',
   rate_rider_label: 'قيّم {name}',
   rating_comment_placeholder: 'أضف تعليقاً (اختياري)',
   skip_btn: 'تخطي',
