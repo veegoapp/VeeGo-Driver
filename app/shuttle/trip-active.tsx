@@ -137,7 +137,6 @@ export default function ShuttleTripActiveScreen() {
 
   const { coords: roadPolylineCoords } = useRoadPolyline(segmentWaypoints);
 
-  const animDurationMs = 1200;
   const [stopTimer, setStopTimer] = useState<number>(SHUTTLE_TRIP_CONFIG.STOP_DURATION_S);
   const [timerActive, setTimerActive] = useState(false);
   const [passengerStatuses, setPassengerStatuses] = useState<Record<string, PassengerStatus>>({});
@@ -556,7 +555,6 @@ export default function ShuttleTripActiveScreen() {
           driverLocation={effectivePos ?? undefined}
           focusTarget={focusTarget}
           navigationMode
-          animDurationMs={animDurationMs}
         />
 
         {/* Floating top bar */}

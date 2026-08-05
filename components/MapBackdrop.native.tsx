@@ -24,7 +24,6 @@ export interface MapBackdropProps {
   approachCircle?: { latitude: number; longitude: number; radius: number } | null;
   focusTarget?: { latitude: number; longitude: number; zoom?: number } | null;
   navigationMode?: boolean;
-  animDurationMs?: number;
 }
 
 // ── Utilities ──────────────────────────────────────────────────────────────────
@@ -200,7 +199,6 @@ export const MapBackdrop = React.memo(function MapBackdrop({
   approachCircle,
   focusTarget,
   navigationMode = false,
-  animDurationMs = 700,
 }: MapBackdropProps) {
   const mapRef = useRef<MapView>(null);
   const [mapReady, setMapReady] = useState(false);
@@ -690,16 +688,17 @@ export const MapBackdrop = React.memo(function MapBackdrop({
 
 const styles = StyleSheet.create({
   // Driver nav marker (car image, rotated by bearing)
-  // Realistic on-road vehicle size (~56 dp long); tune within 42–64 dp.
+  // Realistic on-road vehicle size (~54 dp long) — kept identical to the
+  // passenger app's car marker for cross-app consistency; tune within 42–64 dp.
   driverNavOuter: {
-    width: 56,
-    height: 56,
+    width: 54,
+    height: 54,
     alignItems: 'center',
     justifyContent: 'center',
   },
   carMarkerImage: {
-    width: 56,
-    height: 56,
+    width: 54,
+    height: 54,
     // Base-orientation correction: source art points LEFT → rotate nose-up.
     transform: [{ rotate: '90deg' }],
   },

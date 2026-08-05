@@ -20,7 +20,6 @@ export interface MapBackdropProps {
   approachCircle?: { latitude: number; longitude: number; radius: number } | null;
   focusTarget?: { latitude: number; longitude: number; zoom?: number } | null;
   navigationMode?: boolean;
-  animDurationMs?: number;
 }
 
 // No-op on web — native target uses MapBackdrop.native.tsx automatically.
