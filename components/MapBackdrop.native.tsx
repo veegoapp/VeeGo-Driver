@@ -1,11 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import MapView, { Circle, Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { AnimatedRegion, Circle, Marker, MarkerAnimated, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DARK_MAP_STYLE, LIGHT_MAP_STYLE } from '@/constants/mapStyle';
 import { getToken } from '@/lib/auth';
-import { haversineMeters } from '@/hooks/useDriverLocation';
 import { useService } from '@/lib/serviceContext';
+import { useDriverTrackingBuffer } from '@/hooks/map/useDriverTrackingBuffer';
+import { useDriverSmoothedHeading } from '@/hooks/map/useDriverSmoothedHeading';
+import { useDriverCameraController } from '@/hooks/map/useDriverCameraController';
 
 
 import type { SurgeZone } from '@/lib/types';
@@ -26,29 +28,10 @@ export interface MapBackdropProps {
 }
 
 // ── Utilities ──────────────────────────────────────────────────────────────────
-
-function calcBearing(
-  from: { latitude: number; longitude: number },
-  to: { latitude: number; longitude: number },
-): number {
-  const lat1 = (from.latitude * Math.PI) / 180;
-  const lat2 = (to.latitude * Math.PI) / 180;
-  const dLng = ((to.longitude - from.longitude) * Math.PI) / 180;
-  const y = Math.sin(dLng) * Math.cos(lat2);
-  const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
-  return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
-}
-
-/**
- * EMA-style angular smoothing. Blends `next` toward `prev` along the
- * shortest arc so jumps across 0°/360° are handled correctly.
- * alpha ∈ (0,1]: higher = more responsive, lower = smoother.
- */
-function smoothAngle(prev: number | null, next: number, alpha: number): number {
-  if (prev === null) return next;
-  const diff = ((next - prev + 540) % 360) - 180; // shortest arc, −180..+180
-  return (prev + alpha * diff + 360) % 360;
-}
+//
+// Bearing/heading math (calcBearing, EMA smoothing) now lives in the shared
+// useDriverSmoothedHeading hook so the marker and camera use one heading
+// source — the previous duplicate copies here were removed (Driver D2).
 
 /**
  * Returns a coordinate shifted from `origin` by `distanceM` metres in the
@@ -118,11 +101,11 @@ const DEFAULT_CENTER = { latitude: 30.0444, longitude: 31.2357 }; // Cairo fallb
 // fresh mount (navigationMode toggling the parent Marker in/out) always
 // starts with a fresh, unpainted flag instead of a stale "already painted".
 function DriverNavCarMarker({
-  coordinate,
+  animatedCoord,
   rotation,
 }: {
-  coordinate: { latitude: number; longitude: number };
-  rotation: number;
+  animatedCoord: AnimatedRegion;
+  rotation: Animated.Value;
 }) {
   const [painted, setPainted] = useState(false);
   // Tracks the two chained requestAnimationFrame handles from handleLayout so
@@ -147,116 +130,55 @@ function DriverNavCarMarker({
   }, []);
 
   return (
-    <Marker
-      coordinate={coordinate}
-      anchor={{ x: 0.5, y: 0.5 }}
+    <MarkerAnimated
+      coordinate={animatedCoord}
+      // Rear/middle anchor so the GPS point sits near the rear axle and the car
+      // pivots realistically; flat keeps it in the course-up map plane.
+      anchor={{ x: 0.5, y: 0.6 }}
       flat
       rotation={rotation}
       tracksViewChanges={!painted}
     >
       <View style={styles.driverNavOuter} onLayout={handleLayout}>
-        {/* Car marker image — nose points up; the Marker's own
-            `rotation={rotation}` (flat) handles actual heading. */}
+        {/* Source art points LEFT; the static 90° image transform re-orients it
+            nose-up so MarkerAnimated.rotation (flat, shared smoothed heading)
+            points the front in the direction of travel. The file is not rotated. */}
         <Image
           source={require('@/assets/images/car-marker.png')}
           style={styles.carMarkerImage}
           resizeMode="contain"
         />
       </View>
-    </Marker>
+    </MarkerAnimated>
   );
 }
 
 // ── AnimatedDriverMarker ────────────────────────────────────────────────────────
 //
-// Isolated in its own component so that the setState calls driven by the
-// Animated.ValueXY listener (≈60 fps × 350 ms ≈ 21 frames per GPS tick)
-// only cause THIS component to re-render — not the entire MapBackdrop
-// (MapView + all polylines, circles, and station markers). Without this
-// isolation, every animation frame forced a full MapView re-render, which
-// is the primary source of map jank on mid-range devices.
-//
-// Bearing tracking lives here too (rather than in MapBackdrop passing a
-// `currentBearing` prop down) for the same reason: computing it in MapBackdrop
-// via a state setter forced a second full MapBackdrop re-render on every GPS
-// tick, on top of the one already caused by the driverLocation prop itself.
-// MapBackdrop's own camera-follow logic keeps a parallel bearing calculation
-// (smoothedBearingRef) fed by the same raw ticks — the two stay in sync
-// without either one triggering the other's re-render.
+// Thin renderer over the shared tracking source (Driver D1/D2). Position comes
+// from `animatedCoord` (the one interpolated AnimatedRegion that also drives the
+// camera) and rotation from the shared smoothed `rotation` Animated.Value. This
+// component no longer owns any animation or bearing calculation — motion happens
+// natively via the AnimatedRegion/Animated.Value, so it barely re-renders
+// (previously the ValueXY JS listener re-rendered it ~30 fps per tick).
 const AnimatedDriverMarker = React.memo(function AnimatedDriverMarker({
-  driverLocation,
+  animatedCoord,
+  rotation,
   navigationMode,
-  animDurationMs,
 }: {
-  driverLocation: { latitude: number; longitude: number; heading?: number | null };
+  animatedCoord: AnimatedRegion;
+  rotation: Animated.Value;
   navigationMode: boolean;
-  animDurationMs: number;
 }) {
-  const animRef = useRef<Animated.ValueXY | null>(null);
-  const [coord, setCoord] = useState<{ latitude: number; longitude: number }>({
-    latitude: driverLocation.latitude,
-    longitude: driverLocation.longitude,
-  });
-  const prevPosRef = useRef<{ latitude: number; longitude: number } | null>(null);
-  const smoothedBearingRef = useRef<number | null>(null);
-  const [bearing, setBearing] = useState(0);
-
-  // Initialise ValueXY once on mount and wire the JS-side listener.
-  // The listener updates coord state each animation frame so the Marker
-  // re-renders smoothly — but only this small component, not MapBackdrop.
-  useEffect(() => {
-    const av = new Animated.ValueXY({
-      x: driverLocation.latitude,
-      y: driverLocation.longitude,
-    });
-    av.addListener(({ x, y }) => setCoord({ latitude: x, longitude: y }));
-    animRef.current = av;
-    return () => { av.removeAllListeners(); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Tween to each new GPS fix.
-  useEffect(() => {
-    if (!animRef.current) return;
-    Animated.timing(animRef.current, {
-      toValue: { x: driverLocation.latitude, y: driverLocation.longitude },
-      duration: animDurationMs,
-      useNativeDriver: false, // coordinate values cannot use the native driver
-    }).start();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [driverLocation.latitude, driverLocation.longitude]);
-
-  // Bearing tracking (EMA smoothing) — mirrors MapBackdrop's own bearing
-  // effect, computed independently here so a bearing update only re-renders
-  // this marker, not the parent map.
-  useEffect(() => {
-    const prev = prevPosRef.current;
-    let rawBearing: number | null = null;
-    if (
-      prev &&
-      (prev.latitude !== driverLocation.latitude || prev.longitude !== driverLocation.longitude)
-    ) {
-      rawBearing = calcBearing(prev, driverLocation);
-    } else if (driverLocation.heading != null && driverLocation.heading !== 0) {
-      rawBearing = driverLocation.heading;
-    }
-    if (rawBearing !== null) {
-      const smoothed = smoothAngle(smoothedBearingRef.current, rawBearing, 0.35);
-      smoothedBearingRef.current = smoothed;
-      setBearing(smoothed);
-    }
-    prevPosRef.current = { latitude: driverLocation.latitude, longitude: driverLocation.longitude };
-  }, [driverLocation.latitude, driverLocation.longitude, driverLocation.heading]);
-
   if (navigationMode) {
-    return <DriverNavCarMarker coordinate={coord} rotation={bearing} />;
+    return <DriverNavCarMarker animatedCoord={animatedCoord} rotation={rotation} />;
   }
   return (
-    <Marker coordinate={coord} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
+    <MarkerAnimated coordinate={animatedCoord} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
       <View style={styles.driverIdleMarker}>
         <View style={styles.driverIdleInner} />
       </View>
-    </Marker>
+    </MarkerAnimated>
   );
 });
 
@@ -285,20 +207,36 @@ export const MapBackdrop = React.memo(function MapBackdrop({
   const [userPanned, setUserPanned] = useState(false);
   const [autoPolyline, setAutoPolyline] = useState<Array<{ latitude: number; longitude: number }> | null>(null);
 
-  const prevPosRef = useRef<{ latitude: number; longitude: number } | null>(null);
   const userPannedRef = useRef(false);
   const initialFitDoneRef = useRef(false);
-  // Bearing smoothing — persists smoothed value across renders
-  const smoothedBearingRef = useRef<number | null>(null);
-  // Last driver position from which a navigation-follow animateCamera was fired.
-  // Used to gate camera updates behind a minimum-movement threshold so that
-  // stationary GPS noise and back-to-back 1 Hz ticks don't queue overlapping
-  // animations. Reset to null whenever navigation mode is entered.
-  const prevCameraPositionRef = useRef<{ latitude: number; longitude: number } | null>(null);
   // Ref mirror of the navigationMode prop — lets callbacks read current value without closure capture
   const navigationModeRef = useRef(navigationMode);
   // Auto-recenter timer handle — cleared on re-pan, nav exit, or unmount
   const autoRecenterTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── Unified tracking source (Driver D1/D2) ────────────────────────────────
+  // One interpolated position (animatedCoord for the marker, positionRef for
+  // the camera) and one smoothed heading (rotation for the marker, headingRef
+  // for the camera). GPS validation lives inside the buffer/heading hooks.
+  const { animatedCoord, positionRef } = useDriverTrackingBuffer(driverLocation);
+  const { rotation: driverRotation, headingRef } = useDriverSmoothedHeading(driverLocation);
+
+  // ── Continuous follow camera (Driver D3) ──────────────────────────────────
+  // rAF setCamera loop reading the shared positionRef + headingRef, keeping the
+  // existing look-ahead offset, pitch, zoom, pan suspension, and focusTarget
+  // priority. Replaces the old per-tick animateCamera nav-follow effect.
+  useDriverCameraController({
+    mapRef,
+    positionRef,
+    headingRef,
+    enabled: navigationMode && mapReady,
+    userPannedRef,
+    focusActive: !!focusTarget,
+    pitch: 25,
+    zoom: 18,
+    altitude: 160,
+    lookAheadM: 100,
+  });
 
   // ── Theme management — follows VeeGo app theme (isDarkMode from ServiceContext) ─
   const { isDarkMode, setIsDarkMode } = useService();
@@ -320,39 +258,12 @@ export const MapBackdrop = React.memo(function MapBackdrop({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Bearing tracking (with EMA smoothing) ────────────────────────────────
-  // Ref-only — no setState here. This feeds the camera-follow effect and
-  // handleRecenter below via smoothedBearingRef; AnimatedDriverMarker computes
-  // its own independent (but equivalent) bearing for marker rotation so that
-  // neither consumer forces a re-render of the other. Previously this called
-  // setCurrentBearing() on every GPS tick, which forced a second full
-  // MapBackdrop re-render (MapView + all polylines/circles/markers) on top of
-  // the one already caused by the driverLocation prop change itself.
-  useEffect(() => {
-    if (!driverLocation) return;
-    const prev = prevPosRef.current;
-    let rawBearing: number | null = null;
-    if (
-      prev &&
-      (prev.latitude !== driverLocation.latitude || prev.longitude !== driverLocation.longitude)
-    ) {
-      rawBearing = calcBearing(prev, driverLocation);
-    } else if (driverLocation.heading != null && driverLocation.heading !== 0) {
-      rawBearing = driverLocation.heading;
-    }
-    if (rawBearing !== null) {
-      smoothedBearingRef.current = smoothAngle(smoothedBearingRef.current, rawBearing, 0.35);
-    }
-    prevPosRef.current = { latitude: driverLocation.latitude, longitude: driverLocation.longitude };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [driverLocation?.latitude, driverLocation?.longitude]);
+  // Bearing tracking moved to the shared useDriverSmoothedHeading hook
+  // (Driver D2) — headingRef feeds both the marker rotation and the camera.
 
   // ── Sync navigationMode prop into ref (used by stable callbacks) ────────
   useEffect(() => {
     navigationModeRef.current = navigationMode;
-    // Reset camera position tracking on navigation mode entry so the first
-    // GPS fix after entering nav mode always triggers a camera update.
-    if (navigationMode) prevCameraPositionRef.current = null;
   }, [navigationMode]);
 
   // ── Cancel auto-recenter timer when nav mode ends or on unmount ──────────
@@ -371,63 +282,11 @@ export const MapBackdrop = React.memo(function MapBackdrop({
     };
   }, [navigationMode]);
 
-  // ── Navigation mode camera follow (look-ahead offset) ────────────────────
-  // The camera centre is placed 100 m ahead of the driver in the direction of
-  // the smoothed bearing so the driver marker sits in the lower portion of the
-  // visible map and more road is shown ahead — the Uber/Careem look.
-  //
-  // Camera decision priority (explicit):
-  //   1. focusTarget — when set, its dedicated effect owns the camera and this
-  //      effect yields immediately. focusTarget is read without being added to
-  //      deps because its own effect handles the camera on focusTarget changes;
-  //      this guard only prevents nav-follow from overriding it on GPS ticks.
-  //   2. Navigation follow (this effect) — fires on GPS ticks while navigating.
-  //   3. Initial fit — fitToCoordinates, handled by a separate effect below.
-  //
-  // Minimum-movement gate: animateCamera is skipped when the driver has moved
-  // less than NAV_CAMERA_MIN_MOVE_M since the last camera update. This stops
-  // stationary GPS noise and back-to-back 1 Hz ticks from queuing overlapping
-  // animations that produce visible camera stutter.
-  //
-  // Bearing note: read from smoothedBearingRef (updated synchronously, ref-only,
-  // by the bearing effect above) — there is no bearing *state* on this
-  // component, so reading it here can't itself trigger an extra render.
-  const NAV_CAMERA_MIN_MOVE_M = 3;
-  useEffect(() => {
-    if (!navigationMode || !driverLocation || userPannedRef.current || !mapReady) return;
-    // Priority 1: focusTarget owns the camera — yield.
-    if (focusTarget) return;
-    // Skip if the driver hasn't moved far enough to justify a new camera frame.
-    if (prevCameraPositionRef.current) {
-      const moved = haversineMeters(
-        prevCameraPositionRef.current.latitude,
-        prevCameraPositionRef.current.longitude,
-        driverLocation.latitude,
-        driverLocation.longitude,
-      );
-      if (moved < NAV_CAMERA_MIN_MOVE_M) return;
-    }
-    const bearing = smoothedBearingRef.current ?? 0;
-    const center = offsetCoord(
-      { latitude: driverLocation.latitude, longitude: driverLocation.longitude },
-      bearing,
-      100,
-    );
-    prevCameraPositionRef.current = { latitude: driverLocation.latitude, longitude: driverLocation.longitude };
-    mapRef.current?.animateCamera(
-      {
-        center,
-        heading: bearing,
-        pitch: 25,
-        zoom: 18,
-        altitude: 160,
-      },
-      { duration: animDurationMs },
-    );
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [driverLocation?.latitude, driverLocation?.longitude, navigationMode, mapReady]);
-  // focusTarget intentionally omitted — its own effect handles the camera when
-  // focusTarget changes; this effect only guards against firing alongside it.
+  // Navigation-mode follow is now a continuous rAF setCamera loop
+  // (useDriverCameraController, wired above) reading the shared interpolated
+  // positionRef + smoothed headingRef, keeping the 100 m look-ahead offset,
+  // pitch, zoom, pan suspension, and focusTarget priority. The old per-GPS-tick
+  // animateCamera(raw driverLocation) effect was removed (Driver D3).
 
   // ── Focus target camera control ──────────────────────────────────────────
   useEffect(() => {
@@ -517,17 +376,14 @@ export const MapBackdrop = React.memo(function MapBackdrop({
     }
     userPannedRef.current = false;
     setUserPanned(false);
-    if (!driverLocation) return;
-    // In nav mode use the same look-ahead offset as the follow camera so the
-    // view is identical whether the user pressed Recenter or it fired automatically.
-    const bearing = smoothedBearingRef.current ?? 0;
-    const center = navigationMode
-      ? offsetCoord(
-          { latitude: driverLocation.latitude, longitude: driverLocation.longitude },
-          bearing,
-          100,
-        )
-      : { latitude: driverLocation.latitude, longitude: driverLocation.longitude };
+    // Recenter onto the shared interpolated position + smoothed heading so the
+    // discrete recenter matches exactly what the continuous follow camera does.
+    const pos = positionRef.current ?? (driverLocation
+      ? { latitude: driverLocation.latitude, longitude: driverLocation.longitude }
+      : null);
+    if (!pos) return;
+    const bearing = headingRef.current;
+    const center = navigationMode ? offsetCoord(pos, bearing, 100) : pos;
     mapRef.current?.animateCamera(
       {
         center,
@@ -795,18 +651,14 @@ export const MapBackdrop = React.memo(function MapBackdrop({
         )}
 
         {/* ── Driver marker (nav + idle) — rendered by AnimatedDriverMarker ── */}
-        {/* AnimatedDriverMarker owns its own animation state so that the     */}
-        {/* ~60 fps coord updates during each GPS-tick tween only re-render   */}
-        {/* that small component, not the entire MapView + overlays.          */}
+        {/* Position/rotation come from the shared tracking source (animatedCoord */}
+        {/* + rotation), the same source that drives the follow camera. Motion   */}
+        {/* is native (AnimatedRegion/Animated.Value), so this barely re-renders. */}
         {driverLocation && (
           <AnimatedDriverMarker
-            driverLocation={{
-              latitude: driverLocation.latitude,
-              longitude: driverLocation.longitude,
-              heading: driverLocation.heading,
-            }}
+            animatedCoord={animatedCoord}
+            rotation={driverRotation}
             navigationMode={navigationMode}
-            animDurationMs={animDurationMs}
           />
         )}
       </MapView>
@@ -838,15 +690,18 @@ export const MapBackdrop = React.memo(function MapBackdrop({
 
 const styles = StyleSheet.create({
   // Driver nav marker (car image, rotated by bearing)
+  // Realistic on-road vehicle size (~56 dp long); tune within 42–64 dp.
   driverNavOuter: {
-    width: 100,
-    height: 100,
+    width: 56,
+    height: 56,
     alignItems: 'center',
     justifyContent: 'center',
   },
   carMarkerImage: {
-    width: 100,
-    height: 100,
+    width: 56,
+    height: 56,
+    // Base-orientation correction: source art points LEFT → rotate nose-up.
+    transform: [{ rotate: '90deg' }],
   },
   // Driver idle marker (blue circle)
   driverIdleMarker: {
