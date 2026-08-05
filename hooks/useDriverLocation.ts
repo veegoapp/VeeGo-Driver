@@ -6,6 +6,13 @@ export type DriverPosition = {
   longitude: number;
   heading: number | null;
   speed: number | null;
+  /** Horizontal accuracy in meters (expo-location coords.accuracy). Null when
+   *  the platform doesn't report it. Additive/optional — consumers that don't
+   *  read it are unaffected. */
+  accuracy: number | null;
+  /** GPS fix capture time as epoch milliseconds (expo-location LocationObject
+   *  .timestamp). Null when unavailable. */
+  timestamp: number | null;
 };
 
 export function haversineMeters(

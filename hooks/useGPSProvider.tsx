@@ -113,6 +113,8 @@ export function GPSProvider({ children }: { children: React.ReactNode }) {
               longitude: loc.coords.longitude,
               heading: loc.coords.heading ?? null,
               speed: loc.coords.speed ?? null,
+              accuracy: loc.coords.accuracy ?? null,
+              timestamp: loc.timestamp ?? null,
             });
           },
         );

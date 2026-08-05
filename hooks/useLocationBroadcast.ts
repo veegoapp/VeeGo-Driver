@@ -84,23 +84,40 @@ export function useLocationBroadcast({ enabled, tripId, rideId }: Options): void
     if (now - lastBroadcastAtRef.current < BROADCAST_INTERVAL_MS) return;
     lastBroadcastAtRef.current = now;
 
-    const { latitude, longitude, speed, heading } = position;
+    const { latitude, longitude, speed, heading, accuracy, timestamp } = position;
     const currentRideId = rideIdRef.current ?? undefined;
     const sock = socketRef.current;
     const speedKmh = speed != null && speed >= 0 ? Math.round(speed * 3.6) : undefined;
     const headingDeg = heading != null && heading >= 0 ? Math.round(heading) : undefined;
+    // Ride-channel enrichment (Phase 1). Raw sensor units — NOT converted:
+    //   speedMs    : metres/second straight from GPS (the idle channel below
+    //                still sends km/h; the ride channel intentionally differs
+    //                because downstream interpolation/dead-reckoning wants m/s).
+    //   accuracyM  : horizontal accuracy in metres.
+    //   fixTs      : GPS fix capture time as epoch milliseconds.
+    // Each is emitted only when valid so the payload stays backward compatible.
+    const speedMs = speed != null && speed >= 0 ? speed : undefined;
+    const accuracyM = accuracy != null && accuracy >= 0 ? accuracy : undefined;
+    const fixTs = timestamp != null ? timestamp : undefined;
 
     // Active-ride mode: use the confirmed driver:ride:location contract
-    // (rideId, latitude, longitude, heading) — socket-only. No REST fallback
-    // exists for this contract; useActiveLocationTracking already covers
-    // the disconnected/offline case for rides via its own REST channel.
+    // (rideId, latitude, longitude, heading, speed, accuracy, timestamp) —
+    // socket-only. No REST fallback exists for this contract;
+    // useActiveLocationTracking already covers the disconnected/offline case
+    // for rides via its own REST channel.
     // heading is included so the passenger app's driver marker (and, once the
     // backend forwards it, the camera bearing) can track the driver's facing
-    // direction instead of always rendering north-up.
+    // direction instead of always rendering north-up. speed/accuracy/timestamp
+    // are additive Phase-1 fields the backend currently strips (non-strict
+    // schema) and will forward in a later phase — sending them now is a no-op
+    // for existing passenger behavior.
     if (currentRideId != null) {
       if (sock?.connected) {
         const ridePayload: Record<string, unknown> = { rideId: currentRideId, latitude, longitude };
         if (headingDeg !== undefined) ridePayload.heading = headingDeg;
+        if (speedMs !== undefined) ridePayload.speed = speedMs;
+        if (accuracyM !== undefined) ridePayload.accuracy = accuracyM;
+        if (fixTs !== undefined) ridePayload.timestamp = fixTs;
         sock.emit(SOCKET_EVENTS.DRIVER_RIDE_LOCATION, ridePayload);
       }
       return;
