@@ -38,8 +38,15 @@ interface DriverPoint extends LatLng {
 const SPEED_FREEZE_MS = 1.5; // ~5.4 km/h
 const ROTATION_MS = 400;
 // Only trust a positional bearing once the vehicle has moved at least this far
-// since the last bearing fix — below it, GPS jitter dominates the direction.
-const MIN_MOVE_FOR_BEARING_M = 2;
+// *from the last bearing anchor* — below it, GPS jitter dominates the direction
+// and produces the constant left/right map shimmy (amplified by the camera's
+// look-ahead). The anchor accumulates distance across fixes, so the heading
+// still updates at slow speeds; it just won't be recomputed from ~1 m of noise.
+const MIN_MOVE_FOR_BEARING_M = 5;
+// Hysteresis: ignore target changes smaller than this so sub-threshold GPS
+// noise never re-animates the rotation (which the camera follows). Real turns
+// accumulate well past it and still slew smoothly, in coarse-but-steady steps.
+const HEADING_DEADBAND_DEG = 6;
 const MAX_JUMP_M = 500;
 
 function inRange(lat: number, lng: number): boolean {
@@ -78,6 +85,11 @@ export function useDriverSmoothedHeading(point: DriverPoint | null | undefined):
   const prevTimeRef = useRef<number>(0);
   const seededRef = useRef<boolean>(false);
   const lastAcceptedRef = useRef<LatLng | null>(null);
+  // Position the last accepted bearing was measured from. Unlike prevPosRef
+  // (which advances every fix, for speed), this only advances when a bearing is
+  // actually taken — so distance accrues across slow-crawl fixes instead of
+  // resetting each tick, and the heading neither goes stale nor jitters.
+  const bearingAnchorRef = useRef<LatLng | null>(null);
 
   // Keep a plain-number mirror of the animated rotation for the camera.
   useEffect(() => {
@@ -118,13 +130,28 @@ export function useDriverSmoothedHeading(point: DriverPoint | null | undefined):
     if (!moving) return; // low speed → freeze (hold last stable heading)
 
     // ── Choose a bearing ───────────────────────────────────────────────────
+    // Course of travel (positional bearing) is the only ongoing source — the
+    // device compass (point.heading) is used ONLY to seed the very first
+    // orientation, never for updates: its magnetometer noise is the primary
+    // cause of the "sensor-game" left/right map spin.
+    const anchor = bearingAnchorRef.current;
     let target: number | null = null;
-    if (prev && movedM >= MIN_MOVE_FOR_BEARING_M) {
-      target = calcBearing(prev, cur); // course of travel — most reliable while moving
-    } else if (typeof point.heading === 'number' && Number.isFinite(point.heading)) {
-      target = norm360(point.heading);
+    if (anchor) {
+      const movedFromAnchor = haversineMeters(anchor.latitude, anchor.longitude, cur.latitude, cur.longitude);
+      if (movedFromAnchor >= MIN_MOVE_FOR_BEARING_M) {
+        target = calcBearing(anchor, cur);
+        bearingAnchorRef.current = cur; // advance only when a bearing is taken
+      }
+    } else {
+      // First fix while moving — set the anchor and, if we have a device
+      // course, use it once so the car isn't stuck pointing north until it has
+      // travelled the first few metres.
+      bearingAnchorRef.current = cur;
+      if (!seededRef.current && typeof point.heading === 'number' && Number.isFinite(point.heading)) {
+        target = norm360(point.heading);
+      }
     }
-    if (target == null) return;
+    if (target == null) return; // not enough movement yet → hold last stable heading
     target = norm360(target);
 
     // ── Seed instantly, then slew along the shortest arc ───────────────────
@@ -138,7 +165,9 @@ export function useDriverSmoothedHeading(point: DriverPoint | null | undefined):
     }
 
     const delta = shortestDelta(lastStableRef.current, target);
-    if (delta === 0) return;
+    // Dead-band: ignore sub-threshold wobble so the camera-followed rotation
+    // isn't perpetually re-animated by GPS noise.
+    if (Math.abs(delta) < HEADING_DEADBAND_DEG) return;
     lastStableRef.current = target;
     continuousRef.current += delta;
     Animated.timing(rotation, {
