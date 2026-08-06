@@ -384,19 +384,46 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (Constants.appOwnership !== 'expo' && Platform.OS === 'android') {
-      // NOTE: Android notification channels are IMMUTABLE once created — editing
-      // an existing channel's sound has no effect on devices where the old
-      // channel already exists. The `-v2` suffix forces a brand-new channel so
-      // the custom sound actually takes effect (fixes silent background alerts).
-      // The backend push payloads (channelId) must match these ids exactly.
-      Notifications.setNotificationChannelAsync('ride-requests-v2', {
+      // ── Why background alerts were silent (and kept coming back) ──────────────
+      // On Android 8+ the sound of a notification shown while the app is in the
+      // background is decided by its NOTIFICATION CHANNEL, and channels are
+      // IMMUTABLE: once a channel id exists on a device, its sound can never be
+      // changed — re-calling setNotificationChannelAsync with a new sound is a
+      // silent no-op. The previous bug was that the sound-carrying channel id
+      // (`ride-requests-v2`) was ALSO wired as the app's `defaultChannel` in the
+      // expo-notifications plugin. That let Firebase/Android auto-create that
+      // channel WITHOUT a custom sound (default tone) before this JS ever ran —
+      // and from then on the channel was permanently stuck on the default tone.
+      //
+      // The durable fix has two parts:
+      //   1. Fresh channel ids (`-v3`) so we start from clean, uncorrupted
+      //      channels on every device.
+      //   2. `defaultChannel` in app.json now points at a SEPARATE `default`
+      //      channel (created below), so the sound channels are only ever
+      //      created here — with their sound — and can never be auto-created
+      //      soundless. Keep the backend push `channelId`s in sync with these.
+      //
+      // NOTE: this only takes effect in a native build (EAS build), not an OTA
+      // update — the .wav files are bundled into the native binary. A fresh
+      // channel id (v3) means no uninstall is needed; Android has never seen it.
+
+      // Neutral default channel — target of app.json `defaultChannel` and of any
+      // generic notification that carries no explicit channelId. Uses the system
+      // default sound on purpose.
+      Notifications.setNotificationChannelAsync('default', {
+        name: 'General',
+        importance: Notifications.AndroidImportance.DEFAULT,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#2d2d42',
+      });
+      Notifications.setNotificationChannelAsync('ride-requests-v3', {
         name: 'Ride Requests',
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#2d2d42',
         sound: 'trip_request.wav',
       });
-      Notifications.setNotificationChannelAsync('shuttle-alerts-v2', {
+      Notifications.setNotificationChannelAsync('shuttle-alerts-v3', {
         name: 'Shuttle Alerts',
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 250, 250, 250],

@@ -38,7 +38,7 @@
         {
           "icon": "./assets/images/icon.png",
           "color": "#2d2d42",
-          "defaultChannel": "ride-requests-v2",
+          "defaultChannel": "default",
           "sounds": [
             "./assets/sounds/trip_request.wav",
             "./assets/sounds/shuttle_approaching.wav"
