@@ -2,6 +2,7 @@
   "expo": {
     "name": "VeeGo Driver",
     "slug": "veego-driver",
+    "owner": "mohamedfarghaly91",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -38,7 +39,10 @@
           "icon": "./assets/images/icon.png",
           "color": "#2d2d42",
           "defaultChannel": "ride-requests-v2",
-          "sounds": ["./assets/sounds/trip_request.wav", "./assets/sounds/shuttle_approaching.wav"]
+          "sounds": [
+            "./assets/sounds/trip_request.wav",
+            "./assets/sounds/shuttle_approaching.wav"
+          ]
         }
       ],
       [
@@ -63,7 +67,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "a80f1a4b-eed3-4897-83b7-863c89226679"
+        "projectId": "11857108-9eef-47d8-ba83-6512a97a88bb"
       }
     }
   }
