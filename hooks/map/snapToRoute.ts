@@ -82,3 +82,70 @@ export function snapPointToRoute(
     longitude: point.longitude + (mPerDegLng === 0 ? 0 : bestX / mPerDegLng),
   };
 }
+
+/**
+ * Returns the remaining route AHEAD of `point`, starting exactly at the point's
+ * projection onto the route (everything already driven is dropped). Used to keep
+ * the drawn route line glued to the driver marker and receding continuously —
+ * instead of trimming to the nearest vertex, which recedes in coarse jumps and
+ * lets the (smoothly interpolated) marker run ahead of the line. Returns null
+ * when the point is farther than `maxSnapMeters` from the route (off-route), so
+ * the caller draws the untrimmed route.
+ */
+export function remainingRouteFromPoint(
+  point: LatLng,
+  route: LatLng[] | null | undefined,
+  maxSnapMeters: number,
+): LatLng[] | null {
+  if (!route || route.length < 2) return null;
+
+  const latRad = (point.latitude * Math.PI) / 180;
+  const mPerDegLng = M_PER_DEG_LAT * Math.cos(latRad);
+  const toXY = (c: LatLng): { x: number; y: number } => ({
+    x: (c.longitude - point.longitude) * mPerDegLng,
+    y: (c.latitude - point.latitude) * M_PER_DEG_LAT,
+  });
+
+  let bestX = 0;
+  let bestY = 0;
+  let bestDistSq = Infinity;
+  let bestSeg = -1;
+
+  for (let i = 0; i < route.length - 1; i++) {
+    const a = toXY(route[i]);
+    const b = toXY(route[i + 1]);
+    const abx = b.x - a.x;
+    const aby = b.y - a.y;
+    const lenSq = abx * abx + aby * aby;
+
+    let px: number;
+    let py: number;
+    if (lenSq === 0) {
+      px = a.x;
+      py = a.y;
+    } else {
+      let t = -(a.x * abx + a.y * aby) / lenSq;
+      t = t < 0 ? 0 : t > 1 ? 1 : t;
+      px = a.x + t * abx;
+      py = a.y + t * aby;
+    }
+
+    const distSq = px * px + py * py;
+    if (distSq < bestDistSq) {
+      bestDistSq = distSq;
+      bestX = px;
+      bestY = py;
+      bestSeg = i;
+    }
+  }
+
+  if (bestSeg < 0 || Math.sqrt(bestDistSq) > maxSnapMeters) return null;
+
+  const projected: LatLng = {
+    latitude: point.latitude + bestY / M_PER_DEG_LAT,
+    longitude: point.longitude + (mPerDegLng === 0 ? 0 : bestX / mPerDegLng),
+  };
+
+  // Start at the driver's projected position, then keep everything ahead.
+  return [projected, ...route.slice(bestSeg + 1)];
+}

@@ -9,7 +9,7 @@ import { useService } from '@/lib/serviceContext';
 import { useDriverTrackingBuffer } from '@/hooks/map/useDriverTrackingBuffer';
 import { useDriverSmoothedHeading } from '@/hooks/map/useDriverSmoothedHeading';
 import { useDriverCameraController } from '@/hooks/map/useDriverCameraController';
-import { snapPointToRoute } from '@/hooks/map/snapToRoute';
+import { snapPointToRoute, remainingRouteFromPoint } from '@/hooks/map/snapToRoute';
 
 // Snap the marker to the road only while it's within this many metres of the
 // route. Kept just under useNavigationRoute's 50 m off-route threshold so the
@@ -435,11 +435,24 @@ export const MapBackdrop = React.memo(function MapBackdrop({
   );
 
   // ── Route line: road-snapped → auto-fetched → null ───────────────────────
-  const displayRouteCoords = roadPolyline?.length
+  // While navigating, start the line at the driver's snapped position and drop
+  // the driven portion (remainingRouteFromPoint) so the line stays glued to the
+  // marker and recedes continuously, instead of trimming to the nearest route
+  // vertex — which recedes in coarse jumps every few metres and lets the
+  // smoothly-interpolated marker run ahead of the line. Off-route (or non-nav)
+  // falls back to the full route.
+  const baseRouteCoords = roadPolyline?.length
     ? roadPolyline
     : autoPolyline?.length
     ? autoPolyline
     : null;
+  const displayRouteCoords = useMemo(() => {
+    if (!baseRouteCoords) return null;
+    if (!navigationMode || !effectiveDriverLocation) return baseRouteCoords;
+    const glued = remainingRouteFromPoint(effectiveDriverLocation, baseRouteCoords, SNAP_MAX_M);
+    return glued && glued.length >= 2 ? glued : baseRouteCoords;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [baseRouteCoords, navigationMode, effectiveDriverLocation?.latitude, effectiveDriverLocation?.longitude]);
 
   // ── One-shot initial ride framing (non-nav mode) ─────────────────────────
   // Include the driver when it is already available, but do not refit as the
