@@ -105,6 +105,11 @@ export default function RideScreen() {
   // Reactive counterpart to hasExitedRef — lets location broadcasting stop
   // as soon as the ride is exiting, without waiting for unmount.
   const [isExiting, setIsExiting] = useState(false);
+  // Live ETA + distance to the current target (pickup while approaching, dropoff
+  // during the trip), pushed by the backend (ride:eta_update — real Google road
+  // distance/duration) and refreshed as the driver moves. Null until the first
+  // update; getPhaseEta falls back to the static ride estimate meanwhile.
+  const [liveEta, setLiveEta] = useState<{ etaMinutes: number; distanceM: number } | null>(null);
   // Google-Maps-style navigation: the trip card collapses to a peek at the
   // bottom while actively driving (to_pickup / in_trip) so the car marker sits
   // in the lower third and the road ahead fills the screen. It auto-expands
@@ -224,6 +229,14 @@ export default function RideScreen() {
       if (nextPhase) setPhase(nextPhase);
     };
 
+    const handleEtaUpdate = (data: unknown) => {
+      if (!matchesThisRide(data)) return;
+      const p = data as { etaMinutes?: number; distanceM?: number };
+      if (typeof p.etaMinutes === 'number' || typeof p.distanceM === 'number') {
+        setLiveEta({ etaMinutes: p.etaMinutes ?? 0, distanceM: p.distanceM ?? 0 });
+      }
+    };
+
     const handleDriverAssigned = (data: unknown) => {
       if (!matchesThisRide(data)) return;
       setPhase('to_pickup');
@@ -253,6 +266,7 @@ export default function RideScreen() {
     socket.on(SOCKET_EVENTS.RIDE_TIMEOUT, handleTimeout);
     socket.on(SOCKET_EVENTS.RIDE_NO_SHOW_CANCELLED, handleNoShowCancelled);
     socket.on(SOCKET_EVENTS.RIDE_STATUS_UPDATE, handleStatusChanged);
+    socket.on('ride:eta_update', handleEtaUpdate);
     socket.on(SOCKET_EVENTS.RIDE_DRIVER_ASSIGNED, handleDriverAssigned);
     socket.on(SOCKET_EVENTS.RIDE_DRIVER_ARRIVED, handleDriverArrived);
     socket.on(SOCKET_EVENTS.RIDE_STARTED, handleRideStarted);
@@ -264,6 +278,7 @@ export default function RideScreen() {
       socket.off(SOCKET_EVENTS.RIDE_TIMEOUT, handleTimeout);
       socket.off(SOCKET_EVENTS.RIDE_NO_SHOW_CANCELLED, handleNoShowCancelled);
       socket.off(SOCKET_EVENTS.RIDE_STATUS_UPDATE, handleStatusChanged);
+      socket.off('ride:eta_update', handleEtaUpdate);
       socket.off(SOCKET_EVENTS.RIDE_DRIVER_ASSIGNED, handleDriverAssigned);
       socket.off(SOCKET_EVENTS.RIDE_DRIVER_ARRIVED, handleDriverArrived);
       socket.off(SOCKET_EVENTS.RIDE_STARTED, handleRideStarted);
@@ -305,6 +320,11 @@ export default function RideScreen() {
   useEffect(() => {
     if (phase === 'completed') completedRef.current = true;
   }, [phase]);
+
+  // Clear the live ETA/distance on a phase change (e.g. pickup → dropoff) so a
+  // stale value for the previous target never lingers; the backend re-emits for
+  // the new target on the next location tick.
+  useEffect(() => { setLiveEta(null); }, [phase]);
 
   // ActiveSession termination: when the server ends the ride (cancellation,
   // timeout, admin action), the session:snapshot socket event delivers
@@ -410,11 +430,20 @@ export default function RideScreen() {
     : null;
 
   function getPhaseEta(): string {
+    if (phase === 'arrived') return t.waiting_for_rider;
+
+    // Live, real values (backend ride:eta_update — Google road distance +
+    // duration to the current target) take priority and shrink as the driver
+    // moves. Fall back to the static ride estimate until the first update lands.
+    const liveParts: string[] = [];
+    if (liveEta?.etaMinutes != null && liveEta.etaMinutes > 0) liveParts.push(`${liveEta.etaMinutes} min`);
+    if (liveEta?.distanceM != null && liveEta.distanceM > 0) liveParts.push(`${(liveEta.distanceM / 1000).toFixed(1)} km`);
+    if (liveParts.length > 0) return liveParts.join(' · ');
+
     if (phase === 'to_pickup') {
-      // ETA is not available in ActiveSession; show distance only if present.
+      // No live update yet — show the static distance if present.
       return displayDistance ?? t.calculating;
     }
-    if (phase === 'arrived') return t.waiting_for_rider;
     if (phase === 'in_trip') {
       const parts: string[] = [];
       if (displayDuration) parts.push(displayDuration);
