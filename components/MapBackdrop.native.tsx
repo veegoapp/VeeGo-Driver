@@ -9,6 +9,13 @@ import { useService } from '@/lib/serviceContext';
 import { useDriverTrackingBuffer } from '@/hooks/map/useDriverTrackingBuffer';
 import { useDriverSmoothedHeading } from '@/hooks/map/useDriverSmoothedHeading';
 import { useDriverCameraController } from '@/hooks/map/useDriverCameraController';
+import { snapPointToRoute } from '@/hooks/map/snapToRoute';
+
+// Snap the marker to the road only while it's within this many metres of the
+// route. Kept just under useNavigationRoute's 50 m off-route threshold so the
+// snap releases to the raw fix a moment before a reroute is triggered — no
+// visible snap-back at the boundary.
+const SNAP_MAX_M = 45;
 
 
 import type { SurgeZone } from '@/lib/types';
@@ -210,12 +217,34 @@ export const MapBackdrop = React.memo(function MapBackdrop({
   // Auto-recenter timer handle — cleared on re-pan, nav exit, or unmount
   const autoRecenterTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // ── Snap-to-road (map-matching) ────────────────────────────────────────────
+  // Project the raw GPS fix onto the active road route so the marker and camera
+  // follow the street instead of GPS multipath jitter. Only while navigating
+  // and within SNAP_MAX_M of the route; beyond that the raw fix is kept so a
+  // genuinely off-route driver still shows their real position and the reroute
+  // logic engages. Feeds BOTH the position buffer and the heading hook, so the
+  // smoothed course also comes from the on-road path, not the noisy raw track.
+  const snapRoute =
+    roadPolyline && roadPolyline.length >= 2
+      ? roadPolyline
+      : autoPolyline && autoPolyline.length >= 2
+      ? autoPolyline
+      : null;
+
+  const effectiveDriverLocation = useMemo(() => {
+    if (!driverLocation || !navigationMode || !snapRoute) return driverLocation;
+    const snapped = snapPointToRoute(driverLocation, snapRoute, SNAP_MAX_M);
+    if (!snapped) return driverLocation;
+    return { ...driverLocation, latitude: snapped.latitude, longitude: snapped.longitude };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [driverLocation?.latitude, driverLocation?.longitude, driverLocation?.heading, driverLocation?.speed, navigationMode, snapRoute]);
+
   // ── Unified tracking source (Driver D1/D2) ────────────────────────────────
   // One interpolated position (animatedCoord for the marker, positionRef for
   // the camera) and one smoothed heading (rotation for the marker, headingRef
   // for the camera). GPS validation lives inside the buffer/heading hooks.
-  const { animatedCoord, positionRef } = useDriverTrackingBuffer(driverLocation);
-  const { rotation: driverRotation, headingRef } = useDriverSmoothedHeading(driverLocation);
+  const { animatedCoord, positionRef } = useDriverTrackingBuffer(effectiveDriverLocation);
+  const { rotation: driverRotation, headingRef } = useDriverSmoothedHeading(effectiveDriverLocation);
 
   // ── Continuous follow camera (Driver D3) ──────────────────────────────────
   // rAF setCamera loop reading the shared positionRef + headingRef, keeping the
