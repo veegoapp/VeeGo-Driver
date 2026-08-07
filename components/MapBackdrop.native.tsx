@@ -240,11 +240,17 @@ export const MapBackdrop = React.memo(function MapBackdrop({
   }, [driverLocation?.latitude, driverLocation?.longitude, driverLocation?.heading, driverLocation?.speed, navigationMode, snapRoute]);
 
   // ── Unified tracking source (Driver D1/D2) ────────────────────────────────
-  // One interpolated position (animatedCoord for the marker, positionRef for
-  // the camera) and one smoothed heading (rotation for the marker, headingRef
-  // for the camera). GPS validation lives inside the buffer/heading hooks.
+  // POSITION is snapped to the road (effectiveDriverLocation) so the marker and
+  // camera centre glide along the street. HEADING, however, is computed from the
+  // RAW fix (driverLocation): snapping collapses lateral movement onto the route
+  // line, which starves the positional-bearing calculation (consecutive snapped
+  // points barely advance / can jitter along a segment), leaving the smoothed
+  // heading stale — so the follow camera stayed locked at its seed orientation
+  // (north-up) for the whole trip and only corrected on an app restart (which
+  // re-seeds heading from the device course). Raw movement keeps the course-up
+  // heading live throughout the ride.
   const { animatedCoord, positionRef } = useDriverTrackingBuffer(effectiveDriverLocation);
-  const { rotation: driverRotation, headingRef } = useDriverSmoothedHeading(effectiveDriverLocation);
+  const { rotation: driverRotation, headingRef } = useDriverSmoothedHeading(driverLocation);
 
   // ── Continuous follow camera (Driver D3) ──────────────────────────────────
   // rAF setCamera loop reading the shared positionRef + headingRef, keeping the
