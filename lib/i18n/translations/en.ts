@@ -374,6 +374,8 @@ export const en = {
   nav_choice_msg: 'For the smoothest turn-by-turn directions we recommend Google Maps. Either way, VeeGo keeps tracking your trip in the background — come back anytime and your ride stays in sync.',
   nav_choice_google: 'Use Google Maps',
   nav_choice_app: 'Stay on VeeGo map',
+  bg_loc_required_title: 'Allow location "All the time"',
+  bg_loc_required_msg: 'To go online and receive rides, VeeGo needs location access set to "Allow all the time". This keeps the rider seeing your position even when the app is in the background or you\'re navigating in Google Maps. Open Settings → Permissions → Location → Allow all the time, then tap GO again.',
   active_shuttle: 'Active Shuttle',
   boarding_title: 'Boarding',
   tap_to_mark: 'Tap to mark passengers',

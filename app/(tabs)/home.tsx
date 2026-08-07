@@ -15,12 +15,14 @@ import {
   ActivityIndicator,
   Animated,
   Easing,
+  Linking,
   Platform,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { showAlert } from '@/lib/alert';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { SurgeZone } from '@/lib/types';
@@ -284,7 +286,7 @@ export default function HomeScreen() {
           if (status.isOnline) {
             TaskManager.isTaskRegisteredAsync(DRIVER_LOCATION_TASK)
               .then((isRegistered) => {
-                if (!isRegistered) startLocationTracking();
+                if (!isRegistered) startLocationTracking(false);
               })
               .catch(() => {});
           }
@@ -536,7 +538,7 @@ export default function HomeScreen() {
   // Check-first: only calls the request* (OS-prompting) APIs when the stored
   // status isn't already 'granted', instead of unconditionally requesting on
   // every GO tap.
-  const startLocationTracking = async (): Promise<boolean> => {
+  const startLocationTracking = async (promptOnMissing = true): Promise<boolean> => {
     let fgStatus = (await Location.getForegroundPermissionsAsync()).status;
     if (fgStatus !== 'granted') {
       fgStatus = (await Location.requestForegroundPermissionsAsync()).status;
@@ -550,18 +552,33 @@ export default function HomeScreen() {
     // one-time check (on consumer registration) ran before this request
     // resolved and permanently concluded "denied" for this mount.
     recheckGPSPermission();
-    // Background permission (soft — never block on denial). Request it ONLY the
-    // very first time (status 'undetermined'). On Android 11+ this request can't
-    // show a normal dialog — it opens the App-Info settings page — so requesting
-    // it on every GO tap (whenever it wasn't 'granted', i.e. the driver chose
-    // "while using the app") dumped them into Settings each time they went
-    // online after a cold start. Once the driver has answered, respect that:
-    // background tracking (broadcasting while VeeGo is backgrounded / navigating
-    // in Google Maps) is a bonus; the foreground broadcast still covers the app
-    // being open. The driver can still enable "Allow all the time" in Settings.
-    const bgStatus = (await Location.getBackgroundPermissionsAsync()).status;
+    // ── HARD GATE: background location is REQUIRED to go online ──────────────
+    // A driver with only "while using the app" stops broadcasting the moment
+    // VeeGo is backgrounded (screen off, or navigating in Google Maps), so the
+    // rider loses them. So "Allow all the time" is mandatory to receive rides.
+    //
+    // Request once when undetermined (on Android 11+ this opens the settings
+    // page rather than a dialog). If it's still not granted, explain why and
+    // send the driver to Settings, and BLOCK going online (return false) until
+    // they enable it and tap GO again. The OS never lets us grant it in code —
+    // the user must pick "Allow all the time" themselves — so a gate + a clear
+    // Settings shortcut is the strongest we can enforce.
+    let bgStatus = (await Location.getBackgroundPermissionsAsync()).status;
     if (bgStatus === 'undetermined') {
-      await Location.requestBackgroundPermissionsAsync().catch(() => {});
+      try {
+        bgStatus = (await Location.requestBackgroundPermissionsAsync()).status;
+      } catch {
+        // keep the previous status; handled by the gate below
+      }
+    }
+    if (bgStatus !== 'granted') {
+      if (promptOnMissing) {
+        showAlert(t.bg_loc_required_title, t.bg_loc_required_msg, [
+          { text: t.open_settings, onPress: () => { Linking.openSettings().catch(() => {}); } },
+          { text: t.cancel, style: 'cancel' },
+        ]);
+      }
+      return false;
     }
     try {
       const isRegistered = await TaskManager.isTaskRegisteredAsync(DRIVER_LOCATION_TASK);

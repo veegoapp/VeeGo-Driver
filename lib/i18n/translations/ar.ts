@@ -376,6 +376,8 @@ export const ar: Translations = {
   nav_choice_msg: 'لأسلس ملاحة بننصحك تستخدم Google Maps. على أي حال، VeeGo هيفضل يتابع رحلتك في الخلفية — ارجع في أي وقت ورحلتك هتلاقيها متزامنة.',
   nav_choice_google: 'افتح Google Maps',
   nav_choice_app: 'كمّل على خريطة VeeGo',
+  bg_loc_required_title: 'فعّل الموقع "طوال الوقت"',
+  bg_loc_required_msg: 'عشان تبقى أونلاين وتستقبل رحلات، VeeGo محتاج إذن الموقع يكون "Allow all the time". ده بيخلّي الراكب يشوف مكانك حتى والتطبيق في الخلفية أو وانت بتمشي على Google Maps. افتح الإعدادات → Permissions → Location → Allow all the time، وبعدين دوس GO تاني.',
   active_shuttle: 'باص نشط',
   boarding_title: 'الصعود',
   tap_to_mark: 'اضغط لتأشير الركاب',
