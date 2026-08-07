@@ -35,16 +35,38 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     cancelledRef.current = false;
 
     (async () => {
-      const t = await getToken();
       if (cancelledRef.current) return;
 
       const { io } = await import('socket.io-client');
 
       const socket = io(SOCKET_URL, {
         path: '/api/socket.io',
-        auth: { token: t ?? '' },
+        // Fetch the freshest token on EVERY (re)connection attempt instead of
+        // capturing one token at creation time. The access token lives only
+        // ~10 minutes, and socket.io reuses the initial `auth` for all of its
+        // own built-in reconnections — so a static token that expired mid-ride
+        // made every reconnect fail auth ("Invalid token"), and with a capped
+        // reconnectionAttempts the socket died permanently. Once the driver's
+        // socket stays dead past the backend's 30s disconnect grace, the ride
+        // is released and the passenger is told "your driver disconnected" —
+        // which is what made the passenger's notification bar buzz mid-ride.
+        // As a function, `auth` is re-invoked before each attempt and picks up
+        // the token the REST layer's 401→refresh flow rotated into storage.
+        auth: async (cb: (data: Record<string, unknown>) => void) => {
+          try {
+            const fresh = await getToken();
+            cb(fresh ? { token: fresh } : {});
+          } catch {
+            cb({});
+          }
+        },
         transports: ['polling', 'websocket'],
-        reconnectionAttempts: 10,
+        reconnection: true,
+        // Never permanently give up. Combined with the fresh-token `auth`
+        // above, the socket keeps retrying with backoff and self-heals as soon
+        // as a valid token / working network is available, instead of freezing
+        // dead after 10 stale-token failures.
+        reconnectionAttempts: Infinity,
         reconnectionDelay: 1000,
         reconnectionDelayMax: 30000,
         randomizationFactor: 0.5,
