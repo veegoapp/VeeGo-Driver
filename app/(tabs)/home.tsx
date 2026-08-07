@@ -550,9 +550,17 @@ export default function HomeScreen() {
     // one-time check (on consumer registration) ran before this request
     // resolved and permanently concluded "denied" for this mount.
     recheckGPSPermission();
-    // Background permission (soft — don't block on denial), same check-first pattern.
+    // Background permission (soft — never block on denial). Request it ONLY the
+    // very first time (status 'undetermined'). On Android 11+ this request can't
+    // show a normal dialog — it opens the App-Info settings page — so requesting
+    // it on every GO tap (whenever it wasn't 'granted', i.e. the driver chose
+    // "while using the app") dumped them into Settings each time they went
+    // online after a cold start. Once the driver has answered, respect that:
+    // background tracking (broadcasting while VeeGo is backgrounded / navigating
+    // in Google Maps) is a bonus; the foreground broadcast still covers the app
+    // being open. The driver can still enable "Allow all the time" in Settings.
     const bgStatus = (await Location.getBackgroundPermissionsAsync()).status;
-    if (bgStatus !== 'granted') {
+    if (bgStatus === 'undetermined') {
       await Location.requestBackgroundPermissionsAsync().catch(() => {});
     }
     try {
