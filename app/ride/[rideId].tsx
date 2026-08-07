@@ -775,6 +775,33 @@ export default function RideScreen() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, pickupLat, pickupLng, dropoffLat, dropoffLng]);
 
+  // ── Navigation-choice prompt ─────────────────────────────────────────────
+  // When the driver starts heading to pickup, and again when the trip starts,
+  // offer Google Maps (recommended for smooth turn-by-turn) vs staying on the
+  // in-app map. Shown at most once per phase per screen mount.
+  //
+  // Choosing Google Maps is safe: VeeGo keeps tracking independently in the
+  // background — useActiveLocationTracking (REST snapshots) and the
+  // DRIVER_LOCATION_TASK foreground service (ride-scoped, set via setActiveRideId
+  // above) keep broadcasting the driver's position and the ride stays in sync,
+  // so returning to the app mid-trip or at the end never shows stale state.
+  const navPromptedPhasesRef = useRef<Set<Phase>>(new Set());
+  useEffect(() => {
+    if (phase !== 'to_pickup' && phase !== 'in_trip') return;
+    if (navPromptedPhasesRef.current.has(phase)) return;
+    const hasTarget =
+      phase === 'in_trip'
+        ? dropoffLat != null && dropoffLng != null
+        : pickupLat != null && pickupLng != null;
+    if (!hasTarget) return; // wait until the destination coords are known
+    navPromptedPhasesRef.current.add(phase);
+    showAlert(t.nav_choice_title, t.nav_choice_msg, [
+      { text: t.nav_choice_google, onPress: handleNavigate },
+      { text: t.nav_choice_app, style: 'cancel' },
+    ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, pickupLat, pickupLng, dropoffLat, dropoffLng]);
+
   // Stable object identity so MapBackdrop's React.memo isn't defeated by a
   // fresh {latitude,longitude} literal on every RideScreen re-render (this
   // screen re-renders often — GPS ticks, busy-state toggles, etc. — even
