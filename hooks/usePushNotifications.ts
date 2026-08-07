@@ -22,13 +22,31 @@ function safeSetNotificationHandler() {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const Notifications = require('expo-notifications');
     Notifications.setNotificationHandler({
-      handleNotification: async () => ({
-        shouldPlaySound: true,
-        shouldSetBadge: true,
-        shouldShowAlert: true,
-        shouldShowBanner: true,
-        shouldShowList: true,
-      }),
+      handleNotification: async (notification: any) => {
+        // Ride-offer push is only there to alert a BACKGROUNDED/killed driver.
+        // In the foreground the live socket already shows the offer sheet and
+        // plays the in-app tone, so presenting the push too would double the
+        // sound and stack a redundant banner over the sheet. Suppress it in the
+        // foreground; the OS still shows it (with the channel sound) when the
+        // app is backgrounded, where this handler does not run.
+        const type = notification?.request?.content?.data?.type;
+        if (type === 'ride_offer') {
+          return {
+            shouldPlaySound: false,
+            shouldSetBadge: false,
+            shouldShowAlert: false,
+            shouldShowBanner: false,
+            shouldShowList: false,
+          };
+        }
+        return {
+          shouldPlaySound: true,
+          shouldSetBadge: true,
+          shouldShowAlert: true,
+          shouldShowBanner: true,
+          shouldShowList: true,
+        };
+      },
     });
   } catch {
     // expo-notifications not available in this environment (Expo Go SDK 53)
