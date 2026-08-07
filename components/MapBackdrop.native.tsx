@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import MapView, { AnimatedRegion, Circle, Marker, MarkerAnimated, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
+import { Navigation } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DARK_MAP_STYLE, LIGHT_MAP_STYLE } from '@/constants/mapStyle';
 import { getToken } from '@/lib/auth';
@@ -131,22 +132,19 @@ function DriverNavCarMarker({
   return (
     <MarkerAnimated
       coordinate={animatedCoord}
-      // Rear/middle anchor so the GPS point sits near the rear axle and the car
-      // pivots realistically; flat keeps it in the course-up map plane.
-      anchor={{ x: 0.5, y: 0.6 }}
+      // Centre anchor so the arrow pivots on its own centre as heading changes;
+      // flat keeps it in the course-up map plane.
+      anchor={{ x: 0.5, y: 0.5 }}
       flat
       rotation={rotation}
       tracksViewChanges={!painted}
     >
       <View style={styles.driverNavOuter} onLayout={handleLayout}>
-        {/* Source art points LEFT; the static 90° image transform re-orients it
-            nose-up so MarkerAnimated.rotation (flat, shared smoothed heading)
-            points the front in the direction of travel. The file is not rotated. */}
-        <Image
-          source={require('@/assets/images/car-marker.png')}
-          style={styles.carMarkerImage}
-          resizeMode="contain"
-        />
+        {/* VeeGo brand arrow — the same lucide Navigation mark the passenger app
+            uses for the driver. Its tip points "up" (north) natively, so
+            MarkerAnimated.rotation (flat, shared smoothed heading) points it in
+            the direction of travel with no base-orientation correction. */}
+        <Navigation size={30} color="#ffffff" fill="#1e1e28" strokeWidth={1.5} />
       </View>
     </MarkerAnimated>
   );
@@ -525,6 +523,8 @@ export const MapBackdrop = React.memo(function MapBackdrop({
         showsCompass={false}
         showsScale={false}
         showsTraffic={false}
+        showsBuildings={false}
+        showsIndoors={false}
         toolbarEnabled={false}
         moveOnMarkerPress={false}
       >
@@ -691,16 +691,10 @@ const styles = StyleSheet.create({
   // Realistic on-road vehicle size (~54 dp long) — kept identical to the
   // passenger app's car marker for cross-app consistency; tune within 42–64 dp.
   driverNavOuter: {
-    width: 54,
-    height: 54,
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  carMarkerImage: {
-    width: 54,
-    height: 54,
-    // Base-orientation correction: source art points LEFT → rotate nose-up.
-    transform: [{ rotate: '90deg' }],
   },
   // Driver idle marker (blue circle)
   driverIdleMarker: {

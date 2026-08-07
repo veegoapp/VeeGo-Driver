@@ -125,6 +125,14 @@ export default function RideScreen() {
   // phase is still 'in_trip' and the termination effect below would otherwise
   // mistake a successful completion for a cancellation.
   const isCompletingRef = useRef(false);
+  // Latched true once the ride has reached 'completed'. Completion is terminal:
+  // once we're showing the fare/rating screen, NOTHING may revert the phase
+  // (e.g. a late/stale ActiveSession snapshot still carrying status 'active',
+  // which the reconnect flow can deliver out of order) or fire the
+  // cancelled-exit path. Unlike `phase`, a ref is immune to stale-closure reads
+  // inside the socket handlers. This is the invariant that keeps the rating
+  // card from vanishing and the false "Trip cancelled" alert from appearing.
+  const completedRef = useRef(false);
 
   // A non-completed ride takes priority over a blocked service — only treat
   // the screen as blocked once the ride itself has reached 'completed'.
@@ -210,6 +218,7 @@ export default function RideScreen() {
     // session:snapshot delivery is delayed. session:snapshot remains primary.
     const handleStatusChanged = (data: unknown) => {
       if (!matchesThisRide(data)) return;
+      if (completedRef.current) return; // completion is terminal — never revert
       const payload = data as { status?: string };
       const nextPhase = STATUS_TO_PHASE[payload?.status ?? ''];
       if (nextPhase) setPhase(nextPhase);
@@ -281,11 +290,21 @@ export default function RideScreen() {
   // separately — by socket events and the session→null termination effect.
   // 'completed' is never in DriverRideSession.status so it is never overwritten here.
   useEffect(() => {
+    // Completion is terminal — never let a late/stale snapshot (e.g. one still
+    // carrying status 'active', re-delivered out of order after a reconnect)
+    // drag the screen back out of the fare/rating overlay into 'in_trip'.
+    if (completedRef.current) return;
     if (!rideSession) return;
     const nextPhase = STATUS_TO_PHASE[rideSession.status];
     if (nextPhase) setPhase(nextPhase);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rideSession?.status]);
+
+  // Latch the terminal 'completed' state so the guards above/below (which read a
+  // ref, immune to stale closures) can never be bypassed by a later re-render.
+  useEffect(() => {
+    if (phase === 'completed') completedRef.current = true;
+  }, [phase]);
 
   // ActiveSession termination: when the server ends the ride (cancellation,
   // timeout, admin action), the session:snapshot socket event delivers
@@ -307,6 +326,7 @@ export default function RideScreen() {
       session !== null ||
       !hasObservedRideSessionRef.current ||
       phase === 'completed' ||
+      completedRef.current ||
       isCompletingRef.current
     ) return;
     exitRide(t.ride_cancelled_title, t.ride_cancelled_msg);
