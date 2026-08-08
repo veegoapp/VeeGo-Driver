@@ -169,8 +169,21 @@ export default function RideScreen() {
   // reached via a live socket event (cancelled by rider/system, timeout,
   // no-show) or a status refetch discovering the ride is already cancelled
   // (e.g. after app restart/reconnect).
+  //
+  // completedRef guard: the backend's cancellation path is an atomic
+  // compare-and-swap (UPDATE ... WHERE status IN (pre-completion statuses)),
+  // so it is IMPOSSIBLE for a ride to be cancelled in the database after this
+  // driver's own "Complete trip" tap has already succeeded — that update only
+  // ever emits ride:cancelled when it wins a genuine race against completion.
+  // But a cancellation attempted moments before completion can still emit its
+  // socket event AFTER the local phase has already flipped to 'completed'
+  // (ordinary event-delivery timing, not a data bug) — and every terminal
+  // socket handler (handleCancelled, handleDriverCancelled, handleTimeout,
+  // handleNoShowCancelled) funnels through this one function. So this is the
+  // single choke point to enforce "completion is terminal": once
+  // completedRef is set, nothing here may show an alert or navigate away.
   const exitRide = (title: string, message: string) => {
-    if (hasExitedRef.current) return;
+    if (hasExitedRef.current || completedRef.current) return;
     hasExitedRef.current = true;
     setIsExiting(true);
     showAlert(
