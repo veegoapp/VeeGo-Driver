@@ -3,7 +3,7 @@ import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import MapView, { AnimatedRegion, Circle, Marker, MarkerAnimated, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Navigation } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { DARK_MAP_STYLE, LIGHT_MAP_STYLE } from '@/constants/mapStyle';
+import { DARK_MAP_STYLE, LIGHT_MAP_STYLE } from '@/constants/mapStyles';
 import { getToken } from '@/lib/auth';
 import { useService } from '@/lib/serviceContext';
 import { useDriverTrackingBuffer } from '@/hooks/map/useDriverTrackingBuffer';

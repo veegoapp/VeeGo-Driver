@@ -19,6 +19,7 @@ import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
 import { Shadows } from '@/constants/shadows';
+import { SOCKET_EVENTS } from '@/constants/socketEvents';
 
 type OnboardingStatus = 'pending' | 'pending_review' | 'approved' | 'rejected';
 
@@ -98,13 +99,13 @@ export default function PendingApprovalScreen() {
     const onRejected = () => fetchStatus();
     const onChanges = () => fetchStatus();
 
-    socket.on('driver:account:activated', onActivated);
-    socket.on('driver:account:rejected', onRejected);
-    socket.on('driver:changes:requested', onChanges);
+    socket.on(SOCKET_EVENTS.DRIVER_ACCOUNT_ACTIVATED, onActivated);
+    socket.on(SOCKET_EVENTS.DRIVER_ACCOUNT_REJECTED, onRejected);
+    socket.on(SOCKET_EVENTS.DRIVER_CHANGES_REQUESTED, onChanges);
     return () => {
-      socket.off('driver:account:activated', onActivated);
-      socket.off('driver:account:rejected', onRejected);
-      socket.off('driver:changes:requested', onChanges);
+      socket.off(SOCKET_EVENTS.DRIVER_ACCOUNT_ACTIVATED, onActivated);
+      socket.off(SOCKET_EVENTS.DRIVER_ACCOUNT_REJECTED, onRejected);
+      socket.off(SOCKET_EVENTS.DRIVER_CHANGES_REQUESTED, onChanges);
     };
   }, [socket, fetchStatus, stopPolling, data]);
 

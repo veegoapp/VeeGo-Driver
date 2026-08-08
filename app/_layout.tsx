@@ -342,7 +342,6 @@ function RootLayoutNav() {
         <Stack.Screen name="settings" />
         <Stack.Screen name="shuttle/profile-info" />
         <Stack.Screen name="shuttle/trip-active" />
-        <Stack.Screen name="shuttle/boarding" />
         <Stack.Screen name="shuttle/trip-details" />
         <Stack.Screen name="shuttle/referral-incoming" />
         <Stack.Screen name="shuttle/trip-complete" />
