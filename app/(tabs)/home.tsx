@@ -584,7 +584,16 @@ export default function HomeScreen() {
       const isRegistered = await TaskManager.isTaskRegisteredAsync(DRIVER_LOCATION_TASK);
       if (!isRegistered) {
         await Location.startLocationUpdatesAsync(DRIVER_LOCATION_TASK, {
-          accuracy: Location.Accuracy.Balanced,
+          // High (not Balanced): this is the driver's broadcast position while
+          // online/dispatching — it's what nearby-driver markers on the
+          // passenger's booking map are built from, and what a passenger sees
+          // for the assigned driver right after acceptance, before the ride
+          // screen's own high-accuracy GPS provider (useGPSProvider) takes
+          // over. Balanced accuracy on Android is allowed to resolve from
+          // cell/WiFi positioning instead of the GPS chip, which can land the
+          // driver's shown location a couple of streets off from where they
+          // actually are (same reasoning as CarMap.tsx's pickup-fix comment).
+          accuracy: Location.Accuracy.High,
           timeInterval: 10000,
           distanceInterval: 50,
           foregroundService: {
@@ -601,7 +610,7 @@ export default function HomeScreen() {
       // Expo Go / task manager unavailable — fall back to interval-based tracking
       const sendLocation = async () => {
         try {
-          const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
           await endpoints.driver.updateLocation({
             latitude: loc.coords.latitude,
             longitude: loc.coords.longitude,
