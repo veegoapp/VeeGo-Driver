@@ -1,6 +1,6 @@
 import { showAlert } from '@/lib/alert';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowDownLeft, ArrowUpRight, FileText, Wallet, Wrench, X, Zap, Phone, CreditCard } from 'lucide-react-native';
+import { ArrowDownLeft, ArrowUpRight, FileText, Wallet, Wrench, X } from 'lucide-react-native';
 import React, { useRef, useEffect, useState } from 'react';
 import {
   ActivityIndicator, Animated, KeyboardAvoidingView,
@@ -12,10 +12,15 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { AppLoader } from '@/components/ui/AppLoader';
+import { PayoutMethodIcon } from '@/components/PayoutMethodIcon';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
 import { useSocket } from '@/lib/socketContext';
-import { payoutStatusBadge, type PayoutAccount, type PayoutHistoryItem } from '@/lib/walletHelpers';
+import {
+  payoutStatusBadge, normalizeWalletBalance, normalizeActivePayoutAccounts,
+  pickDefaultPayoutAccount, parsePayoutAmount, submitPayoutRequest, extractList,
+  type PayoutAccount, type PayoutHistoryItem,
+} from '@/lib/walletHelpers';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
@@ -47,18 +52,6 @@ type Transaction = {
   incoming?: boolean;
   description?: string;
 };
-
-// Maps a payout account's methodKey to a lucide icon. Falls back to a
-// generic card icon for any future method key (e.g. bank accounts).
-function MethodIcon({ methodKey, color }: { methodKey: string; color: string }) {
-  const size = 20;
-  const sw = 2;
-  switch (methodKey) {
-    case 'vodafone_cash': return <Phone size={size} color={color} strokeWidth={sw} />;
-    case 'instapay': return <Zap size={size} color={color} strokeWidth={sw} />;
-    default: return <CreditCard size={size} color={color} strokeWidth={sw} />;
-  }
-}
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
@@ -139,18 +132,10 @@ export default function ShuttleWalletScreen() {
   });
 
   // ── Data extraction ────────────────────────────────────────────────────────
-  const _balRaw = balanceRaw as WalletBalance | { wallet?: { balance?: number } } | undefined;
-  const balanceData: WalletBalance = {
-    balance: parseFloat(String(
-      ((_balRaw as WalletBalance)?.balance) ??
-      ((_balRaw as { wallet?: { balance?: number } })?.wallet?.balance) ?? 0
-    )),
-    totalPaid: parseFloat(String((_balRaw as WalletBalance)?.totalPaid ?? 0)),
-    totalPending: parseFloat(String((_balRaw as WalletBalance)?.totalPending ?? 0)),
-  };
+  const balanceData: WalletBalance = normalizeWalletBalance(balanceRaw);
 
   const _txRaw = txRaw as Transaction[] | { data?: Transaction[] } | undefined;
-  const txs: Transaction[] = Array.isArray(_txRaw) ? _txRaw : ((_txRaw as { data?: Transaction[] })?.data ?? []);
+  const txs: Transaction[] = extractList(_txRaw);
 
   const weekEarnings: WeekDay[] = ((weeklyRaw as { weeklyBreakdown?: WeekDay[] } | undefined)?.weeklyBreakdown ?? []);
   const maxEarning = weekEarnings.length ? Math.max(...weekEarnings.map(d => parseFloat(String(d.amount)))) : 1;
@@ -158,13 +143,9 @@ export default function ShuttleWalletScreen() {
   const weekTotal = weekEarnings.reduce((s, d) => s + parseFloat(String(d.amount)), 0);
   const todayAmount = parseFloat(String(summary?.recentEarnings?.[0]?.amount ?? 0));
 
-  const _paRaw = payoutAccountsRaw as PayoutAccount[] | { data?: PayoutAccount[] } | undefined;
-  const payoutAccounts: PayoutAccount[] = (
-    Array.isArray(_paRaw) ? _paRaw : ((_paRaw as { data?: PayoutAccount[] })?.data ?? [])
-  ).filter(a => a.isActive);
+  const payoutAccounts = normalizeActivePayoutAccounts(payoutAccountsRaw as PayoutAccount[] | { data?: PayoutAccount[] } | undefined);
 
-  const _phRaw = payoutHistoryRaw as PayoutHistoryItem[] | { data?: PayoutHistoryItem[] } | undefined;
-  const payoutHistory: PayoutHistoryItem[] = Array.isArray(_phRaw) ? _phRaw : ((_phRaw as { data?: PayoutHistoryItem[] })?.data ?? []);
+  const payoutHistory = extractList<PayoutHistoryItem>(payoutHistoryRaw as PayoutHistoryItem[] | { data?: PayoutHistoryItem[] } | undefined);
 
   const isLoading = balanceLoading || txLoading || weeklyLoading || summaryLoading || accountsLoading;
   const isError = balanceError || txError;
@@ -193,13 +174,13 @@ export default function ShuttleWalletScreen() {
   // account-detail entry step anymore.
   const openPayout = () => {
     setPayoutAmount(String(balanceData.balance.toFixed(2)));
-    setSelectedAccount(payoutAccounts.find(a => a.isDefault) ?? payoutAccounts[0] ?? null);
+    setSelectedAccount(pickDefaultPayoutAccount(payoutAccounts));
     setPayoutVisible(true);
   };
 
   const handlePayoutSubmit = async () => {
-    const amount = parseFloat(payoutAmount);
-    if (!amount || amount <= 0) {
+    const amount = parsePayoutAmount(payoutAmount);
+    if (!amount) {
       showAlert(t.invalid_amount_title, t.invalid_amount_msg);
       return;
     }
@@ -209,14 +190,12 @@ export default function ShuttleWalletScreen() {
     }
     setIsPayingOut(true);
     try {
-      const res = await endpoints.wallet.payout(amount, selectedAccount.id) as { ok?: boolean; message?: string; error?: string; available?: number } | undefined;
-      if (res && res.error) {
+      const res = await submitPayoutRequest(amount, selectedAccount.id, queryClient);
+      if (res.error) {
         const note = res.available != null ? ` (${t.available}: ${res.available.toFixed(2)} ${t.egp})` : '';
         showAlert(t.error, `${res.error}${note}`);
         return;
       }
-      await queryClient.invalidateQueries({ queryKey: ['wallet-balance'] });
-      await queryClient.invalidateQueries({ queryKey: ['wallet-transactions'] });
       setPayoutVisible(false);
       // Payout request is pending admin confirmation — not yet paid.
       showAlert('✓', res?.message ?? t.payout_pending_msg);
@@ -508,7 +487,7 @@ export default function ShuttleWalletScreen() {
                       }]}
                     >
                       <View style={[styles.methodOptionIcon, { backgroundColor: isSelected ? '#1e1e2820' : colors.background }]}>
-                        <MethodIcon methodKey={a.methodKey} color={isSelected ? '#2d2d42' : colors.mutedForeground} />
+                        <PayoutMethodIcon methodKey={a.methodKey} color={isSelected ? '#2d2d42' : colors.mutedForeground} />
                       </View>
                       <View style={{ flex: 1 }}>
                         <Text style={[{ fontSize: Typography.size.sm, color: isSelected ? '#1e1e28' : colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{a.accountName}</Text>

@@ -84,9 +84,6 @@ export const walletEndpoints = {
   // Payout now requests against a specific saved payout account and only
   // creates a pending request — see getPayoutAccounts/addPayoutAccount below.
   payout: (amount: number, payoutAccountId: number) => api.post('/driver/wallet/payout', { amount, payoutAccountId }),
-  // Catalog of enabled payout method *types* (instapay, vodafone_cash, ...),
-  // used to populate the method picker when adding a payout account.
-  payoutMethods: () => api.get('/driver/wallet/payout-methods'),
   getPayoutAccounts: () => api.get('/driver/payout-accounts'),
   addPayoutAccount: (data: { methodKey: string; accountName: string; accountNumber: string }) =>
     api.post('/driver/payout-accounts', data),

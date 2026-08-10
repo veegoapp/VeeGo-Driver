@@ -1,10 +1,9 @@
 import { showAlert } from '@/lib/alert';
 import { router } from 'expo-router';
-import { ArrowLeft, Briefcase, CreditCard, Phone, Plus, Star, Trash2, X } from 'lucide-react-native';
+import { ArrowLeft, CreditCard, Plus, Star, Trash2, X } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -21,36 +20,18 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { AppLoader } from '@/components/ui/AppLoader';
+import { PayoutMethodIcon } from '@/components/PayoutMethodIcon';
 import { useI18n } from '@/lib/i18nContext';
 import { rtlIconStyle } from '@/lib/rtlUtils';
 import { endpoints } from '@/lib/api';
+import { extractList, type PayoutAccount } from '@/lib/walletHelpers';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
 
-// A driver's own saved payout destination (see /driver/payout-accounts).
-// Only instapay / vodafone_cash are supported today; the type picker below
-// is a small local list so adding a future method (e.g. bank accounts) is
-// just one more entry, not a shape change.
-type PayoutAccount = {
-  id: number;
-  methodKey: string;
-  accountName: string;
-  accountNumber: string;
-  isDefault: boolean;
-  isVerified: boolean;
-  isActive: boolean;
-};
-
 type MethodType = 'vodafone_cash' | 'instapay';
 
 const BORDER_COLOR = 'rgba(0,0,0,0.08)';
-
-function MethodIcon({ methodKey, color }: { methodKey: string; color: string }) {
-  if (methodKey === 'vodafone_cash') return <Phone size={20} color={color} strokeWidth={2} />;
-  if (methodKey === 'instapay') return <Briefcase size={20} color={color} strokeWidth={2} />;
-  return <CreditCard size={20} color={color} strokeWidth={2} />;
-}
 
 export default function PayoutAccountsScreen() {
   const colors = useColors();
@@ -78,8 +59,9 @@ export default function PayoutAccountsScreen() {
     queryFn: endpoints.wallet.getPayoutAccounts,
   });
 
-  const _raw = accountsRaw as PayoutAccount[] | { data?: PayoutAccount[] } | undefined;
-  const accounts: PayoutAccount[] = (Array.isArray(_raw) ? _raw : (_raw?.data ?? [])).filter(a => a.isActive);
+  const accounts: PayoutAccount[] = extractList(
+    accountsRaw as PayoutAccount[] | { data?: PayoutAccount[] } | undefined
+  ).filter(a => a.isActive);
 
   const METHOD_TYPES: { key: MethodType; label: string }[] = [
     { key: 'vodafone_cash', label: t.vodafone_cash },
@@ -182,7 +164,7 @@ export default function PayoutAccountsScreen() {
               ) : accounts.map((account) => (
                 <GlassView key={account.id} style={[styles.accountCard, { flexDirection: R }]} borderRadius={16}>
                   <View style={[styles.methodIcon, { backgroundColor: account.isDefault ? colors.primary + '26' : colors.secondary }]}>
-                    <MethodIcon methodKey={account.methodKey} color={account.isDefault ? colors.primary : colors.mutedForeground} />
+                    <PayoutMethodIcon methodKey={account.methodKey} color={account.isDefault ? colors.primary : colors.mutedForeground} instapayIcon="briefcase" />
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={[styles.accountName, { color: colors.foreground, textAlign: TA }]} numberOfLines={1}>

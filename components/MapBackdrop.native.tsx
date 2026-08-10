@@ -4,7 +4,7 @@ import MapView, { AnimatedRegion, Circle, Marker, MarkerAnimated, Polyline, PROV
 import { Navigation } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DARK_MAP_STYLE, LIGHT_MAP_STYLE } from '@/constants/mapStyles';
-import { getToken } from '@/lib/auth';
+import { fetchDirectionsRaw } from '@/lib/utils/googleDirections';
 import { useService } from '@/lib/serviceContext';
 import { useDriverTrackingBuffer } from '@/hooks/map/useDriverTrackingBuffer';
 import { useDriverSmoothedHeading } from '@/hooks/map/useDriverSmoothedHeading';
@@ -342,24 +342,12 @@ export const MapBackdrop = React.memo(function MapBackdrop({
   // ── Auto-fetch route for non-nav on-demand rides ─────────────────────────
   useEffect(() => {
     if (navigationMode || !pickup || !dropoff) return;
-    const base = process.env.EXPO_PUBLIC_API_URL ?? '';
-    const url =
-      `${base}/directions` +
-      `?origin=${pickup.latitude},${pickup.longitude}` +
-      `&destination=${dropoff.latitude},${dropoff.longitude}`;
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 5000);
-    getToken()
-      .then(token =>
-        fetch(url, {
-          signal: ctrl.signal,
-          headers: { Authorization: `Bearer ${token ?? ''}` },
-        }),
-      )
-      .then(r => (r.ok ? r.json() : null))
-      .then(data => {
-        if (Array.isArray(data?.polyline) && data.polyline.length >= 2) {
-          setAutoPolyline(data.polyline);
+    fetchDirectionsRaw(pickup, dropoff, { signal: ctrl.signal })
+      .then(result => {
+        if (result && result.polyline.length >= 2) {
+          setAutoPolyline(result.polyline);
         } else if (pickup && dropoff) {
           // Backend returned no usable polyline — fall back to straight line
           setAutoPolyline([pickup, dropoff]);

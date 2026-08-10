@@ -11,8 +11,11 @@ import { useColors } from '@/hooks/useColors';
 import { AppLoader } from '@/components/ui/AppLoader';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
-import { payoutStatusBadge, type PayoutAccount, type PayoutHistoryItem } from '@/lib/walletHelpers';
-// PayoutAccount is used by the Cash Out flow (handlePayoutOpen / handlePayoutConfirm)
+import {
+  payoutStatusBadge, normalizeWalletBalance, normalizeActivePayoutAccounts,
+  pickDefaultPayoutAccount, parsePayoutAmount, submitPayoutRequest, extractList,
+  type PayoutHistoryItem,
+} from '@/lib/walletHelpers';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
@@ -56,20 +59,11 @@ export default function WalletScreen() {
     retry: false,
   });
 
-  const _balRaw = balanceRaw as WalletBalance | { balance?: number; wallet?: { balance?: number } } | undefined;
-  const balanceData: WalletBalance = {
-    balance: (typeof (_balRaw as WalletBalance)?.balance === 'number'
-      ? (_balRaw as WalletBalance).balance
-      : parseFloat(String((_balRaw as { wallet?: { balance?: number } })?.wallet?.balance ?? (_balRaw as { balance?: unknown })?.balance ?? 0))),
-  };
+  const balanceData: WalletBalance = normalizeWalletBalance(balanceRaw);
   const _txRaw = txRaw as Transaction[] | { transactions?: Transaction[]; data?: Transaction[] } | undefined;
   const txs: Transaction[] = Array.isArray(_txRaw) ? _txRaw : ((_txRaw as { transactions?: Transaction[] })?.transactions ?? ((_txRaw as { data?: Transaction[] })?.data ?? []));
-  const _paRaw = payoutAccountsRaw as PayoutAccount[] | { data?: PayoutAccount[] } | undefined;
-  const payoutAccounts: PayoutAccount[] = (
-    Array.isArray(_paRaw) ? _paRaw : ((_paRaw as { data?: PayoutAccount[] })?.data ?? [])
-  ).filter(a => a.isActive);
-  const _phRaw = payoutHistoryRaw as PayoutHistoryItem[] | { data?: PayoutHistoryItem[] } | undefined;
-  const payoutHistory: PayoutHistoryItem[] = Array.isArray(_phRaw) ? _phRaw : ((_phRaw as { data?: PayoutHistoryItem[] })?.data ?? []);
+  const payoutAccounts = normalizeActivePayoutAccounts(payoutAccountsRaw as Parameters<typeof normalizeActivePayoutAccounts>[0]);
+  const payoutHistory = extractList<PayoutHistoryItem>(payoutHistoryRaw as PayoutHistoryItem[] | { data?: PayoutHistoryItem[] } | undefined);
 
   const isLoading = balanceLoading || txLoading;
   const isError = balanceError || txError;
@@ -100,22 +94,20 @@ export default function WalletScreen() {
   };
 
   const handlePayoutConfirm = async () => {
-    const amount = parseFloat(payoutAmount);
-    if (!amount || amount <= 0) {
+    const amount = parsePayoutAmount(payoutAmount);
+    if (!amount) {
       showAlert(t.invalid_amount_title, t.invalid_amount_msg);
       return;
     }
     // Prefer the driver's default account, falling back to the first active one.
-    const selectedAccount = payoutAccounts.find(a => a.isDefault) ?? payoutAccounts[0] ?? null;
+    const selectedAccount = pickDefaultPayoutAccount(payoutAccounts);
     if (!selectedAccount) {
       showAlert(t.error, (t as any).no_payout_methods ?? 'Please add a payout account first.');
       return;
     }
     setIsPayingOut(true);
     try {
-      await endpoints.wallet.payout(amount, selectedAccount.id);
-      await queryClient.invalidateQueries({ queryKey: ['wallet-balance'] });
-      await queryClient.invalidateQueries({ queryKey: ['wallet-transactions'] });
+      await submitPayoutRequest(amount, selectedAccount.id, queryClient);
       setPayoutVisible(false);
       setPayoutAmount('');
       // Payout request is pending admin confirmation — not yet paid.

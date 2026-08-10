@@ -17,7 +17,6 @@ import { Calendar, Check, ChevronLeft, Clock, Users, X } from 'lucide-react-nati
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Platform,
   Pressable,
   ScrollView,

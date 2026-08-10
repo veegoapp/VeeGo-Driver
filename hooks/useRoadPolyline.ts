@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { getToken } from '@/lib/auth';
+import { fetchDirectionsRaw } from '@/lib/utils/googleDirections';
 import { haversineMeters } from './useDriverLocation';
 
 type Coord = { latitude: number; longitude: number };
@@ -98,28 +98,12 @@ export function useRoadPolyline(
 
     const destination = waypoints[waypoints.length - 1];
     const intermediates = waypoints.slice(1, -1);
-    const waypointParam = intermediates.length > 0
-      ? `&waypoints=${intermediates.map(p => `${p.latitude},${p.longitude}`).join('|')}`
-      : '';
-    const base = process.env.EXPO_PUBLIC_API_URL ?? '';
-    const url =
-      `${base}/directions` +
-      `?origin=${origin.latitude},${origin.longitude}` +
-      `&destination=${destination.latitude},${destination.longitude}` +
-      waypointParam;
     const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
 
-    getToken()
-      .then(token =>
-        fetch(url, {
-          signal: ctrl.signal,
-          headers: { Authorization: `Bearer ${token ?? ''}` },
-        }),
-      )
-      .then(r => (r.ok ? r.json() : Promise.reject(new Error('non-ok'))))
-      .then(data => {
-        if (Array.isArray(data?.polyline) && (data.polyline as Coord[]).length >= 2) {
-          setResult({ coords: data.polyline as Coord[], loading: false });
+    fetchDirectionsRaw(origin, destination, { waypoints: intermediates, signal: ctrl.signal })
+      .then(result => {
+        if (result && result.polyline.length >= 2) {
+          setResult({ coords: result.polyline, loading: false });
         } else {
           setResult({ coords: null, loading: false });
         }

@@ -20,6 +20,7 @@ import { useDriverLocation, haversineMeters } from '@/hooks/useDriverLocation';
 import { useRoadEta } from '@/hooks/useRoadEta';
 import { useRoadPolyline } from '@/hooks/useRoadPolyline';
 import { useActiveLocationTracking } from '@/hooks/useActiveLocationTracking';
+import { useLocationBroadcast } from '@/hooks/useLocationBroadcast';
 import { useShuttle } from '@/lib/shuttleContext';
 import { useActiveSession } from '@/lib/activeSessionContext';
 import { useI18n } from '@/lib/i18nContext';
@@ -108,6 +109,14 @@ export default function ShuttleTripActiveScreen() {
     tripId: tripId != null ? Number(tripId) : null,
   });
 
+  // Real-time driver location broadcast (socket, with REST fallback) — same
+  // infrastructure used on the shuttle home/idle screen, kept alive through
+  // the active trip so passenger-facing tracking doesn't go stale.
+  useLocationBroadcast({
+    enabled: !!activeLine || !!shuttleSession,
+    tripId: tripId ?? null,
+  });
+
   // ── GPS ────────────────────────────────────────────────────────────────────
   const { position: gpsPos } = useDriverLocation(!!activeLine || !!shuttleSession);
   const effectivePos = gpsPos;
@@ -165,22 +174,6 @@ export default function ShuttleTripActiveScreen() {
       if (next !== phase) setPhase(next);
     }
   }, [proximityM]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── GPS location updates to backend every 10 s during active trip ─────────
-  useEffect(() => {
-    if (!effectivePos || !tripId || (phase !== 'en_route' && phase !== 'approaching')) return;
-    const send = () => {
-      endpoints.driver.updateLocation({
-        latitude: effectivePos.latitude,
-        longitude: effectivePos.longitude,
-        speed: effectivePos.speed ?? undefined,
-        tripId,
-      });
-    };
-    send();
-    const id = setInterval(send, 10_000);
-    return () => clearInterval(id);
-  }, [effectivePos?.latitude, effectivePos?.longitude, phase, tripId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reset all per-stop state when the active stop changes
   useEffect(() => {

@@ -54,7 +54,6 @@ const PENDING_SCREENS = new Set([
   'pending-approval',
   'register-vehicle',
   'register-documents',
-  'register-info',
   'register-service-type',
   'register-plate',
 ]);
@@ -339,7 +338,6 @@ function RootLayoutNav() {
         <Stack.Screen name="personal-info" />
         <Stack.Screen name="bonus-targets" />
         <Stack.Screen name="driver-referral" />
-        <Stack.Screen name="settings" />
         <Stack.Screen name="shuttle/profile-info" />
         <Stack.Screen name="shuttle/trip-active" />
         <Stack.Screen name="shuttle/trip-details" />
@@ -347,7 +345,6 @@ function RootLayoutNav() {
         <Stack.Screen name="shuttle/trip-complete" />
         <Stack.Screen name="shuttle/history" />
         <Stack.Screen name="shuttle/earnings" />
-        <Stack.Screen name="register-info" />
         <Stack.Screen name="selfie" />
         <Stack.Screen name="suspended" />
         <Stack.Screen name="shuttle/rate-passengers" />
@@ -358,7 +355,6 @@ function RootLayoutNav() {
         <Stack.Screen name="register-documents" />
         <Stack.Screen name="pending-approval" />
         <Stack.Screen name="forgot-password" />
-        <Stack.Screen name="auth/vehicle-specs" />
         <Stack.Screen name="shuttle/history-detail" />
         <Stack.Screen name="shuttle/referral-request" />
         <Stack.Screen name="shuttle/direct-cancel" />

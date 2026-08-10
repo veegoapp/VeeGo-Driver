@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { haversineMeters } from './useDriverLocation';
-import { getToken } from '@/lib/auth';
+import { fetchDirectionsRaw } from '@/lib/utils/googleDirections';
 
 export type RoadEtaResult = {
   distanceM: number | null;
@@ -64,30 +64,21 @@ export function useRoadEta(
     abortCtrl.current = ctrl;
     const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
 
-    const base = process.env.EXPO_PUBLIC_API_URL ?? '';
-    const url =
-      `${base}/directions` +
-      `?origin=${driverPos.latitude},${driverPos.longitude}` +
-      `&destination=${target.latitude},${target.longitude}`;
-
-    getToken()
-      .then(token =>
-        fetch(url, {
-          signal: ctrl.signal,
-          headers: { Authorization: `Bearer ${token ?? ''}` },
-        }),
-      )
-      .then(r => (r.ok ? r.json() : Promise.reject(new Error('non-ok'))))
-      .then(data => {
-        if (typeof data?.distanceM === 'number' && typeof data?.durationS === 'number') {
+    fetchDirectionsRaw(driverPos, target, { signal: ctrl.signal })
+      .then(result => {
+        if (result && result.distanceM != null && result.durationS != null) {
           anchor.current = {
             at: Date.now(),
             fromLat: driverPos.latitude,
             fromLng: driverPos.longitude,
-            distanceM: data.distanceM,
-            durationS: data.durationS,
+            distanceM: result.distanceM,
+            durationS: result.durationS,
           };
-          setDisplay({ distanceM: data.distanceM, etaSeconds: Math.round(data.durationS), source: 'api' });
+          setDisplay({ distanceM: result.distanceM, etaSeconds: Math.round(result.durationS), source: 'api' });
+        } else {
+          // No usable data (non-OK response) — fall through to the same
+          // speed-based fallback estimate a network/parse error would trigger.
+          throw new Error('no-directions-data');
         }
       })
       .catch(() => {

@@ -22,7 +22,6 @@ type ReferralContextValue = {
   incomingReferralsCount: number;
   addIncomingReferral: (referral: IncomingReferralPayload) => void;
   dismissReferral: (referralId: string) => void;
-  clearReferralBadge: () => void;
 };
 
 const ReferralContext = createContext<ReferralContextValue>({
@@ -30,7 +29,6 @@ const ReferralContext = createContext<ReferralContextValue>({
   incomingReferralsCount: 0,
   addIncomingReferral: () => {},
   dismissReferral: () => {},
-  clearReferralBadge: () => {},
 });
 
 export function ReferralProvider({ children }: { children: React.ReactNode }) {
@@ -48,10 +46,6 @@ export function ReferralProvider({ children }: { children: React.ReactNode }) {
     setPendingReferrals(prev => prev.filter(r => r.referralId !== referralId));
   }, []);
 
-  const clearReferralBadge = useCallback(() => {
-    setPendingReferrals([]);
-  }, []);
-
   return (
     <ReferralContext.Provider
       value={{
@@ -59,7 +53,6 @@ export function ReferralProvider({ children }: { children: React.ReactNode }) {
         incomingReferralsCount: pendingReferrals.length,
         addIncomingReferral,
         dismissReferral,
-        clearReferralBadge,
       }}
     >
       {children}

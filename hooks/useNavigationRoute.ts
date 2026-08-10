@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { haversineMeters } from './useDriverLocation';
-import { getToken } from '@/lib/auth';
+import { fetchDirectionsRaw } from '@/lib/utils/googleDirections';
 
 type Coord = { latitude: number; longitude: number };
 
@@ -36,23 +36,8 @@ async function fetchDirections(
   destination: Coord,
   signal: AbortSignal,
 ): Promise<DirectionsResult> {
-  const base = process.env.EXPO_PUBLIC_API_URL ?? '';
-  const url =
-    `${base}/directions` +
-    `?origin=${origin.latitude},${origin.longitude}` +
-    `&destination=${destination.latitude},${destination.longitude}`;
-  const token = await getToken();
-  const res = await fetch(url, { signal, headers: { Authorization: `Bearer ${token ?? ''}` } });
-  if (!res.ok) throw new Error('non-ok');
-  const data: unknown = await res.json();
-  const poly =
-    data != null &&
-    typeof data === 'object' &&
-    'polyline' in data &&
-    Array.isArray((data as { polyline: unknown }).polyline)
-      ? ((data as { polyline: Coord[] }).polyline)
-      : null;
-  return poly && poly.length >= 2 ? { polyline: poly } : null;
+  const result = await fetchDirectionsRaw(origin, destination, { signal });
+  return result && result.polyline.length >= 2 ? { polyline: result.polyline } : null;
 }
 
 /**
