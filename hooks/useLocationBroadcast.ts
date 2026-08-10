@@ -124,13 +124,19 @@ export function useLocationBroadcast({ enabled, tripId, rideId }: Options): void
     }
 
     const currentTripId = tripIdRef.current ?? undefined;
+    // Backend's driver:location:update schema requires tripId as a positive
+    // integer (z.number().int().positive()); shuttle callers can pass it as
+    // a string, so normalize here — the one place the socket payload is built.
+    const currentTripIdNum = currentTripId != null ? Number(currentTripId) : undefined;
+    const isValidTripId = currentTripIdNum !== undefined
+      && Number.isInteger(currentTripIdNum) && currentTripIdNum > 0;
 
     // Try socket first (real-time), fall back to REST when disconnected.
     if (sock?.connected) {
       const payload: Record<string, unknown> = { latitude, longitude };
       if (speedKmh !== undefined) payload.speed = speedKmh;
       if (headingDeg !== undefined) payload.heading = headingDeg;
-      if (currentTripId != null) payload.tripId = currentTripId;
+      if (isValidTripId) payload.tripId = currentTripIdNum;
       sock.emit(SOCKET_EVENTS.DRIVER_LOCATION_UPDATE, payload);
     } else {
       // When the OS-level background task is registered it already sends REST
