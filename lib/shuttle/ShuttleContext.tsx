@@ -394,12 +394,6 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
       queryClient.invalidateQueries({ queryKey: ['shuttle-lines'] });
     };
 
-    // Task 3b: SHUTTLE_RENEWAL_CONFIRMED — show success alert + refresh bookings
-    const handleRenewalConfirmed = () => {
-      queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
-      showAlert('', 'Your booking for next week has been confirmed');
-    };
-
     // Task 3c: SHUTTLE_BOOKING_CREATED — silent refresh of bookings.
     // Also reused by manual single-trip driver assignment (assign-driver), so
     // refresh the assigned-trip list too — the driver should see a manually
@@ -470,7 +464,6 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
     socket.on(SOCKET_EVENTS.NOTIFICATION_NEW, handleNotification);
     socket.on(SOCKET_EVENTS.SHUTTLE_BOOKING_CANCELLED, handleShuttleBookingCancelled);
     socket.on(SOCKET_EVENTS.SHUTTLE_BOOKING_REASSIGNED, handleShuttleBookingReassigned);
-    socket.on(SOCKET_EVENTS.SHUTTLE_RENEWAL_CONFIRMED, handleRenewalConfirmed);
     socket.on(SOCKET_EVENTS.SHUTTLE_BOOKING_CREATED, handleBookingCreated);
     socket.on(SOCKET_EVENTS.SLOT_TAKEN, handleSlotTaken);
     socket.on(SOCKET_EVENTS.SLOT_RELEASED, handleSlotReleased);
@@ -483,7 +476,6 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
       socket.off(SOCKET_EVENTS.NOTIFICATION_NEW, handleNotification);
       socket.off(SOCKET_EVENTS.SHUTTLE_BOOKING_CANCELLED, handleShuttleBookingCancelled);
       socket.off(SOCKET_EVENTS.SHUTTLE_BOOKING_REASSIGNED, handleShuttleBookingReassigned);
-      socket.off(SOCKET_EVENTS.SHUTTLE_RENEWAL_CONFIRMED, handleRenewalConfirmed);
       socket.off(SOCKET_EVENTS.SHUTTLE_BOOKING_CREATED, handleBookingCreated);
       socket.off(SOCKET_EVENTS.SLOT_TAKEN, handleSlotTaken);
       socket.off(SOCKET_EVENTS.SLOT_RELEASED, handleSlotReleased);

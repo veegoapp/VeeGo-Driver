@@ -21,6 +21,7 @@ import { useRoadEta } from '@/hooks/useRoadEta';
 import { useRoadPolyline } from '@/hooks/useRoadPolyline';
 import { useActiveLocationTracking } from '@/hooks/useActiveLocationTracking';
 import { useLocationBroadcast } from '@/hooks/useLocationBroadcast';
+import { setActiveShuttleTripId } from '@/lib/backgroundLocationTask';
 import { useShuttle } from '@/lib/shuttleContext';
 import { useActiveSession } from '@/lib/activeSessionContext';
 import { useI18n } from '@/lib/i18nContext';
@@ -116,6 +117,19 @@ export default function ShuttleTripActiveScreen() {
     enabled: !!activeLine || !!shuttleSession,
     tripId: tripId ?? null,
   });
+
+  // Lets the background location task (DRIVER_LOCATION_TASK) know which
+  // shuttle trip is active — mirrors setActiveRideId in app/ride/[rideId].tsx
+  // — so a backgrounded update during this trip (screen locked, app not
+  // foregrounded) still carries tripId instead of falling back to the
+  // untagged idle-online ping. Cleared on unmount and whenever the trip
+  // stops being active (session/line become null), which covers completion,
+  // cancellation, and navigating away alike (D6-1/D8-1).
+  useEffect(() => {
+    const active = !!activeLine || !!shuttleSession;
+    setActiveShuttleTripId(active && tripId ? Number(tripId) : null);
+    return () => setActiveShuttleTripId(null);
+  }, [activeLine, shuttleSession, tripId]);
 
   // ── GPS ────────────────────────────────────────────────────────────────────
   const { position: gpsPos } = useDriverLocation(!!activeLine || !!shuttleSession);
@@ -270,8 +284,11 @@ export default function ShuttleTripActiveScreen() {
   // ── Socket: station timeout ────────────────────────────────────────────────
   useEffect(() => {
     if (!socket) return;
-    const handler = async (data: { tripId?: string }) => {
-      if (!data.tripId || data.tripId !== tripId) return;
+    const handler = async (data: { tripId?: number | string }) => {
+      // D5-1: server sends a numeric tripId; local tripId is normalized to a
+      // string (see comment above its declaration) — coerce both sides for
+      // comparison, matching the sibling BOOKING_PASSENGER_UPDATED handler.
+      if (!data.tripId || String(data.tripId) !== String(tripId)) return;
       if (timeoutProcessingRef.current) return;
       timeoutProcessingRef.current = true;
       try {
@@ -387,9 +404,11 @@ export default function ShuttleTripActiveScreen() {
     try {
       const id = activeLine.tripId;
       if (!id) throw new Error('No trip ID');
+      // PATCH /driver/trips/:id/complete performs the status transition and
+      // broadcasts SHUTTLE_TRIP_STATUS/ADMIN_TRACK_TRIP itself — the
+      // DRIVER_TRIP_COMPLETE socket emit that used to duplicate this
+      // broadcast was removed (D5-6/D8-4: dead handler, payload mismatch).
       const result = await endpoints.trips.complete(id) as ShuttleCompleteResponse;
-      // Notify the server that the driver has completed the shuttle trip.
-      if (socket) socket.emit(SOCKET_EVENTS.DRIVER_TRIP_COMPLETE, { tripId: Number(id) });
       const earned = result?.earnedAmount ?? result?.data?.earnedAmount;
       const balance = result?.walletBalance ?? result?.data?.walletBalance;
       router.replace({
@@ -403,7 +422,7 @@ export default function ShuttleTripActiveScreen() {
     } catch {
       router.replace('/shuttle/trip-complete' as any);
     }
-  }, [activeLine, socket]);
+  }, [activeLine]);
 
   const updatePassengerStatus = useCallback((passengerId: string, status: PassengerStatus) => {
     setPassengerStatuses(prev => ({ ...prev, [passengerId]: status }));

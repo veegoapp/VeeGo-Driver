@@ -61,7 +61,6 @@ export const SOCKET_EVENTS = {
   SHUTTLE_BOOKING_CREATED:    "shuttle:booking:created",
   SHUTTLE_BOOKING_CANCELLED:  "shuttle:booking:cancelled",
   SHUTTLE_BOOKING_REASSIGNED: "shuttle:booking:reassigned",
-  SHUTTLE_RENEWAL_CONFIRMED:  "shuttle:renewal:confirmed",
   // Server → Driver: trip threshold crossed (pending → active)
   SHUTTLE_TRIP_STATUS:        "shuttle:trip:status",
   // Server → Driver: emitted on every connect/reconnect — driver should call
@@ -140,10 +139,6 @@ export const SOCKET_EVENTS = {
   DRIVER_STATUS_BUSY:       "driver:status:busy",
   DRIVER_LOCATION_UPDATE:   "driver:location:update",
   DRIVER_RIDE_LOCATION:     "driver:ride:location",
-  /* unused — reserved for future backend compatibility: do not remove */
-  DRIVER_TRIP_START:        "driver:trip:start",
-  /* unused — reserved for future backend compatibility: do not remove */
-  DRIVER_TRIP_COMPLETE:     "driver:trip:complete",
 } as const;
 
 export type DriverSocketEvent = (typeof SOCKET_EVENTS)[keyof typeof SOCKET_EVENTS];

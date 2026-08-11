@@ -15,6 +15,20 @@ export function setActiveRideId(rideId: number | string | null): void {
   activeRideId = rideId == null ? null : Number(rideId);
 }
 
+// Set by the active shuttle trip screen (mirrors activeRideId above). A
+// driver account is permanently locked to one service type, so this and
+// activeRideId are never both set for the same driver. Unlike Ride, Shuttle
+// has no separate tripId-scoped background channel — it reuses the generic
+// driver:location ping and simply attaches tripId when one is active, so a
+// backgrounded update during a shuttle trip still lets the backend broadcast
+// SHUTTLE_DRIVER_LOCATION to the right trip room instead of being dropped
+// (D6-1/D8-1: previously this branch never carried a tripId at all).
+let activeShuttleTripId: number | null = null;
+
+export function setActiveShuttleTripId(tripId: number | string | null): void {
+  activeShuttleTripId = tripId == null ? null : Number(tripId);
+}
+
 /**
  * Stops the background location task if it is currently registered.
  * Safe to call from any context (e.g. logout handler) — no-op if not running.
@@ -65,6 +79,7 @@ TaskManager.defineTask(
           longitude,
           ...(speed != null && speed >= 0 ? { speed: Math.round(speed * 3.6) } : {}),
           ...(heading != null && heading >= 0 ? { heading: Math.round(heading) } : {}),
+          ...(activeShuttleTripId != null ? { tripId: activeShuttleTripId } : {}),
         });
       }
     } catch {

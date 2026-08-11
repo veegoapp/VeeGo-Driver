@@ -106,11 +106,9 @@ export const shuttleEndpoints = {
   bookingLiveDetail: (id: string) =>
     api.get(`/shuttle/route-bookings/${id}/detail`),
 
-  // ── Active Trip Management ───────────────────────────────────────────────
-  start: (bookingId: string) =>
-    api.post(`/shuttle/route-bookings/${bookingId}/start`),
-
-  complete: (lineId: string) => api.post(`/shuttle/lines/${lineId}/complete`),
+  // Note: the legacy start/complete wrappers (POST /shuttle/route-bookings/:id/start,
+  // POST /shuttle/lines/:id/complete) were removed (D3-1/D3-2) — use
+  // tripsEndpoints.start/complete below (PATCH /driver/trips/:id/start|complete).
   passengers: (tripId: string) => api.get(`/shuttle/trips/${tripId}/passengers`),
 
   // PATCH /driver/bookings/:id/board — marks passenger as boarded.

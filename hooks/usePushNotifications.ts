@@ -4,7 +4,13 @@ import { endpoints } from '@/lib/api';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const INT_REGEX = /^\d+$/;
-const VALID_TYPES = new Set(['ride_request', 'shuttle_trip', 'shuttle_referral', 'rate_passengers', 'renewal_prompt', 'slot_released', 'suspension', 'fine', 'warning']);
+// D7-2/D7-3: aligned with what the backend actually sends as push data.type
+// (or, when no type is set, data.category) for Shuttle notifications.
+// 'shuttle_trip' / 'shuttle_referral' / 'rate_passengers' were removed —
+// confirmed via a backend-wide search that no push payload ever sets them
+// (the referral flow is delivered over its own socket events instead, see
+// hooks/useShuttleSocket.ts, not via push tap-navigation).
+const VALID_TYPES = new Set(['ride_request', 'shuttle_approaching', 'shuttle', 'shuttle_renewal', 'renewal_prompt', 'slot_released', 'suspension', 'fine', 'warning']);
 
 export type PushToken = string | null;
 
@@ -125,38 +131,21 @@ export function usePushNotifications(onRideRequest?: () => void) {
             return;
           }
 
-          // --- Active shuttle trip ---
-          if (data?.type === 'shuttle_trip' && data.tripId) {
+          // --- Shuttle station-approach alert (driver nearing next stop) ---
+          // Payload from backend: { type: "shuttle_approaching", tripId, stationId }
+          // (lib/sendNotification.ts). Reuses the same active-trip navigation
+          // as the live in-progress screen — there is no separate destination.
+          if (data?.type === 'shuttle_approaching' && data.tripId) {
             router.push('/shuttle/trip-active');
             return;
           }
 
-          // --- Shuttle trip referral (deep-link into referral-incoming screen) ---
-          // Notification payload must include all IncomingReferralPayload fields
-          // as top-level data keys alongside `type: "shuttle_referral"`.
-          if (data?.type === 'shuttle_referral') {
-            router.push({
-              pathname: '/shuttle/referral-incoming',
-              params: {
-                referralId:    String(data.referralId    ?? ''),
-                bookingId:     String(data.bookingId     ?? ''),
-                routeName:     String(data.routeName     ?? ''),
-                departureTime: String(data.departureTime ?? ''),
-                fromStation:   String(data.fromStation   ?? ''),
-                toStation:     String(data.toStation     ?? ''),
-                ...(data.passengerCount != null && { passengerCount: String(data.passengerCount) }),
-                ...(data.totalSeats     != null && { totalSeats:     String(data.totalSeats)     }),
-                ...(data.lineNumber     != null && { lineNumber:     String(data.lineNumber)     }),
-                ...(data.vehicleType    != null && { vehicleType:    String(data.vehicleType)    }),
-                ...(data.weekStart      != null && { weekStart:      String(data.weekStart)      }),
-              },
-            } as any);
-            return;
-          }
-
-          // --- Rate passengers after shuttle trip ---
-          if (data?.type === 'rate_passengers' && data.tripId) {
-            router.push({ pathname: '/shuttle/rate-passengers', params: { tripId: String(data.tripId) } } as any);
+          // --- Admin route-booking management (cancelled/reassigned/assigned) ---
+          // Sent with category "shuttle" (no `type`) via the shared sendNotification()
+          // helper — no per-notification screen, so this lands on the driver's
+          // Bookings tab where the affected booking's current state is visible.
+          if (data?.type === 'shuttle' || data?.category === 'shuttle') {
+            router.push('/(shuttle)/bookings' as any);
             return;
           }
 
@@ -169,6 +158,14 @@ export function usePushNotifications(onRideRequest?: () => void) {
           // booking record and shows the "Confirm Renewal" / "Cancel Booking"
           // action buttons inside BookingDetailSheet).
           if (data?.type === 'renewal_prompt') {
+            router.push('/(shuttle)/bookings' as any);
+            return;
+          }
+
+          // --- Renewal window extended (admin action) ---
+          // Sent with category "shuttle_renewal" (no `type`) — same destination
+          // as the renewal prompt above, since it's the same booking's deadline.
+          if (data?.type === 'shuttle_renewal' || data?.category === 'shuttle_renewal') {
             router.push('/(shuttle)/bookings' as any);
             return;
           }

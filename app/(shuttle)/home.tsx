@@ -3,6 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { AlertTriangle, ArrowRight, Bell, Calendar, ChevronRight, Clock, GitBranch, Navigation, RefreshCw, Users, Wifi, WifiOff, X } from 'lucide-react-native';
 import { useLocationBroadcast } from '@/hooks/useLocationBroadcast';
+import { setActiveShuttleTripId } from '@/lib/backgroundLocationTask';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -67,6 +68,15 @@ export default function ShuttleHomeScreen() {
 
   // Broadcast GPS location every 5 s while the driver is online
   useLocationBroadcast({ enabled: online, tripId: activeLine?.tripId ?? null });
+
+  // D6-1/D8-1: this screen (not just trip-active.tsx) can broadcast a real
+  // trip's location whenever activeLine is set (e.g. driver briefly back on
+  // the home tab mid-trip), so the background task needs to know about it
+  // here too — mirrors the same registration in app/shuttle/trip-active.tsx.
+  useEffect(() => {
+    setActiveShuttleTripId(online && activeLine?.tripId ? Number(activeLine.tripId) : null);
+    return () => setActiveShuttleTripId(null);
+  }, [online, activeLine?.tripId]);
 
   const { data: driverRaw } = useQuery({ queryKey: ['driver'], queryFn: endpoints.driver.me });
   const { data: driverStatusRaw } = useQuery({
