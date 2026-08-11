@@ -611,10 +611,14 @@ export default function HomeScreen() {
       const sendLocation = async () => {
         try {
           const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+          // D6-9: convert raw m/s (Expo Location) to km/h — matches the unit
+          // every other caller of this same PATCH /driver/location endpoint
+          // sends (useLocationBroadcast.ts, backgroundLocationTask.ts idle
+          // branch), so the backend never receives mixed units for the same field.
           await endpoints.driver.updateLocation({
             latitude: loc.coords.latitude,
             longitude: loc.coords.longitude,
-            speed: loc.coords.speed ?? undefined,
+            speed: loc.coords.speed != null && loc.coords.speed >= 0 ? Math.round(loc.coords.speed * 3.6) : undefined,
             heading: loc.coords.heading ?? undefined,
           });
         } catch {
