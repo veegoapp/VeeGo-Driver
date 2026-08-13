@@ -117,6 +117,31 @@ export default function HomeScreen() {
   // driver:ride:location as the sole live channel during a ride.
   useLocationBroadcast({ enabled: online && homeFocused });
 
+  // ── Proactive foreground GPS permission (idle map) ─────────────────────
+  // Foreground permission was previously only ever requested from
+  // startLocationTracking() (the driver's first GO tap) — until then the
+  // idle map's GPS subscription (DriverMapLayer -> useDriverLocation ->
+  // GPSProvider) only *checks* permission and never prompts on its own (see
+  // useGPSProvider.tsx), so a first-time driver saw no blue dot / driver
+  // marker on the idle map and the recenter button silently no-op'd (no fix
+  // to recenter onto). Request it here too, once, as soon as Home mounts —
+  // but only when status is genuinely 'undetermined', so a driver who has
+  // already declined isn't re-prompted every time they open the app.
+  // recheckGPSPermission() mirrors what startLocationTracking() already does
+  // after its own request: it forces GPSProvider's one-time check to re-run
+  // against the fresh grant instead of staying permanently concluded
+  // "denied" for this mount — the same race DriverMapLayer's comment above
+  // documents avoiding by not firing an unsynchronized permission request
+  // from this component.
+  useEffect(() => {
+    (async () => {
+      const { status } = await Location.getForegroundPermissionsAsync();
+      if (status !== 'undetermined') return;
+      await Location.requestForegroundPermissionsAsync();
+      recheckGPSPermission();
+    })();
+  }, [recheckGPSPermission]);
+
   // Socket event UI state
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [toastType, setToastType] = useState<'warning' | 'success'>('warning');
@@ -540,7 +565,8 @@ export default function HomeScreen() {
   // every GO tap.
   const startLocationTracking = async (promptOnMissing = true): Promise<boolean> => {
     let fgStatus = (await Location.getForegroundPermissionsAsync()).status;
-    if (fgStatus !== 'granted') {
+    const fgAlreadyGranted = fgStatus === 'granted';
+    if (!fgAlreadyGranted) {
       fgStatus = (await Location.requestForegroundPermissionsAsync()).status;
     }
     if (fgStatus !== 'granted') {
@@ -548,10 +574,16 @@ export default function HomeScreen() {
       return false;
     }
     setLocationError(null);
-    // Signal GPSProvider to re-check immediately — closes the race where its
-    // one-time check (on consumer registration) ran before this request
-    // resolved and permanently concluded "denied" for this mount.
-    recheckGPSPermission();
+    if (!fgAlreadyGranted) {
+      // Signal GPSProvider to re-check immediately — closes the race where its
+      // one-time check (on consumer registration) ran before this request
+      // resolved and permanently concluded "denied" for this mount. Skipped
+      // when permission was already granted coming in (the common case after
+      // the Home-mount proactive request above, or a driver's 2nd+ GO tap
+      // this session) — GPSProvider's subscription is already running then,
+      // so there's nothing to re-check.
+      recheckGPSPermission();
+    }
     // ── HARD GATE: background location is REQUIRED to go online ──────────────
     // A driver with only "while using the app" stops broadcasting the moment
     // VeeGo is backgrounded (screen off, or navigating in Google Maps), so the

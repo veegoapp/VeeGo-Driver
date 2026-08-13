@@ -401,6 +401,14 @@ export const MapBackdrop = React.memo(function MapBackdrop({
 
   // ── Recenter (manual button + called by auto-recenter) ───────────────────
   const handleRecenter = useCallback(() => {
+    // Guard against the same class of bug the other camera-triggering effects
+    // in this file already guard against (focus-target effect, initial-fit
+    // effect, first-fix recenter effect): react-native-maps silently discards
+    // animateCamera calls made before the native MapView has finished
+    // initialising. The recenter button renders and is tappable immediately,
+    // so without this a tap in that brief window did nothing with no
+    // feedback — reading as "unresponsive".
+    if (!mapReady) return;
     // Cancel any pending auto-recenter timer since we're recentering now
     if (autoRecenterTimerRef.current !== null) {
       clearTimeout(autoRecenterTimerRef.current);
@@ -426,7 +434,7 @@ export const MapBackdrop = React.memo(function MapBackdrop({
       },
       { duration: 800 },
     );
-  }, [driverLocation, navigationMode]);
+  }, [driverLocation, navigationMode, mapReady]);
 
   // ── Approach circle coords for dashed Polyline ───────────────────────────
   const approachCircleCoords = useMemo(
