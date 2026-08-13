@@ -6,7 +6,7 @@ import React, { useCallback, useRef, useEffect, useMemo, useState } from 'react'
 import { ActivityIndicator, Animated, Easing, Linking, Modal, Platform, Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
-import { MapBackdrop } from '@/components/MapBackdrop';
+import { RideMap } from '@/components/RideMap';
 import { GlassView } from '@/components/GlassView';
 import { ServiceBlockedScreen } from '@/components/ServiceBlockedScreen';
 import { useColors } from '@/hooks/useColors';
@@ -16,8 +16,6 @@ import { useWaitingCharge } from '@/hooks/useWaitingCharge';
 import { useActiveLocationTracking } from '@/hooks/useActiveLocationTracking';
 import { useLocationBroadcast } from '@/hooks/useLocationBroadcast';
 import { setActiveRideId } from '@/lib/backgroundLocationTask';
-import { useDriverLocation } from '@/hooks/useDriverLocation';
-import { useNavigationRoute } from '@/hooks/useNavigationRoute';
 import { endpoints } from '@/lib/api';
 import { useI18n } from '@/lib/i18nContext';
 import { useActiveSession } from '@/lib/activeSessionContext';
@@ -162,8 +160,6 @@ export default function RideScreen() {
     setActiveRideId(locationTrackingEnabled && rideId ? Number(rideId) : null);
     return () => setActiveRideId(null);
   }, [locationTrackingEnabled, rideId]);
-
-  const { position: driverPosition } = useDriverLocation(locationTrackingEnabled);
 
   // Shared exit path for a ride that ended outside the driver's own action —
   // reached via a live socket event (cancelled by rider/system, timeout,
@@ -353,10 +349,11 @@ export default function RideScreen() {
 
   // ── Navigation route ─────────────────────────────────────────────────────
   // Route fetching (initial leg fetch + off-route reroute) is fully owned by
-  // useNavigationRoute now — it used to be split with a separate useRoadPolyline
-  // call here, keyed off the live driverPosition, which refetched /directions
-  // on nearly every GPS tick. navDestination below is the only input this
-  // screen still derives; useNavigationRoute takes driverPosition directly.
+  // useNavigationRoute, called from <RideMap> — not here. That hook, and the
+  // GPS subscription feeding it (useDriverLocation), moved into RideMap so a
+  // GPS tick re-renders only that small subtree instead of this whole screen
+  // (see components/RideMap.tsx). navDestination/navActive below are the only
+  // navigation inputs this screen still derives and passes down as stable props.
   //   to_pickup : driver → pickup
   //   in_trip   : driver → dropoff
   //   arrived / completed : no destination (no fetch; arrived uses MapBackdrop overview)
@@ -388,11 +385,6 @@ export default function RideScreen() {
   ]);
 
   const navActive = phase === 'to_pickup' || phase === 'arrived' || phase === 'in_trip';
-  const { remainingPolyline } = useNavigationRoute(
-    driverPosition,
-    navDestination,
-    navActive,
-  );
 
   const p = PHASE_COPY[phase];
 
@@ -844,11 +836,12 @@ export default function RideScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <MapBackdrop
+      <RideMap
+        locationTrackingEnabled={locationTrackingEnabled}
         pickup={mapPickup}
         dropoff={mapDropoff}
-        driverLocation={driverPosition ?? undefined}
-        roadPolyline={remainingPolyline ?? undefined}
+        navDestination={navDestination}
+        navActive={navActive}
         navigationMode={phase === 'to_pickup' || phase === 'in_trip'}
         focusTarget={arrivedFocusTarget}
       />

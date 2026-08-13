@@ -10,12 +10,25 @@ import { useDriverTrackingBuffer } from '@/hooks/map/useDriverTrackingBuffer';
 import { useDriverSmoothedHeading } from '@/hooks/map/useDriverSmoothedHeading';
 import { useDriverCameraController } from '@/hooks/map/useDriverCameraController';
 import { snapPointToRoute, remainingRouteFromPoint } from '@/hooks/map/snapToRoute';
+import { haversineMeters } from '@/hooks/useDriverLocation';
 
 // Snap the marker to the road only while it's within this many metres of the
 // route. Kept just under useNavigationRoute's 50 m off-route threshold so the
 // snap releases to the raw fix a moment before a reroute is triggered — no
 // visible snap-back at the boundary.
 const SNAP_MAX_M = 45;
+
+// Throttle for the route-line trim (remainingRouteFromPoint): recomputing an
+// O(n) route scan AND handing a brand-new coordinates array to the native
+// <Polyline> on every raw GPS tick forces react-native-maps to re-upload the
+// full route geometry across the bridge every tick — expensive enough on
+// mid/low-end devices to show as a visible flicker/redraw, even though the
+// line is never actually unmounted. Below this movement/time threshold the
+// previous trimmed array (same reference) is reused instead, so the
+// `coordinates` prop is unchanged and react-native-maps skips the native
+// update entirely.
+const TRIM_THROTTLE_MS = 300;
+const TRIM_MIN_MOVE_M = 3;
 
 
 import type { SurgeZone } from '@/lib/types';
@@ -434,11 +447,52 @@ export const MapBackdrop = React.memo(function MapBackdrop({
     : autoPolyline?.length
     ? autoPolyline
     : null;
+
+  // Cache of the last actual trim computation, keyed to the route currently
+  // being trimmed — see TRIM_THROTTLE_MS/TRIM_MIN_MOVE_M above. Cleared
+  // whenever the route identity changes or nav mode drops out, so a genuine
+  // route swap always recomputes immediately (only the same-route, same-mode,
+  // barely-moved case is throttled).
+  const trimCacheRef = useRef<{
+    baseRouteCoords: NonNullable<typeof baseRouteCoords>;
+    lat: number;
+    lng: number;
+    ts: number;
+    result: Array<{ latitude: number; longitude: number }>;
+  } | null>(null);
+
   const displayRouteCoords = useMemo(() => {
-    if (!baseRouteCoords) return null;
-    if (!navigationMode || !effectiveDriverLocation) return baseRouteCoords;
+    if (!baseRouteCoords) {
+      trimCacheRef.current = null;
+      return null;
+    }
+    if (!navigationMode || !effectiveDriverLocation) {
+      trimCacheRef.current = null;
+      return baseRouteCoords;
+    }
+
+    const cache = trimCacheRef.current;
+    if (cache && cache.baseRouteCoords === baseRouteCoords) {
+      const elapsedMs = Date.now() - cache.ts;
+      const movedM = haversineMeters(
+        cache.lat, cache.lng,
+        effectiveDriverLocation.latitude, effectiveDriverLocation.longitude,
+      );
+      if (elapsedMs < TRIM_THROTTLE_MS && movedM < TRIM_MIN_MOVE_M) {
+        return cache.result; // same reference as last render — skips the native Polyline update
+      }
+    }
+
     const glued = remainingRouteFromPoint(effectiveDriverLocation, baseRouteCoords, SNAP_MAX_M);
-    return glued && glued.length >= 2 ? glued : baseRouteCoords;
+    const result = glued && glued.length >= 2 ? glued : baseRouteCoords;
+    trimCacheRef.current = {
+      baseRouteCoords,
+      lat: effectiveDriverLocation.latitude,
+      lng: effectiveDriverLocation.longitude,
+      ts: Date.now(),
+      result,
+    };
+    return result;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [baseRouteCoords, navigationMode, effectiveDriverLocation?.latitude, effectiveDriverLocation?.longitude]);
 
