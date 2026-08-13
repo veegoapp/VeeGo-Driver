@@ -1,12 +1,17 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, Clock, MapPin, Star, TrendingDown, TrendingUp } from 'lucide-react-native';
+import { ArrowLeft, Clock, HelpCircle, MapPin, Star, TrendingDown, TrendingUp } from 'lucide-react-native';
 import React, { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useQuery } from '@tanstack/react-query';
 import { GlassView } from '@/components/GlassView';
+import { StaticRouteMap } from '@/components/shared/StaticRouteMap';
+import { AppLoader } from '@/components/ui/AppLoader';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { rtlIconStyle } from '@/lib/rtlUtils';
+import { useService } from '@/lib/serviceContext';
+import { endpoints } from '@/lib/api';
 import type { RideHistoryItem } from '@/lib/api';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
@@ -16,8 +21,9 @@ import { Spacing } from '@/constants/spacing';
 // passed as a serialized param — instead of a dedicated backend fetch, since
 // history.tsx already holds the full record for every visible card.
 export default function RideHistoryDetailScreen() {
-  const { ride: rideParam } = useLocalSearchParams<{ rideId: string; ride?: string }>();
+  const { rideId, ride: rideParam } = useLocalSearchParams<{ rideId: string; ride?: string }>();
   const colors = useColors();
+  const { isDarkMode } = useService();
   const { t, isRTL } = useI18n();
   const insets = useSafeAreaInsets();
 
@@ -32,6 +38,27 @@ export default function RideHistoryDetailScreen() {
       return null;
     }
   }, [rideParam]);
+
+  // The history list item (`ride` above) has no coordinates — fetch the full
+  // ride record for the map preview's pickup/dropoff lat/lng, the same
+  // GET /rides/:id endpoint app/trips/[tripId].tsx uses for its live map.
+  const { data: fullRide, isLoading: mapLoading } = useQuery<any>({
+    queryKey: ['ride-detail-coords', rideId],
+    queryFn: () => endpoints.rides.getById(rideId),
+    enabled: !!rideId,
+  });
+
+  const mapCoords = useMemo(() => {
+    if (!fullRide) return null;
+    const pickup = fullRide.pickup ?? {};
+    const dropoff = fullRide.dropoff ?? {};
+    const pickupLat = fullRide.pickupLatitude ?? pickup.latitude ?? null;
+    const pickupLng = fullRide.pickupLongitude ?? pickup.longitude ?? null;
+    const dropoffLat = fullRide.dropoffLatitude ?? dropoff.latitude ?? null;
+    const dropoffLng = fullRide.dropoffLongitude ?? dropoff.longitude ?? null;
+    if (pickupLat == null && dropoffLat == null) return null;
+    return { pickupLat, pickupLng, dropoffLat, dropoffLng };
+  }, [fullRide]);
 
   if (!ride) {
     return (
@@ -98,6 +125,25 @@ export default function RideHistoryDetailScreen() {
             {dateStr}
           </Text>
         </View>
+
+        {/* Map preview — pickup/dropoff coordinates come from the dedicated
+            GET /rides/:id fetch above; the history list item alone has no
+            lat/lng. Falls back to rendering nothing if the fetch fails or
+            the ride has no coordinates. */}
+        {mapLoading ? (
+          <View style={[styles.mapCard, styles.mapSkeleton, { backgroundColor: colors.secondary }]}>
+            <AppLoader />
+          </View>
+        ) : mapCoords ? (
+          <View style={styles.mapCard}>
+            <StaticRouteMap
+              pickup={mapCoords.pickupLat != null && mapCoords.pickupLng != null ? { latitude: mapCoords.pickupLat, longitude: mapCoords.pickupLng } : undefined}
+              dropoff={mapCoords.dropoffLat != null && mapCoords.dropoffLng != null ? { latitude: mapCoords.dropoffLat, longitude: mapCoords.dropoffLng } : undefined}
+              darkMode={isDarkMode}
+              style={{ borderRadius: 20 }}
+            />
+          </View>
+        ) : null}
 
         {/* Route */}
         <GlassView style={styles.card} borderRadius={20}>
@@ -223,6 +269,16 @@ export default function RideHistoryDetailScreen() {
             </View>
           </GlassView>
         )}
+
+        {/* Need Help — always available from a ride's history detail */}
+        <Pressable onPress={() => router.push('/support')}>
+          <GlassView style={[styles.card, { flexDirection: R, alignItems: 'center', justifyContent: 'center', gap: Spacing.sm }]} borderRadius={20}>
+            <HelpCircle size={16} color={colors.foreground} strokeWidth={2} />
+            <Text style={{ fontSize: Typography.size.sm, color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>
+              Need Help?
+            </Text>
+          </GlassView>
+        </Pressable>
       </ScrollView>
     </View>
   );
@@ -236,6 +292,17 @@ const styles = StyleSheet.create({
   pageTitle: { fontSize: 24, marginTop: Spacing.xl },
   pageSubtitle: { fontSize: 13 },
   card: { padding: Spacing.lg, marginTop: Spacing.lg },
+  mapCard: {
+    marginTop: Spacing.lg,
+    borderRadius: 20,
+    overflow: 'hidden',
+    height: 200,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  mapSkeleton: { alignItems: 'center', justifyContent: 'center' },
   routeDots: { alignItems: 'center', paddingTop: Spacing.xs },
   dotTop: { width: 8, height: 8, borderRadius: 4 },
   routeLine: { width: 1, flex: 1, marginVertical: 3, minHeight: 20 },
