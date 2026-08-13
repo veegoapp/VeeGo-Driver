@@ -1,7 +1,7 @@
 import { showAlert } from '@/lib/alert';
 import {
   CheckCircle2, Camera, CreditCard, Car, FileText,
-  Award, AlertCircle, ArrowRight, User, Settings,
+  Award, AlertCircle, ArrowLeft, ArrowRight, User, Settings,
 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
@@ -90,7 +90,7 @@ export default function RegisterDocumentsScreen() {
   const insets = useSafeAreaInsets();
   const topPad = insets.top;
   const botPad = insets.bottom;
-  const { t } = useI18n();
+  const { t, isRTL } = useI18n();
 
   const [photos, setPhotos] = useState<Record<string, string>>({});
   const [uploaded, setUploaded] = useState<Record<string, boolean>>({});
@@ -187,6 +187,13 @@ export default function RegisterDocumentsScreen() {
   if (cameraBlocked) {
     return (
       <View style={[s.root, s.blockedRoot, { backgroundColor: '#fafafd' }]}>
+        <TouchableOpacity
+          onPress={() => router.replace('/register-plate')}
+          style={[s.backBtn, { position: 'absolute', top: insets.top + 12, left: isRTL ? undefined : Spacing.xl, right: isRTL ? Spacing.xl : undefined }]}
+          activeOpacity={0.7}
+        >
+          <ArrowLeft size={20} color="#1e1e28" strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
+        </TouchableOpacity>
         <View style={s.blockedCard}>
           <View style={s.blockedIconBox}>
             <Camera size={36} color="#5e5e72" strokeWidth={1.5} />
@@ -222,6 +229,10 @@ export default function RegisterDocumentsScreen() {
         contentContainerStyle={{ paddingTop: topPad + 20, paddingBottom: botPad + 120, paddingHorizontal: Spacing.xl }}
         showsVerticalScrollIndicator={false}
       >
+        <TouchableOpacity onPress={() => router.replace('/register-plate')} style={s.backBtn} activeOpacity={0.7}>
+          <ArrowLeft size={20} color="#1e1e28" strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
+        </TouchableOpacity>
+
         <View style={s.header}>
           <Text style={s.step}>Step 4 of 4</Text>
           <Text style={s.title}>Upload your{'\n'}documents</Text>
@@ -372,6 +383,12 @@ export default function RegisterDocumentsScreen() {
 
 const s = StyleSheet.create({
   root: { flex: 1 },
+  backBtn: {
+    width: 42, height: 42, borderRadius: 14, backgroundColor: 'white',
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: '#e5e5ea',
+    shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: Shadows.small.elevation,
+  },
   blockedRoot: { alignItems: 'center', justifyContent: 'center', padding: Spacing.xxl },
   blockedCard: {
     backgroundColor: 'white', borderRadius: 28, padding: 28,
@@ -394,7 +411,7 @@ const s = StyleSheet.create({
   settingsBtnText: { color: 'white', fontSize: Typography.size.sm, fontWeight: Typography.weight.semibold, fontFamily: 'Inter_600SemiBold' },
   retryPermBtn: { paddingVertical: Spacing.sm },
   retryPermText: { fontSize: 13, color: '#5e5e72', fontFamily: 'Inter_400Regular', textDecorationLine: 'underline' },
-  header: { marginBottom: 20, gap: Spacing.sm },
+  header: { marginTop: Spacing.xl, marginBottom: 20, gap: Spacing.sm },
   step: { fontSize: Typography.size.xs, fontWeight: Typography.weight.semibold, color: '#5e5e72', letterSpacing: 1, textTransform: 'uppercase', fontFamily: 'Inter_600SemiBold' },
   title: { fontSize: 34, fontWeight: Typography.weight.bold, color: '#1e1e28', letterSpacing: -1.2, lineHeight: 40, fontFamily: 'Inter_700Bold' },
   sub: { fontSize: Typography.size.sm, color: '#5e5e72', lineHeight: 20, fontFamily: 'Inter_400Regular' },

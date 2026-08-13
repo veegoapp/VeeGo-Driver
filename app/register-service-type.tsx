@@ -1,4 +1,4 @@
-import { ArrowRight, Car, Bike as ScooterIcon, Package, Bus, Lock } from 'lucide-react-native';
+import { ArrowLeft, ArrowRight, Car, Bike as ScooterIcon, Package, Bus, Lock } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useState } from 'react';
@@ -144,6 +144,19 @@ export default function RegisterServiceTypeScreen() {
         contentContainerStyle={{ paddingTop: topPad + 20, paddingBottom: botPad + 120, paddingHorizontal: Spacing.xl }}
         showsVerticalScrollIndicator={false}
       >
+        {/* Registration entry point — the immediately preceding screen in a
+            fresh signup is verify-otp (see navigateAfterOtp in
+            lib/postAuthRouter.ts), which is also the safe landing spot for a
+            driver resuming registration after a relaunch: re-verifying just
+            routes straight back here. Matches this flow's existing
+            convention of router.replace() with an explicit target rather
+            than router.back() (see verify-otp.tsx, register-vehicle.tsx,
+            register-plate.tsx) — these screens are frequently reached via
+            replace() themselves, so back-stack history isn't reliable. */}
+        <TouchableOpacity onPress={() => router.replace('/verify-otp')} style={s.backBtn} activeOpacity={0.7}>
+          <ArrowLeft size={20} color="#1e1e28" strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
+        </TouchableOpacity>
+
         <View style={s.header}>
           <Text style={[s.step, { textAlign: TA }]}>Step 1 of 4</Text>
           <Text style={[s.title, { textAlign: TA }]}>Select your{'\n'}service type</Text>
@@ -235,7 +248,13 @@ export default function RegisterServiceTypeScreen() {
 
 const s = StyleSheet.create({
   root: { flex: 1 },
-  header: { marginBottom: Spacing.xl, gap: Spacing.sm },
+  backBtn: {
+    width: 42, height: 42, borderRadius: 14, backgroundColor: 'white',
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: '#e5e5ea',
+    shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: Shadows.small.elevation,
+  },
+  header: { marginTop: Spacing.xl, marginBottom: Spacing.xl, gap: Spacing.sm },
   step: { fontSize: Typography.size.xs, fontWeight: Typography.weight.semibold, color: '#5e5e72', letterSpacing: 1, textTransform: 'uppercase', fontFamily: 'Inter_600SemiBold' },
   title: { fontSize: 34, fontWeight: Typography.weight.bold, color: '#1e1e28', letterSpacing: -1.2, lineHeight: 40, fontFamily: 'Inter_700Bold' },
   sub: { fontSize: Typography.size.sm, color: '#5e5e72', lineHeight: 20, fontFamily: 'Inter_400Regular' },
