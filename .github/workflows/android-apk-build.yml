@@ -56,6 +56,14 @@ jobs:
             pnpm exec expo prebuild --platform android --no-install
           fi
 
+      - name: Increase Gradle/Kotlin daemon memory
+        run: |
+          {
+            echo "org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m"
+            echo "org.gradle.workers.max=2"
+            echo "kotlin.daemon.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=1024m"
+          } >> android/gradle.properties
+
       - name: Setup JDK 17
         uses: actions/setup-java@v4
         with:
