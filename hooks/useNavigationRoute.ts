@@ -5,8 +5,18 @@ import { fetchDirectionsRaw } from '@/lib/utils/googleDirections';
 type Coord = { latitude: number; longitude: number };
 
 export type NavigationRouteResult = {
-  /** Remaining portion of the route from the driver's closest position onward. */
-  remainingPolyline: Coord[] | null;
+  /**
+   * The current leg's full route geometry (untrimmed), replaced only on a
+   * genuine leg change or a successful reroute — NOT on every GPS tick.
+   * Visual trimming to the driver's live position is MapBackdrop's job
+   * (remainingRouteFromPoint, glued to the snapped marker); this hook used to
+   * also expose its own nearest-vertex trim as `remainingPolyline`, computed
+   * and re-rendered on every single GPS tick purely to be immediately
+   * re-trimmed (and superseded) by MapBackdrop's better trim — pure wasted
+   * work on the JS thread at 1 Hz. Off-route detection below still needs its
+   * own distance scan, but no longer needs to slice/expose a polyline for it.
+   */
+  routeCoords: Coord[] | null;
   /** True when the driver is more than OFF_ROUTE_THRESHOLD_M away from the route. */
   isOffRoute: boolean;
   /** True while a reroute network request is in flight. */
@@ -50,10 +60,8 @@ async function fetchDirections(
  * Responsibilities:
  *  1. Initial route fetch — driverPos → destination, fetched once per leg
  *     (keyed on `destination`, not on every driverPos tick).
- *  2. Route progress — trims the route to the remaining portion ahead of the
- *     driver's closest position on the route.
- *  3. Off-route detection — flags when the driver is > 50 m from the route.
- *  4. Rerouting — when off-route, fetches a new route from the current
+ *  2. Off-route detection — flags when the driver is > 50 m from the route.
+ *  3. Rerouting — when off-route, fetches a new route from the current
  *     driver position to `destination`. Throttled by a 15 s cooldown and a
  *     20 m minimum-movement guard.
  *
@@ -72,8 +80,8 @@ export function useNavigationRoute(
   enabled: boolean,
 ): NavigationRouteResult {
   // Internal "current route" — set by the initial leg fetch, replaced on reroute.
+  // Also the hook's public routeCoords output — see NavigationRouteResult.
   const [currentRoute, setCurrentRoute] = useState<Coord[] | null>(null);
-  const [remainingPolyline, setRemainingPolyline] = useState<Coord[] | null>(null);
   const [isOffRoute, setIsOffRoute] = useState(false);
   const [isRerouting, setIsRerouting] = useState(false);
 
@@ -108,9 +116,9 @@ export function useNavigationRoute(
         if (result) setCurrentRoute(result.polyline);
       })
       .catch(() => {
-        // Leg fetch failed — remainingPolyline stays null; off-route reroute
-        // logic below will pick it up once a driver position is off-route,
-        // and this effect will retry on the next genuine destination change.
+        // Leg fetch failed — routeCoords stays null; off-route reroute logic
+        // below will pick it up once a driver position is off-route, and
+        // this effect will retry on the next genuine destination change.
       })
       .finally(() => clearTimeout(timer));
 
@@ -127,23 +135,23 @@ export function useNavigationRoute(
   useEffect(() => {
     if (enabled) return;
     setCurrentRoute(null);
-    setRemainingPolyline(null);
     setIsOffRoute(false);
     lastLegDestKeyRef.current = null;
     abortRef.current?.abort();
   }, [enabled]);
 
-  // ── Route progress trimming + off-route detection + reroute trigger ─────
+  // ── Off-route detection + reroute trigger ────────────────────────────────
+  // Visual route trimming is no longer done here (see routeCoords doc above)
+  // — this effect now only computes the one number it actually needs.
   useEffect(() => {
     if (!enabled || !driverPos || !currentRoute || currentRoute.length < 2) {
-      setRemainingPolyline(currentRoute ?? null);
+      setIsOffRoute(false);
       return;
     }
 
-    // O(n) scan — find the closest route vertex to the driver's position.
+    // O(n) scan — find the closest distance from the driver to the route.
     // For typical routes (100–500 points) this is negligible at 1 Hz.
     let minDist = Infinity;
-    let minIdx = 0;
     for (let i = 0; i < currentRoute.length; i++) {
       const d = haversineMeters(
         driverPos.latitude, driverPos.longitude,
@@ -151,13 +159,8 @@ export function useNavigationRoute(
       );
       if (d < minDist) {
         minDist = d;
-        minIdx = i;
       }
     }
-
-    // Trim to the remaining portion; keep ≥ 2 points so Polyline renders.
-    const sliced = currentRoute.slice(minIdx);
-    setRemainingPolyline(sliced.length >= 2 ? sliced : currentRoute.slice(-2));
 
     const offRoute = minDist > OFF_ROUTE_THRESHOLD_M;
     setIsOffRoute(offRoute);
@@ -221,5 +224,5 @@ export function useNavigationRoute(
     return () => { abortRef.current?.abort(); };
   }, []);
 
-  return { remainingPolyline, isOffRoute, isRerouting };
+  return { routeCoords: currentRoute, isOffRoute, isRerouting };
 }

@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import MapView, { AnimatedRegion, Circle, Marker, MarkerAnimated, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
-import { Navigation } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DARK_MAP_STYLE, LIGHT_MAP_STYLE } from '@/constants/mapStyles';
 import { fetchDirectionsRaw } from '@/lib/utils/googleDirections';
@@ -10,12 +9,25 @@ import { useDriverTrackingBuffer } from '@/hooks/map/useDriverTrackingBuffer';
 import { useDriverSmoothedHeading } from '@/hooks/map/useDriverSmoothedHeading';
 import { useDriverCameraController } from '@/hooks/map/useDriverCameraController';
 import { snapPointToRoute, remainingRouteFromPoint } from '@/hooks/map/snapToRoute';
+import { haversineMeters } from '@/hooks/useDriverLocation';
 
 // Snap the marker to the road only while it's within this many metres of the
 // route. Kept just under useNavigationRoute's 50 m off-route threshold so the
 // snap releases to the raw fix a moment before a reroute is triggered — no
 // visible snap-back at the boundary.
 const SNAP_MAX_M = 45;
+
+// Throttle for the route-line trim (remainingRouteFromPoint): recomputing an
+// O(n) route scan AND handing a brand-new coordinates array to the native
+// <Polyline> on every raw GPS tick forces react-native-maps to re-upload the
+// full route geometry across the bridge every tick — expensive enough on
+// mid/low-end devices to show as a visible flicker/redraw, even though the
+// line is never actually unmounted. Below this movement/time threshold the
+// previous trimmed array (same reference) is reused instead, so the
+// `coordinates` prop is unchanged and react-native-maps skips the native
+// update entirely.
+const TRIM_THROTTLE_MS = 300;
+const TRIM_MIN_MOVE_M = 3;
 
 
 import type { SurgeZone } from '@/lib/types';
@@ -97,91 +109,28 @@ function circleCoords(
 
 const DEFAULT_CENTER = { latitude: 30.0444, longitude: 31.2357 }; // Cairo fallback
 
-// Custom Marker children that contain an <Svg> take an extra frame to paint on
-// Android before react-native-maps can snapshot them into a bitmap. With
-// tracksViewChanges locked to false from the very first render, that snapshot
-// can be taken before the Svg has painted, leaving the marker permanently
-// blank — no further re-render ever comes along to retake it. Keeping
-// tracksViewChanges true until the double-rAF after onLayout guarantees at
-// least one snapshot is taken after the Svg has actually painted, then it's
-// switched off for normal performance. State lives in its own component so a
-// fresh mount (navigationMode toggling the parent Marker in/out) always
-// starts with a fresh, unpainted flag instead of a stale "already painted".
-function DriverNavCarMarker({
-  animatedCoord,
-  rotation,
-}: {
-  animatedCoord: AnimatedRegion;
-  rotation: Animated.Value;
-}) {
-  const [painted, setPainted] = useState(false);
-  // Tracks the two chained requestAnimationFrame handles from handleLayout so
-  // they can be cancelled on unmount — without this, a rapid navigationMode
-  // toggle (which remounts this component) could still resolve setPainted
-  // against an already-unmounted marker.
-  const rafIdsRef = useRef<number[]>([]);
-
-  useEffect(() => {
-    return () => {
-      rafIdsRef.current.forEach((id) => cancelAnimationFrame(id));
-      rafIdsRef.current = [];
-    };
-  }, []);
-
-  const handleLayout = useCallback(() => {
-    const outerId = requestAnimationFrame(() => {
-      const innerId = requestAnimationFrame(() => setPainted(true));
-      rafIdsRef.current.push(innerId);
-    });
-    rafIdsRef.current.push(outerId);
-  }, []);
-
-  return (
-    <MarkerAnimated
-      coordinate={animatedCoord}
-      // Centre anchor so the arrow pivots on its own centre as heading changes;
-      // flat keeps it in the course-up map plane.
-      anchor={{ x: 0.5, y: 0.5 }}
-      flat
-      rotation={rotation}
-      tracksViewChanges={!painted}
-    >
-      <View style={styles.driverNavOuter} onLayout={handleLayout}>
-        {/* VeeGo brand arrow — the same lucide Navigation mark the passenger app
-            uses for the driver. Its tip points "up" (north) natively, so
-            MarkerAnimated.rotation (flat, shared smoothed heading) points it in
-            the direction of travel with no base-orientation correction. */}
-        <Navigation size={30} color="#ffffff" fill="#1e1e28" strokeWidth={1.5} />
-      </View>
-    </MarkerAnimated>
-  );
-}
-
 // ── AnimatedDriverMarker ────────────────────────────────────────────────────────
 //
-// Thin renderer over the shared tracking source (Driver D1/D2). Position comes
-// from `animatedCoord` (the one interpolated AnimatedRegion that also drives the
-// camera) and rotation from the shared smoothed `rotation` Animated.Value. This
-// component no longer owns any animation or bearing calculation — motion happens
-// natively via the AnimatedRegion/Animated.Value, so it barely re-renders
-// (previously the ValueXY JS listener re-rendered it ~30 fps per tick).
+// Pill/circle dot — route-blue fill, white halo ring, no rotation (a
+// symmetrical dot has no facing direction, unlike the previous nav-mode
+// arrow/car icon). Position comes from `animatedCoord`, the one interpolated
+// AnimatedRegion that also drives the follow camera; motion happens natively
+// via AnimatedRegion, so this barely re-renders (previously the ValueXY JS
+// listener re-rendered it ~30 fps per tick).
+//
+// tracksViewChanges is a flat `false` here (unlike the old arrow marker,
+// which had to keep it `true` until a double-rAF confirmed its <Svg> child
+// had actually painted on Android — see git history). A plain View with no
+// Svg/image content paints synchronously with its first snapshot, so that
+// paint-timing workaround no longer applies.
 const AnimatedDriverMarker = React.memo(function AnimatedDriverMarker({
   animatedCoord,
-  rotation,
-  navigationMode,
 }: {
   animatedCoord: AnimatedRegion;
-  rotation: Animated.Value;
-  navigationMode: boolean;
 }) {
-  if (navigationMode) {
-    return <DriverNavCarMarker animatedCoord={animatedCoord} rotation={rotation} />;
-  }
   return (
-    <MarkerAnimated coordinate={animatedCoord} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
-      <View style={styles.driverIdleMarker}>
-        <View style={styles.driverIdleInner} />
-      </View>
+    <MarkerAnimated coordinate={animatedCoord} anchor={{ x: 0.5, y: 0.5 }} rotation={0} tracksViewChanges={false}>
+      <View style={styles.driverDot} />
     </MarkerAnimated>
   );
 });
@@ -250,7 +199,7 @@ export const MapBackdrop = React.memo(function MapBackdrop({
   // re-seeds heading from the device course). Raw movement keeps the course-up
   // heading live throughout the ride.
   const { animatedCoord, positionRef } = useDriverTrackingBuffer(effectiveDriverLocation);
-  const { rotation: driverRotation, headingRef } = useDriverSmoothedHeading(driverLocation);
+  const { headingRef } = useDriverSmoothedHeading(driverLocation);
 
   // ── Continuous follow camera (Driver D3) ──────────────────────────────────
   // rAF setCamera loop reading the shared positionRef + headingRef, keeping the
@@ -388,6 +337,14 @@ export const MapBackdrop = React.memo(function MapBackdrop({
 
   // ── Recenter (manual button + called by auto-recenter) ───────────────────
   const handleRecenter = useCallback(() => {
+    // Guard against the same class of bug the other camera-triggering effects
+    // in this file already guard against (focus-target effect, initial-fit
+    // effect, first-fix recenter effect): react-native-maps silently discards
+    // animateCamera calls made before the native MapView has finished
+    // initialising. The recenter button renders and is tappable immediately,
+    // so without this a tap in that brief window did nothing with no
+    // feedback — reading as "unresponsive".
+    if (!mapReady) return;
     // Cancel any pending auto-recenter timer since we're recentering now
     if (autoRecenterTimerRef.current !== null) {
       clearTimeout(autoRecenterTimerRef.current);
@@ -413,7 +370,7 @@ export const MapBackdrop = React.memo(function MapBackdrop({
       },
       { duration: 800 },
     );
-  }, [driverLocation, navigationMode]);
+  }, [driverLocation, navigationMode, mapReady]);
 
   // ── Approach circle coords for dashed Polyline ───────────────────────────
   const approachCircleCoords = useMemo(
@@ -434,11 +391,52 @@ export const MapBackdrop = React.memo(function MapBackdrop({
     : autoPolyline?.length
     ? autoPolyline
     : null;
+
+  // Cache of the last actual trim computation, keyed to the route currently
+  // being trimmed — see TRIM_THROTTLE_MS/TRIM_MIN_MOVE_M above. Cleared
+  // whenever the route identity changes or nav mode drops out, so a genuine
+  // route swap always recomputes immediately (only the same-route, same-mode,
+  // barely-moved case is throttled).
+  const trimCacheRef = useRef<{
+    baseRouteCoords: NonNullable<typeof baseRouteCoords>;
+    lat: number;
+    lng: number;
+    ts: number;
+    result: Array<{ latitude: number; longitude: number }>;
+  } | null>(null);
+
   const displayRouteCoords = useMemo(() => {
-    if (!baseRouteCoords) return null;
-    if (!navigationMode || !effectiveDriverLocation) return baseRouteCoords;
+    if (!baseRouteCoords) {
+      trimCacheRef.current = null;
+      return null;
+    }
+    if (!navigationMode || !effectiveDriverLocation) {
+      trimCacheRef.current = null;
+      return baseRouteCoords;
+    }
+
+    const cache = trimCacheRef.current;
+    if (cache && cache.baseRouteCoords === baseRouteCoords) {
+      const elapsedMs = Date.now() - cache.ts;
+      const movedM = haversineMeters(
+        cache.lat, cache.lng,
+        effectiveDriverLocation.latitude, effectiveDriverLocation.longitude,
+      );
+      if (elapsedMs < TRIM_THROTTLE_MS && movedM < TRIM_MIN_MOVE_M) {
+        return cache.result; // same reference as last render — skips the native Polyline update
+      }
+    }
+
     const glued = remainingRouteFromPoint(effectiveDriverLocation, baseRouteCoords, SNAP_MAX_M);
-    return glued && glued.length >= 2 ? glued : baseRouteCoords;
+    const result = glued && glued.length >= 2 ? glued : baseRouteCoords;
+    trimCacheRef.current = {
+      baseRouteCoords,
+      lat: effectiveDriverLocation.latitude,
+      lng: effectiveDriverLocation.longitude,
+      ts: Date.now(),
+      result,
+    };
+    return result;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [baseRouteCoords, navigationMode, effectiveDriverLocation?.latitude, effectiveDriverLocation?.longitude]);
 
@@ -684,16 +682,12 @@ export const MapBackdrop = React.memo(function MapBackdrop({
           </Marker>
         )}
 
-        {/* ── Driver marker (nav + idle) — rendered by AnimatedDriverMarker ── */}
-        {/* Position/rotation come from the shared tracking source (animatedCoord */}
-        {/* + rotation), the same source that drives the follow camera. Motion   */}
-        {/* is native (AnimatedRegion/Animated.Value), so this barely re-renders. */}
+        {/* ── Driver marker — pill/circle dot, rendered by AnimatedDriverMarker ── */}
+        {/* Position comes from the shared tracking source (animatedCoord), the  */}
+        {/* same source that drives the follow camera. Motion is native          */}
+        {/* (AnimatedRegion), so this barely re-renders.                         */}
         {driverLocation && (
-          <AnimatedDriverMarker
-            animatedCoord={animatedCoord}
-            rotation={driverRotation}
-            navigationMode={navigationMode}
-          />
+          <AnimatedDriverMarker animatedCoord={animatedCoord} />
         )}
       </MapView>
 
@@ -723,31 +717,22 @@ export const MapBackdrop = React.memo(function MapBackdrop({
 // ── Styles ─────────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  // Driver nav marker (car image, rotated by bearing)
-  // Realistic on-road vehicle size (~54 dp long) — kept identical to the
-  // passenger app's car marker for cross-app consistency; tune within 42–64 dp.
-  driverNavOuter: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  // Driver idle marker (blue circle)
-  driverIdleMarker: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: '#2563eb',
-    borderWidth: 2.5,
-    borderColor: 'white',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  driverIdleInner: {
-    width: 16,
-    height: 10,
-    backgroundColor: 'white',
-    borderRadius: 3,
+  // Driver marker — pill/circle dot. Route-blue fill (matches the Polyline's
+  // #3b82f6 stroke), solid white halo ring, subtle elevation so it reads as
+  // sitting slightly above the route line. Symmetrical, so it never needs to
+  // rotate with heading (see AnimatedDriverMarker's rotation={0}).
+  driverDot: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#3b82f6',
+    borderWidth: 3,
+    borderColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
   // Pickup / dropoff pin markers
   pinWrapper: { alignItems: 'center' },
