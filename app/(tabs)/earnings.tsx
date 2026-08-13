@@ -24,7 +24,6 @@ import { Radius } from '@/constants/radius';
 import { Shadows } from '@/constants/shadows';
 import { TAB_BAR_HEIGHT_BASE } from '@/constants/tabBar';
 
-type WeekDay = { week_start: string; trip_count: number; total_earned: number; paid?: number; pending?: number; confirmed?: number };
 type EarningsSummary = {
   driverId: string;
   summary: {
@@ -141,21 +140,6 @@ export default function EarningsScreen() {
 
   const [period, setPeriod] = useState<PeriodKey>('this_week');
 
-  const { data: weeklyRaw, isLoading: weeklyLoading, isError: weeklyError, refetch: refetchWeekly } = useQuery({
-    queryKey: ['earnings-weekly'],
-    queryFn: async () => {
-      console.log('[Earnings:weekly] → GET /earnings/weekly?weeks=4');
-      try {
-        const result = await endpoints.earnings.weekly();
-        console.log('[Earnings:weekly] ✓ success:', { weeks: (result as any)?.weeklyBreakdown?.length });
-        return result;
-      } catch (err: unknown) {
-        const e = err as any;
-        console.error('[Earnings:weekly] ✗ failed:', { name: e?.name, message: e?.message, status: e?.status, statusText: e?.statusText, body: e?.body, stack: e?.stack }, e);
-        throw err;
-      }
-    },
-  });
   const { data: summaryRaw, isLoading: summaryLoading, isError: summaryError, refetch: refetchSummary } = useQuery({
     queryKey: ['earnings-summary', period],
     queryFn: async () => {
@@ -179,7 +163,6 @@ export default function EarningsScreen() {
     },
   });
 
-  const weekEarnings = ((weeklyRaw as { weeklyBreakdown?: WeekDay[] } | undefined)?.weeklyBreakdown ?? []);
   const summary = summaryRaw as EarningsSummary | undefined;
   const rides = periodRides ?? [];
 
@@ -205,29 +188,19 @@ export default function EarningsScreen() {
     };
   }, [summary]);
 
-  const barAnims = useRef(Array.from({ length: 12 }, () => new Animated.Value(0))).current;
   const heroAnim = useRef(new Animated.Value(0)).current;
-  const trendMax = weekEarnings.length ? Math.max(...weekEarnings.map(d => d.total_earned ?? 0)) : 1;
 
-  const isLoading = weeklyLoading || summaryLoading;
-  const isError = weeklyError || summaryError;
+  const isLoading = summaryLoading;
+  const isError = summaryError;
 
   // Debug: log when "Failed to load earnings" screen renders
   useEffect(() => {
-    if (weeklyError) console.error('[Earnings:screen] weeklyError → rendering "Failed to load earnings. Please try again."', { weeklyError });
     if (summaryError) console.error('[Earnings:screen] summaryError → rendering "Failed to load earnings. Please try again."', { summaryError });
-  }, [weeklyError, summaryError]);
+  }, [summaryError]);
 
   useEffect(() => {
     Animated.spring(heroAnim, { toValue: 1, useNativeDriver: true, stiffness: 200, damping: 20 }).start();
   }, [period]);
-
-  useEffect(() => {
-    if (!weekEarnings.length) return;
-    Animated.stagger(50, weekEarnings.map((d, i) =>
-      Animated.spring(barAnims[i], { toValue: (d.total_earned ?? 0) / trendMax, useNativeDriver: false, stiffness: 200 })
-    )).start();
-  }, [weekEarnings.length]);
 
   const handleTripPress = (ride: RideHistoryItem) => {
     router.push({
@@ -248,7 +221,7 @@ export default function EarningsScreen() {
     return (
       <View style={[styles.container, { backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center', gap: 16 }]}>
         <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: Typography.size.sm }}>Failed to load earnings. Please try again.</Text>
-        <Pressable onPress={() => { refetchWeekly(); refetchSummary(); }} style={{ paddingHorizontal: 24, paddingVertical: 10, borderRadius: 20, backgroundColor: colors.secondary }}>
+        <Pressable onPress={() => refetchSummary()} style={{ paddingHorizontal: 24, paddingVertical: 10, borderRadius: 20, backgroundColor: colors.secondary }}>
           <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: Typography.size.sm }}>Retry</Text>
         </Pressable>
       </View>
@@ -349,30 +322,6 @@ export default function EarningsScreen() {
           </View>
         </GlassView>
 
-        {/* Last 4 weeks trend — a fixed comparison widget, deliberately
-            decoupled from the period tabs above (it's weekly data at a
-            different granularity than "Today"/"This Month" etc). */}
-        <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>Last 4 Weeks</Text>
-        <GlassView style={styles.trendCard} borderRadius={20}>
-          {weekEarnings.length < 2 ? (
-            <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: Typography.size.sm, textAlign: 'center', paddingVertical: Spacing.lg }}>
-              Not enough weeks of data yet to show a trend.
-            </Text>
-          ) : (
-            <View style={[styles.barChart, { flexDirection: R }]}>
-              {weekEarnings.map((d, i) => (
-                <View key={d.week_start ?? String(i)} style={styles.barWrapper}>
-                  <Animated.View style={[styles.bar, {
-                    backgroundColor: colors.accent,
-                    height: barAnims[i].interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
-                  }]} />
-                  <Text style={[styles.barDay, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>{(d.week_start ?? '').slice(5)}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-        </GlassView>
-
         {/* Trips — simple per-ride cards for the selected period; tap opens
             the full detail screen (route, payment type, driver/company split). */}
         <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.trips}</Text>
@@ -459,11 +408,6 @@ const styles = StyleSheet.create({
   heroAmountRow: { alignItems: 'flex-end', gap: Spacing.sm, marginTop: Spacing.xs },
   heroAmount: { fontSize: 48, lineHeight: 52 },
   heroCurrency: { fontSize: 20, marginBottom: Spacing.xs },
-  trendCard: { padding: Spacing.lg },
-  barChart: { alignItems: 'flex-end', height: 96, gap: Spacing.xs },
-  barWrapper: { flex: 1, alignItems: 'center', height: '100%', justifyContent: 'flex-end' },
-  bar: { width: '100%', borderRadius: 4 },
-  barDay: { fontSize: 10, marginTop: 6 },
   sectionTitle: { fontSize: Typography.size.xs, letterSpacing: 2, textTransform: 'uppercase', marginTop: Spacing.xl, marginBottom: Spacing.md },
   summaryCard: {},
   summaryInner: { padding: Spacing.lg, gap: Spacing.md },
