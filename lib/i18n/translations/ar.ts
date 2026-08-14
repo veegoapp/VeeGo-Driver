@@ -1118,6 +1118,13 @@ export const ar: Translations = {
   payout_history_label: 'سجل السحب',
   payout_history_empty: 'لا توجد طلبات سحب بعد',
   payout_history_load_err: 'تعذر تحميل سجل السحب',
+  // ── Wallet transaction type labels (driver_wallet_ledger.type) ───────────────
+  shuttle_earnings_label: 'أرباح الحافلة',
+  wallet_bonus_label: 'مكافأة',
+  cancellation_fee_label: 'رسوم الإلغاء',
+  waiting_charge_label: 'رسوم الانتظار',
+  platform_commission_label: 'عمولة المنصة',
+  payout_transfer_label: 'تحويل السحب',
   // ── Profile screen additions ──────────────────────────────────────────────────
   driver_code_label: 'كود السائق',
   driver_code_copied: 'تم نسخ الكود!',

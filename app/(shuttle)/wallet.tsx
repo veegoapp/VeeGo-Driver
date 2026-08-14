@@ -1,7 +1,7 @@
 import { showAlert } from '@/lib/alert';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowDownLeft, ArrowUpRight, FileText, Wallet, Wrench, X } from 'lucide-react-native';
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
 import {
   ActivityIndicator, Animated, KeyboardAvoidingView,
   LayoutChangeEvent, Modal, Platform, Pressable, ScrollView,
@@ -19,7 +19,7 @@ import { useSocket } from '@/lib/socketContext';
 import {
   payoutStatusBadge, normalizeWalletBalance, normalizeActivePayoutAccounts,
   pickDefaultPayoutAccount, parsePayoutAmount, submitPayoutRequest, extractList,
-  type PayoutAccount, type PayoutHistoryItem,
+  normalizeTransactions, type PayoutAccount, type PayoutHistoryItem, type RawWalletTransaction,
 } from '@/lib/walletHelpers';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
 import { Typography } from '@/constants/typography';
@@ -42,17 +42,6 @@ type EarningsSummary = {
   summary: { totalEarnings: string; totalPaid: string; totalPending: string; totalConfirmed: string };
   recentEarnings: { amount: string }[];
 };
-type Transaction = {
-  id: string | number;
-  amount: number;
-  status?: string;
-  date?: string;
-  title?: string;
-  sub?: string;
-  incoming?: boolean;
-  description?: string;
-};
-
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 export default function ShuttleWalletScreen() {
@@ -134,8 +123,10 @@ export default function ShuttleWalletScreen() {
   // ── Data extraction ────────────────────────────────────────────────────────
   const balanceData: WalletBalance = normalizeWalletBalance(balanceRaw);
 
-  const _txRaw = txRaw as Transaction[] | { data?: Transaction[] } | undefined;
-  const txs: Transaction[] = extractList(_txRaw);
+  const txs = useMemo(
+    () => normalizeTransactions(txRaw as RawWalletTransaction[] | { data?: RawWalletTransaction[] } | undefined, t, isRTL),
+    [txRaw, t, isRTL],
+  );
 
   const weekEarnings: WeekDay[] = ((weeklyRaw as { weeklyBreakdown?: WeekDay[] } | undefined)?.weeklyBreakdown ?? []);
   const maxEarning = weekEarnings.length ? Math.max(...weekEarnings.map(d => parseFloat(String(d.amount)))) : 1;
@@ -190,17 +181,15 @@ export default function ShuttleWalletScreen() {
     }
     setIsPayingOut(true);
     try {
-      const res = await submitPayoutRequest(amount, selectedAccount.id, queryClient);
-      if (res.error) {
-        const note = res.available != null ? ` (${t.available}: ${res.available.toFixed(2)} ${t.egp})` : '';
-        showAlert(t.error, `${res.error}${note}`);
+      const result = await submitPayoutRequest(amount, selectedAccount.id, queryClient);
+      if (!result.ok) {
+        const note = result.available != null ? ` (${t.available}: ${result.available.toFixed(2)} ${t.egp})` : '';
+        showAlert(t.error, `${result.error ?? t.payout_failed_msg}${note}`);
         return;
       }
       setPayoutVisible(false);
       // Payout request is pending admin confirmation — not yet paid.
-      showAlert('✓', res?.message ?? t.payout_pending_msg);
-    } catch {
-      showAlert(t.error, t.payout_failed_msg);
+      showAlert('✓', result.message ?? t.payout_pending_msg);
     } finally {
       setIsPayingOut(false);
     }
@@ -400,29 +389,23 @@ export default function ShuttleWalletScreen() {
             <View style={{ padding: Spacing.xl, alignItems: 'center' }}>
               <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13 }}>{t.no_transactions_yet}</Text>
             </View>
-          ) : txs.map((tx, i) => {
-            const isIncoming = tx.incoming ?? (tx.status === 'confirmed');
-            const txAmount = typeof tx.amount === 'number' ? tx.amount : parseFloat(String(tx.amount));
-            const txTitle = tx.title ?? (isIncoming ? t.trip_earnings_label : t.cash_out);
-            const txSub = tx.sub ?? tx.description ?? tx.date ?? '';
-            return (
-              <View key={String(tx.id)} style={[styles.txItem, i > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}>
-                <View style={[styles.txIcon, { backgroundColor: isIncoming ? '#1e1e2820' : colors.secondary }]}>
-                  {isIncoming
-                    ? <ArrowDownLeft size={16} color="#2d2d42" strokeWidth={2} />
-                    : <ArrowUpRight size={16} color={colors.mutedForeground} strokeWidth={2} />
-                  }
-                </View>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={[styles.txTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]} numberOfLines={1}>{txTitle}</Text>
-                  <Text style={[styles.txSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]} numberOfLines={1}>{txSub}</Text>
-                </View>
-                <Text style={[styles.txAmount, { color: isIncoming ? '#2d2d42' : colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-                  {isIncoming ? '+' : '−'}{txAmount.toFixed(2)} {t.egp}
-                </Text>
+          ) : txs.map((tx, i) => (
+            <View key={tx.id} style={[styles.txItem, i > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}>
+              <View style={[styles.txIcon, { backgroundColor: tx.isCredit ? colors.success + '1A' : colors.destructive + '1A' }]}>
+                {tx.isCredit
+                  ? <ArrowDownLeft size={16} color={colors.success} strokeWidth={2} />
+                  : <ArrowUpRight size={16} color={colors.destructive} strokeWidth={2} />
+                }
               </View>
-            );
-          })}
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={[styles.txTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]} numberOfLines={1}>{tx.title}</Text>
+                <Text style={[styles.txSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]} numberOfLines={1}>{tx.subtitle}</Text>
+              </View>
+              <Text style={[styles.txAmount, { color: tx.isCredit ? colors.success : colors.destructive, fontFamily: 'Inter_700Bold' }]}>
+                {tx.isCredit ? '+' : '−'}{tx.amount.toFixed(2)} {t.egp}
+              </Text>
+            </View>
+          ))}
         </GlassView>
       </ScrollView>
 
