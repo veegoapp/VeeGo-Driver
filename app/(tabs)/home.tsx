@@ -244,6 +244,14 @@ export default function HomeScreen() {
   const statsLoading = driverLoading || earningsLoading;
   const statsError = driverError || earningsError;
 
+  // Header avatar: falls back to initials-on-tint when there's no photo yet
+  // or the signed URL fails to load (e.g. expired) — never a blank/broken
+  // image. Re-armed whenever the avatar URL itself changes.
+  const [avatarFailed, setAvatarFailed] = useState(false);
+  useEffect(() => { setAvatarFailed(false); }, [driverData?.avatar]);
+  const driverInitials = (driverData?.name ?? '')
+    .split(' ').filter(Boolean).map((w: string) => w[0]).join('').toUpperCase().slice(0, 2) || '—';
+
   // Debug: log when the "Failed to load. Tap to retry." pill renders
   useEffect(() => {
     if (driverError) console.error('[Home:stats-pill] driverError → rendering "Failed to load. Tap to retry."', { driverError });
@@ -882,7 +890,18 @@ export default function HomeScreen() {
           <Pressable onPress={() => router.push('/(tabs)/profile')} style={styles.avatarPill}>
             <GlassView style={styles.avatarPillGlass} borderRadius={24}>
               <View style={[styles.avatarPillInner, { flexDirection: R }]}>
-                <Image source={driverData?.avatar ? { uri: driverData.avatar } : undefined} style={[styles.avatar, { borderColor: colors.primary + '66' }]} contentFit="cover" />
+                {driverData?.avatar && !avatarFailed ? (
+                  <Image
+                    source={{ uri: driverData.avatar }}
+                    style={[styles.avatar, { borderColor: colors.primary + '66' }]}
+                    contentFit="cover"
+                    onError={() => setAvatarFailed(true)}
+                  />
+                ) : (
+                  <View style={[styles.avatar, styles.avatarFallback, { borderColor: colors.primary + '66', backgroundColor: colors.secondary }]}>
+                    <Text style={{ color: colors.mutedForeground, fontSize: 12, fontFamily: 'Inter_700Bold' }}>{driverInitials}</Text>
+                  </View>
+                )}
                 <View>
                   <Text style={[styles.hiText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>{t.hi}, {(driverData?.name ?? '—').split(' ')[0]}</Text>
                   <View style={[styles.ratingRow, { flexDirection: R }]}>
@@ -1174,6 +1193,7 @@ const styles = StyleSheet.create({
   avatarPillGlass: {},
   avatarPillInner: { alignItems: 'center', gap: 10, paddingLeft: Spacing.xs, paddingRight: Spacing.md, paddingVertical: Spacing.xs },
   avatar: { width: 36, height: 36, borderRadius: 18, borderWidth: 2 },
+  avatarFallback: { alignItems: 'center', justifyContent: 'center' },
   hiText: { fontSize: Typography.size.xs },
   ratingRow: { alignItems: 'center', gap: Spacing.xs },
   ratingText: { fontSize: Typography.size.xs },
