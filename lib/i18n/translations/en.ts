@@ -1118,6 +1118,13 @@ export const en = {
   payout_history_label: 'Payout History',
   payout_history_empty: 'No payout requests yet',
   payout_history_load_err: 'Failed to load payout history',
+  // ── Wallet transaction type labels (driver_wallet_ledger.type) ───────────────
+  shuttle_earnings_label: 'Shuttle Earnings',
+  wallet_bonus_label: 'Bonus',
+  cancellation_fee_label: 'Cancellation Fee',
+  waiting_charge_label: 'Waiting Charge',
+  platform_commission_label: 'Platform Commission',
+  payout_transfer_label: 'Payout Transfer',
   // ── Profile screen additions ──────────────────────────────────────────────────
   driver_code_label: 'Driver Code',
   driver_code_copied: 'Code copied to clipboard!',

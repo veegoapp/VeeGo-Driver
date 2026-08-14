@@ -2,7 +2,7 @@ import { showAlert } from '@/lib/alert';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { ArrowDownLeft, ArrowUpRight, X } from 'lucide-react-native';
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { ActivityIndicator, Animated, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -14,16 +14,13 @@ import { endpoints } from '@/lib/api';
 import {
   payoutStatusBadge, normalizeWalletBalance, normalizeActivePayoutAccounts,
   pickDefaultPayoutAccount, parsePayoutAmount, submitPayoutRequest, extractList,
-  type PayoutHistoryItem,
+  normalizeTransactions, type PayoutHistoryItem, type RawWalletTransaction,
 } from '@/lib/walletHelpers';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
 import { Shadows } from '@/constants/shadows';
 import { TAB_BAR_HEIGHT_BASE } from '@/constants/tabBar';
-
-type WalletBalance = { balance: number };
-type Transaction = { id: string; title: string; sub: string; amount: number; incoming: boolean };
 
 export default function WalletScreen() {
   const colors = useColors();
@@ -59,9 +56,11 @@ export default function WalletScreen() {
     retry: false,
   });
 
-  const balanceData: WalletBalance = normalizeWalletBalance(balanceRaw);
-  const _txRaw = txRaw as Transaction[] | { transactions?: Transaction[]; data?: Transaction[] } | undefined;
-  const txs: Transaction[] = Array.isArray(_txRaw) ? _txRaw : ((_txRaw as { transactions?: Transaction[] })?.transactions ?? ((_txRaw as { data?: Transaction[] })?.data ?? []));
+  const balanceData = normalizeWalletBalance(balanceRaw);
+  const txs = useMemo(
+    () => normalizeTransactions(txRaw as RawWalletTransaction[] | { data?: RawWalletTransaction[] } | undefined, t, isRTL),
+    [txRaw, t, isRTL],
+  );
   const payoutAccounts = normalizeActivePayoutAccounts(payoutAccountsRaw as Parameters<typeof normalizeActivePayoutAccounts>[0]);
   const payoutHistory = extractList<PayoutHistoryItem>(payoutHistoryRaw as PayoutHistoryItem[] | { data?: PayoutHistoryItem[] } | undefined);
 
@@ -83,13 +82,16 @@ export default function WalletScreen() {
     }
   }, [balanceLoading]);
 
+  const parsedPayoutAmount = parsePayoutAmount(payoutAmount);
+  const payoutExceedsBalance = parsedPayoutAmount != null && parsedPayoutAmount > balanceData.balance;
+
   const handlePayoutOpen = () => {
     if (payoutAccounts.length === 0) {
       showAlert(t.error, (t as any).no_payout_methods ?? 'Please add a payout account first.');
       router.push('/payout-accounts' as any);
       return;
     }
-    setPayoutAmount(String(balanceData?.balance ?? ''));
+    setPayoutAmount(balanceData.balance > 0 ? balanceData.balance.toFixed(2) : '');
     setPayoutVisible(true);
   };
 
@@ -107,13 +109,16 @@ export default function WalletScreen() {
     }
     setIsPayingOut(true);
     try {
-      await submitPayoutRequest(amount, selectedAccount.id, queryClient);
+      const result = await submitPayoutRequest(amount, selectedAccount.id, queryClient);
+      if (!result.ok) {
+        const note = result.available != null ? ` (${t.available}: ${result.available.toFixed(2)} ${t.egp})` : '';
+        showAlert(t.error, `${result.error ?? t.payout_fail_msg}${note}`);
+        return;
+      }
       setPayoutVisible(false);
       setPayoutAmount('');
       // Payout request is pending admin confirmation — not yet paid.
       showAlert(t.payout_success_title, t.payout_pending_msg);
-    } catch {
-      showAlert(t.error, t.payout_fail_msg);
     } finally {
       setIsPayingOut(false);
     }
@@ -149,58 +154,79 @@ export default function WalletScreen() {
         <Text style={[styles.sectionLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.wallet}</Text>
         <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.your_balance}</Text>
 
+        {/* Hero balance card — same gradient identity as the Earnings hero */}
         <Animated.View style={[{ marginTop: 20, opacity: heroAnim, transform: [{ translateY: heroAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
-          <View style={[styles.balanceCard, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
-            <View style={[styles.balanceBlob, { backgroundColor: colors.primary + '33' }]} />
-            <Text style={[styles.availableLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.available}</Text>
+          <LinearGradient colors={colors.gradientEarnings} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.balanceCard}>
+            <View style={styles.balanceBlob} />
+            <Text style={[styles.availableLabel, { color: colors.primaryForeground + 'CC', fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.available}</Text>
             <View style={[styles.balanceRow, { flexDirection: R }]}>
-              <Text style={[styles.balanceAmount, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{(balanceData?.balance ?? 0).toFixed(2)}</Text>
-              <Text style={[styles.balanceCurrency, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>{t.egp}</Text>
+              <Text style={[styles.balanceAmount, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>{balanceData.balance.toFixed(2)}</Text>
+              <Text style={[styles.balanceCurrency, { color: colors.primaryForeground + 'CC', fontFamily: 'Inter_700Bold' }]}>{t.egp}</Text>
+            </View>
+
+            {/* Balance status — paid out vs still pending, from the same balance response */}
+            <View style={[styles.balanceStatusRow, { flexDirection: R }]}>
+              <Text style={[styles.balanceStatusText, { color: colors.primaryForeground + 'CC', fontFamily: 'Inter_600SemiBold' }]}>
+                {t.status_paid_out}: {balanceData.totalPaid.toFixed(2)} {t.egp}
+              </Text>
+              <View style={[styles.balanceStatusDot, { backgroundColor: colors.primaryForeground + '66' }]} />
+              <Text style={[styles.balanceStatusText, { color: colors.primaryForeground + 'CC', fontFamily: 'Inter_600SemiBold' }]}>
+                {t.status_pending}: {balanceData.totalPending.toFixed(2)} {t.egp}
+              </Text>
             </View>
 
             {payoutVisible ? (
               <View style={styles.payoutInput}>
-                <View style={[styles.payoutRow, { borderColor: colors.border }]}>
+                <View style={[styles.payoutRow, { borderColor: colors.primaryForeground + '40', backgroundColor: colors.primaryForeground + '14' }]}>
                   <TextInput
                     value={payoutAmount}
                     onChangeText={setPayoutAmount}
                     keyboardType="decimal-pad"
                     placeholder={t.amount_placeholder}
-                    placeholderTextColor={colors.mutedForeground}
-                    style={[styles.payoutTextInput, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}
+                    placeholderTextColor={colors.primaryForeground + '80'}
+                    style={[styles.payoutTextInput, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}
                     autoFocus
                   />
-                  <Text style={[{ color: colors.mutedForeground, fontFamily: 'Inter_700Bold', fontSize: Typography.size.sm }]}>{t.egp}</Text>
+                  <Text style={[{ color: colors.primaryForeground + 'CC', fontFamily: 'Inter_700Bold', fontSize: Typography.size.sm }]}>{t.egp}</Text>
                 </View>
+                {payoutExceedsBalance && (
+                  <Text style={[styles.payoutWarning, { color: '#FFD9D0', textAlign: TA }]}>
+                    {t.available}: {balanceData.balance.toFixed(2)} {t.egp}
+                  </Text>
+                )}
                 <View style={[styles.actionRow, { flexDirection: R }]}>
                   <Pressable onPress={() => setPayoutVisible(false)} style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.8 : 1 }]}>
-                    <GlassView strong style={[styles.secondaryAction, { flexDirection: R }]} borderRadius={16}>
-                      <X size={16} color={colors.foreground} strokeWidth={2} />
-                      <Text style={[styles.actionText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.cancel}</Text>
-                    </GlassView>
+                    <View style={[styles.secondaryAction, { flexDirection: R, backgroundColor: colors.primaryForeground + '1F', borderColor: colors.primaryForeground + '33' }]}>
+                      <X size={16} color={colors.primaryForeground} strokeWidth={2} />
+                      <Text style={[styles.actionText, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>{t.cancel}</Text>
+                    </View>
                   </Pressable>
-                  <Pressable onPress={handlePayoutConfirm} disabled={isPayingOut} style={({ pressed }) => [styles.primaryAction, { opacity: pressed || isPayingOut ? 0.8 : 1 }]}>
-                    <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[styles.actionGrad, { flexDirection: R }]}>
+                  <Pressable
+                    onPress={handlePayoutConfirm}
+                    disabled={isPayingOut || !parsedPayoutAmount || payoutExceedsBalance}
+                    style={({ pressed }) => [styles.primaryAction, { opacity: pressed || isPayingOut || !parsedPayoutAmount || payoutExceedsBalance ? 0.6 : 1 }]}
+                  >
+                    <View style={[styles.actionGrad, { flexDirection: R, backgroundColor: colors.background }]}>
                       {isPayingOut
-                        ? <ActivityIndicator color={colors.primaryForeground} size="small" />
-                        : <ArrowDownLeft size={16} color={colors.primaryForeground} strokeWidth={2} />
+                        ? <ActivityIndicator color={colors.foreground} size="small" />
+                        : <ArrowDownLeft size={16} color={colors.foreground} strokeWidth={2} />
                       }
-                      <Text style={[styles.actionText, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>{t.confirm}</Text>
-                    </LinearGradient>
+                      <Text style={[styles.actionText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.confirm}</Text>
+                    </View>
                   </Pressable>
                 </View>
               </View>
             ) : (
               <View style={[styles.actionRow, { flexDirection: R }]}>
                 <Pressable onPress={handlePayoutOpen} style={({ pressed }) => [styles.primaryAction, { opacity: pressed ? 0.9 : 1 }]}>
-                  <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[styles.actionGrad, { flexDirection: R }]}>
-                    <ArrowDownLeft size={16} color={colors.primaryForeground} strokeWidth={2} />
-                    <Text style={[styles.actionText, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>{t.cash_out}</Text>
-                  </LinearGradient>
+                  <View style={[styles.actionGrad, { flexDirection: R, backgroundColor: colors.background }]}>
+                    <ArrowDownLeft size={16} color={colors.foreground} strokeWidth={2} />
+                    <Text style={[styles.actionText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.cash_out}</Text>
+                  </View>
                 </Pressable>
               </View>
             )}
-          </View>
+          </LinearGradient>
         </Animated.View>
 
         <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', marginTop: Spacing.xl, marginBottom: Spacing.md, textAlign: TA }]}>{t.payout_history_label}</Text>
@@ -237,7 +263,9 @@ export default function WalletScreen() {
                     <Text style={[styles.txAmount, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
                       {item.amount.toFixed(2)} {t.egp}
                     </Text>
-                    <Text style={[styles.defaultBadge, { color: badge.color, fontFamily: 'Inter_700Bold' }]}>{badge.label}</Text>
+                    <View style={[styles.statusPill, { backgroundColor: badge.color + '1A' }]}>
+                      <Text style={[styles.statusPillText, { color: badge.color, fontFamily: 'Inter_700Bold' }]}>{badge.label}</Text>
+                    </View>
                   </View>
                 </View>
               );
@@ -246,25 +274,31 @@ export default function WalletScreen() {
         )}
 
         <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', marginTop: Spacing.xl, marginBottom: Spacing.md, textAlign: TA }]}>{t.transactions_label}</Text>
-        <GlassView borderRadius={16}>
-          {txs.map((tx, i) => (
-            <View key={tx.id} style={[styles.txItem, { flexDirection: R }, i > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}>
-              <View style={[styles.txIcon, { backgroundColor: tx.incoming ? colors.primary + '26' : colors.secondary }]}>
-                {tx.incoming
-                  ? <ArrowDownLeft size={16} color={colors.primary} strokeWidth={2} />
-                  : <ArrowUpRight size={16} color={colors.mutedForeground} strokeWidth={2} />
-                }
+        {txs.length === 0 ? (
+          <GlassView borderRadius={16} style={{ padding: Spacing.xl, alignItems: 'center' }}>
+            <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13 }}>{t.no_transactions_yet}</Text>
+          </GlassView>
+        ) : (
+          <GlassView borderRadius={16}>
+            {txs.map((tx, i) => (
+              <View key={tx.id} style={[styles.txItem, { flexDirection: R }, i > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}>
+                <View style={[styles.txIcon, { backgroundColor: tx.isCredit ? colors.success + '1A' : colors.destructive + '1A' }]}>
+                  {tx.isCredit
+                    ? <ArrowDownLeft size={16} color={colors.success} strokeWidth={2} />
+                    : <ArrowUpRight size={16} color={colors.destructive} strokeWidth={2} />
+                  }
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={[styles.txTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]} numberOfLines={1}>{tx.title}</Text>
+                  <Text style={[styles.txSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]} numberOfLines={1}>{tx.subtitle}</Text>
+                </View>
+                <Text style={[styles.txAmount, { color: tx.isCredit ? colors.success : colors.destructive, fontFamily: 'Inter_700Bold' }]}>
+                  {tx.isCredit ? '+' : '−'}{tx.amount.toFixed(2)} {t.egp}
+                </Text>
               </View>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={[styles.txTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]} numberOfLines={1}>{tx.title}</Text>
-                <Text style={[styles.txSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]} numberOfLines={1}>{tx.sub}</Text>
-              </View>
-              <Text style={[styles.txAmount, { color: tx.incoming ? colors.primary : colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-                {tx.incoming ? '+' : '−'}{tx.amount.toFixed(2)} {t.egp}
-              </Text>
-            </View>
-          ))}
-        </GlassView>
+            ))}
+          </GlassView>
+        )}
       </ScrollView>
     </View>
   );
@@ -274,37 +308,30 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   sectionLabel: { fontSize: 10, letterSpacing: 2, textTransform: 'uppercase' },
   pageTitle: { fontSize: 24, marginTop: 2 },
-  balanceCard: { borderRadius: Radius.xl, padding: 20, borderWidth: 1, overflow: 'hidden', elevation: Shadows.large.elevation, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 16 },
-  balanceBlob: { position: 'absolute', top: -24, right: -24, width: 128, height: 128, borderRadius: 64 },
+  balanceCard: { borderRadius: Radius.xl, padding: 20, overflow: 'hidden', elevation: Shadows.large.elevation, shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 20 },
+  balanceBlob: { position: 'absolute', top: -24, right: -24, width: 128, height: 128, borderRadius: 64, backgroundColor: 'rgba(255,255,255,0.12)' },
   availableLabel: { fontSize: 10, letterSpacing: 2, textTransform: 'uppercase' },
   balanceRow: { alignItems: 'flex-end', gap: Spacing.sm, marginTop: Spacing.xs },
   balanceAmount: { fontSize: 48, lineHeight: 52 },
   balanceCurrency: { fontSize: 20, marginBottom: Spacing.xs },
+  balanceStatusRow: { alignItems: 'center', gap: Spacing.sm, marginTop: Spacing.sm },
+  balanceStatusText: { fontSize: 11 },
+  balanceStatusDot: { width: 3, height: 3, borderRadius: 1.5 },
   payoutInput: { marginTop: Spacing.lg, gap: 10 },
   payoutRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10 },
   payoutTextInput: { flex: 1, fontSize: 20, height: 36 },
+  payoutWarning: { fontSize: 11, marginTop: -4 },
   actionRow: { gap: Spacing.sm, marginTop: 20 },
-  primaryAction: { flex: 1, height: 48, borderRadius: Radius.lg, overflow: 'hidden', elevation: Shadows.large.elevation, shadowColor: '#2d2d42', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.35, shadowRadius: 8 },
+  primaryAction: { flex: 1, height: 48, borderRadius: Radius.lg, overflow: 'hidden' },
   actionGrad: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
-  secondaryAction: { height: 48, alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
+  secondaryAction: { height: 48, borderRadius: Radius.lg, borderWidth: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
   actionText: { fontSize: Typography.size.sm },
   sectionTitle: { fontSize: Typography.size.xs, letterSpacing: 2, textTransform: 'uppercase' },
-  defaultBadge: { fontSize: 10, letterSpacing: 1, textTransform: 'uppercase' },
-  trashBtn: { padding: 6 },
+  statusPill: { paddingHorizontal: Spacing.sm, paddingVertical: 3, borderRadius: 999 },
+  statusPillText: { fontSize: 10, letterSpacing: 0.5, textTransform: 'uppercase' },
   txItem: { alignItems: 'center', gap: Spacing.md, padding: Spacing.lg },
   txIcon: { width: 40, height: 40, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
   txTitle: { fontSize: Typography.size.sm },
   txSub: { fontSize: Typography.size.xs, marginTop: 2 },
   txAmount: { fontSize: Typography.size.sm },
-  modalOverlay: { flex: 1, justifyContent: 'flex-end' },
-  modalSheet: { borderTopLeftRadius: Radius.xl, borderTopRightRadius: Radius.xl, padding: Spacing.xl, paddingBottom: 40, elevation: 24, shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.2, shadowRadius: 16 },
-  modalHeader: { alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
-  modalTitle: { fontSize: Typography.size.md },
-  fieldLabel: { fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase', marginTop: 14, marginBottom: 6 },
-  fieldInput: { borderWidth: 1, borderRadius: Radius.md, paddingHorizontal: 14, paddingVertical: 10, fontSize: 15, marginBottom: 2 },
-  typeRow: { gap: 6, marginBottom: Spacing.xs },
-  typeChip: { paddingVertical: Spacing.sm, paddingHorizontal: Spacing.xs, borderRadius: 10, borderWidth: 1 },
-  typeChipText: { fontSize: Typography.size.xs },
-  submitBtn: { height: 48, borderRadius: Radius.lg, overflow: 'hidden', marginTop: 20, elevation: 6, shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 8 },
-  submitGrad: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 });
