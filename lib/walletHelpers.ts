@@ -33,7 +33,10 @@ export type PayoutHistoryItem = {
 export function payoutStatusBadge(status: PayoutHistoryItem['status'], colors: ReturnType<typeof useColors>, t: ReturnType<typeof useI18n>['t']) {
   switch (status) {
     case 'paid':
-      return { label: t.status_paid_out, color: colors.primary };
+      // colors.primary is a near-black navy in dark mode — invisible as text
+      // on a dark card. success (brand green) is both legible and semantically
+      // right for a completed, positive outcome.
+      return { label: t.status_paid_out, color: colors.success };
     case 'cancelled':
       return { label: t.status_cancelled, color: colors.destructive };
     default:
