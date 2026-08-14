@@ -344,7 +344,7 @@ export default function EarningsScreen() {
             <EarningsRow icon="check-circle" label="Confirmed" value={`${parseFloat(String(summary?.summary?.totalConfirmed ?? 0)).toFixed(2)} ${t.egp}`} colors={colors} isRTL={isRTL} />
             <EarningsRow icon="credit-card" label="Pending" value={`${parseFloat(String(summary?.summary?.totalPending ?? 0)).toFixed(2)} ${t.egp}`} colors={colors} isRTL={isRTL} />
             <EarningsRow icon="star" label="Paid Out" value={`${parseFloat(String(summary?.summary?.totalPaid ?? 0)).toFixed(2)} ${t.egp}`} accent colors={colors} isRTL={isRTL} />
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+            <View style={[styles.divider, { backgroundColor: colors.divider }]} />
             <EarningsRow label={t.net_earnings} value={`${parseFloat(String(summary?.summary?.totalEarnings ?? 0)).toFixed(2)} ${t.egp}`} bold colors={colors} isRTL={isRTL} />
           </View>
         </GlassView>

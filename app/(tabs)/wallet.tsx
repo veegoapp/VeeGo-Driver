@@ -247,7 +247,7 @@ export default function WalletScreen() {
             {payoutHistory.map((item, i) => {
               const badge = payoutStatusBadge(item.status, colors, t);
               return (
-                <View key={item.id} style={[styles.txItem, { flexDirection: R }, i > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}>
+                <View key={item.id} style={[styles.txItem, { flexDirection: R }, i > 0 && { borderTopWidth: 1, borderTopColor: colors.divider }]}>
                   <View style={[styles.txIcon, { backgroundColor: colors.secondary }]}>
                     <ArrowUpRight size={16} color={colors.mutedForeground} strokeWidth={2} />
                   </View>
@@ -280,23 +280,28 @@ export default function WalletScreen() {
           </GlassView>
         ) : (
           <GlassView borderRadius={16}>
-            {txs.map((tx, i) => (
-              <View key={tx.id} style={[styles.txItem, { flexDirection: R }, i > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}>
-                <View style={[styles.txIcon, { backgroundColor: tx.isCredit ? colors.success + '1A' : colors.destructive + '1A' }]}>
-                  {tx.isCredit
-                    ? <ArrowDownLeft size={16} color={colors.success} strokeWidth={2} />
-                    : <ArrowUpRight size={16} color={colors.destructive} strokeWidth={2} />
-                  }
+            {txs.map((tx, i) => {
+              // Debits (payouts/commission) use warning (amber), not destructive
+              // (red) — they're routine outflows, not error states.
+              const txColor = tx.isCredit ? colors.success : colors.warning;
+              return (
+                <View key={tx.id} style={[styles.txItem, { flexDirection: R }, i > 0 && { borderTopWidth: 1, borderTopColor: colors.divider }]}>
+                  <View style={[styles.txIcon, { backgroundColor: txColor + '1A' }]}>
+                    {tx.isCredit
+                      ? <ArrowDownLeft size={16} color={txColor} strokeWidth={2} />
+                      : <ArrowUpRight size={16} color={txColor} strokeWidth={2} />
+                    }
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={[styles.txTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]} numberOfLines={1}>{tx.title}</Text>
+                    <Text style={[styles.txSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]} numberOfLines={1}>{tx.subtitle}</Text>
+                  </View>
+                  <Text style={[styles.txAmount, { color: txColor, fontFamily: 'Inter_700Bold' }]}>
+                    {tx.isCredit ? '+' : '−'}{tx.amount.toFixed(2)} {t.egp}
+                  </Text>
                 </View>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={[styles.txTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]} numberOfLines={1}>{tx.title}</Text>
-                  <Text style={[styles.txSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]} numberOfLines={1}>{tx.subtitle}</Text>
-                </View>
-                <Text style={[styles.txAmount, { color: tx.isCredit ? colors.success : colors.destructive, fontFamily: 'Inter_700Bold' }]}>
-                  {tx.isCredit ? '+' : '−'}{tx.amount.toFixed(2)} {t.egp}
-                </Text>
-              </View>
-            ))}
+              );
+            })}
           </GlassView>
         )}
       </ScrollView>
