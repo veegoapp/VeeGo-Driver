@@ -33,6 +33,16 @@ const SERVICE_NAMES: Record<string, string> = {
   DELIVERY: 'Delivery',
 };
 
+// Fixed brand treatment for the post-trip fare/payment UI (completed overlay's
+// rating card + fare-breakdown sheet) — solid charcoal fills and gold fare
+// emphasis instead of theme-token glass panels, independent of light/dark
+// theme. Mirrors the Passenger app's TripCompletedSheet/FareBreakdownModal,
+// which itself was originally ported from this screen's structure.
+const GOLD = '#C8A535';
+const CHARCOAL = '#1C1C1E';
+const CHARCOAL_SURFACE = '#26262A';
+const CARD_BORDER = 'rgba(255,255,255,0.08)';
+
 type Phase = 'to_pickup' | 'arrived' | 'in_trip' | 'completed';
 type PhaseCopy = { label: string; cta: string; next: Phase };
 
@@ -178,8 +188,19 @@ export default function RideScreen() {
   // handleNoShowCancelled) funnels through this one function. So this is the
   // single choke point to enforce "completion is terminal": once
   // completedRef is set, nothing here may show an alert or navigate away.
+  //
+  // isCompletingRef guard: completedRef is only set once the completion
+  // request resolves, which leaves a window — between the "Complete trip" tap
+  // and that response landing — where a cancellation-family socket event for
+  // this ride can still slip through and pop this alert. Because the alert is
+  // a custom in-app Modal (not a blocking native one — see AppAlert.tsx), the
+  // ride screen keeps rendering underneath it: the completion then resolves,
+  // phase flips to 'completed', and the "Trip completed!" screen renders
+  // behind a stuck "Ride Cancelled" alert that was never dismissed. Checking
+  // isCompletingRef here (not just in the session-null effect) closes that
+  // window for all four handlers at once.
   const exitRide = (title: string, message: string) => {
-    if (hasExitedRef.current || completedRef.current) return;
+    if (hasExitedRef.current || completedRef.current || isCompletingRef.current) return;
     hasExitedRef.current = true;
     setIsExiting(true);
     showAlert(
@@ -196,11 +217,17 @@ export default function RideScreen() {
   useEffect(() => {
     if (!socket || !rideId) return;
 
+    // Fails closed: every ride-lifecycle event this screen listens for
+    // (backend-confirmed) always carries a rideId, so a payload without one —
+    // malformed, or from an unrelated event shape — must never be treated as
+    // a match. Matching on a missing rideId would let a stale/mismatched
+    // event (e.g. a cancellation for a different ride) fire this screen's
+    // exitRide() alert.
     const matchesThisRide = (data: unknown): boolean => {
       const payloadRideId = (data && typeof data === 'object')
         ? (data as { rideId?: string | number }).rideId
         : undefined;
-      return payloadRideId == null || String(payloadRideId) === rideId;
+      return payloadRideId != null && String(payloadRideId) === rideId;
     };
 
     const handleCancelled = (data: unknown) => {
@@ -881,15 +908,21 @@ export default function RideScreen() {
             </LinearGradient>
           </Animated.View>
           <Text style={[styles.completedTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.trip_done_title}</Text>
-          <Text style={[styles.fareEarned, { color: colors.primary, fontFamily: 'Inter_700Bold' }]}>
-            {completionResult != null ? `${completionResult.netCashPayable.toFixed(2)} ${t.egp}` : '—'}
+          <Text style={[styles.fareEarned, { color: GOLD, fontFamily: 'Inter_700Bold' }]}>
+            {completionResult != null
+              // Cash rides: the amount still owed in person. Non-cash rides:
+              // netCashPayable is correctly 0 (already settled via wallet/card),
+              // so the headline shows driverCut (what was actually earned)
+              // instead of a misleading "0.00 EGP".
+              ? `${(completionResult.netCashPayable > 0 ? completionResult.netCashPayable : completionResult.driverCut).toFixed(2)} ${t.egp}`
+              : '—'}
           </Text>
           <Text style={[styles.fareNote, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
             {completionResult != null && completionResult.netCashPayable > 0 ? t.cash_to_collect : t.added_to_earnings}
           </Text>
           {completionResult != null && (
             <Pressable onPress={() => setViewDetailsOpen(true)} style={styles.viewDetailsBtn} accessibilityLabel={t.view_details}>
-              <Text style={[styles.viewDetailsBtnText, { color: colors.primary, fontFamily: 'Inter_600SemiBold' }]}>{t.view_details}</Text>
+              <Text style={[styles.viewDetailsBtnText, { color: GOLD, fontFamily: 'Inter_600SemiBold' }]}>{t.view_details}</Text>
             </Pressable>
           )}
           {creditedChange > 0 && (
@@ -898,32 +931,32 @@ export default function RideScreen() {
             </Text>
           )}
 
-          <GlassView style={styles.ratingCard} borderRadius={16}>
+          <View style={[styles.ratingCard, { backgroundColor: CHARCOAL, borderColor: CARD_BORDER, borderWidth: 1 }]}>
             <View style={styles.ratingCardHeader}>
-              <View style={[styles.ratingAvatar, { justifyContent: 'center', alignItems: 'center', backgroundColor: colors.secondary }]}>
-                <Text style={{ color: colors.mutedForeground, fontSize: 11, fontFamily: 'Inter_700Bold' }}>{passengerInitials}</Text>
+              <View style={[styles.ratingAvatar, { justifyContent: 'center', alignItems: 'center', backgroundColor: CHARCOAL_SURFACE }]}>
+                <Text style={{ color: '#ffffff', fontSize: 11, fontFamily: 'Inter_700Bold' }}>{passengerInitials}</Text>
               </View>
-              <Text style={[styles.ratingCardLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>{t.rate_rider_label.replace('{name}', passengerName ?? '—')}</Text>
+              <Text style={[styles.ratingCardLabel, { color: '#B0B0B5', fontFamily: 'Inter_700Bold' }]}>{t.rate_rider_label.replace('{name}', passengerName ?? '—')}</Text>
             </View>
             <View style={styles.starsRow}>
               {[1, 2, 3, 4, 5].map(n => (
                 <Pressable key={n} onPress={() => setRating(n)}>
-                  <Star size={36} color={n <= rating ? colors.accent : colors.accent + '60'} fill={n <= rating ? colors.accent : 'transparent'} strokeWidth={2} />
+                  <Star size={36} color={n <= rating ? GOLD : '#5A5A5E'} fill={n <= rating ? GOLD : 'transparent'} strokeWidth={2} />
                 </Pressable>
               ))}
             </View>
             {rating > 0 && (
               <TextInput
-                style={[styles.commentInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.secondary }]}
+                style={[styles.commentInput, { color: '#ffffff', borderColor: CARD_BORDER, backgroundColor: CHARCOAL_SURFACE }]}
                 placeholder={t.rating_comment_placeholder}
-                placeholderTextColor={colors.mutedForeground}
+                placeholderTextColor="#8A8A8E"
                 value={ratingComment}
                 onChangeText={setRatingComment}
                 maxLength={500}
                 multiline
               />
             )}
-          </GlassView>
+          </View>
 
           <View style={styles.ratingActionsRow}>
             <Pressable onPress={handleSkipRating} disabled={ratingSubmitting} style={[styles.skipBtn, { borderColor: colors.border }]}>
@@ -1198,41 +1231,56 @@ export default function RideScreen() {
         </View>
       </Modal>
 
-      {/* ── Fare breakdown ("View details") ───────────────────────────── */}
+      {/* ── Fare breakdown ("View details") — fixed charcoal/gold treatment,
+          matching the Passenger app's FareBreakdownModal for this same
+          payment moment. ─────────────────────────────────────────────── */}
       <Modal visible={viewDetailsOpen} transparent animationType="fade" onRequestClose={() => setViewDetailsOpen(false)}>
         <View style={styles.modalBackdrop}>
-          <GlassView strong style={styles.modalCard} borderRadius={24}>
-            <Text style={[styles.modalTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.fare_breakdown_title}</Text>
+          <View
+            style={[
+              styles.modalCard,
+              {
+                backgroundColor: CHARCOAL,
+                borderColor: CARD_BORDER,
+                borderWidth: 1,
+                borderTopLeftRadius: 28,
+                borderTopRightRadius: 28,
+                paddingBottom: insets.bottom + 20,
+              },
+            ]}
+          >
+            <View style={[styles.sheetHandle, { backgroundColor: CARD_BORDER }]} />
+            <Text style={[styles.modalTitle, { color: '#ffffff', fontFamily: 'Inter_700Bold' }]}>{t.fare_breakdown_title}</Text>
 
             {completionResult != null && (
               <>
                 <View style={styles.summaryRow}>
-                  <Text style={[styles.summaryLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{t.gross_fare_label}</Text>
-                  <Text style={[styles.summaryValue, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{completionResult.grossFare.toFixed(2)} {t.egp}</Text>
+                  <Text style={[styles.summaryLabel, { color: '#B0B0B5', fontFamily: 'Inter_400Regular' }]}>{t.gross_fare_label}</Text>
+                  <Text style={[styles.summaryValue, { color: '#ffffff', fontFamily: 'Inter_600SemiBold' }]}>{completionResult.grossFare.toFixed(2)} {t.egp}</Text>
                 </View>
                 {completionResult.promoDiscount > 0 && (
                   <View style={styles.summaryRow}>
-                    <Text style={[styles.summaryLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{t.promo_discount_label}</Text>
-                    <Text style={[styles.summaryValue, { color: '#22c55e', fontFamily: 'Inter_700Bold' }]}>-{completionResult.promoDiscount.toFixed(2)} {t.egp}</Text>
+                    <Text style={[styles.summaryLabel, { color: '#B0B0B5', fontFamily: 'Inter_400Regular' }]}>{t.promo_discount_label}</Text>
+                    <Text style={[styles.summaryValue, { color: '#22c55e', fontFamily: 'Inter_600SemiBold' }]}>-{completionResult.promoDiscount.toFixed(2)} {t.egp}</Text>
                   </View>
                 )}
                 {completionResult.walletDeduction > 0 && (
                   <View style={styles.summaryRow}>
-                    <Text style={[styles.summaryLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{t.wallet_deduction_label}</Text>
-                    <Text style={[styles.summaryValue, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>-{completionResult.walletDeduction.toFixed(2)} {t.egp}</Text>
+                    <Text style={[styles.summaryLabel, { color: '#B0B0B5', fontFamily: 'Inter_400Regular' }]}>{t.wallet_deduction_label}</Text>
+                    <Text style={[styles.summaryValue, { color: '#ffffff', fontFamily: 'Inter_600SemiBold' }]}>-{completionResult.walletDeduction.toFixed(2)} {t.egp}</Text>
                   </View>
                 )}
-                <View style={[styles.summaryRow, styles.summaryRowTotal, { borderTopColor: colors.border }]}>
-                  <Text style={[styles.summaryLabel, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.net_cash_payable_label}</Text>
-                  <Text style={[styles.summaryValueHighlight, { color: colors.primary, fontFamily: 'Inter_700Bold' }]}>{completionResult.netCashPayable.toFixed(2)} {t.egp}</Text>
+                <View style={[styles.summaryRow, styles.summaryRowTotal, { borderTopColor: CARD_BORDER }]}>
+                  <Text style={[styles.summaryLabel, { color: '#ffffff', fontFamily: 'Inter_700Bold' }]}>{t.net_cash_payable_label}</Text>
+                  <Text style={[styles.summaryValueHighlight, { color: GOLD, fontFamily: 'Inter_700Bold' }]}>{completionResult.netCashPayable.toFixed(2)} {t.egp}</Text>
                 </View>
               </>
             )}
 
-            <Pressable onPress={() => setViewDetailsOpen(false)} style={[styles.modalCancelBtn, { backgroundColor: colors.secondary, marginTop: Spacing.md }]}>
-              <Text style={[styles.modalCancelBtnText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.close_btn}</Text>
+            <Pressable onPress={() => setViewDetailsOpen(false)} style={[styles.modalCancelBtn, { backgroundColor: CHARCOAL_SURFACE, borderColor: CARD_BORDER, borderWidth: 1, marginTop: Spacing.md }]}>
+              <Text style={[styles.modalCancelBtnText, { color: '#ffffff', fontFamily: 'Inter_700Bold' }]}>{t.close_btn}</Text>
             </Pressable>
-          </GlassView>
+          </View>
         </View>
       </Modal>
     </View>
@@ -1253,7 +1301,7 @@ const styles = StyleSheet.create({
   completedTitle: { fontSize: 24, marginTop: Spacing.xl },
   fareEarned: { fontSize: 48, lineHeight: 52 },
   fareNote: { fontSize: Typography.size.sm, marginTop: Spacing.sm },
-  ratingCard: { padding: Spacing.lg, marginTop: Spacing.xl, width: '100%' },
+  ratingCard: { padding: Spacing.lg, marginTop: Spacing.xl, width: '100%', borderRadius: Radius.lg, overflow: 'hidden' },
   ratingCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   ratingAvatar: { width: 32, height: 32, borderRadius: Radius.lg, backgroundColor: '#e5e5ea' },
   ratingCardLabel: { fontSize: 10, letterSpacing: 2, textTransform: 'uppercase', flexShrink: 1 },

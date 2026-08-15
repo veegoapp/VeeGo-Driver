@@ -26,6 +26,10 @@ const colors = {
     infoForeground: '#FFFFFF',
     surface: '#FFFFFF',
     surfaceForeground: '#0D1117',
+    // Canonical payment/fare-emphasis token (shared with Passenger app) —
+    // fixed value, same in light and dark, for money-specific UI moments
+    // (post-trip fare amount, fare-breakdown total) independent of theme.
+    gold: '#C8A535',
     border: 'rgba(0,0,0,0.08)',
     // Softer than `border` — for internal list-row separators, distinct from
     // an outer card/component outline.
@@ -70,6 +74,10 @@ const colors = {
     infoForeground: '#FFFFFF',
     surface: '#1C1C30',
     surfaceForeground: '#FFFFFF',
+    // Canonical payment/fare-emphasis token (shared with Passenger app) —
+    // fixed value, same in light and dark, for money-specific UI moments
+    // (post-trip fare amount, fare-breakdown total) independent of theme.
+    gold: '#C8A535',
     // Semi-transparent instead of a flat near-black hex, so it reads as a
     // subtle edge on any elevated surface rather than another solid block.
     border: 'rgba(255,255,255,0.08)',
