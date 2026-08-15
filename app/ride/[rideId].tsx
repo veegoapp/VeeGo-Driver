@@ -496,6 +496,13 @@ export default function RideScreen() {
           isCompletingRef.current = false;
           throw err;
         }
+        // Set synchronously the instant completion is confirmed — not inside
+        // the `useEffect` keyed on `phase` below, which only latches this
+        // after the next render commits. A cancellation-family socket event
+        // (RIDE_CANCELLED etc.) landing in that gap would otherwise read a
+        // stale `completedRef.current === false` and pop the "Ride Cancelled"
+        // alert over the just-shown Trip Completed / rating screen.
+        completedRef.current = true;
         setCompletionResult({
           finalPrice: completeResult.data.finalPrice,
           driverCut: completeResult.data.driverCut,
@@ -566,6 +573,10 @@ export default function RideScreen() {
         isCompletingRef.current = false;
         throw err;
       }
+      // See the matching comment in handleNext — must be set synchronously
+      // here, not deferred to the `phase`-keyed useEffect, to close the race
+      // window where a stale cancellation event could still show the alert.
+      completedRef.current = true;
       queryClient.invalidateQueries({ queryKey: ['earnings-summary'] });
       queryClient.invalidateQueries({ queryKey: ['earnings-weekly'] });
       setCreditedChange(result.data.changeAmount ?? 0);

@@ -47,7 +47,6 @@ export default function ShuttleHomeScreen() {
   const { t, isRTL } = useI18n();
   const TA = isRTL ? 'right' as const : 'left' as const;
   const [online, setOnline] = useState(false);
-  const [onlineInitialized, setOnlineInitialized] = useState(false);
   const [onlineLoading, setOnlineLoading] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -79,7 +78,7 @@ export default function ShuttleHomeScreen() {
   }, [online, activeLine?.tripId]);
 
   const { data: driverRaw } = useQuery({ queryKey: ['driver'], queryFn: endpoints.driver.me });
-  const { data: driverStatusRaw } = useQuery({
+  const { data: driverStatusRaw, refetch: refetchDriverStatus } = useQuery({
     queryKey: ['driver-status'],
     queryFn: endpoints.driver.status,
     staleTime: 0,
@@ -137,7 +136,21 @@ export default function ShuttleHomeScreen() {
       // Returning to this screen (e.g. backed out of /selfie) — allow another prompt.
       checkinPromptedRef.current = false;
       refetchCheckinStatus();
-    }, [refetchNotifications, refetch, queryClient, refetchCheckinStatus])
+
+      // Reconcile local `online` state against the server on every visit —
+      // not just once at cold start. The old one-shot sync (gated by
+      // onlineInitialized) applied whatever `driver-status` held on its
+      // first resolution — including a stale cached value on a remount —
+      // then never re-synced again, so returning here after a completed
+      // shuttle trip could get stuck showing the pre-trip online state.
+      refetchDriverStatus().then((result) => {
+        const status = result.data as { isOnline?: boolean; online?: boolean; status?: string } | undefined;
+        if (!status) return;
+        const serverFlag = status.isOnline ?? status.online;
+        const isOnline = serverFlag !== undefined ? Boolean(serverFlag) : status.status === 'online';
+        setOnline(Boolean(isOnline));
+      }).catch(() => {});
+    }, [refetchNotifications, refetch, queryClient, refetchCheckinStatus, refetchDriverStatus])
   );
 
   // Re-check the gate on reconnect too — covers a dropped connection that
@@ -236,15 +249,6 @@ export default function ShuttleHomeScreen() {
   const summaryData = summaryRaw as { summary?: { totalEarnings?: string | number } } | undefined;
   const todayEarnings = parseFloat(String(summaryData?.summary?.totalEarnings ?? 0)).toFixed(0);
   const completedCount = allLines.filter(l => l.status === 'completed').length;
-
-  useEffect(() => {
-    if (onlineInitialized || driverStatusRaw === undefined) return;
-    const status = driverStatusRaw as { isOnline?: boolean; online?: boolean; status?: string } | null;
-    const serverFlag = status?.isOnline ?? status?.online;
-    const isOnline = serverFlag !== undefined ? Boolean(serverFlag) : status?.status === 'online';
-    setOnline(Boolean(isOnline));
-    setOnlineInitialized(true);
-  }, [driverStatusRaw, onlineInitialized]);
 
   useEffect(() => {
     Animated.spring(cardAnim, { toValue: 1, stiffness: 200, damping: 20, useNativeDriver: true }).start();
