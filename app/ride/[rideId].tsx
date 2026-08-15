@@ -172,7 +172,7 @@ export default function RideScreen() {
   }, [locationTrackingEnabled, rideId]);
 
   // Shared exit path for a ride that ended outside the driver's own action —
-  // reached via a live socket event (cancelled by rider/system, timeout,
+  // reached via a live socket event (cancelled by driver/system, timeout,
   // no-show) or a status refetch discovering the ride is already cancelled
   // (e.g. after app restart/reconnect).
   //
@@ -184,21 +184,16 @@ export default function RideScreen() {
   // But a cancellation attempted moments before completion can still emit its
   // socket event AFTER the local phase has already flipped to 'completed'
   // (ordinary event-delivery timing, not a data bug) — and every terminal
-  // socket handler (handleCancelled, handleDriverCancelled, handleTimeout,
-  // handleNoShowCancelled) funnels through this one function. So this is the
-  // single choke point to enforce "completion is terminal": once
-  // completedRef is set, nothing here may show an alert or navigate away.
+  // socket handler funnels through this one function (or silentExitRide
+  // below). So this is the single choke point to enforce "completion is
+  // terminal": once completedRef is set, nothing here may show an alert or
+  // navigate away.
   //
   // isCompletingRef guard: completedRef is only set once the completion
   // request resolves, which leaves a window — between the "Complete trip" tap
   // and that response landing — where a cancellation-family socket event for
-  // this ride can still slip through and pop this alert. Because the alert is
-  // a custom in-app Modal (not a blocking native one — see AppAlert.tsx), the
-  // ride screen keeps rendering underneath it: the completion then resolves,
-  // phase flips to 'completed', and the "Trip completed!" screen renders
-  // behind a stuck "Ride Cancelled" alert that was never dismissed. Checking
-  // isCompletingRef here (not just in the session-null effect) closes that
-  // window for all four handlers at once.
+  // this ride can still slip through. Checking isCompletingRef here (not just
+  // in the session-null effect) closes that window for every handler at once.
   const exitRide = (title: string, message: string) => {
     if (hasExitedRef.current || completedRef.current || isCompletingRef.current) return;
     hasExitedRef.current = true;
@@ -208,6 +203,17 @@ export default function RideScreen() {
       message,
       [{ text: t.ok, onPress: () => router.replace('/(tabs)/home') }],
     );
+  };
+
+  // Same terminal-exit guard as exitRide, but with no alert: used when the
+  // rider cancels while the ride is in progress, and by the session-null
+  // fallback — the driver is moved off the dead ride silently, with no
+  // "Ride Cancelled" (or any other) popup.
+  const silentExitRide = () => {
+    if (hasExitedRef.current || completedRef.current || isCompletingRef.current) return;
+    hasExitedRef.current = true;
+    setIsExiting(true);
+    router.replace('/(tabs)/home');
   };
 
   // Ride lifecycle socket events (backend-confirmed). Status-changing events
@@ -230,14 +236,15 @@ export default function RideScreen() {
       return payloadRideId != null && String(payloadRideId) === rideId;
     };
 
+    // The rider cancelling mid-ride exits the screen silently — no alert.
     const handleCancelled = (data: unknown) => {
       if (!matchesThisRide(data)) return;
-      exitRide(t.ride_cancelled_title, t.ride_cancelled_msg);
+      silentExitRide();
     };
 
     const handleDriverCancelled = (data: unknown) => {
       if (!matchesThisRide(data)) return;
-      exitRide(t.ride_cancelled_title, t.ride_driver_cancelled_msg);
+      exitRide(t.ride_ended_title, t.ride_driver_cancelled_msg);
     };
 
     const handleTimeout = (data: unknown) => {
@@ -247,7 +254,7 @@ export default function RideScreen() {
 
     const handleNoShowCancelled = (data: unknown) => {
       if (!matchesThisRide(data)) return;
-      exitRide(t.ride_cancelled_title, t.ride_no_show_msg);
+      exitRide(t.ride_ended_title, t.ride_no_show_msg);
     };
 
     // Resilience fallback: advance phase directly from socket events in case
@@ -347,9 +354,11 @@ export default function RideScreen() {
   // ActiveSession termination: when the server ends the ride (cancellation,
   // timeout, admin action), the session:snapshot socket event delivers
   // { data: null }, which sets session = null in ActiveSessionContext.
-  // This effect detects that transition and exits via the existing exitRide()
-  // path, which is already guarded by hasExitedRef to prevent duplicate exits
-  // alongside the socket-event paths.
+  // This effect detects that transition and exits via silentExitRide(),
+  // which is already guarded by hasExitedRef to prevent duplicate exits
+  // alongside the socket-event paths. This is a fallback for the same
+  // rider-cancels-mid-ride case handleCancelled above also covers, so it
+  // stays silent too — no alert.
   //
   // Guards:
   //   initialized — avoids acting on the initial null before the first fetch
@@ -367,8 +376,8 @@ export default function RideScreen() {
       completedRef.current ||
       isCompletingRef.current
     ) return;
-    exitRide(t.ride_cancelled_title, t.ride_cancelled_msg);
-  // exitRide and t are stable within the component lifecycle and intentionally
+    silentExitRide();
+  // silentExitRide is stable within the component lifecycle and intentionally
   // omitted from deps — consistent with the existing useEffect at line ~177
   // that calls exitRide(t.*) with only [rideRaw] in its dependency array.
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -526,9 +535,10 @@ export default function RideScreen() {
         // Set synchronously the instant completion is confirmed — not inside
         // the `useEffect` keyed on `phase` below, which only latches this
         // after the next render commits. A cancellation-family socket event
-        // (RIDE_CANCELLED etc.) landing in that gap would otherwise read a
-        // stale `completedRef.current === false` and pop the "Ride Cancelled"
-        // alert over the just-shown Trip Completed / rating screen.
+        // landing in that gap would otherwise read a stale
+        // `completedRef.current === false` and exit the just-shown Trip
+        // Completed / rating screen (silently for RIDE_CANCELLED, with an
+        // alert for the driver-cancelled/timeout/no-show variants).
         completedRef.current = true;
         setCompletionResult({
           finalPrice: completeResult.data.finalPrice,
