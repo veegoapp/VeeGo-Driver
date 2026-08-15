@@ -9,6 +9,8 @@ export const SOCKET_EVENTS = {
   /* unused — reserved for future */
   RIDE_NEW_REQUEST:         "ride:new_request",
   RIDE_OFFER_EXPIRED:       "ride:offer_expired",
+  // Confirms a decline was processed server-side.
+  RIDE_DECLINE_SUCCESS:     "ride:decline:success",
   // Backend-confirmed value; was previously "ride:status_update" (never emitted, unused).
   RIDE_STATUS_UPDATE:       "ride:status:changed",
   RIDE_DRIVER_ASSIGNED:     "ride:driver_assigned",

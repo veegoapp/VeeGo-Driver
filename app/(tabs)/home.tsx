@@ -157,6 +157,11 @@ export default function HomeScreen() {
   // allows the previous instance to be unloaded before a new one is created.
   const tripRequestSoundRef = useRef<Audio.Sound | null>(null);
 
+  // Ride IDs the driver has already declined this session — guards against the
+  // same offer being re-shown by a late/duplicate ride:offer emit (e.g. a
+  // round that was already in flight when the decline was processed).
+  const declinedRideIdsRef = useRef<Set<string>>(new Set());
+
   const [unreadCount, setUnreadCount] = useState(0);
   const { socket } = useSocket();
 
@@ -496,6 +501,7 @@ export default function HomeScreen() {
   const { token, fcmToken } = usePushNotifications(useCallback(() => {}, []));
 
   const handleRideOffer = useCallback((ride: RideRequest) => {
+    if (declinedRideIdsRef.current.has(ride.id)) return;
     showRequestRef.current?.(ride);
   }, []);
 
@@ -804,7 +810,19 @@ export default function HomeScreen() {
     setDeclining(true);
     timerRef.current?.stop();
     if (countdownRef.current) clearInterval(countdownRef.current);
+
+    // Stop the ringtone immediately — don't let it keep playing while the
+    // decline call is in flight or the sheet is animating out.
+    const activeSound = tripRequestSoundRef.current;
+    tripRequestSoundRef.current = null;
+    if (activeSound) {
+      activeSound.stopAsync().catch(() => {}).finally(() => {
+        activeSound.unloadAsync().catch(() => {});
+      });
+    }
+
     if (request) {
+      declinedRideIdsRef.current.add(request.id);
       endpoints.rides.decline(request.id).catch(() => {});
     }
     Animated.timing(sheetAnim, { toValue: 300, duration: 250, useNativeDriver: true }).start(() => {
