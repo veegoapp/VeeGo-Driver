@@ -151,12 +151,12 @@ export default function RideHistoryTabScreen() {
             <View style={{ marginTop: 60, alignItems: 'center', gap: Spacing.sm }}>
               <Text style={{ fontSize: 36 }}>🚗</Text>
               <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: Typography.size.md }}>
-                No rides yet
+                {t.no_rides_yet}
               </Text>
               <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13, textAlign: 'center' }}>
                 {filter === 'all'
-                  ? 'Your completed rides will appear here.'
-                  : `No ${filter} rides found.`}
+                  ? t.completed_rides_appear
+                  : t.no_filter_rides_found.replace('{filter}', (filter === 'completed' ? t.completed_label : t.status_cancelled).toLowerCase())}
               </Text>
             </View>
           ) : null
@@ -188,7 +188,7 @@ export default function RideHistoryTabScreen() {
               }}
             >
               <Text style={{ color: '#55c49a', fontFamily: 'Inter_600SemiBold', fontSize: Typography.size.sm }}>
-                Load more
+                {t.load_more_label}
               </Text>
             </Pressable>
           ) : isLoading && page > 1 ? (

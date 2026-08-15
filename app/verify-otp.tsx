@@ -19,6 +19,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '@/lib/authContext';
 import { endpoints, ApiError } from '@/lib/api';
 import { navigateAfterOtp } from '@/lib/postAuthRouter';
+import { useI18n } from '@/lib/i18nContext';
 import { useCodeLockout, formatLockoutCountdown } from '@/hooks/useCodeLockout';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
@@ -33,6 +34,7 @@ export default function VerifyOtpScreen() {
   const { phone: phoneParam, maskedPhone: maskedPhoneParam, retryAfter: retryAfterParam } = useLocalSearchParams<{ phone: string; maskedPhone?: string; retryAfter?: string }>();
   const phone = phoneParam ? decodeURIComponent(phoneParam) : '';
   const { login } = useAuth();
+  const { t } = useI18n();
 
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
@@ -111,19 +113,19 @@ export default function VerifyOtpScreen() {
         if (err.status === 429) {
           justLocked = true;
           lock(body?.retryAfter);
-          setError(body?.error ?? 'Too many incorrect attempts. Please request a new code.');
+          setError(body?.error ?? t.err_too_many_attempts);
         } else if (err.status === 400 || err.status === 401) {
           const remaining = typeof body?.attemptsRemaining === 'number' ? body.attemptsRemaining : null;
           setError(
             remaining !== null
-              ? `Invalid code. ${remaining} attempt${remaining === 1 ? '' : 's'} left.`
-              : 'Invalid or expired OTP. Please try again.'
+              ? t.otp_invalid_with_attempts.replace('{n}', String(remaining))
+              : t.err_code_invalid
           );
         } else {
-          setError('Something went wrong. Please try again.');
+          setError(t.err_generic);
         }
       } else {
-        setError('Could not connect. Check your internet and try again.');
+        setError(t.err_no_connection);
       }
       setOtp('');
       if (!justLocked) inputRef.current?.focus();
@@ -146,10 +148,10 @@ export default function VerifyOtpScreen() {
     } catch (err) {
       if (err instanceof ApiError && err.status === 429) {
         const body = err.body as { error?: string; retryAfter?: number } | null;
-        setError(body?.error ?? 'Failed to resend code. Please try again.');
+        setError(body?.error ?? t.resend_code_fail);
         if (typeof body?.retryAfter === 'number') setCountdown(body.retryAfter);
       } else {
-        setError('Failed to resend code. Please try again.');
+        setError(t.resend_code_fail);
       }
     } finally {
       setResending(false);
@@ -186,9 +188,9 @@ export default function VerifyOtpScreen() {
               </LinearGradient>
             </View>
 
-            <Text style={s.title}>Verify your number</Text>
+            <Text style={s.title}>{t.verify_number_title}</Text>
             <Text style={s.sub}>
-              We sent a 6-digit code to{'\n'}
+              {t.otp_sent_msg}{'\n'}
               <Text style={s.phoneBold}>{maskedPhone}</Text>
             </Text>
 
@@ -218,13 +220,13 @@ export default function VerifyOtpScreen() {
 
             {error && <Text style={s.errorText}>{error}</Text>}
             {locked && lockoutRemaining > 0 && (
-              <Text style={s.lockoutText}>Try again in {formatLockoutCountdown(lockoutRemaining)}</Text>
+              <Text style={s.lockoutText}>{t.otp_try_again_in.replace('{time}', formatLockoutCountdown(lockoutRemaining))}</Text>
             )}
 
             {loading && (
               <View style={s.loadingRow}>
                 <ActivityIndicator size="small" color="#55c49a" />
-                <Text style={s.loadingText}>Verifying…</Text>
+                <Text style={s.loadingText}>{t.verifying_msg}</Text>
               </View>
             )}
 
@@ -247,19 +249,19 @@ export default function VerifyOtpScreen() {
 
             <View style={s.resendRow}>
               {countdown > 0 ? (
-                <Text style={s.resendCooldown}>Resend code in <Text style={s.resendCount}>{countdown}s</Text></Text>
+                <Text style={s.resendCooldown}>{t.resend_code_in} <Text style={s.resendCount}>{countdown}s</Text></Text>
               ) : (
                 <TouchableOpacity onPress={handleResend} disabled={resending} activeOpacity={0.7}>
                   {resending
                     ? <ActivityIndicator size="small" color="#55c49a" />
-                    : <Text style={s.resendBtn}>Resend code</Text>
+                    : <Text style={s.resendBtn}>{t.resend}</Text>
                   }
                 </TouchableOpacity>
               )}
             </View>
           </View>
 
-          <Text style={s.hint}>Didn't receive the SMS? Check that your phone number is correct and try resending.</Text>
+          <Text style={s.hint}>{t.otp_hint_no_sms}</Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </LinearGradient>

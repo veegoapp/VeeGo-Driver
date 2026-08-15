@@ -53,7 +53,7 @@ export default function RatingsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const topPad = insets.top;
-  const { isRTL } = useI18n();
+  const { t, isRTL } = useI18n();
   const TA = isRTL ? 'right' as const : 'left' as const;
 
   const [refreshing, setRefreshing] = useState(false);
@@ -90,7 +90,7 @@ export default function RatingsScreen() {
   if (isError) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' }]}>
-        <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: Typography.size.sm }}>Failed to load ratings. Please try again.</Text>
+        <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: Typography.size.sm }}>{t.ratings_load_fail}</Text>
       </View>
     );
   }
@@ -145,7 +145,7 @@ export default function RatingsScreen() {
         {/* Reviews list */}
         {ratings.length > 0 && (
           <>
-            <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>Recent reviews</Text>
+            <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>{t.recent_reviews_label}</Text>
             <View style={{ gap: Spacing.sm }}>
               {ratings.slice(0, 20).map(r => (
                 <GlassView key={r.id} style={styles.reviewCard} borderRadius={20}>
@@ -160,7 +160,7 @@ export default function RatingsScreen() {
                       ))}
                     </View>
                     <Text style={[styles.reviewContext, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold', textAlign: TA }]}>
-                      {r.context === 'ride' ? 'Ride' : 'Shuttle'}
+                      {r.context === 'ride' ? t.ride_label : t.shuttle}
                     </Text>
                   </View>
                   {r.comment ? (
@@ -179,7 +179,7 @@ export default function RatingsScreen() {
 
         {ratings.length === 0 && !isLoading && (
           <View style={{ alignItems: 'center', marginTop: 40 }}>
-            <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: Typography.size.sm }}>No reviews yet.</Text>
+            <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: Typography.size.sm }}>{t.no_reviews_yet}</Text>
           </View>
         )}
       </ScrollView>

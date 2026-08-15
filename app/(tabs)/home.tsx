@@ -864,7 +864,7 @@ export default function HomeScreen() {
         }}>
           <AlertCircle size={14} color="#fff" strokeWidth={2.5} />
           <Text style={{ color: '#fff', fontSize: 13, fontFamily: 'Inter_600SemiBold', letterSpacing: 0.2 }}>
-            Reconnecting to server…
+            {t.reconnecting_server}
           </Text>
         </View>
       </Animated.View>
@@ -917,7 +917,7 @@ export default function HomeScreen() {
           <View style={[styles.headerActions, { flexDirection: R }]}>
             <Pressable
               style={styles.iconBtn}
-              accessibilityLabel="Notifications"
+              accessibilityLabel={t.notifications}
               onPress={() => router.push('/messages')}
             >
               <GlassView style={styles.iconBtnGlass} borderRadius={20}>
@@ -940,7 +940,7 @@ export default function HomeScreen() {
               </View>
             ) : statsError ? (
               <Pressable onPress={() => { refetchDriver(); refetchEarnings(); }} style={{ paddingVertical: 14, alignItems: 'center' }}>
-                <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 12 }}>Failed to load. Tap to retry.</Text>
+                <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 12 }}>{t.stats_load_fail}</Text>
               </Pressable>
             ) : (
               <View style={[styles.statsPillInner, { flexDirection: R }]}>
@@ -1046,7 +1046,7 @@ export default function HomeScreen() {
             <Pressable
               onPress={handleToggleOnline}
               disabled={togglingOnline}
-              accessibilityLabel={online ? 'Go offline' : 'Go online'}
+              accessibilityLabel={online ? t.go_offline_label : t.go_online_label}
               style={({ pressed }) => [styles.onlineBtn, { transform: [{ scale: pressed ? 0.95 : 1 }], opacity: togglingOnline ? 0.7 : 1 }]}
             >
               {online ? (
@@ -1142,7 +1142,7 @@ export default function HomeScreen() {
                 onPress={dismissRequest}
                 disabled={declining}
                 style={[styles.declineBtn, { backgroundColor: colors.secondary, opacity: declining ? 0.7 : 1 }]}
-                accessibilityLabel="Decline ride"
+                accessibilityLabel={t.decline_ride_label}
               >
                 {declining
                   ? <ActivityIndicator size="small" color={colors.foreground} />
@@ -1153,7 +1153,7 @@ export default function HomeScreen() {
                 onPress={acceptRequest}
                 disabled={acceptingRide}
                 style={[styles.acceptBtn, { opacity: acceptingRide ? 0.7 : 1 }]}
-                accessibilityLabel="Accept ride"
+                accessibilityLabel={t.accept_ride_label}
               >
                 <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[styles.acceptBtnGrad, { flexDirection: R }]}>
                   {acceptingRide

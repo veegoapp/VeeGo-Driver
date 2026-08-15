@@ -1,8 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import { AppLoader } from '@/components/ui/AppLoader';
+import { useI18n } from '@/lib/i18nContext';
 
 export function LanguageSwitchOverlay() {
+  const { t } = useI18n();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.88)).current;
   const checkAnim = useRef(new Animated.Value(0)).current;
@@ -53,7 +55,7 @@ export function LanguageSwitchOverlay() {
         </View>
 
         <Text style={overlayStyles.label}>
-          {showCheck ? 'Done!' : 'Switching language…'}
+          {showCheck ? t.done_exclaim : t.switching_language_msg}
         </Text>
       </Animated.View>
     </Animated.View>

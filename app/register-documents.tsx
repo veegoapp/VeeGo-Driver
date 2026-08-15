@@ -173,12 +173,12 @@ export default function RegisterDocumentsScreen() {
       signupStore.reset();
       router.replace('/pending-approval');
     } catch (err) {
-      let msg = 'Failed to submit registration. Please try again.';
+      let msg = t.reg_submit_fail;
       if (err instanceof ApiError) {
         const body = err.body as { error?: string } | null;
         if (body?.error) msg = body.error;
       }
-      showAlert('Error', msg);
+      showAlert(t.error, msg);
     } finally {
       setSubmitting(false);
     }
@@ -216,7 +216,7 @@ export default function RegisterDocumentsScreen() {
             }}
             activeOpacity={0.7}
           >
-            <Text style={s.retryPermText}>I've granted permission — try again</Text>
+            <Text style={s.retryPermText}>{t.retry_camera_btn}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -234,10 +234,10 @@ export default function RegisterDocumentsScreen() {
         </TouchableOpacity>
 
         <View style={s.header}>
-          <Text style={s.step}>Step 4 of 4</Text>
-          <Text style={s.title}>Upload your{'\n'}documents</Text>
+          <Text style={s.step}>{t.reg_step_4_of_4}</Text>
+          <Text style={s.title}>{t.upload_docs_header}</Text>
           <Text style={s.sub}>
-            Upload all required documents to complete your registration. Your account will be reviewed by our team.
+            {t.upload_docs_sub}
           </Text>
         </View>
 
@@ -245,7 +245,7 @@ export default function RegisterDocumentsScreen() {
           <View style={s.progressBar}>
             <View style={[s.progressFill, { width: `${(doneCount / ALL_IDS.length) * 100}%` }]} />
           </View>
-          <Text style={s.progressText}>{doneCount} / {MANDATORY_IDS.length} required uploaded</Text>
+          <Text style={s.progressText}>{t.docs_required_uploaded.replace('{done}', String(doneCount)).replace('{total}', String(MANDATORY_IDS.length))}</Text>
         </View>
 
         <View style={s.sections}>
@@ -254,7 +254,7 @@ export default function RegisterDocumentsScreen() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
                 <Text style={s.sectionTitle}>{section.title}</Text>
                 {section.optional && (
-                  <View style={s.optionalBadge}><Text style={s.optionalBadgeText}>Optional</Text></View>
+                  <View style={s.optionalBadge}><Text style={s.optionalBadgeText}>{t.doc_optional_badge}</Text></View>
                 )}
               </View>
               <View style={s.slotsRow}>
@@ -302,7 +302,7 @@ export default function RegisterDocumentsScreen() {
                           {!isUploading && (
                             <TouchableOpacity style={s.retakeBtn} onPress={() => captureDoc(slot)} activeOpacity={0.8}>
                               <Camera size={11} color="#1e1e28" />
-                              <Text style={s.retakeText}>{isFailed ? 'Retry' : 'Retake'}</Text>
+                              <Text style={s.retakeText}>{isFailed ? t.retry_label : t.doc_retake_photo}</Text>
                             </TouchableOpacity>
                           )}
                         </>
@@ -315,7 +315,7 @@ export default function RegisterDocumentsScreen() {
                           <Text style={s.slotHint}>{slot.hint}</Text>
                           <View style={s.cameraBtn}>
                             <Camera size={13} color="white" />
-                            <Text style={s.cameraBtnText}>Take photo</Text>
+                            <Text style={s.cameraBtnText}>{t.doc_take_photo}</Text>
                           </View>
                         </View>
                       )}

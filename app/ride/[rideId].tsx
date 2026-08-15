@@ -477,7 +477,7 @@ export default function RideScreen() {
       };
       const expected = expectedStatus[phase];
       if (!rideSession || (expected && rideSession.status !== expected)) {
-        showAlert('Status Changed', 'Ride status has changed. Refreshing...');
+        showAlert(t.ride_status_changed_title, t.ride_status_changed_msg);
         setBusy(false);
         return;
       }
@@ -951,7 +951,7 @@ export default function RideScreen() {
         <Pressable
           onPress={handleNavigate}
           style={[styles.floatingNavBtn, { bottom: insets.bottom + 360 }]}
-          accessibilityLabel="Open in Google Maps"
+          accessibilityLabel={t.open_in_maps_label}
         >
           <Map size={22} color="#3b82f6" strokeWidth={2} />
         </Pressable>
@@ -982,7 +982,7 @@ export default function RideScreen() {
               onPress={toggleSheet}
               hitSlop={16}
               accessibilityRole="button"
-              accessibilityLabel={sheetCollapsed ? 'Expand trip card' : 'Collapse trip card'}
+              accessibilityLabel={sheetCollapsed ? t.expand_trip_card_label : t.collapse_trip_card_label}
             >
               <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
             </Pressable>
@@ -1003,7 +1003,7 @@ export default function RideScreen() {
               <Pressable
                 style={[styles.actionBtn, { backgroundColor: colors.primary + '26' }]}
                 onPress={() => router.push({ pathname: '/ride/chat', params: { rideId: rideId ?? '' } } as any)}
-                accessibilityLabel="Message rider"
+                accessibilityLabel={t.message_rider_title}
               >
                 <MessageCircle size={20} color={colors.primary} strokeWidth={2} />
               </Pressable>
@@ -1013,7 +1013,7 @@ export default function RideScreen() {
                   const phone = passengerPhone;
                   if (phone) Linking.openURL(`tel:${phone}`).catch(() => {});
                 }}
-                accessibilityLabel="Call rider"
+                accessibilityLabel={t.call_rider_label}
               >
                 <Phone size={20} color={colors.primary} strokeWidth={2} />
               </Pressable>
@@ -1037,7 +1037,7 @@ export default function RideScreen() {
                 </Text>
                 {waitingCharge.capped && (
                   <View style={styles.cappedBadge}>
-                    <Text style={[styles.cappedText, { fontFamily: 'Inter_700Bold' }]}>CAPPED</Text>
+                    <Text style={[styles.cappedText, { fontFamily: 'Inter_700Bold' }]}>{t.capped_badge}</Text>
                   </View>
                 )}
               </Animated.View>
@@ -1062,7 +1062,7 @@ export default function RideScreen() {
                 onPress={handleOpenAmountSheet}
                 disabled={busy}
                 style={[styles.otherAmountBtn, { backgroundColor: colors.secondary, borderColor: colors.border, opacity: busy ? 0.6 : 1 }]}
-                accessibilityLabel="Other amount received"
+                accessibilityLabel={t.other_amount_btn}
               >
                 <Text style={[styles.otherAmountBtnText, { color: colors.foreground, fontFamily: 'Inter_600SemiBold' }]}>{t.other_amount_btn}</Text>
               </Pressable>
@@ -1073,7 +1073,7 @@ export default function RideScreen() {
                 onPress={handleCancelRide}
                 disabled={cancelling}
                 style={[styles.cancelRideBtn, { opacity: cancelling ? 0.6 : 1 }]}
-                accessibilityLabel="Cancel ride"
+                accessibilityLabel={t.cancel_ride}
               >
                 {cancelling ? (
                   <ActivityIndicator size="small" color={colors.destructive} />
@@ -1093,7 +1093,7 @@ export default function RideScreen() {
                   onPress={handleShareTrip}
                   disabled={shareBusy}
                   style={[styles.shareBtn, { backgroundColor: colors.secondary, opacity: shareBusy ? 0.6 : 1 }]}
-                  accessibilityLabel="Share Trip"
+                  accessibilityLabel={t.share_trip_label}
                 >
                   <Share2 size={14} color={colors.foreground} strokeWidth={2} />
                   <Text style={[styles.shareBtnText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
@@ -1104,10 +1104,10 @@ export default function RideScreen() {
                   onPress={handleSOS}
                   disabled={sosBusy}
                   style={[styles.sosBtn, { opacity: sosBusy ? 0.6 : 1 }]}
-                  accessibilityLabel="Send SOS"
+                  accessibilityLabel={t.send_sos_label}
                 >
                   <AlertTriangle size={14} color={colors.destructiveForeground} strokeWidth={2} />
-                  <Text style={[styles.sosBtnText, { color: colors.destructiveForeground, fontFamily: 'Inter_700Bold' }]}>SOS</Text>
+                  <Text style={[styles.sosBtnText, { color: colors.destructiveForeground, fontFamily: 'Inter_700Bold' }]}>{t.sos_label}</Text>
                 </Pressable>
               </View>
             </View>

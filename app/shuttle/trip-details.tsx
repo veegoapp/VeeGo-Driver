@@ -182,7 +182,7 @@ export default function TripDetailsScreen() {
         </View>
         <View style={styles.emptyState}>
           <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: Typography.size.sm }}>
-            Trip not found
+            {t.trip_not_found}
           </Text>
         </View>
       </View>

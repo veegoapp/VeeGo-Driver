@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DARK_MAP_STYLE, LIGHT_MAP_STYLE } from '@/constants/mapStyles';
 import { fetchDirectionsRaw } from '@/lib/utils/googleDirections';
 import { useService } from '@/lib/serviceContext';
+import { useI18n } from '@/lib/i18nContext';
 import { useDriverTrackingBuffer } from '@/hooks/map/useDriverTrackingBuffer';
 import { useDriverSmoothedHeading } from '@/hooks/map/useDriverSmoothedHeading';
 import { useDriverCameraController } from '@/hooks/map/useDriverCameraController';
@@ -224,6 +225,7 @@ export const MapBackdrop = React.memo(function MapBackdrop({
   const mapStyle = effectiveTheme === 'dark' ? DARK_MAP_STYLE : LIGHT_MAP_STYLE;
 
   const insets = useSafeAreaInsets();
+  const { t } = useI18n();
 
   const handleThemeToggle = useCallback(() => {
     setIsDarkMode(!isDarkMode);
@@ -706,7 +708,7 @@ export const MapBackdrop = React.memo(function MapBackdrop({
       <Pressable
         onPress={handleRecenter}
         style={[styles.recenterBtn, { bottom: insets.bottom + 110 }]}
-        accessibilityLabel="Recenter map"
+        accessibilityLabel={t.recenter_map_label}
       >
         <Text style={styles.recenterIcon}>⊕</Text>
       </Pressable>

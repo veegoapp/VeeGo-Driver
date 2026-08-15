@@ -105,7 +105,13 @@ export default function TripDetailScreen() {
       await queryClient.invalidateQueries({ queryKey: ['trip', tripId] });
       await queryClient.invalidateQueries({ queryKey: ['trips'] });
     } catch {
-      showAlert('Error', `Could not ${action} trip. Please try again.`);
+      const errByAction = {
+        accept: t.trip_accept_error,
+        reject: t.trip_reject_error,
+        start: t.trip_start_error,
+        complete: t.trip_complete_error,
+      };
+      showAlert(t.error, errByAction[action]);
     } finally {
       setActionBusy(null);
     }
@@ -121,7 +127,7 @@ export default function TripDetailScreen() {
       setShowCancel(false);
       setCancelReason('');
     } catch {
-      showAlert('Error', 'Could not cancel trip. Please try again.');
+      showAlert(t.error, t.trip_cancel_error);
     } finally {
       setCancelBusy(false);
     }
@@ -134,7 +140,7 @@ export default function TripDetailScreen() {
       await endpoints.trips.stationArrived(tripId, stationId);
       queryClient.invalidateQueries({ queryKey: ['trip-stations', tripId] });
     } catch {
-      showAlert('Error', 'Could not mark station as arrived.');
+      showAlert(t.error, t.station_action_error);
     } finally {
       setStationBusy(null);
     }
@@ -146,7 +152,7 @@ export default function TripDetailScreen() {
       await endpoints.trips.stationCompleted(tripId, stationId);
       queryClient.invalidateQueries({ queryKey: ['trip-stations', tripId] });
     } catch {
-      showAlert('Error', 'Could not mark station as done.');
+      showAlert(t.error, t.station_action_error);
     } finally {
       setStationBusy(null);
     }
@@ -162,11 +168,11 @@ export default function TripDetailScreen() {
       <Modal visible={showCancel} transparent animationType="fade" onRequestClose={() => setShowCancel(false)}>
         <View style={styles.modalOverlay}>
           <GlassView strong style={styles.modalCard} borderRadius={24}>
-            <Text style={[styles.modalTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>Cancel trip</Text>
-            <Text style={[styles.modalSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>Please provide a reason</Text>
+            <Text style={[styles.modalTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.cancel_trip_title}</Text>
+            <Text style={[styles.modalSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{t.cancel_reason_prompt}</Text>
             <TextInput
               style={[styles.modalInput, { borderColor: colors.border, color: colors.foreground, backgroundColor: colors.secondary }]}
-              placeholder="e.g. Vehicle breakdown"
+              placeholder={t.cancel_reason_placeholder}
               placeholderTextColor={colors.mutedForeground}
               value={cancelReason}
               onChangeText={setCancelReason}
@@ -175,7 +181,7 @@ export default function TripDetailScreen() {
             />
             <View style={styles.modalActions}>
               <Pressable style={[styles.modalBtn, { backgroundColor: colors.secondary }]} onPress={() => setShowCancel(false)}>
-                <Text style={[styles.modalBtnText, { color: colors.foreground, fontFamily: 'Inter_600SemiBold' }]}>Back</Text>
+                <Text style={[styles.modalBtnText, { color: colors.foreground, fontFamily: 'Inter_600SemiBold' }]}>{t.back}</Text>
               </Pressable>
               <Pressable
                 style={[styles.modalBtn, { backgroundColor: colors.destructive, opacity: (!cancelReason.trim() || cancelBusy) ? 0.5 : 1 }]}
@@ -184,7 +190,7 @@ export default function TripDetailScreen() {
               >
                 {cancelBusy
                   ? <ActivityIndicator size="small" color="#fff" />
-                  : <Text style={[styles.modalBtnText, { color: '#fff', fontFamily: 'Inter_600SemiBold' }]}>Confirm</Text>
+                  : <Text style={[styles.modalBtnText, { color: '#fff', fontFamily: 'Inter_600SemiBold' }]}>{t.confirm}</Text>
                 }
               </Pressable>
             </View>
@@ -203,7 +209,7 @@ export default function TripDetailScreen() {
           <ArrowLeft size={20} color={colors.foreground} strokeWidth={2} style={rtlIconStyle(isRTL)} />
         </Pressable>
 
-        <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>Trip detail</Text>
+        <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.trip_detail_title}</Text>
         {data?.date && (
           <Text style={[styles.pageSubtitle, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{data.date}</Text>
         )}
@@ -216,8 +222,8 @@ export default function TripDetailScreen() {
 
         {isError && (
           <GlassView style={styles.centeredState} borderRadius={20}>
-            <Text style={[styles.stateTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>Could not load trip</Text>
-            <Text style={[styles.stateSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>Go back and try again.</Text>
+            <Text style={[styles.stateTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.trip_detail_load_error}</Text>
+            <Text style={[styles.stateSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{t.trip_detail_load_error_sub}</Text>
           </GlassView>
         )}
 
@@ -225,19 +231,19 @@ export default function TripDetailScreen() {
           <>
             {/* Stats row */}
             <GlassView style={styles.statsRow} borderRadius={20}>
-              <StatCell icon={<Banknote size={18} color={colors.primary} strokeWidth={2} />} label="Fare" value={`${fare.toFixed(2)} ${t.egp}`} highlight colors={colors} />
+              <StatCell icon={<Banknote size={18} color={colors.primary} strokeWidth={2} />} label={t.fare_label} value={`${fare.toFixed(2)} ${t.egp}`} highlight colors={colors} />
               <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-              <StatCell icon={<Ruler size={18} color={colors.mutedForeground} strokeWidth={2} />} label="Distance" value={distance > 0 ? `${distance.toFixed(1)} km` : '—'} colors={colors} />
+              <StatCell icon={<Ruler size={18} color={colors.mutedForeground} strokeWidth={2} />} label={t.ride_distance} value={distance > 0 ? `${distance.toFixed(1)} km` : '—'} colors={colors} />
               <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-              <StatCell icon={<Star size={18} color="#f59e0b" strokeWidth={2} fill="#f59e0b" />} label="Rating" value={riderRating > 0 ? riderRating.toFixed(1) : '—'} colors={colors} />
+              <StatCell icon={<Star size={18} color="#f59e0b" strokeWidth={2} fill="#f59e0b" />} label={t.rating_label} value={riderRating > 0 ? riderRating.toFixed(1) : '—'} colors={colors} />
             </GlassView>
 
             {/* Route */}
             {(data.pickup || data.destination) && (
               <GlassView style={{ marginTop: Spacing.lg }} borderRadius={20}>
-                <RouteRow icon={<MapPin size={16} color={colors.primary} strokeWidth={2} />} label="Pickup" value={data.pickup ?? '—'} colors={colors} />
+                <RouteRow icon={<MapPin size={16} color={colors.primary} strokeWidth={2} />} label={t.pickup_point_label} value={data.pickup ?? '—'} colors={colors} />
                 <View style={[styles.routeLine, { backgroundColor: colors.border }]} />
-                <RouteRow icon={<Navigation size={16} color={colors.foreground} strokeWidth={2} />} label="Destination" value={data.destination ?? '—'} colors={colors} />
+                <RouteRow icon={<Navigation size={16} color={colors.foreground} strokeWidth={2} />} label={t.destination_point_label} value={data.destination ?? '—'} colors={colors} />
               </GlassView>
             )}
 
@@ -258,8 +264,8 @@ export default function TripDetailScreen() {
               <GlassView style={{ marginTop: Spacing.lg }} borderRadius={20}>
                 <View style={styles.detailRow}>
                   <Users size={16} color={colors.mutedForeground} strokeWidth={2} />
-                  <Text style={[styles.detailLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>Bookings</Text>
-                  <Text style={[styles.detailValue, { color: colors.foreground, fontFamily: 'Inter_600SemiBold' }]}>{data.bookings.length} passengers</Text>
+                  <Text style={[styles.detailLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{t.bookings_label}</Text>
+                  <Text style={[styles.detailValue, { color: colors.foreground, fontFamily: 'Inter_600SemiBold' }]}>{data.bookings.length} {t.passengers}</Text>
                 </View>
               </GlassView>
             )}
@@ -269,7 +275,7 @@ export default function TripDetailScreen() {
               <GlassView style={{ marginTop: Spacing.lg }} borderRadius={20}>
                 <View style={styles.detailRow}>
                   <Clock size={16} color={colors.mutedForeground} strokeWidth={2} />
-                  <Text style={[styles.detailLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>Date</Text>
+                  <Text style={[styles.detailLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{t.date}</Text>
                   <Text style={[styles.detailValue, { color: colors.foreground, fontFamily: 'Inter_600SemiBold' }]}>{data.date}</Text>
                 </View>
                 {data.startedAt && (
@@ -277,7 +283,7 @@ export default function TripDetailScreen() {
                     <View style={[styles.rowSep, { backgroundColor: colors.border }]} />
                     <View style={styles.detailRow}>
                       <Clock size={16} color={colors.mutedForeground} strokeWidth={2} />
-                      <Text style={[styles.detailLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>Started</Text>
+                      <Text style={[styles.detailLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{t.started_label}</Text>
                       <Text style={[styles.detailValue, { color: colors.foreground, fontFamily: 'Inter_600SemiBold' }]}>{data.startedAt}</Text>
                     </View>
                   </>
@@ -287,7 +293,7 @@ export default function TripDetailScreen() {
                     <View style={[styles.rowSep, { backgroundColor: colors.border }]} />
                     <View style={styles.detailRow}>
                       <Check size={16} color="#22c55e" strokeWidth={2} />
-                      <Text style={[styles.detailLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>Completed</Text>
+                      <Text style={[styles.detailLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{t.completed_label}</Text>
                       <Text style={[styles.detailValue, { color: '#22c55e', fontFamily: 'Inter_600SemiBold' }]}>{data.completedAt}</Text>
                     </View>
                   </>
@@ -299,11 +305,11 @@ export default function TripDetailScreen() {
             {data.status === 'waiting_driver' && (
               <View style={[styles.actionBar, { flexDirection: 'row' }]}>
                 <Pressable style={[styles.rejectBtn, { backgroundColor: colors.secondary, opacity: actionBusy ? 0.6 : 1 }]} onPress={() => doTripAction('reject')} disabled={!!actionBusy}>
-                  {actionBusy === 'reject' ? <ActivityIndicator size="small" color={colors.foreground} /> : <Text style={[styles.actionBtnText, { color: colors.foreground, fontFamily: 'Inter_600SemiBold' }]}>Reject</Text>}
+                  {actionBusy === 'reject' ? <ActivityIndicator size="small" color={colors.foreground} /> : <Text style={[styles.actionBtnText, { color: colors.foreground, fontFamily: 'Inter_600SemiBold' }]}>{t.reject_trip_btn}</Text>}
                 </Pressable>
                 <Pressable style={[styles.acceptBtnWrap, { opacity: actionBusy ? 0.6 : 1 }]} onPress={() => doTripAction('accept')} disabled={!!actionBusy}>
                   <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.acceptBtnGrad}>
-                    {actionBusy === 'accept' ? <ActivityIndicator size="small" color="#fff" /> : <Text style={[styles.actionBtnText, { color: '#fff', fontFamily: 'Inter_700Bold' }]}>Accept</Text>}
+                    {actionBusy === 'accept' ? <ActivityIndicator size="small" color="#fff" /> : <Text style={[styles.actionBtnText, { color: '#fff', fontFamily: 'Inter_700Bold' }]}>{t.accept_btn_label}</Text>}
                   </LinearGradient>
                 </Pressable>
               </View>
@@ -312,7 +318,7 @@ export default function TripDetailScreen() {
             {data.status === 'driver_assigned' && (
               <Pressable style={[styles.fullActionBtn, { opacity: actionBusy ? 0.6 : 1 }]} onPress={() => doTripAction('start')} disabled={!!actionBusy}>
                 <LinearGradient colors={['#22c55e', '#16a34a']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.acceptBtnGrad}>
-                  {actionBusy === 'start' ? <ActivityIndicator size="small" color="#fff" /> : <Text style={[styles.actionBtnText, { color: '#fff', fontFamily: 'Inter_700Bold' }]}>Start Trip</Text>}
+                  {actionBusy === 'start' ? <ActivityIndicator size="small" color="#fff" /> : <Text style={[styles.actionBtnText, { color: '#fff', fontFamily: 'Inter_700Bold' }]}>{t.start_trip}</Text>}
                 </LinearGradient>
               </Pressable>
             )}
@@ -320,11 +326,11 @@ export default function TripDetailScreen() {
             {data.status === 'active' && (
               <View style={[styles.actionBar, { flexDirection: 'row' }]}>
                 <Pressable style={[styles.rejectBtn, { backgroundColor: '#ef444415', opacity: actionBusy ? 0.6 : 1 }]} onPress={() => setShowCancel(true)} disabled={!!actionBusy}>
-                  <Text style={[styles.actionBtnText, { color: '#ef4444', fontFamily: 'Inter_600SemiBold' }]}>Cancel</Text>
+                  <Text style={[styles.actionBtnText, { color: '#ef4444', fontFamily: 'Inter_600SemiBold' }]}>{t.cancel}</Text>
                 </Pressable>
                 <Pressable style={[styles.acceptBtnWrap, { opacity: actionBusy ? 0.6 : 1 }]} onPress={() => doTripAction('complete')} disabled={!!actionBusy}>
                   <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.acceptBtnGrad}>
-                    {actionBusy === 'complete' ? <ActivityIndicator size="small" color="#fff" /> : <Text style={[styles.actionBtnText, { color: '#fff', fontFamily: 'Inter_700Bold' }]}>Complete</Text>}
+                    {actionBusy === 'complete' ? <ActivityIndicator size="small" color="#fff" /> : <Text style={[styles.actionBtnText, { color: '#fff', fontFamily: 'Inter_700Bold' }]}>{t.complete_trip_btn}</Text>}
                   </LinearGradient>
                 </Pressable>
               </View>
@@ -333,13 +339,14 @@ export default function TripDetailScreen() {
             {/* Task 3: station lifecycle */}
             {stations.length > 0 && (
               <View style={{ marginTop: Spacing.xl }}>
-                <Text style={[styles.sectionLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>STATIONS</Text>
+                <Text style={[styles.sectionLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>{t.stations.toUpperCase()}</Text>
                 <View style={{ gap: 10, marginTop: 10 }}>
                   {stations.map((station) => (
                     <StationRow
                       key={station.id}
                       station={station}
                       colors={colors}
+                      t={t}
                       arrivedBusy={stationBusy === `arrived-${station.id}`}
                       doneBusy={stationBusy === `done-${station.id}`}
                       onArrived={() => doStationArrived(station.id)}
@@ -357,9 +364,10 @@ export default function TripDetailScreen() {
 }
 
 // Task 3: station row with Arrived / Done buttons
-function StationRow({ station, colors, arrivedBusy, doneBusy, onArrived, onDone }: {
+function StationRow({ station, colors, t, arrivedBusy, doneBusy, onArrived, onDone }: {
   station: Station;
   colors: ReturnType<typeof useColors>;
+  t: ReturnType<typeof useI18n>['t'];
   arrivedBusy: boolean;
   doneBusy: boolean;
   onArrived: () => void;
@@ -376,7 +384,7 @@ function StationRow({ station, colors, arrivedBusy, doneBusy, onArrived, onDone 
         <View style={{ flex: 1 }}>
           <Text style={[styles.stationName, { color: colors.foreground, fontFamily: 'Inter_600SemiBold' }]}>{station.name}</Text>
           {station.arrivedAt && (
-            <Text style={[styles.stationMeta, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>Arrived: {station.arrivedAt}</Text>
+            <Text style={[styles.stationMeta, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{t.station_arrived_time.replace('{time}', station.arrivedAt)}</Text>
           )}
         </View>
         <View style={{ flexDirection: 'row', gap: 6 }}>
@@ -389,7 +397,7 @@ function StationRow({ station, colors, arrivedBusy, doneBusy, onArrived, onDone 
             >
               {arrivedBusy
                 ? <ActivityIndicator size="small" color="#f59e0b" />
-                : <Text style={[styles.stationBtnText, { color: '#f59e0b', fontFamily: 'Inter_600SemiBold' }]}>Arrived</Text>
+                : <Text style={[styles.stationBtnText, { color: '#f59e0b', fontFamily: 'Inter_600SemiBold' }]}>{t.arrived_label}</Text>
               }
             </Pressable>
           )}
@@ -402,7 +410,7 @@ function StationRow({ station, colors, arrivedBusy, doneBusy, onArrived, onDone 
             >
               {doneBusy
                 ? <ActivityIndicator size="small" color="#22c55e" />
-                : <Text style={[styles.stationBtnText, { color: '#22c55e', fontFamily: 'Inter_700Bold' }]}>Done</Text>
+                : <Text style={[styles.stationBtnText, { color: '#22c55e', fontFamily: 'Inter_700Bold' }]}>{t.done}</Text>
               }
             </Pressable>
           )}

@@ -227,20 +227,20 @@ export default function ShuttleLinesScreen() {
     onError: (err: unknown) => {
       if (err instanceof ApiError && err.status === 409) {
         showAlert(
-          'Slot Taken',
-          'This slot was just claimed by another driver. Please choose a different time or week.',
-          [{ text: 'OK' }]
+          t.slot_taken_title,
+          t.slot_taken_msg,
+          [{ text: t.ok }]
         );
       } else if (err instanceof ApiError && err.status === 400) {
         const body = (err as ApiError).body as Record<string, unknown> | null;
         const msg =
           (typeof body?.message === 'string' ? body.message : null) ??
           (typeof body?.error === 'string' ? body.error : null) ??
-          'Invalid booking request.';
-        showAlert('Booking Failed', msg, [{ text: 'OK' }]);
+          t.invalid_booking_request;
+        showAlert(t.booking_failed_title, msg, [{ text: t.ok }]);
       } else {
         const detail = err instanceof ApiError ? ` (${(err as ApiError).status})` : '';
-        showAlert('Booking Failed', `Could not complete the booking${detail}. Please try again.`, [{ text: 'OK' }]);
+        showAlert(t.booking_failed_title, t.booking_failed_msg.replace('{detail}', detail), [{ text: t.ok }]);
       }
     },
   });

@@ -613,7 +613,7 @@ export default function ShuttleTripActiveScreen() {
                 styles.shareTripBtn,
                 { opacity: shareBusy ? 0.6 : 1, transform: [{ scale: pressed ? 0.93 : 1 }] },
               ]}
-              accessibilityLabel="Share Trip"
+              accessibilityLabel={t.share_trip_label}
             >
               <Share2 size={14} color={colors.foreground} strokeWidth={2.5} />
             </Pressable>
@@ -627,7 +627,7 @@ export default function ShuttleTripActiveScreen() {
               ]}
             >
               <AlertTriangle size={14} color="#fff" strokeWidth={2.5} />
-              <Text style={styles.sosBtnText}>SOS</Text>
+              <Text style={styles.sosBtnText}>{t.sos_label}</Text>
             </Pressable>
 
           </View>
@@ -640,7 +640,7 @@ export default function ShuttleTripActiveScreen() {
                 <Text style={[styles.hudPrimary, { fontFamily: 'Inter_700Bold' }]}>
                   {Math.round((effectivePos.speed ?? 0) * 3.6)}
                 </Text>
-                <Text style={[styles.hudLabel, { fontFamily: 'Inter_400Regular' }]}>km/h</Text>
+                <Text style={[styles.hudLabel, { fontFamily: 'Inter_400Regular' }]}>{t.unit_kmh}</Text>
               </View>
 
               <View style={styles.hudSep} />
@@ -650,7 +650,7 @@ export default function ShuttleTripActiveScreen() {
                 <Text style={[styles.hudPrimary, { fontFamily: 'Inter_700Bold' }]}>
                   {distanceM !== null ? distanceLabel(distanceM) : '—'}
                 </Text>
-                <Text style={[styles.hudLabel, { fontFamily: 'Inter_400Regular' }]}>distance</Text>
+                <Text style={[styles.hudLabel, { fontFamily: 'Inter_400Regular' }]}>{t.hud_distance_label}</Text>
               </View>
 
               <View style={styles.hudSep} />
@@ -662,7 +662,7 @@ export default function ShuttleTripActiveScreen() {
                     ? `~${stationEtas.nextStation.etaMinutes} min`
                     : roadEta.etaSeconds !== null ? etaLabel(roadEta.etaSeconds) : '—'}
                 </Text>
-                <Text style={[styles.hudLabel, { fontFamily: 'Inter_400Regular' }]}>ETA</Text>
+                <Text style={[styles.hudLabel, { fontFamily: 'Inter_400Regular' }]}>{t.home_eta}</Text>
               </View>
             </View>
           )}
@@ -700,7 +700,7 @@ export default function ShuttleTripActiveScreen() {
             <View style={{ flex: 1, minWidth: 0 }}>
               <View style={styles.stopModeBadge}>
                 <View style={styles.stopModeDot} />
-                <Text style={[styles.stopModeLabel, { fontFamily: 'Inter_700Bold' }]}>STOP MODE</Text>
+                <Text style={[styles.stopModeLabel, { fontFamily: 'Inter_700Bold' }]}>{t.stop_mode_label}</Text>
               </View>
               <Text style={[styles.atStopName, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]} numberOfLines={1}>
                 {currentStop?.name ?? '—'}
@@ -731,7 +731,7 @@ export default function ShuttleTripActiveScreen() {
             {passengers.length === 0 ? (
               <View style={styles.emptyPassengers}>
                 <Users size={26} color={colors.mutedForeground} strokeWidth={1.5} />
-                <Text style={[styles.emptyPassengersText, { fontFamily: 'Inter_400Regular', color: colors.mutedForeground }]}>No passengers at this stop</Text>
+                <Text style={[styles.emptyPassengersText, { fontFamily: 'Inter_400Regular', color: colors.mutedForeground }]}>{t.no_passengers_at_stop}</Text>
               </View>
             ) : (
               passengers.map(p => {
@@ -757,12 +757,12 @@ export default function ShuttleTripActiveScreen() {
                         <View style={[styles.paymentCashBadge, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}>
                           <Banknote size={11} color="#d97706" strokeWidth={2} />
                           <Text style={[styles.paymentBadgeText, { fontFamily: 'Inter_700Bold', color: '#d97706' }]}>
-                            {p.fareAmount > 0 ? `${p.fareAmount} EGP` : 'Cash'}
+                            {p.fareAmount > 0 ? `${p.fareAmount} ${t.egp}` : t.cash_label}
                           </Text>
                         </View>
                       ) : p.paymentMethod === 'card' || p.paymentMethod === 'online' ? (
                         <View style={styles.paymentPaidBadge}>
-                          <Text style={[styles.paymentBadgeText, { fontFamily: 'Inter_600SemiBold', color: '#16a34a' }]}>✓ Paid</Text>
+                          <Text style={[styles.paymentBadgeText, { fontFamily: 'Inter_600SemiBold', color: '#16a34a' }]}>{t.paid_badge}</Text>
                         </View>
                       ) : null}
                     </View>
