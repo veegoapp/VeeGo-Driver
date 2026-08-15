@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { endpoints } from '@/lib/api';
 
@@ -11,7 +11,9 @@ const INT_REGEX = /^\d+$/;
 // confirmed via a backend-wide search that no push payload ever sets them
 // (the referral flow is delivered over its own socket events instead, see
 // hooks/useShuttleSocket.ts, not via push tap-navigation).
-const VALID_TYPES = new Set(['ride_request', 'shuttle_approaching', 'shuttle', 'shuttle_renewal', 'renewal_prompt', 'slot_released', 'suspension', 'fine', 'warning']);
+// 'ride_offer' (not 'ride_request') is what the backend actually sends for a
+// ride offer — see lib/sendNotification.ts sendRideOfferExpoPush/FCMPush.
+const VALID_TYPES = new Set(['ride_offer', 'shuttle_approaching', 'shuttle', 'shuttle_renewal', 'renewal_prompt', 'slot_released', 'suspension', 'fine', 'warning']);
 
 export type PushToken = string | null;
 
@@ -33,11 +35,22 @@ function safeSetNotificationHandler() {
         // Ride-offer push is only there to alert a BACKGROUNDED/killed driver.
         // In the foreground the live socket already shows the offer sheet and
         // plays the in-app tone, so presenting the push too would double the
-        // sound and stack a redundant banner over the sheet. Suppress it in the
-        // foreground; the OS still shows it (with the channel sound) when the
-        // app is backgrounded, where this handler does not run.
+        // sound and stack a redundant banner over the sheet — suppress it
+        // there. This does NOT mean suppressing it whenever this handler
+        // runs: on Android (and on iOS while this app's background-location
+        // task keeps it alive — see app.json isIosBackgroundLocationEnabled),
+        // the JS engine keeps running for a while after the driver switches
+        // to another app, so this handler DOES still fire for a backgrounded-
+        // but-not-killed app — it is not iOS-suspended-only. The previous
+        // unconditional suppression on `type === 'ride_offer'` silenced every
+        // ride offer whenever the driver had merely switched apps (not just
+        // when VeeGo Driver itself was on screen), which is exactly the
+        // "driver has another app open and never hears/sees the request" bug.
+        // AppState tells us whether the app is actually the one on screen —
+        // only suppress when it genuinely is.
         const type = notification?.request?.content?.data?.type;
-        if (type === 'ride_offer') {
+        const isForeground = AppState.currentState === 'active';
+        if (type === 'ride_offer' && isForeground) {
           return {
             shouldPlaySound: false,
             shouldSetBadge: false,
@@ -109,7 +122,7 @@ export function usePushNotifications(onRideRequest?: () => void) {
       notificationListener.current = Notifications.addNotificationReceivedListener(
         (notification: { request: { content: { data: Record<string, unknown> } } }) => {
           const data = notification.request.content.data;
-          if (data?.type === 'ride_request' && onRideRequest) onRideRequest();
+          if (data?.type === 'ride_offer' && onRideRequest) onRideRequest();
         },
       );
 
@@ -123,7 +136,7 @@ export function usePushNotifications(onRideRequest?: () => void) {
           if (!VALID_TYPES.has(notifType)) return;
 
           // --- On-demand ride request ---
-          if (data?.type === 'ride_request') {
+          if (data?.type === 'ride_offer') {
             if (data.rideId) {
               const rideId = String(data.rideId);
               if (!UUID_REGEX.test(rideId) && !INT_REGEX.test(rideId)) return;
