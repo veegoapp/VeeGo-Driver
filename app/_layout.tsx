@@ -7,6 +7,7 @@ import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } f
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
+import * as SplashScreen from 'expo-splash-screen';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import React, { useEffect } from 'react';
 import { Platform } from 'react-native';
@@ -31,6 +32,17 @@ import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { GPSProvider } from '@/hooks/useGPSProvider';
 import { ServerStatusBanner } from '@/components/ServerStatusBanner';
 import { AppAlert } from '@/components/ui';
+
+// Keep the native splash screen up until fonts, the stored-token check, and
+// language init have all resolved (see the hideAsync() call in
+// RootLayoutNav below). Without this, Expo auto-hides the native splash the
+// moment JS starts executing — well before the auth check finishes — which
+// on a cold launch can expose a blank frame or the OS's cached screenshot of
+// whatever screen the app was last on (e.g. Login, if that's how the app was
+// left) for the second or two it takes SecureStore + the auth guard to
+// settle. Call this before any component renders — placement here, at
+// module scope, guarantees it runs before RootLayout's first render.
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -180,6 +192,17 @@ function RootLayoutNav() {
   // screen indefinitely. Capped at MAX_REFRESH_RETRIES to prevent loops.
   const [refreshAttempt, setRefreshAttempt] = React.useState(0);
   const retryTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Hide the native splash the moment fonts + the stored-token check +
+  // language init have all resolved — exactly when the render below stops
+  // returning null and mounts the real <Stack> (starting on the branded
+  // `index` splash screen). This is the earliest point at which there's
+  // real, correct content to show, so the handoff from native splash to
+  // in-app splash is seamless with no blank/stale frame in between.
+  useEffect(() => {
+    if (isLoading || isLanguageLoading) return;
+    SplashScreen.hideAsync().catch(() => {});
+  }, [isLoading, isLanguageLoading]);
 
   useEffect(() => {
     setOnAccountSuspended(() => {
