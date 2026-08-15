@@ -72,7 +72,7 @@ export default function ProfileScreen() {
       setTermsData(data);
       setTermsModalVisible(true);
     } catch {
-      showAlert('', 'Failed to load terms. Please try again.');
+      showAlert('', t.terms_load_fail);
     } finally {
       setTermsLoading(false);
     }

@@ -71,7 +71,7 @@ export default function RegisterServiceTypeScreen() {
   const insets = useSafeAreaInsets();
   const topPad = insets.top;
   const botPad = insets.bottom;
-  const { isRTL } = useI18n();
+  const { t, isRTL } = useI18n();
   const TA = isRTL ? 'right' as const : 'left' as const;
   const { setServiceType } = useService();
 
@@ -158,17 +158,17 @@ export default function RegisterServiceTypeScreen() {
         </TouchableOpacity>
 
         <View style={s.header}>
-          <Text style={[s.step, { textAlign: TA }]}>Step 1 of 4</Text>
-          <Text style={[s.title, { textAlign: TA }]}>Select your{'\n'}service type</Text>
+          <Text style={[s.step, { textAlign: TA }]}>{t.reg_step_1_of_4}</Text>
+          <Text style={[s.title, { textAlign: TA }]}>{t.choose_service_type}</Text>
           <Text style={[s.sub, { textAlign: TA }]}>
-            This determines your vehicle type and the app interface you'll use.
+            {t.reg_service_type_sub}
           </Text>
         </View>
 
         {loadingControls ? (
           <View style={s.loadingWrap}>
             <AppLoader />
-            <Text style={s.loadingText}>Loading available services…</Text>
+            <Text style={s.loadingText}>{t.reg_service_loading}</Text>
           </View>
         ) : (
           <View style={s.optionsGrid}>
@@ -236,7 +236,7 @@ export default function RegisterServiceTypeScreen() {
             <ActivityIndicator color="white" />
           ) : (
             <>
-              <Text style={s.continueBtnText}>Continue</Text>
+              <Text style={s.continueBtnText}>{t.continue}</Text>
               <ArrowRight size={18} color="white" strokeWidth={2} />
             </>
           )}

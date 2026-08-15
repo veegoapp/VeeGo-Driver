@@ -72,7 +72,7 @@ export default function RideHistoryDetailScreen() {
           </Pressable>
           <GlassView style={styles.centeredState} borderRadius={20}>
             <Text style={[styles.stateTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-              Could not load trip
+              {t.trip_detail_load_error}
             </Text>
           </GlassView>
         </View>
@@ -111,7 +111,7 @@ export default function RideHistoryDetailScreen() {
           </Pressable>
           <View style={[styles.statusBadge, { backgroundColor: isCompleted ? colors.secondary : '#ef444415' }]}>
             <Text style={[styles.statusText, { color: isCompleted ? colors.mutedForeground : '#ef4444', fontFamily: 'Inter_700Bold' }]}>
-              {isCompleted ? 'Completed' : 'Cancelled'}
+              {isCompleted ? t.completed_label : t.status_cancelled}
             </Text>
           </View>
         </View>
@@ -180,7 +180,7 @@ export default function RideHistoryDetailScreen() {
               {ride.duration ?? '—'}
             </Text>
             <Text style={[styles.statLabel, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>
-              Duration
+              {t.duration_label}
             </Text>
           </View>
           <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
@@ -200,7 +200,7 @@ export default function RideHistoryDetailScreen() {
           <GlassView style={styles.card} borderRadius={20}>
             <View style={[{ flexDirection: R, alignItems: 'center', justifyContent: 'space-between' }]}>
               <Text style={[{ fontSize: Typography.size.sm, color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>
-                Payment method
+                {t.payment_method_fallback}
               </Text>
               <Text style={[{ fontSize: Typography.size.sm, color: colors.foreground, fontFamily: 'Inter_700Bold', textTransform: 'capitalize' }]}>
                 {ride.paymentMethod ?? '—'}
@@ -212,7 +212,7 @@ export default function RideHistoryDetailScreen() {
                 <TrendingUp size={15} color="#16A34A" strokeWidth={2} />
               </View>
               <Text style={[{ flex: 1, fontSize: Typography.size.sm, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>
-                Your share {fare > 0 ? `(${((earnedAmount / fare) * 100).toFixed(0)}%)` : ''}
+                {t.your_share_label} {fare > 0 ? `(${((earnedAmount / fare) * 100).toFixed(0)}%)` : ''}
               </Text>
               <Text style={[{ fontSize: Typography.size.sm, color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
                 {earnedAmount.toFixed(2)} {t.egp}
@@ -223,7 +223,7 @@ export default function RideHistoryDetailScreen() {
                 <TrendingDown size={15} color="#EA580C" strokeWidth={2} />
               </View>
               <Text style={[{ flex: 1, fontSize: Typography.size.sm, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>
-                Company share {fare > 0 ? `(${(100 - (earnedAmount / fare) * 100).toFixed(0)}%)` : ''}
+                {t.company_share_label} {fare > 0 ? `(${(100 - (earnedAmount / fare) * 100).toFixed(0)}%)` : ''}
               </Text>
               <Text style={[{ fontSize: Typography.size.sm, color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
                 {Math.max(0, fare - earnedAmount).toFixed(2)} {t.egp}
@@ -254,7 +254,7 @@ export default function RideHistoryDetailScreen() {
         {isCompleted && ride.myRating != null && (
           <GlassView style={[styles.card, { flexDirection: R, alignItems: 'center', justifyContent: 'space-between' }]} borderRadius={20}>
             <Text style={[{ fontSize: Typography.size.sm, color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>
-              Your rating
+              {t.my_rating_label}
             </Text>
             <View style={[{ flexDirection: R, gap: 2 }]}>
               {Array.from({ length: 5 }).map((_, idx) => (
@@ -275,7 +275,7 @@ export default function RideHistoryDetailScreen() {
           <GlassView style={[styles.card, { flexDirection: R, alignItems: 'center', justifyContent: 'center', gap: Spacing.sm }]} borderRadius={20}>
             <HelpCircle size={16} color={colors.foreground} strokeWidth={2} />
             <Text style={{ fontSize: Typography.size.sm, color: colors.foreground, fontFamily: 'Inter_600SemiBold' }}>
-              Need Help?
+              {t.need_help_title}
             </Text>
           </GlassView>
         </Pressable>

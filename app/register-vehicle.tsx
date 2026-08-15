@@ -263,12 +263,12 @@ export default function RegisterVehicleScreen() {
       });
       router.push('/register-plate');
     } catch (err) {
-      let msg = 'Failed to save vehicle details. Please try again.';
+      let msg = t.reg_vehicle_err_save;
       if (err instanceof ApiError) {
         const body = err.body as { error?: string } | null;
         if (body?.error) msg = body.error;
       }
-      showAlert('Error', msg);
+      showAlert(t.error, msg);
     } finally {
       setSubmitting(false);
     }

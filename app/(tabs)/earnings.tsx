@@ -220,9 +220,9 @@ export default function EarningsScreen() {
   if (isError) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center', gap: 16 }]}>
-        <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: Typography.size.sm }}>Failed to load earnings. Please try again.</Text>
+        <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: Typography.size.sm }}>{t.earnings_load_fail}</Text>
         <Pressable onPress={() => refetchSummary()} style={{ paddingHorizontal: 24, paddingVertical: 10, borderRadius: 20, backgroundColor: colors.secondary }}>
-          <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: Typography.size.sm }}>Retry</Text>
+          <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: Typography.size.sm }}>{t.retry_label}</Text>
         </Pressable>
       </View>
     );
@@ -284,7 +284,7 @@ export default function EarningsScreen() {
 
         {/* Driver vs company split — derived from real fare/driverEarnings on
             the rides loaded for this period, not an assumed fixed rate. */}
-        <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>Your Share vs Company</Text>
+        <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.earnings_share_vs_company}</Text>
         <GlassView style={styles.summaryCard} borderRadius={20}>
           <View style={styles.summaryInner}>
             <View style={[styles.splitBarTrack, { backgroundColor: colors.secondary }]}>
@@ -293,7 +293,7 @@ export default function EarningsScreen() {
             <SplitRow
               icon={<TrendingUp size={16} color="#16A34A" strokeWidth={2} />}
               iconBg="#F0FDF4"
-              label="Your share"
+              label={t.your_share_label}
               amount={`${driverTotal.toFixed(2)} ${t.egp}`}
               pct={grossTotal > 0 ? `${driverPct.toFixed(0)}%` : '—'}
               colors={colors}
@@ -302,7 +302,7 @@ export default function EarningsScreen() {
             <SplitRow
               icon={<TrendingDown size={16} color="#EA580C" strokeWidth={2} />}
               iconBg="#FFF7ED"
-              label="Company share"
+              label={t.company_share_label}
               amount={`${companyTotal.toFixed(2)} ${t.egp}`}
               pct={grossTotal > 0 ? `${companyPct.toFixed(0)}%` : '—'}
               colors={colors}
@@ -314,9 +314,9 @@ export default function EarningsScreen() {
         <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{PERIOD_LABELS[period]} · {summary?.recentEarnings?.length ?? 0} {t.trips}</Text>
         <GlassView style={styles.summaryCard} borderRadius={20}>
           <View style={styles.summaryInner}>
-            <EarningsRow icon="check-circle" label="Confirmed" value={`${parseFloat(String(summary?.summary?.totalConfirmed ?? 0)).toFixed(2)} ${t.egp}`} colors={colors} isRTL={isRTL} />
-            <EarningsRow icon="credit-card" label="Pending" value={`${parseFloat(String(summary?.summary?.totalPending ?? 0)).toFixed(2)} ${t.egp}`} colors={colors} isRTL={isRTL} />
-            <EarningsRow icon="star" label="Paid Out" value={`${parseFloat(String(summary?.summary?.totalPaid ?? 0)).toFixed(2)} ${t.egp}`} accent colors={colors} isRTL={isRTL} />
+            <EarningsRow icon="check-circle" label={t.status_confirmed} value={`${parseFloat(String(summary?.summary?.totalConfirmed ?? 0)).toFixed(2)} ${t.egp}`} colors={colors} isRTL={isRTL} />
+            <EarningsRow icon="credit-card" label={t.status_pending} value={`${parseFloat(String(summary?.summary?.totalPending ?? 0)).toFixed(2)} ${t.egp}`} colors={colors} isRTL={isRTL} />
+            <EarningsRow icon="star" label={t.paid_out_label} value={`${parseFloat(String(summary?.summary?.totalPaid ?? 0)).toFixed(2)} ${t.egp}`} accent colors={colors} isRTL={isRTL} />
             <View style={[styles.divider, { backgroundColor: colors.divider }]} />
             <EarningsRow label={t.net_earnings} value={`${parseFloat(String(summary?.summary?.totalEarnings ?? 0)).toFixed(2)} ${t.egp}`} bold colors={colors} isRTL={isRTL} />
           </View>
@@ -331,7 +331,7 @@ export default function EarningsScreen() {
           </View>
         ) : rides.length === 0 ? (
           <GlassView style={[styles.summaryCard, { padding: Spacing.lg, alignItems: 'center' }]} borderRadius={20}>
-            <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: Typography.size.sm }}>No trips in this period.</Text>
+            <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: Typography.size.sm }}>{t.no_trips_period}</Text>
           </GlassView>
         ) : (
           <View style={{ gap: Spacing.sm }}>

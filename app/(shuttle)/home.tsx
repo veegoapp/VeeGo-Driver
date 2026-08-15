@@ -348,7 +348,7 @@ export default function ShuttleHomeScreen() {
             </Pressable>
             <GlassView style={[styles.serviceChip, { borderColor: '#1e1e2833' }]} borderRadius={20}>
               <View style={[styles.serviceChipDot, { backgroundColor: '#1e1e28' }]} />
-              <Text style={[styles.serviceChipText, { color: '#1e1e28', fontFamily: 'Inter_700Bold' }]}>SHUTTLE</Text>
+              <Text style={[styles.serviceChipText, { color: '#1e1e28', fontFamily: 'Inter_700Bold' }]}>{t.shuttle.toUpperCase()}</Text>
             </GlassView>
           </View>
         </View>

@@ -12,6 +12,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/lib/authContext';
 import { AppLoader } from '@/components/ui/AppLoader';
+import { useI18n } from '@/lib/i18nContext';
 import { useSocket } from '@/lib/socketContext';
 import { endpoints } from '@/lib/api';
 import { navigateToHome } from '@/lib/postAuthRouter';
@@ -40,6 +41,7 @@ export default function PendingApprovalScreen() {
   const botPad = insets.bottom;
   const { logout, token } = useAuth();
   const { socket } = useSocket();
+  const { t } = useI18n();
 
   const [data, setData] = useState<OnboardingData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -140,12 +142,14 @@ export default function PendingApprovalScreen() {
               <>
                 <StatusIcon color="#f59e0b" Icon={AlertTriangle} />
                 <Text style={s.title}>
-                  {data?.rejectionReason ? 'Changes requested' : 'Complete your documents'}
+                  {data?.rejectionReason ? t.changes_requested_title : t.complete_documents_title}
                 </Text>
                 <Text style={s.sub}>
                   {data?.rejectionReason
                     ? data.rejectionReason
-                    : `Upload all required documents to submit your application. (${data?.totalUploaded ?? 0}/${data?.totalRequired ?? 8} uploaded)`
+                    : t.upload_all_required_docs
+                        .replace('{uploaded}', String(data?.totalUploaded ?? 0))
+                        .replace('{total}', String(data?.totalRequired ?? 8))
                   }
                 </Text>
                 <TouchableOpacity
@@ -153,7 +157,7 @@ export default function PendingApprovalScreen() {
                   onPress={() => router.push('/register-documents')}
                   activeOpacity={0.85}
                 >
-                  <Text style={s.actionBtnText}>Upload documents</Text>
+                  <Text style={s.actionBtnText}>{t.upload_documents_btn}</Text>
                   <ArrowRight size={16} color="white" strokeWidth={2} />
                 </TouchableOpacity>
               </>
@@ -163,18 +167,18 @@ export default function PendingApprovalScreen() {
             {status === 'pending_review' && (
               <>
                 <StatusIcon color="#f59e0b" Icon={Clock} pulse pulseAnim={pulseAnim} />
-                <Text style={s.title}>Under review</Text>
+                <Text style={s.title}>{t.under_review_title}</Text>
                 <Text style={s.sub}>
-                  Your documents have been submitted. Our team is reviewing them — this usually takes 1–2 business days. We'll notify you once a decision is made.
+                  {t.under_review_sub}
                 </Text>
 
                 <View style={s.pollingRow}>
                   <Animated.View style={[s.pollingDot, { opacity: pulseAnim }]} />
-                  <Text style={s.pollingText}>Checking status automatically…</Text>
+                  <Text style={s.pollingText}>{t.checking_status_auto}</Text>
                 </View>
 
                 {/* Progress steps */}
-                <Steps active={1} />
+                <Steps active={1} t={t} />
 
                 <TouchableOpacity
                   style={s.refreshBtn}
@@ -182,7 +186,7 @@ export default function PendingApprovalScreen() {
                   activeOpacity={0.7}
                 >
                   <RefreshCw size={14} color="#5e5e72" />
-                  <Text style={s.refreshText}>Refresh status</Text>
+                  <Text style={s.refreshText}>{t.refresh_status_btn}</Text>
                 </TouchableOpacity>
               </>
             )}
@@ -191,22 +195,22 @@ export default function PendingApprovalScreen() {
             {status === 'rejected' && (
               <>
                 <StatusIcon color="#e53935" Icon={XCircle} />
-                <Text style={[s.title, { color: '#e53935' }]}>Application rejected</Text>
+                <Text style={[s.title, { color: '#e53935' }]}>{t.application_rejected_title}</Text>
                 {data?.rejectionReason && (
                   <View style={s.rejectionBox}>
-                    <Text style={s.rejectionLabel}>Reason from admin:</Text>
+                    <Text style={s.rejectionLabel}>{t.reason_from_admin_label}</Text>
                     <Text style={s.rejectionText}>{data.rejectionReason}</Text>
                   </View>
                 )}
                 <Text style={s.sub}>
-                  You can re-upload your documents. Once all required documents are re-submitted, your application will automatically return to review.
+                  {t.reupload_docs_sub}
                 </Text>
                 <TouchableOpacity
                   style={s.actionBtn}
                   onPress={() => router.push('/register-documents')}
                   activeOpacity={0.85}
                 >
-                  <Text style={s.actionBtnText}>Re-upload documents</Text>
+                  <Text style={s.actionBtnText}>{t.reupload_documents_btn}</Text>
                   <ArrowRight size={16} color="white" strokeWidth={2} />
                 </TouchableOpacity>
               </>
@@ -216,8 +220,8 @@ export default function PendingApprovalScreen() {
             {status === 'approved' && (
               <>
                 <StatusIcon color="#27ae60" Icon={CheckCircle2} />
-                <Text style={[s.title, { color: '#27ae60' }]}>Account approved!</Text>
-                <Text style={s.sub}>Redirecting you to the dashboard…</Text>
+                <Text style={[s.title, { color: '#27ae60' }]}>{t.account_approved_title}</Text>
+                <Text style={s.sub}>{t.redirecting_dashboard}</Text>
                 <ActivityIndicator color="#27ae60" style={{ marginTop: Spacing.sm }} />
               </>
             )}
@@ -225,7 +229,7 @@ export default function PendingApprovalScreen() {
             <View style={s.divider} />
 
             {/* Contact */}
-            <Text style={s.contactTitle}>Need help?</Text>
+            <Text style={s.contactTitle}>{t.need_help_title}</Text>
             <View style={s.contactRow}>
               <View style={s.contactChip}>
                 <Mail size={14} color="#55c49a" />
@@ -241,7 +245,7 @@ export default function PendingApprovalScreen() {
 
         <TouchableOpacity style={s.logoutBtn} onPress={handleLogout} activeOpacity={0.7}>
           <LogOut size={15} color="#5e5e72" />
-          <Text style={s.logoutText}>Sign out</Text>
+          <Text style={s.logoutText}>{t.sign_out}</Text>
         </TouchableOpacity>
       </ScrollView>
     </LinearGradient>
@@ -270,8 +274,8 @@ function StatusIcon({ color, Icon, pulse, pulseAnim }: {
   );
 }
 
-const STEP_LABELS = ['Account created', 'Documents submitted', 'Under review', 'Approved'];
-function Steps({ active }: { active: number }) {
+function Steps({ active, t }: { active: number; t: ReturnType<typeof useI18n>['t'] }) {
+  const STEP_LABELS = [t.onboarding_step_account_created, t.onboarding_step_docs_submitted, t.under_review_title, t.onboarding_step_approved];
   return (
     <View style={s.stepsBlock}>
       {STEP_LABELS.map((label, i) => (
