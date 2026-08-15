@@ -165,8 +165,11 @@ export const driverEndpoints = {
 };
 
 export const pushTokensEndpoints = {
-  register: (token: string, platform?: 'ios' | 'android' | 'web') =>
-    api.post('/driver/push-token', { token, platform }),
+  // fcmToken is the native Firebase device token (Android only — see
+  // usePushNotifications.ts) that enables the backend's FCM fallback route
+  // alongside the Expo push token.
+  register: (token: string, platform?: 'ios' | 'android' | 'web', fcmToken?: string | null) =>
+    api.post('/driver/push-token', { token, platform, fcmToken }),
 };
 
 export const registrationEndpoints = {

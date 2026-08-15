@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Platform } from 'react-native';
 import { router } from 'expo-router';
 import { endpoints } from '@/lib/api';
 
@@ -65,6 +66,7 @@ safeSetNotificationHandler();
 
 export function usePushNotifications(onRideRequest?: () => void) {
   const [token, setToken] = useState<PushToken>(null);
+  const [fcmToken, setFcmToken] = useState<PushToken>(null);
   const [permissionStatus, setPermissionStatus] = useState<string>('undetermined');
   const notificationListener = useRef<{ remove: () => void } | null>(null);
   const responseListener = useRef<{ remove: () => void } | null>(null);
@@ -72,14 +74,15 @@ export function usePushNotifications(onRideRequest?: () => void) {
   useEffect(() => {
     let cancelled = false;
 
-    registerForPushNotifications().then(t => {
+    registerForPushNotifications().then(({ expoToken, fcmToken: nativeFcmToken }) => {
       if (!cancelled) {
-        setToken(t ?? null);
-        if (t) {
+        setToken(expoToken ?? null);
+        setFcmToken(nativeFcmToken ?? null);
+        if (expoToken) {
           // Retry up to 2 times with a short delay before giving up silently.
           const registerWithRetry = async (attempt = 0): Promise<void> => {
             try {
-              await endpoints.pushTokens.register(t);
+              await endpoints.pushTokens.register(expoToken, Platform.OS as 'ios' | 'android' | 'web', nativeFcmToken);
             } catch (err) {
               if (attempt < 2) {
                 await new Promise(res => setTimeout(res, 3000 * (attempt + 1)));
@@ -221,10 +224,10 @@ export function usePushNotifications(onRideRequest?: () => void) {
     };
   }, [onRideRequest]);
 
-  return { token, permissionStatus };
+  return { token, fcmToken, permissionStatus };
 }
 
-async function registerForPushNotifications(): Promise<string | undefined> {
+async function registerForPushNotifications(): Promise<{ expoToken?: string; fcmToken?: string | null }> {
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const Notifications = require('expo-notifications');
@@ -237,12 +240,32 @@ async function registerForPushNotifications(): Promise<string | undefined> {
       finalStatus = status;
     }
 
-    if (finalStatus !== 'granted') return undefined;
+    if (finalStatus !== 'granted') return {};
 
     // Retrieve the Expo push token bound to this device + app.
     const tokenData = await Notifications.getExpoPushTokenAsync();
-    return tokenData.data as string;
+    const expoToken = tokenData.data as string;
+
+    // Native FCM device token — Android only. On iOS, getDevicePushTokenAsync()
+    // returns a raw APNs token (type 'apns'), which Firebase Admin's
+    // getMessaging().send({ token }) cannot use directly (it expects a real FCM
+    // registration token), so we only register it as the FCM fallback route
+    // when the platform actually produces one. iOS keeps working exactly as
+    // before, on the Expo push token alone.
+    let fcmToken: string | null = null;
+    if (Platform.OS === 'android') {
+      try {
+        const deviceToken = await Notifications.getDevicePushTokenAsync();
+        if (deviceToken?.type === 'fcm' && typeof deviceToken.data === 'string') {
+          fcmToken = deviceToken.data;
+        }
+      } catch {
+        // Native FCM token unavailable (e.g. Expo Go) — Expo push still works.
+      }
+    }
+
+    return { expoToken, fcmToken };
   } catch {
-    return undefined;
+    return {};
   }
 }

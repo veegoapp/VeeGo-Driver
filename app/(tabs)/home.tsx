@@ -33,6 +33,7 @@ import { useDriverLocation } from '@/hooks/useDriverLocation';
 import { useGPSPermissionRecheck } from '@/hooks/useGPSProvider';
 import { useLocationBroadcast } from '@/hooks/useLocationBroadcast';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { maybePromptBatteryOptimization } from '@/lib/batteryOptimization';
 import { useRideSocket, type RideRequest } from '@/hooks/useRideSocket';
 import { useI18n } from '@/lib/i18nContext';
 import { useActiveSession } from '@/lib/activeSessionContext';
@@ -492,7 +493,7 @@ export default function HomeScreen() {
 
   showRequestRef.current = showRequest;
 
-  const { token } = usePushNotifications(useCallback(() => {}, []));
+  const { token, fcmToken } = usePushNotifications(useCallback(() => {}, []));
 
   const handleRideOffer = useCallback((ride: RideRequest) => {
     showRequestRef.current?.(ride);
@@ -563,9 +564,9 @@ export default function HomeScreen() {
   // Push token registration happens on login, not just when going online
   useEffect(() => {
     if (token) {
-      endpoints.pushTokens.register(token, Platform.OS as 'ios' | 'android' | 'web').catch(() => {});
+      endpoints.pushTokens.register(token, Platform.OS as 'ios' | 'android' | 'web', fcmToken).catch(() => {});
     }
-  }, [token]);
+  }, [token, fcmToken]);
 
   // Start GPS tracking using background location task — returns false if permission denied.
   // Check-first: only calls the request* (OS-prompting) APIs when the stored
@@ -739,6 +740,18 @@ export default function HomeScreen() {
           lastSubmittedStatusRef.current = 'offline';
           return;
         }
+        // Advisory only — never blocks going online. Aggressive OEM battery
+        // managers (MIUI, ColorOS, etc.) can suspend the app and throttle
+        // background push delivery even with a correctly-configured
+        // high-priority FCM/Expo payload; this is the one mitigation left
+        // that requires the driver's own action.
+        maybePromptBatteryOptimization({
+          title: t.battery_optim_title,
+          message: t.battery_optim_msg,
+          openSettingsLabel: t.open_settings,
+          dontAskLabel: t.battery_optim_dont_ask,
+          laterLabel: t.later,
+        }).catch(() => {});
       } else {
         stopLocationTracking();
         setLocationError(null);
