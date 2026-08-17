@@ -438,6 +438,8 @@ function RootLayoutNav() {
         <Stack.Screen name="safety" />
         <Stack.Screen name="documents" />
         <Stack.Screen name="criminal-record-required" />
+        <Stack.Screen name="wallet-withdraw" />
+        <Stack.Screen name="wallet-deposit" />
         <Stack.Screen name="vehicle" />
         <Stack.Screen name="messages" />
         <Stack.Screen name="personal-info" />

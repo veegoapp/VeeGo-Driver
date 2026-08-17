@@ -1,25 +1,23 @@
-import { showAlert } from '@/lib/alert';
+import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowDownLeft, ArrowUpRight, FileText, Wallet, Wrench, X } from 'lucide-react-native';
+import { ArrowDownLeft, ArrowUpRight, FileText, Wallet, Wrench } from 'lucide-react-native';
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import {
-  ActivityIndicator, Animated, KeyboardAvoidingView,
-  LayoutChangeEvent, Modal, Platform, Pressable, ScrollView,
-  StyleSheet, Text, TextInput, View,
+  ActivityIndicator, Animated,
+  LayoutChangeEvent, Pressable, ScrollView,
+  StyleSheet, Text, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { AppLoader } from '@/components/ui/AppLoader';
-import { PayoutMethodIcon } from '@/components/PayoutMethodIcon';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
 import { useSocket } from '@/lib/socketContext';
 import {
-  payoutStatusBadge, normalizeWalletBalance, normalizeActivePayoutAccounts,
-  pickDefaultPayoutAccount, parsePayoutAmount, submitPayoutRequest, extractList,
-  normalizeTransactions, type PayoutAccount, type PayoutHistoryItem, type RawWalletTransaction,
+  payoutStatusBadge, normalizeWalletBalance, extractList,
+  normalizeSettledTransactions, type PayoutHistoryItem, type RawSettledTransaction,
 } from '@/lib/walletHelpers';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
 import { Typography } from '@/constants/typography';
@@ -52,14 +50,7 @@ export default function ShuttleWalletScreen() {
   const { t, isRTL, language } = useI18n();
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
   const TA = isRTL ? 'right' as const : 'left' as const;
-  const queryClient = useQueryClient();
   const { socket } = useSocket();
-
-  // Payout modal state
-  const [payoutVisible, setPayoutVisible] = useState(false);
-  const [payoutAmount, setPayoutAmount] = useState('');
-  const [selectedAccount, setSelectedAccount] = useState<PayoutAccount | null>(null);
-  const [isPayingOut, setIsPayingOut] = useState(false);
 
   const scrollRef = useRef<ScrollView>(null);
   const [txSectionY, setTxSectionY] = useState(0);
@@ -108,11 +99,6 @@ export default function ShuttleWalletScreen() {
     queryFn: () => endpoints.earnings.summary(),
     enabled: walletLive,
   });
-  const { data: payoutAccountsRaw, isLoading: accountsLoading } = useQuery({
-    queryKey: ['payout-accounts'],
-    queryFn: endpoints.wallet.getPayoutAccounts,
-    enabled: walletLive,
-  });
   const { data: payoutHistoryRaw, isLoading: historyLoading, isError: historyError } = useQuery({
     queryKey: ['payout-history'],
     queryFn: endpoints.wallet.getPayoutHistory,
@@ -124,7 +110,7 @@ export default function ShuttleWalletScreen() {
   const balanceData: WalletBalance = normalizeWalletBalance(balanceRaw);
 
   const txs = useMemo(
-    () => normalizeTransactions(txRaw as RawWalletTransaction[] | { data?: RawWalletTransaction[] } | undefined, t, isRTL),
+    () => normalizeSettledTransactions(txRaw as RawSettledTransaction[] | { data?: RawSettledTransaction[] } | undefined, t, isRTL),
     [txRaw, t, isRTL],
   );
 
@@ -134,11 +120,9 @@ export default function ShuttleWalletScreen() {
   const weekTotal = weekEarnings.reduce((s, d) => s + parseFloat(String(d.amount)), 0);
   const todayAmount = parseFloat(String(summary?.recentEarnings?.[0]?.amount ?? 0));
 
-  const payoutAccounts = normalizeActivePayoutAccounts(payoutAccountsRaw as PayoutAccount[] | { data?: PayoutAccount[] } | undefined);
-
   const payoutHistory = extractList<PayoutHistoryItem>(payoutHistoryRaw as PayoutHistoryItem[] | { data?: PayoutHistoryItem[] } | undefined);
 
-  const isLoading = balanceLoading || txLoading || weeklyLoading || summaryLoading || accountsLoading;
+  const isLoading = balanceLoading || txLoading || weeklyLoading || summaryLoading;
   const isError = balanceError || txError;
 
   // ── Animations ─────────────────────────────────────────────────────────────
@@ -158,42 +142,6 @@ export default function ShuttleWalletScreen() {
       )),
     ]).start();
   }, [balanceLoading, weeklyLoading, weekEarnings.length]);
-
-  // ── Payout flow ────────────────────────────────────────────────────────────
-  // Accounts are created upfront in Profile > Payment Information, so the
-  // payout modal only needs an amount + a saved account — no per-payout
-  // account-detail entry step anymore.
-  const openPayout = () => {
-    setPayoutAmount(String(balanceData.balance.toFixed(2)));
-    setSelectedAccount(pickDefaultPayoutAccount(payoutAccounts));
-    setPayoutVisible(true);
-  };
-
-  const handlePayoutSubmit = async () => {
-    const amount = parsePayoutAmount(payoutAmount);
-    if (!amount) {
-      showAlert(t.invalid_amount_title, t.invalid_amount_msg);
-      return;
-    }
-    if (!selectedAccount) {
-      showAlert(t.select_method_title, t.select_method_msg);
-      return;
-    }
-    setIsPayingOut(true);
-    try {
-      const result = await submitPayoutRequest(amount, selectedAccount.id, queryClient);
-      if (!result.ok) {
-        const note = result.available != null ? ` (${t.available}: ${result.available.toFixed(2)} ${t.egp})` : '';
-        showAlert(t.error, `${result.error ?? t.payout_failed_msg}${note}`);
-        return;
-      }
-      setPayoutVisible(false);
-      // Payout request is pending admin confirmation — not yet paid.
-      showAlert('✓', result.message ?? t.payout_pending_msg);
-    } finally {
-      setIsPayingOut(false);
-    }
-  };
 
   // ── Not-live screen ────────────────────────────────────────────────────────
   if (!walletLive) {
@@ -279,11 +227,17 @@ export default function ShuttleWalletScreen() {
             </View>
 
             <View style={styles.actionRow}>
-              <Pressable onPress={openPayout} style={({ pressed }) => [styles.primaryAction, { opacity: pressed ? 0.9 : 1 }]}>
+              <Pressable onPress={() => router.push('/wallet-withdraw')} style={({ pressed }) => [styles.primaryAction, { opacity: pressed ? 0.9 : 1 }]}>
                 <LinearGradient colors={colors.gradientAccent} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.actionGrad}>
                   <ArrowDownLeft size={16} color="#fff" strokeWidth={2} />
                   <Text style={[styles.actionText, { color: '#fff', fontFamily: 'Inter_700Bold' }]}>{t.cash_out}</Text>
                 </LinearGradient>
+              </Pressable>
+              <Pressable onPress={() => router.push('/wallet-deposit')} style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.9 : 1 }]}>
+                <GlassView strong style={styles.secondaryAction} borderRadius={16}>
+                  <ArrowUpRight size={16} color={colors.foreground} strokeWidth={2} />
+                  <Text style={[styles.actionText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.deposit_label}</Text>
+                </GlassView>
               </Pressable>
               <Pressable onPress={() => scrollRef.current?.scrollTo({ y: txSectionY, animated: true })} style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.9 : 1 }]}>
                 <GlassView strong style={styles.secondaryAction} borderRadius={16}>
@@ -413,98 +367,6 @@ export default function ShuttleWalletScreen() {
           })}
         </GlassView>
       </ScrollView>
-
-      {/* ── Payout modal ── */}
-      <Modal
-        visible={payoutVisible}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setPayoutVisible(false)}
-      >
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => setPayoutVisible(false)} />
-          <View style={[styles.modalSheet, { backgroundColor: colors.background }]}>
-            {/* Header */}
-            <View style={[styles.modalHeader, { flexDirection: R }]}>
-              <Text style={[styles.modalTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
-                {t.cash_out}
-              </Text>
-              <Pressable onPress={() => setPayoutVisible(false)} hitSlop={8}>
-                <X size={20} color={colors.mutedForeground} strokeWidth={2} />
-              </Pressable>
-            </View>
-
-            {/* Amount input */}
-            <Text style={[styles.fieldLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.amount_label}</Text>
-            <View style={[styles.amountRow, { borderColor: colors.border }]}>
-              <TextInput
-                value={payoutAmount}
-                onChangeText={setPayoutAmount}
-                keyboardType="decimal-pad"
-                placeholder="0.00"
-                placeholderTextColor={colors.mutedForeground}
-                style={[styles.amountInput, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}
-                autoFocus
-              />
-              <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_700Bold', fontSize: Typography.size.sm }}>{t.egp}</Text>
-            </View>
-            <Text style={[{ fontSize: 11, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', marginBottom: Spacing.lg, textAlign: TA }]}>
-              {t.available}: {balanceData.balance.toFixed(2)} {t.egp}
-            </Text>
-
-            {/* Payout account selector */}
-            <Text style={[styles.fieldLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.payout_methods}</Text>
-            {accountsLoading ? (
-              <ActivityIndicator color={colors.primary} style={{ marginVertical: Spacing.md }} />
-            ) : payoutAccounts.length === 0 ? (
-              <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13, marginBottom: Spacing.lg }}>
-                {t.no_payout_methods_avail}
-              </Text>
-            ) : (
-              <View style={{ gap: Spacing.sm, marginBottom: Spacing.lg }}>
-                {payoutAccounts.map(a => {
-                  const isSelected = selectedAccount?.id === a.id;
-                  return (
-                    <Pressable
-                      key={a.id}
-                      onPress={() => setSelectedAccount(a)}
-                      style={[styles.methodOption, {
-                        backgroundColor: isSelected ? '#1e1e2812' : colors.secondary,
-                        borderColor: isSelected ? '#1e1e2866' : colors.border,
-                        flexDirection: R,
-                      }]}
-                    >
-                      <View style={[styles.methodOptionIcon, { backgroundColor: isSelected ? '#1e1e2820' : colors.background }]}>
-                        <PayoutMethodIcon methodKey={a.methodKey} color={isSelected ? '#2d2d42' : colors.mutedForeground} />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={[{ fontSize: Typography.size.sm, color: isSelected ? '#1e1e28' : colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{a.accountName}</Text>
-                        <Text style={[{ fontSize: 11, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>{a.accountNumber}</Text>
-                      </View>
-                      <View style={[styles.radioOuter, { borderColor: isSelected ? '#1e1e28' : colors.border }]}>
-                        {isSelected && <View style={[styles.radioInner, { backgroundColor: '#1e1e28' }]} />}
-                      </View>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            )}
-
-            <Pressable
-              onPress={handlePayoutSubmit}
-              disabled={isPayingOut || payoutAccounts.length === 0}
-              style={({ pressed }) => [styles.submitBtn, { opacity: pressed || isPayingOut || payoutAccounts.length === 0 ? 0.6 : 1 }]}
-            >
-              <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.submitGrad}>
-                {isPayingOut
-                  ? <ActivityIndicator color="#fff" size="small" />
-                  : <Text style={{ color: '#fff', fontFamily: 'Inter_700Bold', fontSize: Typography.size.sm }}>{t.confirm}</Text>
-                }
-              </LinearGradient>
-            </Pressable>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
     </View>
   );
 }

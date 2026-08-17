@@ -209,3 +209,98 @@ export async function submitPayoutRequest(
     return { ok: false };
   }
 }
+
+// ─── Settled transactions (GET /driver/wallet/transactions) ───────────────────
+// Real, admin-confirmed money movements only — the driver app's Wallet screen
+// Transactions section. Distinct from the raw driver_wallet_ledger dump above
+// (normalizeTransactions / GET /driver/earnings/history): this list is only
+// ever a paid payout or an approved deposit, so there's no accrual noise
+// (cash_debt, ride_earning, ...) to filter or reinterpret client-side.
+export type RawSettledTransaction = {
+  id: string;
+  type: 'withdrawal' | 'deposit';
+  amount: number | string;
+  methodKey?: string | null;
+  occurredAt?: string | null;
+};
+
+export type NormalizedSettledTransaction = {
+  id: string;
+  amount: number;
+  isCredit: boolean;
+  title: string;
+  subtitle: string;
+};
+
+export function normalizeSettledTransaction(
+  raw: RawSettledTransaction,
+  t: ReturnType<typeof useI18n>['t'],
+  isRTL = false,
+): NormalizedSettledTransaction {
+  const isCredit = raw.type === 'deposit';
+  const dateSub = raw.occurredAt
+    ? new Date(raw.occurredAt).toLocaleDateString(isRTL ? 'ar-EG' : 'en-EG', {
+        day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+      })
+    : '';
+  return {
+    id: raw.id,
+    amount: Math.abs(toSafeNumber(raw.amount)),
+    isCredit,
+    title: isCredit ? t.deposit_transaction_label : t.payout_transfer_label,
+    subtitle: raw.methodKey ? `${raw.methodKey}${dateSub ? ' · ' + dateSub : ''}` : dateSub,
+  };
+}
+
+export function normalizeSettledTransactions(
+  raw: RawSettledTransaction[] | { data?: RawSettledTransaction[] } | null | undefined,
+  t: ReturnType<typeof useI18n>['t'],
+  isRTL = false,
+): NormalizedSettledTransaction[] {
+  return extractList(raw).map(item => normalizeSettledTransaction(item, t, isRTL));
+}
+
+// ─── Deposits: driver pays back cash commission owed ───────────────────────────
+
+// One of the platform's own receiving accounts (see GET /driver/wallet/deposit-methods).
+export type DepositMethod = {
+  id: string;
+  key: string;
+  name: string;
+  nameAr: string | null;
+  description: string | null;
+  descriptionAr: string | null;
+  icon: string | null;
+  instructions: string | null;
+  instructionsAr: string | null;
+};
+
+// One row from GET /driver/wallet/deposits — the driver's own deposit requests.
+export type DepositHistoryItem = {
+  id: number;
+  amount: number;
+  methodKey: string;
+  status: 'pending' | 'approved' | 'rejected';
+  proofImageUrl: string;
+  rejectionReason: string | null;
+  createdAt: string;
+  reviewedAt: string | null;
+};
+
+export function depositStatusBadge(status: DepositHistoryItem['status'], colors: ReturnType<typeof useColors>, t: ReturnType<typeof useI18n>['t']) {
+  switch (status) {
+    case 'approved':
+      return { label: t.status_paid_out, color: colors.success };
+    case 'rejected':
+      return { label: t.deposit_status_rejected, color: colors.destructive };
+    default:
+      return { label: t.status_pending, color: colors.mutedForeground };
+  }
+}
+
+// Same validation as parsePayoutAmount — kept as a separate named export so
+// the two flows can diverge later (e.g. a platform-side min/max on deposits)
+// without one silently changing the other's behavior.
+export function parseDepositAmount(amountStr: string): number | null {
+  return parsePayoutAmount(amountStr);
+}

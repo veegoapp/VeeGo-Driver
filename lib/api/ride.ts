@@ -80,7 +80,10 @@ export const earningsEndpoints = {
 export const walletEndpoints = {
   feature: () => api.get('/config/driver-wallet-feature'),
   balance: () => api.get('/driver/wallet/balance'),
-  transactions: (page = 1, limit = 20) => api.get(`/driver/earnings/history?page=${page}&limit=${limit}`),
+  // Real, admin-confirmed money movements only (paid payouts + approved
+  // deposits) — what the Wallet screen's Transactions section shows. Distinct
+  // from earningsEndpoints below, which is the full internal ledger dump.
+  transactions: (page = 1, limit = 20) => api.get(`/driver/wallet/transactions?page=${page}&limit=${limit}`),
   // Payout now requests against a specific saved payout account and only
   // creates a pending request — see getPayoutAccounts/addPayoutAccount below.
   payout: (amount: number, payoutAccountId: number) => api.post('/driver/wallet/payout', { amount, payoutAccountId }),
@@ -91,6 +94,37 @@ export const walletEndpoints = {
   setDefaultPayoutAccount: (id: number) => api.patch(`/driver/payout-accounts/${id}/default`),
   // The driver's own payout requests (pending/paid/cancelled), newest first.
   getPayoutHistory: () => api.get('/driver/wallet/payouts'),
+
+  // ── Deposits: driver pays back cash commission owed to the platform ──────
+  getDepositMethods: () => api.get('/driver/wallet/deposit-methods'),
+  // Single multipart request — amount + methodKey fields alongside the proof
+  // screenshot (field "proof", JPG only — the backend's multer filter and
+  // compressImage re-encode both reject anything else). Mirrors
+  // driverEndpoints.uploadFile's manual fetch (not the JSON api.post helper,
+  // which can't send FormData) with the same auth/timeout/error handling.
+  submitDeposit: async (formData: FormData): Promise<{ id: number; amount: number; methodKey: string; status: string }> => {
+    const token = await getToken();
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    try {
+      const response = await fetch(`${API_BASE_URL}/driver/wallet/deposits`, {
+        method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        body: formData,
+        signal: controller.signal,
+      });
+      if (!response.ok) {
+        let body: unknown = null;
+        try { body = await response.json(); } catch { body = await response.text(); }
+        throw new ApiError(response.status, response.statusText, body);
+      }
+      return await response.json();
+    } finally {
+      clearTimeout(timeout);
+    }
+  },
+  // The driver's own deposit requests (pending/approved/rejected), newest first.
+  getDepositHistory: () => api.get('/driver/wallet/deposits'),
 };
 
 export const notificationsEndpoints = {

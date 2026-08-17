@@ -1,20 +1,18 @@
-import { showAlert } from '@/lib/alert';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { ArrowDownLeft, ArrowUpRight, X } from 'lucide-react-native';
+import { ArrowDownLeft, ArrowUpRight } from 'lucide-react-native';
 import React, { useRef, useEffect, useState, useMemo } from 'react';
-import { ActivityIndicator, Animated, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Animated, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { AppLoader } from '@/components/ui/AppLoader';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
 import {
-  payoutStatusBadge, normalizeWalletBalance, normalizeActivePayoutAccounts,
-  pickDefaultPayoutAccount, parsePayoutAmount, submitPayoutRequest, extractList,
-  normalizeTransactions, type PayoutHistoryItem, type RawWalletTransaction,
+  payoutStatusBadge, normalizeWalletBalance, extractList,
+  normalizeSettledTransactions, type PayoutHistoryItem, type RawSettledTransaction,
 } from '@/lib/walletHelpers';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
@@ -28,14 +26,9 @@ export default function WalletScreen() {
   const { t, isRTL } = useI18n();
   const topPad = insets.top;
   const tabBarHeight = TAB_BAR_HEIGHT_BASE + insets.bottom;
-  const queryClient = useQueryClient();
 
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
   const TA = isRTL ? 'right' as const : 'left' as const;
-
-  const [payoutVisible, setPayoutVisible] = useState(false);
-  const [payoutAmount, setPayoutAmount] = useState('');
-  const [isPayingOut, setIsPayingOut] = useState(false);
 
   const { data: balanceRaw, isLoading: balanceLoading, isError: balanceError, refetch: refetchBalance } = useQuery({
     queryKey: ['wallet-balance'],
@@ -45,11 +38,6 @@ export default function WalletScreen() {
     queryKey: ['wallet-transactions'],
     queryFn: () => endpoints.wallet.transactions(),
   });
-  const { data: payoutAccountsRaw } = useQuery({
-    queryKey: ['payout-accounts'],
-    queryFn: endpoints.wallet.getPayoutAccounts,
-    retry: false,
-  });
   const { data: payoutHistoryRaw, isLoading: historyLoading, isError: historyError } = useQuery({
     queryKey: ['payout-history'],
     queryFn: endpoints.wallet.getPayoutHistory,
@@ -58,10 +46,9 @@ export default function WalletScreen() {
 
   const balanceData = normalizeWalletBalance(balanceRaw);
   const txs = useMemo(
-    () => normalizeTransactions(txRaw as RawWalletTransaction[] | { data?: RawWalletTransaction[] } | undefined, t, isRTL),
+    () => normalizeSettledTransactions(txRaw as RawSettledTransaction[] | { data?: RawSettledTransaction[] } | undefined, t, isRTL),
     [txRaw, t, isRTL],
   );
-  const payoutAccounts = normalizeActivePayoutAccounts(payoutAccountsRaw as Parameters<typeof normalizeActivePayoutAccounts>[0]);
   const payoutHistory = extractList<PayoutHistoryItem>(payoutHistoryRaw as PayoutHistoryItem[] | { data?: PayoutHistoryItem[] } | undefined);
 
   const isLoading = balanceLoading || txLoading;
@@ -81,48 +68,6 @@ export default function WalletScreen() {
       Animated.spring(heroAnim, { toValue: 1, useNativeDriver: true, stiffness: 200, damping: 20 }).start();
     }
   }, [balanceLoading]);
-
-  const parsedPayoutAmount = parsePayoutAmount(payoutAmount);
-  const payoutExceedsBalance = parsedPayoutAmount != null && parsedPayoutAmount > balanceData.balance;
-
-  const handlePayoutOpen = () => {
-    if (payoutAccounts.length === 0) {
-      showAlert(t.error, (t as any).no_payout_methods ?? 'Please add a payout account first.');
-      router.push('/payout-accounts' as any);
-      return;
-    }
-    setPayoutAmount(balanceData.balance > 0 ? balanceData.balance.toFixed(2) : '');
-    setPayoutVisible(true);
-  };
-
-  const handlePayoutConfirm = async () => {
-    const amount = parsePayoutAmount(payoutAmount);
-    if (!amount) {
-      showAlert(t.invalid_amount_title, t.invalid_amount_msg);
-      return;
-    }
-    // Prefer the driver's default account, falling back to the first active one.
-    const selectedAccount = pickDefaultPayoutAccount(payoutAccounts);
-    if (!selectedAccount) {
-      showAlert(t.error, (t as any).no_payout_methods ?? 'Please add a payout account first.');
-      return;
-    }
-    setIsPayingOut(true);
-    try {
-      const result = await submitPayoutRequest(amount, selectedAccount.id, queryClient);
-      if (!result.ok) {
-        const note = result.available != null ? ` (${t.available}: ${result.available.toFixed(2)} ${t.egp})` : '';
-        showAlert(t.error, `${result.error ?? t.payout_fail_msg}${note}`);
-        return;
-      }
-      setPayoutVisible(false);
-      setPayoutAmount('');
-      // Payout request is pending admin confirmation — not yet paid.
-      showAlert(t.payout_success_title, t.payout_pending_msg);
-    } finally {
-      setIsPayingOut(false);
-    }
-  };
 
   if (isLoading) {
     return (
@@ -175,57 +120,20 @@ export default function WalletScreen() {
               </Text>
             </View>
 
-            {payoutVisible ? (
-              <View style={styles.payoutInput}>
-                <View style={[styles.payoutRow, { borderColor: colors.primaryForeground + '40', backgroundColor: colors.primaryForeground + '14' }]}>
-                  <TextInput
-                    value={payoutAmount}
-                    onChangeText={setPayoutAmount}
-                    keyboardType="decimal-pad"
-                    placeholder={t.amount_placeholder}
-                    placeholderTextColor={colors.primaryForeground + '80'}
-                    style={[styles.payoutTextInput, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}
-                    autoFocus
-                  />
-                  <Text style={[{ color: colors.primaryForeground + 'CC', fontFamily: 'Inter_700Bold', fontSize: Typography.size.sm }]}>{t.egp}</Text>
+            <View style={[styles.actionRow, { flexDirection: R }]}>
+              <Pressable onPress={() => router.push('/wallet-withdraw')} style={({ pressed }) => [styles.primaryAction, { opacity: pressed ? 0.9 : 1 }]}>
+                <View style={[styles.actionGrad, { flexDirection: R, backgroundColor: colors.background }]}>
+                  <ArrowDownLeft size={16} color={colors.foreground} strokeWidth={2} />
+                  <Text style={[styles.actionText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.cash_out}</Text>
                 </View>
-                {payoutExceedsBalance && (
-                  <Text style={[styles.payoutWarning, { color: '#FFD9D0', textAlign: TA }]}>
-                    {t.available}: {balanceData.balance.toFixed(2)} {t.egp}
-                  </Text>
-                )}
-                <View style={[styles.actionRow, { flexDirection: R }]}>
-                  <Pressable onPress={() => setPayoutVisible(false)} style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.8 : 1 }]}>
-                    <View style={[styles.secondaryAction, { flexDirection: R, backgroundColor: colors.primaryForeground + '1F', borderColor: colors.primaryForeground + '33' }]}>
-                      <X size={16} color={colors.primaryForeground} strokeWidth={2} />
-                      <Text style={[styles.actionText, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>{t.cancel}</Text>
-                    </View>
-                  </Pressable>
-                  <Pressable
-                    onPress={handlePayoutConfirm}
-                    disabled={isPayingOut || !parsedPayoutAmount || payoutExceedsBalance}
-                    style={({ pressed }) => [styles.primaryAction, { opacity: pressed || isPayingOut || !parsedPayoutAmount || payoutExceedsBalance ? 0.6 : 1 }]}
-                  >
-                    <View style={[styles.actionGrad, { flexDirection: R, backgroundColor: colors.background }]}>
-                      {isPayingOut
-                        ? <ActivityIndicator color={colors.foreground} size="small" />
-                        : <ArrowDownLeft size={16} color={colors.foreground} strokeWidth={2} />
-                      }
-                      <Text style={[styles.actionText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.confirm}</Text>
-                    </View>
-                  </Pressable>
+              </Pressable>
+              <Pressable onPress={() => router.push('/wallet-deposit')} style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.8 : 1 }]}>
+                <View style={[styles.secondaryAction, { flexDirection: R, backgroundColor: colors.primaryForeground + '1F', borderColor: colors.primaryForeground + '33' }]}>
+                  <ArrowUpRight size={16} color={colors.primaryForeground} strokeWidth={2} />
+                  <Text style={[styles.actionText, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>{t.deposit_label}</Text>
                 </View>
-              </View>
-            ) : (
-              <View style={[styles.actionRow, { flexDirection: R }]}>
-                <Pressable onPress={handlePayoutOpen} style={({ pressed }) => [styles.primaryAction, { opacity: pressed ? 0.9 : 1 }]}>
-                  <View style={[styles.actionGrad, { flexDirection: R, backgroundColor: colors.background }]}>
-                    <ArrowDownLeft size={16} color={colors.foreground} strokeWidth={2} />
-                    <Text style={[styles.actionText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.cash_out}</Text>
-                  </View>
-                </Pressable>
-              </View>
-            )}
+              </Pressable>
+            </View>
           </LinearGradient>
         </Animated.View>
 
@@ -322,10 +230,6 @@ const styles = StyleSheet.create({
   balanceStatusRow: { alignItems: 'center', gap: Spacing.sm, marginTop: Spacing.sm },
   balanceStatusText: { fontSize: 11 },
   balanceStatusDot: { width: 3, height: 3, borderRadius: 1.5 },
-  payoutInput: { marginTop: Spacing.lg, gap: 10 },
-  payoutRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10 },
-  payoutTextInput: { flex: 1, fontSize: 20, height: 36 },
-  payoutWarning: { fontSize: 11, marginTop: -4 },
   actionRow: { gap: Spacing.sm, marginTop: 20 },
   primaryAction: { flex: 1, height: 48, borderRadius: Radius.lg, overflow: 'hidden' },
   actionGrad: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
