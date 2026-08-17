@@ -1006,7 +1006,7 @@ export default function HomeScreen() {
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text style={[styles.promoHomeTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]} numberOfLines={1}>{activePromo.title}</Text>
                   {(activePromo.bonusPercentage != null || activePromo.bonusAmount != null) && (
-                    <Text style={[styles.promoHomeBonus, { color: colors.primary, fontFamily: 'Inter_700Bold' }]}>
+                    <Text style={[styles.promoHomeBonus, { color: colors.accent, fontFamily: 'Inter_700Bold' }]}>
                       {activePromo.bonusPercentage != null
                         ? `+${activePromo.bonusPercentage}% bonus`
                         : `+${activePromo.bonusAmount} ${t.egp} bonus`}
@@ -1105,7 +1105,7 @@ export default function HomeScreen() {
             <View style={[styles.requestHeader, { flexDirection: R }]}>
               <View style={[styles.requestHeaderLeft, { flexDirection: R }]}>
                 <View style={[styles.liveDot, { backgroundColor: colors.primary }]} />
-                <Text style={[styles.requestType, { color: colors.primary, fontFamily: 'Inter_700Bold' }]}>
+                <Text style={[styles.requestType, { color: colors.accent, fontFamily: 'Inter_700Bold' }]}>
                   {t.new_trip} · {request.type}
                 </Text>
               </View>
@@ -1211,7 +1211,12 @@ function StatItem({ label, value, highlight, colors, isRTL }: { label: string; v
   return (
     <View style={styles.statItem}>
       <Text style={[styles.statLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: 'center' }]}>{label}</Text>
-      <Text style={[styles.statValue, { color: highlight ? colors.primary : colors.foreground, fontFamily: 'Inter_700Bold', textAlign: 'center' }]}>{value}</Text>
+      {/* colors.primary is a dark-navy brand color meant for button
+          backgrounds, not text — on the dark-mode glass card (also dark
+          navy) it was rendering as nearly invisible dark-on-dark. accent
+          (brand green) is the token already used elsewhere for "this number
+          should pop" emphasis and reads clearly in both themes. */}
+      <Text style={[styles.statValue, { color: highlight ? colors.accent : colors.foreground, fontFamily: 'Inter_700Bold', textAlign: 'center' }]}>{value}</Text>
     </View>
   );
 }
