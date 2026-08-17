@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, Clock, HelpCircle, MapPin, Star, TrendingDown, TrendingUp } from 'lucide-react-native';
+import { ArrowLeft, Banknote, Clock, HelpCircle, MapPin, Star, TrendingDown, TrendingUp, Wallet } from 'lucide-react-native';
 import React, { useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { GlassView } from '@/components/GlassView';
@@ -12,7 +12,7 @@ import { useI18n } from '@/lib/i18nContext';
 import { rtlIconStyle } from '@/lib/rtlUtils';
 import { useService } from '@/lib/serviceContext';
 import { endpoints } from '@/lib/api';
-import type { RideHistoryItem } from '@/lib/api';
+import type { RideHistoryItem, RideFinancialDetail } from '@/lib/api';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 
@@ -45,6 +45,16 @@ export default function RideHistoryDetailScreen() {
   const { data: fullRide, isLoading: mapLoading } = useQuery<any>({
     queryKey: ['ride-detail-coords', rideId],
     queryFn: () => endpoints.rides.getById(rideId),
+    enabled: !!rideId,
+  });
+
+  // Full money breakdown (payment method, cash-vs-promo/wallet split,
+  // platform commission, driver earnings, peak bonus) — read from the
+  // immutable financial_snapshots row, not derived from fare/driverEarnings
+  // client-side percentages the way this screen used to.
+  const { data: financial, isLoading: financialLoading } = useQuery<RideFinancialDetail>({
+    queryKey: ['ride-financial-detail', rideId],
+    queryFn: () => endpoints.rides.financialDetail(rideId),
     enabled: !!rideId,
   });
 
@@ -194,42 +204,98 @@ export default function RideHistoryDetailScreen() {
           </View>
         </GlassView>
 
-        {/* Payment method + driver/company split — split % is computed from
-            this ride's own fare/driverEarnings, not an assumed fixed rate. */}
+        {/* Full financial breakdown — read from financial_snapshots (the same
+            immutable per-ride record the Earnings screen's totals are built
+            from), not derived from fare/driverEarnings client-side
+            percentages the way this screen used to compute driver/company %. */}
         {isCompleted && (
-          <GlassView style={styles.card} borderRadius={20}>
-            <View style={[{ flexDirection: R, alignItems: 'center', justifyContent: 'space-between' }]}>
-              <Text style={[{ fontSize: Typography.size.sm, color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>
-                {t.payment_method_fallback}
-              </Text>
-              <Text style={[{ fontSize: Typography.size.sm, color: colors.foreground, fontFamily: 'Inter_700Bold', textTransform: 'capitalize' }]}>
-                {ride.paymentMethod ?? '—'}
-              </Text>
-            </View>
+          financialLoading ? (
+            <GlassView style={[styles.card, { alignItems: 'center' }]} borderRadius={20}>
+              <ActivityIndicator color={colors.mutedForeground} />
+            </GlassView>
+          ) : financial?.hasSnapshot ? (
+            <GlassView style={styles.card} borderRadius={20}>
+              {/* Payment method */}
+              <View style={[{ flexDirection: R, alignItems: 'center', justifyContent: 'space-between' }]}>
+                <Text style={[{ fontSize: Typography.size.sm, color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>
+                  {t.payment_method_fallback}
+                </Text>
+                <View style={[{ flexDirection: R, alignItems: 'center', gap: 6 }]}>
+                  {financial.paymentMethod === 'cash'
+                    ? <Banknote size={14} color={colors.foreground} strokeWidth={2} />
+                    : <Wallet size={14} color={colors.foreground} strokeWidth={2} />}
+                  <Text style={[{ fontSize: Typography.size.sm, color: colors.foreground, fontFamily: 'Inter_700Bold', textTransform: 'capitalize' }]}>
+                    {financial.paymentMethod === 'cash' ? t.payment_cash
+                      : financial.paymentMethod === 'wallet' ? t.payment_wallet
+                      : financial.paymentMethod === 'card' ? t.payment_card
+                      : financial.paymentMethod ?? '—'}
+                  </Text>
+                </View>
+              </View>
 
-            <View style={[styles.splitRow, { flexDirection: R }]}>
-              <View style={[styles.rowIcon, { backgroundColor: '#F0FDF4' }]}>
-                <TrendingUp size={15} color="#16A34A" strokeWidth={2} />
+              {/* Price breakdown */}
+              <View style={[styles.divider, { backgroundColor: colors.divider }]} />
+              <FinRow label={t.trip_fare_label} value={`${(financial.finalPrice ?? 0).toFixed(2)} ${t.egp}`} colors={colors} isRTL={isRTL} />
+              {(financial.discountAmount ?? 0) > 0 && (
+                <FinRow label={t.promo_discount_label} value={`-${(financial.discountAmount ?? 0).toFixed(2)} ${t.egp}`} negative colors={colors} isRTL={isRTL} />
+              )}
+              {financial.waitingCharge > 0 && (
+                <FinRow label={t.waiting_charge_label} value={`+${financial.waitingCharge.toFixed(2)} ${t.egp}`} colors={colors} isRTL={isRTL} />
+              )}
+
+              {/* Cash-specific: how much of it was actually cash-in-hand */}
+              {financial.paymentMethod === 'cash' && (
+                <>
+                  <FinRow label={t.cash_collected_label} value={`${(financial.cashCollectedAmount ?? 0).toFixed(2)} ${t.egp}`} colors={colors} isRTL={isRTL} />
+                  {financial.cashStatus === 'pending' && (
+                    <FinRow label={t.cash_owed_label} value={`${Math.max(0, (financial.cashDueAmount ?? 0) - (financial.cashCollectedAmount ?? 0)).toFixed(2)} ${t.egp}`} negative colors={colors} isRTL={isRTL} />
+                  )}
+                </>
+              )}
+
+              {/* Driver / platform split */}
+              <View style={[styles.divider, { backgroundColor: colors.divider }]} />
+              <View style={[styles.splitRow, { flexDirection: R }]}>
+                <View style={[styles.rowIcon, { backgroundColor: '#F0FDF4' }]}>
+                  <TrendingUp size={15} color="#16A34A" strokeWidth={2} />
+                </View>
+                <Text style={[{ flex: 1, fontSize: Typography.size.sm, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>
+                  {t.your_share_label} {financial.commissionRateUsed != null ? `(${(100 - financial.commissionRateUsed * 100).toFixed(0)}%)` : ''}
+                </Text>
+                <Text style={[{ fontSize: Typography.size.sm, color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
+                  {(financial.driverEarningsAmount ?? 0).toFixed(2)} {t.egp}
+                </Text>
               </View>
-              <Text style={[{ flex: 1, fontSize: Typography.size.sm, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>
-                {t.your_share_label} {fare > 0 ? `(${((earnedAmount / fare) * 100).toFixed(0)}%)` : ''}
-              </Text>
-              <Text style={[{ fontSize: Typography.size.sm, color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-                {earnedAmount.toFixed(2)} {t.egp}
-              </Text>
-            </View>
-            <View style={[styles.splitRow, { flexDirection: R }]}>
-              <View style={[styles.rowIcon, { backgroundColor: '#FFF7ED' }]}>
-                <TrendingDown size={15} color="#EA580C" strokeWidth={2} />
+              {(financial.peakBonusAmount ?? 0) > 0 && (
+                <FinRow label={t.peak_bonus_label} value={`+${(financial.peakBonusAmount ?? 0).toFixed(2)} ${t.egp}`} colors={colors} isRTL={isRTL} />
+              )}
+              <View style={[styles.splitRow, { flexDirection: R }]}>
+                <View style={[styles.rowIcon, { backgroundColor: '#FFF7ED' }]}>
+                  <TrendingDown size={15} color="#EA580C" strokeWidth={2} />
+                </View>
+                <Text style={[{ flex: 1, fontSize: Typography.size.sm, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>
+                  {t.company_share_label} {financial.commissionRateUsed != null ? `(${(financial.commissionRateUsed * 100).toFixed(0)}%)` : ''}
+                </Text>
+                <Text style={[{ fontSize: Typography.size.sm, color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
+                  {(financial.platformCommissionAmount ?? 0).toFixed(2)} {t.egp}
+                </Text>
               </View>
-              <Text style={[{ flex: 1, fontSize: Typography.size.sm, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>
-                {t.company_share_label} {fare > 0 ? `(${(100 - (earnedAmount / fare) * 100).toFixed(0)}%)` : ''}
-              </Text>
-              <Text style={[{ fontSize: Typography.size.sm, color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-                {Math.max(0, fare - earnedAmount).toFixed(2)} {t.egp}
-              </Text>
-            </View>
-          </GlassView>
+            </GlassView>
+          ) : (
+            // Fallback: no financial_snapshots row (shouldn't happen for a
+            // genuinely completed ride, but keep the screen usable if it does).
+            <GlassView style={styles.card} borderRadius={20}>
+              <View style={[{ flexDirection: R, alignItems: 'center', justifyContent: 'space-between' }]}>
+                <Text style={[{ fontSize: Typography.size.sm, color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>
+                  {t.payment_method_fallback}
+                </Text>
+                <Text style={[{ fontSize: Typography.size.sm, color: colors.foreground, fontFamily: 'Inter_700Bold', textTransform: 'capitalize' }]}>
+                  {ride.paymentMethod ?? '—'}
+                </Text>
+              </View>
+              <FinRow label={t.net_earnings} value={`${earnedAmount.toFixed(2)} ${t.egp}`} colors={colors} isRTL={isRTL} />
+            </GlassView>
+          )
         )}
 
         {/* Rider */}
@@ -284,6 +350,27 @@ export default function RideHistoryDetailScreen() {
   );
 }
 
+// A single labeled money line in the financial breakdown card (e.g. "Trip fare
+// — 40.94 EGP", "Promo discount — -5.00 EGP"). `negative` tints the value red
+// for amounts that reduce what the driver collects/keeps.
+function FinRow({ label, value, negative, colors, isRTL }: {
+  label: string; value: string; negative?: boolean;
+  colors: ReturnType<typeof useColors>; isRTL: boolean;
+}) {
+  const R = isRTL ? 'row-reverse' as const : 'row' as const;
+  const TA = isRTL ? 'right' as const : 'left' as const;
+  return (
+    <View style={[{ flexDirection: R, alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6 }]}>
+      <Text style={[{ fontSize: Typography.size.sm, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>
+        {label}
+      </Text>
+      <Text style={[{ fontSize: Typography.size.sm, color: negative ? colors.destructive : colors.foreground, fontFamily: 'Inter_700Bold' }]}>
+        {value}
+      </Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
   backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
@@ -292,6 +379,7 @@ const styles = StyleSheet.create({
   pageTitle: { fontSize: 24, marginTop: Spacing.xl },
   pageSubtitle: { fontSize: 13 },
   card: { padding: Spacing.lg, marginTop: Spacing.lg },
+  divider: { height: 1, marginVertical: Spacing.sm },
   mapCard: {
     marginTop: Spacing.lg,
     borderRadius: 20,

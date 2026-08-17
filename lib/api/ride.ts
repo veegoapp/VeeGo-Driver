@@ -2,6 +2,31 @@ import { api, ApiError, API_BASE_URL, REQUEST_TIMEOUT_MS } from './_client';
 import { getToken } from '../auth';
 import type { RideMessage, RideHistoryItem } from './types';
 
+// GET /driver/rides/:id/financial-detail — full breakdown for one ride, read
+// from the immutable financial_snapshots row written at completion time.
+// hasSnapshot is false for cancelled rides / anything completed before
+// financial_snapshots existed — every field below fare/paymentMethod/
+// waitingCharge is meaningless in that case.
+export type RideFinancialDetail = {
+  rideId: number;
+  hasSnapshot: boolean;
+  status: string;
+  paymentMethod?: string;
+  waitingCharge: number;
+  currency?: string;
+  originalPrice?: number;
+  finalPrice?: number;
+  discountAmount?: number;
+  commissionRateUsed?: number;
+  platformCommissionAmount?: number;
+  driverEarningsAmount?: number;
+  peakBonusAmount?: number;
+  promoCostAmount?: number;
+  cashDueAmount?: number;
+  cashCollectedAmount?: number;
+  cashStatus?: 'collected' | 'pending' | 'not_applicable';
+};
+
 export const ridesEndpoints = {
   available: () => api.get('/driver/rides/available'),
   getById: (rideId: string) => api.get(`/rides/${rideId}`),
@@ -50,6 +75,8 @@ export const ridesEndpoints = {
       `/driver/rides/history?${params.join('&')}`
     );
   },
+  financialDetail: (rideId: string) =>
+    api.get<RideFinancialDetail>(`/driver/rides/${rideId}/financial-detail`),
 };
 
 // Driver Trip Sharing: a driver-generated, temporary, revocable public

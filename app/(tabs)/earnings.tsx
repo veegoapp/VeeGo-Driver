@@ -1,7 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { ChevronRight, Download, TrendingDown, TrendingUp } from 'lucide-react-native';
-import { FeatherIcon } from '@/lib/iconMap';
+import { ChevronRight, TrendingDown, TrendingUp } from 'lucide-react-native';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
@@ -240,12 +239,6 @@ export default function EarningsScreen() {
             <Text style={[styles.sectionLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.earnings}</Text>
             <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{PERIOD_LABELS[period]}</Text>
           </View>
-          <Pressable onPress={() => router.push('/(tabs)/wallet')}>
-            <GlassView style={[styles.cashOutBtn, { flexDirection: R }]} borderRadius={20}>
-              <Download size={14} color={colors.foreground} strokeWidth={2} />
-              <Text style={[styles.cashOutText, { color: colors.foreground, fontFamily: 'Inter_600SemiBold' }]}>{t.cash_out}</Text>
-            </GlassView>
-          </Pressable>
         </View>
 
         {/* Period filter chips */}
@@ -266,7 +259,14 @@ export default function EarningsScreen() {
         </ScrollView>
 
         {/* Hero — now strictly reflects the selected period (was pinned to a
-            separate 4-week query before, so it never matched the tabs) */}
+            separate 4-week query before, so it never matched the tabs).
+            Reads driverTotal (financial_snapshots-derived, via the useMemo
+            below), NOT summary.summary.totalEarnings — that field sums
+            driver_wallet_ledger credits only, which deliberately excludes
+            cash-ride earnings (the driver already holds that cash), so it
+            under-reports (often to 0.00) for anyone who takes cash rides.
+            driverTotal is the same source the split card below already uses,
+            so the two numbers on this screen no longer disagree. */}
         <Animated.View style={[styles.heroCard, { opacity: heroAnim, transform: [{ translateY: heroAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
           <LinearGradient colors={['#2d2d42', '#55c49a']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroGrad}>
             <View style={styles.heroBlobTop} />
@@ -274,7 +274,7 @@ export default function EarningsScreen() {
               <Text style={[styles.heroLabel, { color: colors.primaryForeground + 'CC', fontFamily: 'Inter_700Bold', textAlign: TA }]}>{PERIOD_HERO_LABELS[period]}</Text>
               <View style={[styles.heroAmountRow, { flexDirection: R }]}>
                 <Text style={[styles.heroAmount, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>
-                  {parseFloat(String(summary?.summary?.totalEarnings ?? 0)).toFixed(2)}
+                  {driverTotal.toFixed(2)}
                 </Text>
                 <Text style={[styles.heroCurrency, { color: colors.primaryForeground + 'CC', fontFamily: 'Inter_700Bold' }]}>{t.egp}</Text>
               </View>
@@ -308,17 +308,6 @@ export default function EarningsScreen() {
               colors={colors}
               isRTL={isRTL}
             />
-          </View>
-        </GlassView>
-
-        <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{PERIOD_LABELS[period]} · {summary?.recentEarnings?.length ?? 0} {t.trips}</Text>
-        <GlassView style={styles.summaryCard} borderRadius={20}>
-          <View style={styles.summaryInner}>
-            <EarningsRow icon="check-circle" label={t.status_confirmed} value={`${parseFloat(String(summary?.summary?.totalConfirmed ?? 0)).toFixed(2)} ${t.egp}`} colors={colors} isRTL={isRTL} />
-            <EarningsRow icon="credit-card" label={t.status_pending} value={`${parseFloat(String(summary?.summary?.totalPending ?? 0)).toFixed(2)} ${t.egp}`} colors={colors} isRTL={isRTL} />
-            <EarningsRow icon="star" label={t.paid_out_label} value={`${parseFloat(String(summary?.summary?.totalPaid ?? 0)).toFixed(2)} ${t.egp}`} accent colors={colors} isRTL={isRTL} />
-            <View style={[styles.divider, { backgroundColor: colors.divider }]} />
-            <EarningsRow label={t.net_earnings} value={`${parseFloat(String(summary?.summary?.totalEarnings ?? 0)).toFixed(2)} ${t.egp}`} bold colors={colors} isRTL={isRTL} />
           </View>
         </GlassView>
 
@@ -357,22 +346,6 @@ export default function EarningsScreen() {
         )}
 
       </ScrollView>
-    </View>
-  );
-}
-
-function EarningsRow({ icon, label, value, accent, bold, colors, isRTL }: { icon?: string; label: string; value: string; accent?: boolean; bold?: boolean; colors: ReturnType<typeof useColors>; isRTL: boolean }) {
-  const R = isRTL ? 'row-reverse' as const : 'row' as const;
-  const TA = isRTL ? 'right' as const : 'left' as const;
-  return (
-    <View style={[styles.earningsRow, { flexDirection: R }]}>
-      {icon && (
-        <View style={[styles.rowIcon, { backgroundColor: colors.secondary + 'B3' }]}>
-          <FeatherIcon name={icon} size={16} color={colors.mutedForeground} />
-        </View>
-      )}
-      <Text style={[styles.rowLabel, { color: bold ? colors.foreground : colors.mutedForeground, fontFamily: bold ? 'Inter_700Bold' : 'Inter_400Regular', flex: 1, textAlign: TA }]}>{label}</Text>
-      <Text style={[styles.rowValue, { color: accent ? colors.primary : colors.foreground, fontFamily: 'Inter_700Bold', fontSize: bold ? 16 : 14 }]}>{value}</Text>
     </View>
   );
 }

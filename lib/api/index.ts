@@ -22,6 +22,7 @@ export type {
   LocationSnapshot,
   StationEtaResponse,
 } from './types';
+export type { RideFinancialDetail } from './ride';
 
 // ── Endpoint group imports ────────────────────────────────────────────────────
 import { authEndpoints } from './auth';
