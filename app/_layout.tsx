@@ -106,6 +106,54 @@ function ForceDisconnectBridge() {
   return null;
 }
 
+/**
+ * Reacts to the two criminal-record-suspension realtime events so a driver
+ * who is currently inside the app doesn't have to background/reopen it (or
+ * wait for the next Home focus) to see the effect:
+ *  - NOTIFICATION_NEW with category "suspension" fires the instant
+ *    checkCriminalRecordThreshold suspends the account (e.g. right after the
+ *    driver completes their 30th trip) — redirect immediately instead of
+ *    leaving them on Home where the GO toggle would otherwise let them try
+ *    (and fail) to go online.
+ *  - driver:account:reactivated fires when an admin approves the uploaded
+ *    certificate — if the driver is sitting on the criminal-record-required
+ *    screen, route them back into the app now that they're unblocked.
+ */
+function CriminalRecordEventsBridge() {
+  const { socket } = useSocket();
+  const { token } = useAuth();
+  const { t } = useI18n();
+  const router = useRouter();
+  const segments = useSegments();
+  const segmentsRef = React.useRef(segments);
+  segmentsRef.current = segments;
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleNotificationNew = (data?: { category?: string }) => {
+      if (data?.category !== 'suspension') return;
+      router.replace('/criminal-record-required');
+    };
+
+    const handleReactivated = () => {
+      showAlert(t.criminal_record_reactivated_title, t.criminal_record_reactivated_body);
+      if (segmentsRef.current[0] === 'criminal-record-required') {
+        navigateAfterAuth(token);
+      }
+    };
+
+    socket.on(SOCKET_EVENTS.NOTIFICATION_NEW, handleNotificationNew);
+    socket.on(SOCKET_EVENTS.DRIVER_ACCOUNT_REACTIVATED, handleReactivated);
+    return () => {
+      socket.off(SOCKET_EVENTS.NOTIFICATION_NEW, handleNotificationNew);
+      socket.off(SOCKET_EVENTS.DRIVER_ACCOUNT_REACTIVATED, handleReactivated);
+    };
+  }, [socket, token, t, router]);
+
+  return null;
+}
+
 function SosAcknowledgementBridge() {
   const { socket } = useSocket();
   const { t } = useI18n();
@@ -205,8 +253,21 @@ function RootLayoutNav() {
   }, [isLoading, isLanguageLoading]);
 
   useEffect(() => {
+    // Fires on ANY 403 account_suspended response — a blocked user (admin/
+    // no-show) or a criminal-record-suspended driver whose online/busy
+    // attempt was just rejected (see setDriverStatusUnified on the backend;
+    // turning offline is always allowed and never reaches this path). Check
+    // the reason before deciding where to send the driver: only the
+    // criminal-record case gets the document-upload screen, everything else
+    // keeps the existing "contact support" screen.
     setOnAccountSuspended(() => {
-      router.replace('/suspended');
+      endpoints.driver.me().then((me: any) => {
+        router.replace(
+          me?.status === 'suspended' && me?.suspensionReason === 'criminal_record_required'
+            ? '/criminal-record-required'
+            : '/suspended'
+        );
+      }).catch(() => router.replace('/suspended'));
     });
   }, [router]);
 
@@ -320,11 +381,22 @@ function RootLayoutNav() {
       }
     } catch {}
 
-    endpoints.driver.me().then((me: any) => {
-      if (me && (me.isBlocked || me.isSuspended)) {
-        router.replace('/suspended');
+    // Redirects a suspended driver to the right screen: the criminal-record
+    // flow if that's specifically why they're suspended, otherwise the
+    // generic "contact support" screen. Resolves to true when a redirect was
+    // issued, so callers waiting on it (the inPreAuthZone branch below) know
+    // not to also navigate the driver into the app.
+    const suspensionCheck: Promise<boolean> = endpoints.driver.me().then((me: any) => {
+      if (me?.status === 'suspended') {
+        router.replace(
+          me?.suspensionReason === 'criminal_record_required'
+            ? '/criminal-record-required'
+            : '/suspended'
+        );
+        return true;
       }
-    }).catch(() => {});
+      return false;
+    }).catch(() => false);
 
     if (inPendingZone) return;
 
@@ -332,7 +404,15 @@ function RootLayoutNav() {
     if (isOtpFlow) return;
 
     if (inPreAuthZone) {
-      navigateAfterAuth(token);
+      // Wait for the suspension check before routing the driver into the app
+      // — entering Home first and redirecting a moment later (once this
+      // promise resolved) used to cause a visible flash into Home, and on a
+      // dropped/slow connection could leave a suspended driver on Home
+      // altogether since navigateAfterAuth used to fire immediately,
+      // unsynchronized with this check.
+      suspensionCheck.then((redirected) => {
+        if (!redirected) navigateAfterAuth(token);
+      });
     }
   }, [token, isLoading, segments, refreshAttempt]);
 
@@ -342,6 +422,7 @@ function RootLayoutNav() {
     <>
       <PushNotificationsBridge />
       <ForceDisconnectBridge />
+      <CriminalRecordEventsBridge />
       <SosAcknowledgementBridge />
       <ActiveSessionInitBridge />
 
@@ -356,6 +437,7 @@ function RootLayoutNav() {
         <Stack.Screen name="support" />
         <Stack.Screen name="safety" />
         <Stack.Screen name="documents" />
+        <Stack.Screen name="criminal-record-required" />
         <Stack.Screen name="vehicle" />
         <Stack.Screen name="messages" />
         <Stack.Screen name="personal-info" />

@@ -685,6 +685,12 @@ export const ar: Translations = {
   // ── Suspended screen ──────────────────────────────────────────────────────────
   account_suspended_title: 'تم إيقاف حسابك',
   account_suspended_body: 'تم إيقاف حسابك بسبب تكرار الغياب. تواصل مع الدعم لإعادة التفعيل.',
+  // ── Criminal record required screen ─────────────────────────────────────────
+  criminal_record_required_title: 'مطلوب صحيفة الحالة الجنائية',
+  criminal_record_required_body: 'لقد أكملت {trips} رحلة. لتتمكن من الاستمرار في القيادة مع فيجو، يجب رفع صحيفة حالة جنائية سارية. سيظل حسابك غير متصل حتى ترفعها ويتم اعتمادها.',
+  criminal_record_required_upload_btn: 'رفع الصحيفة الجنائية',
+  criminal_record_reactivated_title: 'تم إعادة تفعيل الحساب',
+  criminal_record_reactivated_body: 'تم اعتماد صحيفة حالتك الجنائية. يمكنك الآن العمل أونلاين مجدداً.',
   // ── Direct cancel screen ──────────────────────────────────────────────────────
   cancel_trip_failed: 'فشل إلغاء الرحلة. يرجى المحاولة مجدداً أو التواصل مع الدعم.',
   select_reason_first: 'يرجى اختيار سبب الإلغاء أولاً.',

@@ -80,6 +80,8 @@ export const SOCKET_EVENTS = {
   DRIVER_ACCOUNT_ACTIVATED:   "driver:account:activated",
   DRIVER_ACCOUNT_REJECTED:    "driver:account:rejected",
   DRIVER_CHANGES_REQUESTED:   "driver:changes:requested",
+  // Server → Driver: criminal record certificate approved while suspended for it
+  DRIVER_ACCOUNT_REACTIVATED: "driver:account:reactivated",
 
   // Server → All Drivers: real-time slot availability (broadcast to "drivers" room)
   SLOT_TAKEN:                 "slot_taken",

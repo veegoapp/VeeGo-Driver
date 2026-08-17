@@ -685,6 +685,12 @@ export const en = {
   // ── Suspended screen ──────────────────────────────────────────────────────────
   account_suspended_title: 'Your Account is Suspended',
   account_suspended_body: 'Your account has been suspended due to repeated absences. Contact support to reactivate.',
+  // ── Criminal record required screen ─────────────────────────────────────────
+  criminal_record_required_title: 'Criminal Record Certificate Required',
+  criminal_record_required_body: 'You have completed {trips} trips. To keep driving with VeeGo, you must upload a valid criminal record certificate. Your account will stay offline until you upload it and it is approved.',
+  criminal_record_required_upload_btn: 'Upload Certificate',
+  criminal_record_reactivated_title: 'Account Reactivated',
+  criminal_record_reactivated_body: 'Your criminal record certificate has been approved. You can go online again.',
   // ── Direct cancel screen ──────────────────────────────────────────────────────
   cancel_trip_failed: 'Could not cancel the trip. Please try again or contact support.',
   select_reason_first: 'Please select a cancellation reason first.',
