@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { HeadphonesIcon, ShieldAlert, UploadCloud } from 'lucide-react-native';
+import { Clock, HeadphonesIcon, ShieldAlert, UploadCloud } from 'lucide-react-native';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -31,6 +31,53 @@ export default function CriminalRecordRequiredScreen() {
     retry: 1,
   });
   const trips = profile?.trips ?? 0;
+
+  // Whether a criminal_record certificate has already been uploaded and is
+  // awaiting admin review. The driver stays suspended (and is routed back
+  // here) between uploading and approval, so this screen must distinguish
+  // "not uploaded yet" (show the upload CTA) from "uploaded, under review"
+  // (show a waiting state, no CTA) — otherwise it keeps telling a driver who
+  // already uploaded to upload again. Approval flips status to offline
+  // server-side and fires driver:account:reactivated, which routes the driver
+  // off this screen (see CriminalRecordEventsBridge in _layout).
+  const { data: rawDocs } = useQuery({
+    queryKey: ['documents'],
+    queryFn: () => endpoints.driver.documents(),
+    retry: 1,
+  });
+  const isPendingReview = React.useMemo(() => {
+    const list = Array.isArray(rawDocs)
+      ? rawDocs
+      : Array.isArray((rawDocs as { data?: unknown[] } | null)?.data)
+        ? (rawDocs as { data: any[] }).data
+        : [];
+    let latest: any = null;
+    for (const doc of list as any[]) {
+      if (doc?.type !== 'criminal_record') continue;
+      if (!latest || String(doc.uploadedAt) > String(latest.uploadedAt)) latest = doc;
+    }
+    return latest?.verificationStatus === 'pending';
+  }, [rawDocs]);
+
+  if (isPendingReview) {
+    return (
+      <View style={[s.root, { paddingTop: topPad, paddingBottom: botPad + 24 }]}>
+        <View style={[s.iconWrap, s.iconWrapPending]}>
+          <Clock size={64} color="#b45309" strokeWidth={1.5} />
+        </View>
+        <Text style={s.title}>{t.criminal_record_pending_title}</Text>
+        <Text style={s.body}>{t.criminal_record_pending_body}</Text>
+        <Pressable
+          style={[s.secondaryBtn, { marginTop: 8 }]}
+          onPress={() => router.push('/support')}
+          accessibilityRole="button"
+        >
+          <HeadphonesIcon size={16} color="#5e5e72" strokeWidth={2} />
+          <Text style={s.secondaryBtnText}>{t.help_support}</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
     <View style={[s.root, { paddingTop: topPad, paddingBottom: botPad + 24 }]}>
@@ -76,6 +123,9 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.sm,
+  },
+  iconWrapPending: {
+    backgroundColor: '#fef3c7',
   },
   title: {
     fontSize: 26,

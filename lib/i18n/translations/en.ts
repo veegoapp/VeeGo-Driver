@@ -689,6 +689,8 @@ export const en = {
   criminal_record_required_title: 'Criminal Record Certificate Required',
   criminal_record_required_body: 'You have completed {trips} trips. To keep driving with VeeGo, you must upload a valid criminal record certificate. Your account will stay offline until you upload it and it is approved.',
   criminal_record_required_upload_btn: 'Upload Certificate',
+  criminal_record_pending_title: 'Certificate Under Review',
+  criminal_record_pending_body: 'Your criminal record certificate has been uploaded and is now under review. Your account will stay offline until an admin approves it — we\'ll notify you as soon as that happens.',
   criminal_record_reactivated_title: 'Account Reactivated',
   criminal_record_reactivated_body: 'Your criminal record certificate has been approved. You can go online again.',
   // ── Direct cancel screen ──────────────────────────────────────────────────────
