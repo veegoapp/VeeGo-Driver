@@ -689,6 +689,8 @@ export const ar: Translations = {
   criminal_record_required_title: 'مطلوب صحيفة الحالة الجنائية',
   criminal_record_required_body: 'لقد أكملت {trips} رحلة. لتتمكن من الاستمرار في القيادة مع فيجو، يجب رفع صحيفة حالة جنائية سارية. سيظل حسابك غير متصل حتى ترفعها ويتم اعتمادها.',
   criminal_record_required_upload_btn: 'رفع الصحيفة الجنائية',
+  criminal_record_pending_title: 'الصحيفة قيد المراجعة',
+  criminal_record_pending_body: 'تم رفع صحيفة الحالة الجنائية وهي الآن قيد المراجعة. سيظل حسابك غير متصل حتى يعتمدها المشرف، وسنخطرك فور اعتمادها.',
   criminal_record_reactivated_title: 'تم إعادة تفعيل الحساب',
   criminal_record_reactivated_body: 'تم اعتماد صحيفة حالتك الجنائية. يمكنك الآن العمل أونلاين مجدداً.',
   // ── Direct cancel screen ──────────────────────────────────────────────────────

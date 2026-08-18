@@ -70,6 +70,20 @@ const PENDING_SCREENS = new Set([
   'register-plate',
 ]);
 
+// Screens a criminal-record-suspended driver is intentionally allowed to reach
+// while their account is offline: the info screen itself, the document-upload
+// flow (to fix it), and support (to get help). Unlike a generic /suspended
+// dead-end, this suspension is meant to be resolvable in-app. The auth guard's
+// suspension redirect must skip these — otherwise, because that guard re-runs
+// on every navigation, it would see status 'suspended' and immediately
+// router.replace back to /criminal-record-required the moment the driver taps
+// "Upload Certificate" or "Help & support", trapping them in a loop.
+const CRIMINAL_RECORD_ALLOWED_SCREENS = new Set([
+  'criminal-record-required',
+  'documents',
+  'support',
+]);
+
 function PushNotificationsBridge() {
   usePushNotifications();
   return null;
@@ -388,11 +402,15 @@ function RootLayoutNav() {
     // not to also navigate the driver into the app.
     const suspensionCheck: Promise<boolean> = endpoints.driver.me().then((me: any) => {
       if (me?.status === 'suspended') {
-        router.replace(
-          me?.suspensionReason === 'criminal_record_required'
-            ? '/criminal-record-required'
-            : '/suspended'
-        );
+        if (me?.suspensionReason === 'criminal_record_required') {
+          // The driver may freely move between the info screen, the upload
+          // flow, and support while fixing this — only redirect if they've
+          // strayed off those allowed screens.
+          if (CRIMINAL_RECORD_ALLOWED_SCREENS.has(currentScreen ?? '')) return false;
+          router.replace('/criminal-record-required');
+        } else {
+          router.replace('/suspended');
+        }
         return true;
       }
       return false;
