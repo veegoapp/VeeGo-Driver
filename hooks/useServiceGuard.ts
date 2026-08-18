@@ -37,12 +37,23 @@ export function useServiceGuard(explicitType?: ServiceType, suppressRedirect?: b
   status: ServiceStatus;
 } {
   const { serviceType: contextType } = useService();
-  const { getServiceStatus, refresh, isLoading: servicesLoading } = useServiceControl();
+  const { getServiceStatus, refresh, isLoading: servicesLoading, error: servicesError } = useServiceControl();
   const { isLoading: authLoading } = useAuth();
   const type = explicitType ?? contextType;
 
   const status = getServiceStatus(type);
-  const blocked = (authLoading || servicesLoading) ? false : isHardBlocked(status);
+  // A failed /services/control fetch makes getServiceStatus() return
+  // ERROR_BLOCKED, whose displayMode ('unavailable') trips isHardBlocked() —
+  // so a transient network error was indistinguishable from an admin
+  // actually disabling the service. That's most visible right as a ride
+  // finishes: app/ride/[rideId].tsx only acts on isBlocked once phase is
+  // 'completed', so a driver with a flaky connection (not unusual mid-drive)
+  // would have the trip-completed fare/rating screen replaced by
+  // ServiceBlockedScreen within a frame of it appearing — showing as a flash
+  // that vanishes before the fare is even readable. A fetch failure is not
+  // evidence the service is actually blocked, so treat it the same as the
+  // loading state below: never block on it.
+  const blocked = (authLoading || servicesLoading || !!servicesError) ? false : isHardBlocked(status);
   // Drives the redirect-scheduling effect only — isBlocked/status returned
   // below always reflect the real `blocked` value regardless of suppression.
   const shouldRedirect = blocked && !suppressRedirect;
