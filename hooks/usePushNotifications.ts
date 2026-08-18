@@ -278,7 +278,19 @@ async function registerForPushNotifications(): Promise<{ expoToken?: string; fcm
     }
 
     return { expoToken, fcmToken };
-  } catch {
+  } catch (err) {
+    // Do NOT swallow this silently. The most common cause on a real Android
+    // build is a missing google-services.json / FCM configuration, which makes
+    // getExpoPushTokenAsync() throw ("Default FirebaseApp is not initialized").
+    // When that happens the driver gets NO push token at all, so no ride-offer
+    // alert can ever reach a backgrounded/killed app. Surfacing the reason here
+    // is what lets us tell "push infra not set up" apart from "code bug".
+    const reason = err instanceof Error ? err.message : String(err);
+    console.error(
+      `[PushNotifications] Could not obtain a push token on ${Platform.OS}. ` +
+        `Background ride-request alerts will NOT work until this is fixed. ` +
+        `Reason: ${reason}`,
+    );
     return {};
   }
 }
