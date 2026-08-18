@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "841172964796",
+    "project_id": "veego-89d2e",
+    "storage_bucket": "veego-89d2e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:841172964796:android:e84e04a94be5245f2787b9",
+        "android_client_info": {
+          "package_name": "com.veego.driver"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBxAR8s-XEodieYIwJ7plUweUtA1VxkcBs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
