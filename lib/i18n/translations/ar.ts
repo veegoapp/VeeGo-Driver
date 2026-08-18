@@ -947,10 +947,18 @@ export const ar: Translations = {
   reg_year_no_eligible: 'لا توجد سنوات مسجلة لهذا الموديل حتى الآن.\nيرجى التواصل مع الدعم.',
   reg_no_options: 'لا توجد خيارات',
   // ── Ride screen ───────────────────────────────────────────────────────────────
-  phase_to_pickup: 'في الطريق لنقطة الاستلام',
-  phase_to_pickup_cta: 'وصلت لنقطة الاستلام',
-  phase_arrived: 'استلام الراكب',
+  // CAR/SCOOTER wording: the driver is heading to a person, not collecting an
+  // item, so this uses "الراكب" (the rider) rather than "الاستلام" (collection).
+  phase_to_pickup: 'في الطريق إلى الراكب',
+  phase_to_pickup_cta: 'وصلت إلى الراكب',
+  phase_arrived: 'استقبال الراكب',
   phase_arrived_cta: 'ابدأ الرحلة',
+  // DELIVERY wording: same phases, but the driver is collecting/handing off
+  // a package, so "نقطة الاستلام" / "استلام الطلب" fit instead of "الراكب".
+  phase_to_pickup_delivery: 'في الطريق لنقطة الاستلام',
+  phase_to_pickup_cta_delivery: 'وصلت لنقطة الاستلام',
+  phase_arrived_delivery: 'استلام الطلب',
+  phase_arrived_cta_delivery: 'ابدأ التوصيل',
   phase_in_trip: 'التوصيل',
   phase_in_trip_cta: 'إنهاء الرحلة',
   phase_completed_label: 'اكتملت الرحلة',
@@ -973,6 +981,7 @@ export const ar: Translations = {
   route_deviation_msg: 'يبدو أنك انحرفت عن المسار المتوقع.',
   calculating: 'جارٍ الحساب...',
   waiting_for_rider: 'في انتظار الراكب',
+  waiting_for_pickup_delivery: 'في انتظار استلام الطلب',
   action_failed_title: 'فشلت العملية',
   try_again_msg: 'يرجى المحاولة مرة أخرى',
   sos_sent_title: 'تم إرسال نداء الاستغاثة',

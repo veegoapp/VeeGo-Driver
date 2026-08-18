@@ -947,10 +947,17 @@ export const en = {
   reg_year_no_eligible: 'No eligible years registered for this model yet.\nPlease contact support.',
   reg_no_options: 'No options available',
   // ── Ride screen ───────────────────────────────────────────────────────────────
-  phase_to_pickup: 'Heading to pickup',
-  phase_to_pickup_cta: 'Arrived at pickup',
+  // CAR/SCOOTER wording: the driver is heading to a person.
+  phase_to_pickup: 'Heading to rider',
+  phase_to_pickup_cta: 'Arrived at rider',
   phase_arrived: 'Pick up rider',
   phase_arrived_cta: 'Start trip',
+  // DELIVERY wording: same phases, but the driver is collecting/handing off
+  // a package instead of a person.
+  phase_to_pickup_delivery: 'Heading to pickup',
+  phase_to_pickup_cta_delivery: 'Arrived at pickup',
+  phase_arrived_delivery: 'Collect order',
+  phase_arrived_cta_delivery: 'Start delivery',
   phase_in_trip: 'Drop off',
   phase_in_trip_cta: 'Complete trip',
   phase_completed_label: 'Trip completed',
@@ -973,6 +980,7 @@ export const en = {
   route_deviation_msg: 'You appear to have deviated from the expected route.',
   calculating: 'Calculating...',
   waiting_for_rider: 'Waiting for rider',
+  waiting_for_pickup_delivery: 'Waiting to collect order',
   action_failed_title: 'Action Failed',
   try_again_msg: 'Please try again.',
   sos_sent_title: 'SOS Sent',

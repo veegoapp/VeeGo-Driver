@@ -66,15 +66,27 @@ const KEYPAD_ROWS = [
 export default function RideScreen() {
   const colors = useColors();
   const { t } = useI18n();
+  const { serviceType } = useService();
+  // DELIVERY carries a package, not a person — the to_pickup/arrived copy
+  // ("heading to the rider" / "pick up rider") is wrong for that case, so it
+  // gets its own wording ("heading to pickup point" / "collect order").
+  const isDelivery = serviceType === 'DELIVERY';
   const PHASE_COPY: Record<Phase, PhaseCopy> = {
-    to_pickup: { label: t.phase_to_pickup, cta: t.phase_to_pickup_cta, next: 'arrived' },
-    arrived: { label: t.phase_arrived, cta: t.phase_arrived_cta, next: 'in_trip' },
+    to_pickup: {
+      label: isDelivery ? t.phase_to_pickup_delivery : t.phase_to_pickup,
+      cta: isDelivery ? t.phase_to_pickup_cta_delivery : t.phase_to_pickup_cta,
+      next: 'arrived',
+    },
+    arrived: {
+      label: isDelivery ? t.phase_arrived_delivery : t.phase_arrived,
+      cta: isDelivery ? t.phase_arrived_cta_delivery : t.phase_arrived_cta,
+      next: 'in_trip',
+    },
     in_trip: { label: t.phase_in_trip, cta: t.phase_in_trip_cta, next: 'completed' },
     completed: { label: t.phase_completed_label, cta: t.phase_done_btn, next: 'completed' },
   };
   const insets = useSafeAreaInsets();
   const topPad = insets.top;
-  const { serviceType } = useService();
   const [phase, setPhase] = useState<Phase>('to_pickup');
   // Suppress useServiceGuard's forced /login redirect while a ride is still
   // in progress — a service becoming blocked mid-trip must not strand the
@@ -445,7 +457,9 @@ export default function RideScreen() {
   // Small label above the destination in the nav card. No time/distance (kept
   // off deliberately to avoid spending Google Directions on live ETA).
   const navLabel =
-    phase === 'arrived' ? t.waiting_for_rider : phase === 'in_trip' ? t.phase_in_trip : t.navigate;
+    phase === 'arrived'
+      ? (isDelivery ? t.waiting_for_pickup_delivery : t.waiting_for_rider)
+      : phase === 'in_trip' ? t.phase_in_trip : t.navigate;
 
   const sheetAnim = useRef(new Animated.Value(100)).current;
   // 0 = expanded, 1 = collapsed. Drives the extra downward translate that
