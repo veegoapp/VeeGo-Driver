@@ -17,7 +17,8 @@
       "bundleIdentifier": "com.veego.driver",
       "buildNumber": "1",
       "infoPlist": {
-        "LSApplicationQueriesSchemes": ["comgooglemaps"]
+        "LSApplicationQueriesSchemes": ["comgooglemaps"],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {

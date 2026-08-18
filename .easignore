@@ -37,6 +37,8 @@ VeeGo_Driver_Production_UX_Audit.md
 "Driver App Cleanup Report.md"
 driver-audit-verification-report.md
 driver-local-fixes-report.md
+PUSH_NOTIFICATIONS_SETUP.md
+IOS_SETUP.md
 
 # ── Environment files (values are supplied via EAS Secrets instead) ───────────
 .env

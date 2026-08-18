@@ -1,0 +1,111 @@
+name: iOS Simulator Build (GitHub Actions)
+
+# Manual-only, optional build path — builds an UNSIGNED .app for the iOS
+# SIMULATOR only. Simulator builds do not require code signing, so this
+# needs NO Apple Developer account, certificates, or provisioning profile —
+# unlike a real-device / TestFlight / App Store build, which does.
+#
+# Use this to build and smoke-test the iOS version right now. It does NOT
+# replace or interact with EAS Build. A real-device/production iOS build
+# still needs Apple Developer credentials wired into EAS — see IOS_SETUP.md
+# for exactly what's left — and should go through:
+#   pnpm exec eas build --platform ios --profile preview   (device, ad-hoc)
+#   pnpm exec eas build --platform ios --profile production (App Store)
+
+on:
+  workflow_dispatch:
+
+env:
+  # Optional: only needed for Google Maps to function at runtime.
+  # Build succeeds without it; the map simply renders blank.
+  GOOGLE_MAPS_API_KEY_IOS: ${{ secrets.GOOGLE_MAPS_API_KEY_IOS }}
+  EXPO_PUBLIC_API_URL: ${{ secrets.EXPO_PUBLIC_API_URL }}
+  EXPO_NO_TELEMETRY: "1"
+  CI: "1"
+
+jobs:
+  build-ios-simulator:
+    name: Build iOS Simulator App
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate native iOS project (expo prebuild)
+        run: |
+          if [ -d "ios" ]; then
+            echo "ios/ already present in repo — skipping prebuild."
+          else
+            echo "ios/ not found — generating via expo prebuild (managed workflow stays untouched in git)."
+            pnpm exec expo prebuild --platform ios --no-install
+          fi
+
+      - name: Install CocoaPods dependencies
+        working-directory: ios
+        run: pod install
+
+      - name: Locate workspace and scheme
+        id: xc
+        working-directory: ios
+        run: |
+          WORKSPACE=$(find . -maxdepth 1 -name "*.xcworkspace" | head -n 1)
+          if [ -z "$WORKSPACE" ]; then
+            echo "No .xcworkspace found after pod install." >&2
+            exit 1
+          fi
+          SCHEME=$(xcodebuild -list -workspace "$WORKSPACE" | awk '/Schemes:/{found=1; next} found && NF {print $1; exit}')
+          if [ -z "$SCHEME" ]; then
+            echo "Could not determine an Xcode scheme from $WORKSPACE." >&2
+            exit 1
+          fi
+          echo "Workspace: $WORKSPACE"
+          echo "Scheme: $SCHEME"
+          echo "workspace=$WORKSPACE" >> "$GITHUB_OUTPUT"
+          echo "scheme=$SCHEME" >> "$GITHUB_OUTPUT"
+
+      - name: Build for iOS Simulator (unsigned)
+        working-directory: ios
+        run: |
+          xcodebuild \
+            -workspace "${{ steps.xc.outputs.workspace }}" \
+            -scheme "${{ steps.xc.outputs.scheme }}" \
+            -sdk iphonesimulator \
+            -destination "generic/platform=iOS Simulator" \
+            -configuration Release \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            build
+
+      - name: Locate and zip the built .app
+        id: app
+        run: |
+          APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData -maxdepth 6 -name "*.app" -path "*Release-iphonesimulator*" | head -n 1)
+          if [ -z "$APP_PATH" ]; then
+            echo "No .app found under DerivedData." >&2
+            exit 1
+          fi
+          echo "Found app: $APP_PATH"
+          cd "$(dirname "$APP_PATH")"
+          zip -r -q "$RUNNER_TEMP/ios-simulator-app.zip" "$(basename "$APP_PATH")"
+          echo "zip_path=$RUNNER_TEMP/ios-simulator-app.zip" >> "$GITHUB_OUTPUT"
+
+      - name: Upload Simulator .app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: veego-driver-ios-simulator-app
+          path: ${{ steps.app.outputs.zip_path }}
+          retention-days: 14
