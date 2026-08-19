@@ -104,6 +104,8 @@ export type BoardingPassenger = {
   luggage: boolean;
   paymentMethod: 'cash' | 'card' | 'online' | 'unknown';
   fareAmount: number;
+  /** Name of the station this passenger is getting off at, when known. */
+  destinationStationName: string | null;
 };
 
 // ─── Slot-released alert payload ──────────────────────────────────────────────

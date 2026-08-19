@@ -3,7 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { safeBack } from '@/lib/navUtils';
 import {
-  AlertTriangle, Banknote, Check, ChevronLeft, Clock, Navigation2, Share2, Users, X,
+  AlertTriangle, Banknote, Check, ChevronLeft, Clock, MapPin, Navigation2, Share2, Users, X,
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -753,6 +753,17 @@ export default function ShuttleTripActiveScreen() {
                     <View style={{ flex: 1, minWidth: 0 }}>
                       <Text style={[styles.passengerName, { fontFamily: 'Inter_600SemiBold', color: colors.foreground }]} numberOfLines={1}>{p.name}</Text>
                       <Text style={[styles.passengerPhone, { fontFamily: 'Inter_400Regular', color: colors.mutedForeground }]}>{p.phone}</Text>
+                      {p.destinationStationName ? (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                          <MapPin size={11} color={colors.mutedForeground} strokeWidth={2} />
+                          <Text
+                            style={[styles.passengerPhone, { fontFamily: 'Inter_400Regular', color: colors.mutedForeground }]}
+                            numberOfLines={1}
+                          >
+                            {t.drop_off_at}: {p.destinationStationName}
+                          </Text>
+                        </View>
+                      ) : null}
                       {p.paymentMethod === 'cash' ? (
                         <View style={[styles.paymentCashBadge, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}>
                           <Banknote size={11} color="#d97706" strokeWidth={2} />
