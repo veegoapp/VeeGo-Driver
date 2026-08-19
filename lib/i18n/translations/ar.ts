@@ -1334,6 +1334,7 @@ export const ar: Translations = {
   stop_mode_label: 'وضع التوقف',
   no_passengers_at_stop: 'لا يوجد ركاب في هذه المحطة',
   paid_badge: '✓ مدفوع',
+  drop_off_at: 'ينزل عند',
   slot_taken_title: 'تم حجز هذا الموعد',
   slot_taken_msg: 'تم حجز هذا الموعد للتو من قبل سائق آخر. يرجى اختيار وقت أو أسبوع مختلف.',
   booking_failed_title: 'فشل الحجز',

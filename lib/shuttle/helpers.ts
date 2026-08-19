@@ -59,6 +59,8 @@ type StationPassenger = {
   seatCount: number;
   status: string;
   boardingStationId: number | null;
+  alightingStationId?: number | null;
+  alightingStationName?: string | null;
   userName: string;
   userPhone: string;
   paymentMethod?: string;

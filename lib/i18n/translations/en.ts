@@ -1333,6 +1333,7 @@ export const en = {
   stop_mode_label: 'STOP MODE',
   no_passengers_at_stop: 'No passengers at this stop',
   paid_badge: '✓ Paid',
+  drop_off_at: 'Drop-off',
   slot_taken_title: 'Slot Taken',
   slot_taken_msg: 'This slot was just claimed by another driver. Please choose a different time or week.',
   booking_failed_title: 'Booking Failed',

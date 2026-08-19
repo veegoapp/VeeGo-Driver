@@ -315,6 +315,7 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
           luggage: false,
           paymentMethod,
           fareAmount: sp.fareAmount ?? sp.price ?? sp.amount ?? 0,
+          destinationStationName: sp.alightingStationName ?? null,
         };
       });
     });
