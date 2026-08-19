@@ -191,7 +191,7 @@ export default function RegisterServiceTypeScreen() {
                   disabled={!selectable}
                 >
                   <LinearGradient
-                    colors={isSelected ? [opt.accentColor + '18', opt.accentColor + '08'] : ['#fff', '#fafafd']}
+                    colors={['#fff', '#fafafd']}
                     style={s.optionCardInner}
                   >
                     {/* Icon */}
