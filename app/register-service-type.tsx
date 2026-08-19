@@ -1,6 +1,5 @@
 import { ArrowLeft, ArrowRight, Car, Bike as ScooterIcon, Package, Bus, Lock } from 'lucide-react-native';
 import { router } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -183,39 +182,36 @@ export default function RegisterServiceTypeScreen() {
                   key={opt.key}
                   style={({ pressed }) => [
                     s.optionCard,
-                    isSelected && [s.optionCardSelected, { borderColor: opt.accentColor }],
+                    isSelected && s.optionCardSelected,
                     !selectable && s.optionCardDisabled,
                     pressed && selectable && { opacity: 0.8 },
                   ]}
                   onPress={() => handleSelect(opt)}
                   disabled={!selectable}
                 >
-                  <LinearGradient
-                    colors={['#fff', '#fafafd']}
-                    style={s.optionCardInner}
-                  >
+                  <View style={[s.optionCardInner, isSelected && s.optionCardInnerSelected]}>
                     {/* Icon */}
-                    <View style={[s.iconBox, { backgroundColor: selectable ? opt.accentColor + '18' : '#f2f2f5' }]}>
-                      <Icon size={26} color={selectable ? opt.accentColor : '#c3c3cc'} strokeWidth={1.8} />
+                    <View style={[s.iconBox, isSelected ? s.iconBoxSelected : { backgroundColor: selectable ? opt.accentColor + '18' : '#f2f2f5' }]}>
+                      <Icon size={26} color={isSelected ? '#fff' : selectable ? opt.accentColor : '#c3c3cc'} strokeWidth={1.8} />
                     </View>
 
                     {/* Text */}
                     <View style={{ flex: 1 }}>
-                      <Text style={[s.optLabel, !selectable && s.optLabelDisabled]}>
+                      <Text style={[s.optLabel, isSelected && s.optLabelSelected, !selectable && s.optLabelDisabled]}>
                         {isRTL ? opt.labelAr : opt.label}
                       </Text>
-                      <Text style={[s.optDesc, !selectable && s.optDescDisabled]} numberOfLines={2}>
+                      <Text style={[s.optDesc, isSelected && s.optDescSelected, !selectable && s.optDescDisabled]} numberOfLines={2}>
                         {blockReason ?? (isRTL ? opt.descAr : opt.desc)}
                       </Text>
                     </View>
 
                     {/* Selected dot OR lock */}
                     {isSelected ? (
-                      <View style={[s.selectedDot, { backgroundColor: opt.accentColor }]} />
+                      <View style={[s.selectedDot, { backgroundColor: '#fff' }]} />
                     ) : !selectable ? (
                       <Lock size={14} color="#c3c3cc" />
                     ) : null}
-                  </LinearGradient>
+                  </View>
                 </Pressable>
               );
             })}
@@ -265,13 +261,19 @@ const s = StyleSheet.create({
     borderRadius: 22, borderWidth: 1.5, borderColor: '#e5e5ea', overflow: 'hidden',
     shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: Shadows.small.elevation,
   },
-  optionCardSelected: { borderWidth: 2 },
+  // Selected state — plain solid navy fill (app's theme primary color), no
+  // gradient/tint, matching the flat solid-color style used on ride cards.
+  optionCardSelected: { borderWidth: 0 },
   optionCardDisabled: { opacity: 0.55 },
-  optionCardInner: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 18 },
+  optionCardInner: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 18, backgroundColor: '#fff' },
+  optionCardInnerSelected: { backgroundColor: '#1e1e28' },
   iconBox: { width: 52, height: 52, borderRadius: Radius.lg, alignItems: 'center', justifyContent: 'center' },
+  iconBoxSelected: { backgroundColor: '#2d2d42' },
   optLabel: { fontSize: Typography.size.md, fontWeight: Typography.weight.bold, color: '#1e1e28', fontFamily: 'Inter_700Bold', marginBottom: 3 },
+  optLabelSelected: { color: '#fff' },
   optLabelDisabled: { color: '#9e9ea8' },
   optDesc: { fontSize: Typography.size.xs, color: '#5e5e72', lineHeight: 17, fontFamily: 'Inter_400Regular' },
+  optDescSelected: { color: '#C7CBD3' },
   optDescDisabled: { color: '#b0b0bc' },
   selectedDot: { width: 10, height: 10, borderRadius: 5 },
   errorText: { fontSize: 13, color: '#e53935', textAlign: 'center', marginTop: Spacing.sm, fontFamily: 'Inter_400Regular' },
