@@ -132,38 +132,24 @@ export default function DocumentsScreen() {
     }
   };
 
-  const pickAndUpload = async (docType: string, source: 'camera' | 'gallery') => {
-    let result: ImagePicker.ImagePickerResult;
-    if (source === 'camera') {
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== 'granted') {
-        showAlert(t.doc_permission_title, t.doc_permission_msg);
-        return;
-      }
-      result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ['images'], quality: 0.85, allowsEditing: true, aspect: [4, 3],
-      });
-    } else {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        showAlert(t.doc_permission_title, t.doc_permission_msg);
-        return;
-      }
-      result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'], quality: 0.85, allowsEditing: true, aspect: [4, 3],
-      });
+  // Camera-only — sensitive documents (ID, license, criminal record, etc.)
+  // must not be pickable from the gallery, only captured live.
+  const pickAndUpload = async (docType: string) => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      showAlert(t.doc_permission_title, t.doc_permission_msg);
+      return;
     }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'], quality: 0.85, allowsEditing: true, aspect: [4, 3],
+    });
     if (!result.canceled && result.assets[0]) {
       await uploadDoc(docType, result.assets[0]);
     }
   };
 
   const handleUploadPress = (docType: string) => {
-    showAlert(t.doc_upload_btn, undefined, [
-      { text: t.doc_take_photo, onPress: () => pickAndUpload(docType, 'camera') },
-      { text: t.doc_choose_gallery, onPress: () => pickAndUpload(docType, 'gallery') },
-      { text: t.cancel, style: 'cancel' },
-    ]);
+    pickAndUpload(docType);
   };
 
   // ── Type → label ─────────────────────────────────────────────────────────
