@@ -1367,6 +1367,8 @@ export const en = {
   peak_bonus_label: 'Peak bonus',
   no_trips_period: 'No trips in this period.',
   recenter_map_label: 'Recenter map',
+  north_up_map_label: 'Switch to north-up map',
+  course_up_map_label: 'Switch to course-up map',
   error_boundary_title: 'Something went wrong',
   error_boundary_message: 'Please reload the app to continue.',
   error_boundary_retry: 'Try Again',

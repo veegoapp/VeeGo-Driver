@@ -12,7 +12,7 @@ export type { SurgeZone } from '@/lib/types';
 export interface MapBackdropProps {
   pickup?: { latitude: number; longitude: number };
   dropoff?: { latitude: number; longitude: number };
-  driverLocation?: { latitude: number; longitude: number; heading?: number | null; speed?: number | null };
+  driverLocation?: { latitude: number; longitude: number; heading?: number | null; speed?: number | null; accuracy?: number | null };
   surgeZones?: SurgeZone[];
   routePolyline?: Array<{ latitude: number; longitude: number }>;
   roadPolyline?: Array<{ latitude: number; longitude: number }>;

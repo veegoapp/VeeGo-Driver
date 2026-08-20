@@ -41,6 +41,10 @@ interface Options {
   userPannedRef: React.MutableRefObject<boolean>;
   /** A focusTarget owns the camera — follow yields. */
   focusActive: boolean;
+  /** When true, the camera stays north-up (heading forced to 0) instead of
+   *  rotating to follow the smoothed course — the driver's manual override
+   *  for the orientation-toggle button. */
+  northUp?: boolean;
   pitch?: number;
   zoom?: number;
   altitude?: number;
@@ -84,6 +88,7 @@ export function useDriverCameraController({
   enabled,
   userPannedRef,
   focusActive,
+  northUp = false,
   pitch = 25,
   zoom = 18,
   altitude = 160,
@@ -116,7 +121,7 @@ export function useDriverCameraController({
       const now = Date.now();
       if (now - lastWriteAtRef.current < WRITE_INTERVAL_MS) return;
 
-      const heading = headingRef.current;
+      const heading = northUp ? 0 : headingRef.current;
       const center = offsetCoord(pos, heading, lookAheadM);
 
       const last = lastCenterRef.current;
@@ -142,5 +147,5 @@ export function useDriverCameraController({
         rafRef.current = null;
       }
     };
-  }, [enabled, mapRef, positionRef, headingRef, userPannedRef, pitch, zoom, altitude, lookAheadM]);
+  }, [enabled, mapRef, positionRef, headingRef, userPannedRef, northUp, pitch, zoom, altitude, lookAheadM]);
 }
