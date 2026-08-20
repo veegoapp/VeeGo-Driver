@@ -3,7 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { safeBack } from '@/lib/navUtils';
 import {
-  AlertTriangle, Banknote, Check, ChevronLeft, Clock, MapPin, Navigation2, Share2, Users, X,
+  AlertTriangle, ArrowRight, Banknote, Check, ChevronLeft, Clock, MapPin, Navigation2, Share2, Users, X,
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -673,7 +673,7 @@ export default function ShuttleTripActiveScreen() {
               <View style={styles.approachBanner}>
                 <AlertTriangle size={16} color="#f59e0b" strokeWidth={2} />
                 <Text style={[styles.approachText, { fontFamily: 'Inter_700Bold' }]}>
-                  Approaching {currentStop.name}
+                  {t.approaching_stop_msg.replace('{name}', currentStop.name)}
                 </Text>
                 <View style={styles.approachBadge}>
                   <Text style={[styles.approachBadgeText, { fontFamily: 'Inter_700Bold' }]}>
@@ -834,8 +834,15 @@ export default function ShuttleTripActiveScreen() {
                   <LinearGradient colors={['#4f46e5', '#6366f1']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.primaryBtnGrad}>
                     <Navigation2 size={18} color="#fff" strokeWidth={2} />
                     <Text style={[styles.primaryBtnText, { fontFamily: 'Inter_700Bold' }]}>
-                      {isNextLoading ? '…' : failedStationActions.length > 0 ? `Retry Failed (${failedStationActions.length}) →` : 'Depart to Next Stop →'}
+                      {isNextLoading
+                        ? '…'
+                        : failedStationActions.length > 0
+                        ? t.retry_failed_label.replace('{count}', String(failedStationActions.length))
+                        : t.depart_to_next_stop_label}
                     </Text>
+                    {!isNextLoading && (
+                      <ArrowRight size={16} color="#fff" strokeWidth={2.5} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
+                    )}
                   </LinearGradient>
                 </Pressable>
               )}
@@ -861,7 +868,7 @@ export default function ShuttleTripActiveScreen() {
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text style={[styles.nextStopLabel, { color: phase === 'approaching' ? '#f59e0b' : 'rgba(255,255,255,0.5)', fontFamily: 'Inter_600SemiBold' }]}>
-                    {phase === 'approaching' ? '⚠ Approaching' : 'Next Stop'}
+                    {phase === 'approaching' ? t.approaching_label : t.next_stop_label}
                   </Text>
                   <Text style={[styles.nextStopName, { color: '#fff', fontFamily: 'Inter_700Bold' }]} numberOfLines={1}>
                     {currentStop.name}
@@ -884,7 +891,9 @@ export default function ShuttleTripActiveScreen() {
               <View style={styles.passengerCountRow}>
                 <Users size={13} color="rgba(255,255,255,0.4)" strokeWidth={2} />
                 <Text style={[styles.passengerCountText, { color: 'rgba(255,255,255,0.4)', fontFamily: 'Inter_400Regular' }]}>
-                  {passengers.length} passenger{passengers.length !== 1 ? 's' : ''} at this stop
+                  {t.passengers_at_stop_msg
+                    .replace('{count}', String(passengers.length))
+                    .replace('{pax}', passengers.length === 1 ? t.pax_one : t.pax_many)}
                 </Text>
               </View>
             </View>
@@ -916,7 +925,7 @@ export default function ShuttleTripActiveScreen() {
             >
               <Check size={18} color="#fff" strokeWidth={2} />
               <Text style={[styles.arrivedBtnText, { fontFamily: 'Inter_700Bold' }]}>
-                {isArrivingLoading ? '…' : 'Mark Arrived'}
+                {isArrivingLoading ? '…' : t.mark_arrived_label}
               </Text>
             </LinearGradient>
           </Pressable>
