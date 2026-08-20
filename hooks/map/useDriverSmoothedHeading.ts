@@ -33,6 +33,7 @@ interface LatLng {
 interface DriverPoint extends LatLng {
   heading?: number | null;
   speed?: number | null;
+  accuracy?: number | null;
 }
 
 const SPEED_FREEZE_MS = 1.5; // ~5.4 km/h
@@ -43,6 +44,15 @@ const ROTATION_MS = 400;
 // look-ahead). The anchor accumulates distance across fixes, so the heading
 // still updates at slow speeds; it just won't be recomputed from ~1 m of noise.
 const MIN_MOVE_FOR_BEARING_M = 5;
+// A fix's reported horizontal accuracy can be worse than MIN_MOVE_FOR_BEARING_M
+// (weak signal near tall buildings/overpasses, cloudy sky, etc.) — in that case
+// a 5 m "move" is indistinguishable from GPS position noise, and the bearing
+// computed from it points in an essentially random direction, which is what
+// was causing the camera/route line to snap up/down/sideways instead of
+// tracking the real direction of travel. Require the move to clear the
+// reported accuracy by a margin before trusting it as a real course change;
+// fixes with no accuracy figure fall back to the flat MIN_MOVE_FOR_BEARING_M.
+const ACCURACY_BEARING_MARGIN = 1.5;
 // Hysteresis: ignore target changes smaller than this so sub-threshold GPS
 // noise never re-animates the rotation (which the camera follows). Real turns
 // accumulate well past it and still slew smoothly, in coarse-but-steady steps.
@@ -138,7 +148,11 @@ export function useDriverSmoothedHeading(point: DriverPoint | null | undefined):
     let target: number | null = null;
     if (anchor) {
       const movedFromAnchor = haversineMeters(anchor.latitude, anchor.longitude, cur.latitude, cur.longitude);
-      if (movedFromAnchor >= MIN_MOVE_FOR_BEARING_M) {
+      const requiredMove =
+        typeof point.accuracy === 'number' && point.accuracy >= 0
+          ? Math.max(MIN_MOVE_FOR_BEARING_M, point.accuracy * ACCURACY_BEARING_MARGIN)
+          : MIN_MOVE_FOR_BEARING_M;
+      if (movedFromAnchor >= requiredMove) {
         target = calcBearing(anchor, cur);
         bearingAnchorRef.current = cur; // advance only when a bearing is taken
       }
@@ -175,7 +189,7 @@ export function useDriverSmoothedHeading(point: DriverPoint | null | undefined):
       duration: ROTATION_MS,
       useNativeDriver: false,
     }).start();
-  }, [point?.latitude, point?.longitude, point?.heading, point?.speed, rotation]);
+  }, [point?.latitude, point?.longitude, point?.heading, point?.speed, point?.accuracy, rotation]);
 
   return { rotation, headingRef };
 }

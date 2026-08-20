@@ -1368,6 +1368,8 @@ export const ar: Translations = {
   peak_bonus_label: 'مكافأة وقت الذروة',
   no_trips_period: 'لا توجد رحلات في هذه الفترة.',
   recenter_map_label: 'إعادة توسيط الخريطة',
+  north_up_map_label: 'تثبيت الشمال لأعلى',
+  course_up_map_label: 'تدوير الخريطة مع اتجاه السير',
   error_boundary_title: 'حدث خطأ ما',
   error_boundary_message: 'يرجى إعادة تحميل التطبيق للمتابعة.',
   error_boundary_retry: 'حاول مرة أخرى',

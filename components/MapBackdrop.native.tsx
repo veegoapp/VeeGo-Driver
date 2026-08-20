@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import MapView, { AnimatedRegion, Circle, Marker, MarkerAnimated, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DARK_MAP_STYLE, LIGHT_MAP_STYLE } from '@/constants/mapStyles';
+import colors from '@/constants/colors';
 import { fetchDirectionsRaw } from '@/lib/utils/googleDirections';
 import { useService } from '@/lib/serviceContext';
 import { useI18n } from '@/lib/i18nContext';
@@ -37,7 +38,7 @@ export type { SurgeZone } from '@/lib/types';
 export interface MapBackdropProps {
   pickup?: { latitude: number; longitude: number };
   dropoff?: { latitude: number; longitude: number };
-  driverLocation?: { latitude: number; longitude: number; heading?: number | null; speed?: number | null };
+  driverLocation?: { latitude: number; longitude: number; heading?: number | null; speed?: number | null; accuracy?: number | null };
   surgeZones?: SurgeZone[];
   routePolyline?: Array<{ latitude: number; longitude: number }>;
   roadPolyline?: Array<{ latitude: number; longitude: number }>;
@@ -112,7 +113,7 @@ const DEFAULT_CENTER = { latitude: 30.0444, longitude: 31.2357 }; // Cairo fallb
 
 // ── AnimatedDriverMarker ────────────────────────────────────────────────────────
 //
-// Pill/circle dot — route-blue fill, white halo ring, no rotation (a
+// Pill/circle dot — blue fill, white halo ring, no rotation (a
 // symmetrical dot has no facing direction, unlike the previous nav-mode
 // arrow/car icon). Position comes from `animatedCoord`, the one interpolated
 // AnimatedRegion that also drives the follow camera; motion happens natively
@@ -158,6 +159,10 @@ export const MapBackdrop = React.memo(function MapBackdrop({
   const mapRef = useRef<MapView>(null);
   const [mapReady, setMapReady] = useState(false);
   const [userPanned, setUserPanned] = useState(false);
+  // Manual orientation override: true pins the map north-up instead of
+  // rotating with the smoothed course. Lets the driver fix the view
+  // themselves if the auto-rotated view is ever confusing.
+  const [northUp, setNorthUp] = useState(false);
   const [autoPolyline, setAutoPolyline] = useState<Array<{ latitude: number; longitude: number }> | null>(null);
 
   const userPannedRef = useRef(false);
@@ -213,6 +218,7 @@ export const MapBackdrop = React.memo(function MapBackdrop({
     enabled: navigationMode && mapReady,
     userPannedRef,
     focusActive: !!focusTarget,
+    northUp,
     pitch: 25,
     zoom: 18,
     altitude: 160,
@@ -223,6 +229,8 @@ export const MapBackdrop = React.memo(function MapBackdrop({
   const { isDarkMode, setIsDarkMode } = useService();
   const effectiveTheme: 'dark' | 'light' = isDarkMode ? 'dark' : 'light';
   const mapStyle = effectiveTheme === 'dark' ? DARK_MAP_STYLE : LIGHT_MAP_STYLE;
+  // Route line — the app's own navy theme color, not a generic route-blue.
+  const routeLineColor = colors[effectiveTheme].primary;
 
   const insets = useSafeAreaInsets();
   const { t } = useI18n();
@@ -255,6 +263,8 @@ export const MapBackdrop = React.memo(function MapBackdrop({
         clearTimeout(autoRecenterTimerRef.current);
         autoRecenterTimerRef.current = null;
       }
+      // Next navigation session starts fresh in course-up (the default).
+      setNorthUp(false);
     }
     return () => {
       if (autoRecenterTimerRef.current !== null) {
@@ -360,7 +370,7 @@ export const MapBackdrop = React.memo(function MapBackdrop({
       ? { latitude: driverLocation.latitude, longitude: driverLocation.longitude }
       : null);
     if (!pos) return;
-    const bearing = headingRef.current;
+    const bearing = navigationMode && northUp ? 0 : headingRef.current;
     const center = navigationMode ? offsetCoord(pos, bearing, 100) : pos;
     mapRef.current?.animateCamera(
       {
@@ -372,7 +382,12 @@ export const MapBackdrop = React.memo(function MapBackdrop({
       },
       { duration: 800 },
     );
-  }, [driverLocation, navigationMode, mapReady]);
+  }, [driverLocation, navigationMode, northUp, mapReady]);
+
+  // ── Orientation toggle (manual north-up / course-up override) ────────────
+  const handleToggleOrientation = useCallback(() => {
+    setNorthUp(v => !v);
+  }, []);
 
   // ── Approach circle coords for dashed Polyline ───────────────────────────
   const approachCircleCoords = useMemo(
@@ -564,20 +579,23 @@ export const MapBackdrop = React.memo(function MapBackdrop({
         toolbarEnabled={false}
         moveOnMarkerPress={false}
       >
-        {/* ── Route line (road-snapped or auto-fetched) ────────────────── */}
+        {/* ── Route line (road-snapped or auto-fetched) ─────────────────── */}
+        {/* Navy — the app's own theme primary color — instead of the generic */}
+        {/* route-blue, and wider than before for better legibility while    */}
+        {/* driving. */}
         {displayRouteCoords && (
           <>
             <Polyline
               coordinates={displayRouteCoords}
-              strokeColor="rgba(255,255,255,0.15)"
-              strokeWidth={8}
+              strokeColor="rgba(255,255,255,0.18)"
+              strokeWidth={11}
               lineCap="round"
               lineJoin="round"
             />
             <Polyline
               coordinates={displayRouteCoords}
-              strokeColor="#3b82f6"
-              strokeWidth={5}
+              strokeColor={routeLineColor}
+              strokeWidth={7}
               lineCap="round"
               lineJoin="round"
             />
@@ -712,6 +730,20 @@ export const MapBackdrop = React.memo(function MapBackdrop({
       >
         <Text style={styles.recenterIcon}>⊕</Text>
       </Pressable>
+
+      {/* ── Orientation toggle — nav mode only, below recenter. Lets the      */}
+      {/* driver force the map north-up if the auto course-up rotation ever  */}
+      {/* looks wrong, instead of only being able to recenter onto the same  */}
+      {/* (possibly bad) heading. */}
+      {navigationMode && (
+        <Pressable
+          onPress={handleToggleOrientation}
+          style={[styles.orientationBtn, { bottom: insets.bottom + 58 }]}
+          accessibilityLabel={northUp ? t.course_up_map_label : t.north_up_map_label}
+        >
+          <Text style={styles.orientationIcon}>{northUp ? '⬆︎N' : '🧭'}</Text>
+        </Pressable>
+      )}
     </View>
   );
 });
@@ -719,10 +751,9 @@ export const MapBackdrop = React.memo(function MapBackdrop({
 // ── Styles ─────────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  // Driver marker — pill/circle dot. Route-blue fill (matches the Polyline's
-  // #3b82f6 stroke), solid white halo ring, subtle elevation so it reads as
-  // sitting slightly above the route line. Symmetrical, so it never needs to
-  // rotate with heading (see AnimatedDriverMarker's rotation={0}).
+  // Driver marker — pill/circle dot. Solid white halo ring, subtle elevation
+  // so it reads as sitting slightly above the route line. Symmetrical, so it
+  // never needs to rotate with heading (see AnimatedDriverMarker's rotation={0}).
   driverDot: {
     width: 22,
     height: 22,
@@ -844,4 +875,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   recenterIcon: { color: '#3b82f6', fontSize: 20, lineHeight: 22 },
+  // Orientation toggle button — bottom right, below recenter, nav mode only
+  orientationBtn: {
+    position: 'absolute',
+    right: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(15,15,25,0.88)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  orientationIcon: { color: '#ffffff', fontSize: 15, lineHeight: 18, fontWeight: '600' },
 });
