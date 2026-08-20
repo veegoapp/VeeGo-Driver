@@ -16,7 +16,7 @@ type TabBarProps = {
 };
 
 const SHUTTLE_TAB_NAMES = [
-  { name: 'index', Icon: Radio, key: 'home' as const },
+  { name: 'home', Icon: Radio, key: 'home' as const },
   { name: 'lines', Icon: GitBranch, key: 'routes' as const },
   { name: 'bookings', Icon: Bookmark, key: 'my_bookings' as const },
   { name: 'wallet', Icon: CreditCard, key: 'wallet' as const },
