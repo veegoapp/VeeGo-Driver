@@ -246,8 +246,12 @@ export default function ShuttleHomeScreen() {
     queryKey: ['earnings-summary'],
     queryFn: () => endpoints.earnings.summary(),
   });
-  const summaryData = summaryRaw as { summary?: { totalEarnings?: string | number } } | undefined;
-  const todayEarnings = parseFloat(String(summaryData?.summary?.totalEarnings ?? 0)).toFixed(0);
+  const summaryData = summaryRaw as { summary?: { driverShare?: string | number } } | undefined;
+  // driverShare (financial_snapshots-derived), NOT totalEarnings — that field
+  // sums driver_wallet_ledger credits only, which deliberately excludes
+  // cash-ride earnings (the driver already holds that cash), so it
+  // under-reports for anyone who takes cash-paid shuttle bookings.
+  const todayEarnings = parseFloat(String(summaryData?.summary?.driverShare ?? 0)).toFixed(0);
   const completedCount = allLines.filter(l => l.status === 'completed').length;
 
   useEffect(() => {

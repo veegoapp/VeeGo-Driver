@@ -975,8 +975,12 @@ export default function HomeScreen() {
               </Pressable>
             ) : (
               <View style={[styles.statsPillInner, { flexDirection: R }]}>
-                {/* backend returns totalEarnings as a string — parseFloat for numeric formatting */}
-                <StatItem label={t.today} value={`${parseFloat(String(earningsData?.summary?.totalEarnings ?? 0)).toFixed(2)} ${t.egp}`} highlight colors={colors} isRTL={isRTL} />
+                {/* driverShare (financial_snapshots-derived), NOT totalEarnings — that
+                    field sums driver_wallet_ledger credits only, which deliberately
+                    excludes cash-ride earnings (the driver already holds that cash),
+                    so it under-reports for anyone who takes cash rides. Same fix
+                    already applied on the Earnings tab (see app/(tabs)/earnings.tsx). */}
+                <StatItem label={t.today} value={`${parseFloat(String(earningsData?.summary?.driverShare ?? 0)).toFixed(2)} ${t.egp}`} highlight colors={colors} isRTL={isRTL} />
                 <View style={[styles.divider, { backgroundColor: colors.border }]} />
                 <StatItem label={t.trips} value={todayTripsCount != null ? String(todayTripsCount) : '—'} colors={colors} isRTL={isRTL} />
                 <View style={[styles.divider, { backgroundColor: colors.border }]} />
