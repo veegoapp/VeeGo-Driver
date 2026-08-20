@@ -42,6 +42,8 @@ export type DriverRideSession = {
     id: number;
     name: string;
     phone: string;
+    /** Signed URL to the passenger's profile photo, or null when they have none set. */
+    avatar: string | null;
   } | null;
   /** ISO timestamp string. */
   requestedAt: string;

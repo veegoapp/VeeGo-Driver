@@ -3,7 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { AlertTriangle, Check, ChevronUp, Clock, Delete, Map, MessageCircle, Navigation, Phone, Share2, Shield, Star } from 'lucide-react-native';
 import React, { useCallback, useRef, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Animated, Easing, Linking, Modal, Platform, Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Animated, Easing, Image, Linking, Modal, Platform, Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { RideMap } from '@/components/RideMap';
@@ -132,6 +132,9 @@ export default function RideScreen() {
   // the card handle (e.g. on reaching the destination to end the ride).
   const [sheetCollapsed, setSheetCollapsed] = useState(false);
   const [sheetHeight, setSheetHeight] = useState(0);
+  // Falls back to initials if the signed avatar URL fails to load (e.g. expired
+  // before first paint) — reset whenever the URL itself changes.
+  const [riderAvatarFailed, setRiderAvatarFailed] = useState(false);
   // Guards the cancelled-ride exit (alert + navigate) so it only fires once,
   // whether triggered by the live socket event or a subsequent status refetch.
   const hasExitedRef = useRef(false);
@@ -450,7 +453,8 @@ export default function RideScreen() {
   const displayFare    = rideSession?.finalPrice ?? rideSession?.estimatedPrice;
   // vehicleType: available for future use; not yet rendered in this screen.
   const vehicleType    = rideSession?.vehicleType;
-  // Avatar: DriverRideSession.passenger has no avatar URL — initials derived from name.
+  const passengerAvatar = rideSession?.passenger?.avatar ?? null;
+  useEffect(() => { setRiderAvatarFailed(false); }, [passengerAvatar]);
   const passengerInitials = passengerName
     ? passengerName.trim().split(/\s+/).map((w: string) => w[0]?.toUpperCase() ?? '').slice(0, 2).join('')
     : '?';
@@ -957,9 +961,13 @@ export default function RideScreen() {
 
           <View style={[styles.ratingCard, { backgroundColor: CHARCOAL, borderColor: CARD_BORDER, borderWidth: 1 }]}>
             <View style={styles.ratingCardHeader}>
-              <View style={[styles.ratingAvatar, { justifyContent: 'center', alignItems: 'center', backgroundColor: CHARCOAL_SURFACE }]}>
-                <Text style={{ color: '#ffffff', fontSize: 11, fontFamily: 'Inter_700Bold' }}>{passengerInitials}</Text>
-              </View>
+              {passengerAvatar && !riderAvatarFailed ? (
+                <Image source={{ uri: passengerAvatar }} style={styles.ratingAvatar} resizeMode="cover" />
+              ) : (
+                <View style={[styles.ratingAvatar, { justifyContent: 'center', alignItems: 'center', backgroundColor: CHARCOAL_SURFACE }]}>
+                  <Text style={{ color: '#ffffff', fontSize: 11, fontFamily: 'Inter_700Bold' }}>{passengerInitials}</Text>
+                </View>
+              )}
               <Text style={[styles.ratingCardLabel, { color: '#B0B0B5', fontFamily: 'Inter_700Bold' }]}>{t.rate_rider_label.replace('{name}', passengerName ?? '—')}</Text>
             </View>
             <View style={styles.starsRow}>
@@ -1045,9 +1053,18 @@ export default function RideScreen() {
             </Pressable>
 
             <View style={styles.riderRow}>
-              <View style={[styles.riderAvatar, { justifyContent: 'center', alignItems: 'center', backgroundColor: colors.secondary }]}>
-                <Text style={{ color: colors.mutedForeground, fontSize: 16, fontFamily: 'Inter_700Bold' }}>{passengerInitials}</Text>
-              </View>
+              {passengerAvatar && !riderAvatarFailed ? (
+                <Image
+                  source={{ uri: passengerAvatar }}
+                  style={styles.riderAvatar}
+                  resizeMode="cover"
+                  onError={() => setRiderAvatarFailed(true)}
+                />
+              ) : (
+                <View style={[styles.riderAvatar, { justifyContent: 'center', alignItems: 'center', backgroundColor: colors.secondary }]}>
+                  <Text style={{ color: colors.mutedForeground, fontSize: 16, fontFamily: 'Inter_700Bold' }}>{passengerInitials}</Text>
+                </View>
+              )}
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={[styles.riderName, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]} numberOfLines={1}>{passengerName ?? '—'}</Text>
                 <View style={styles.riderMeta}>
