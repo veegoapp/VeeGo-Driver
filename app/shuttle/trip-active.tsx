@@ -623,6 +623,7 @@ export default function ShuttleTripActiveScreen() {
               onPress={handleSOS}
               style={({ pressed }) => [
                 styles.sosBtn,
+                { backgroundColor: colors.destructive, shadowColor: colors.destructive },
                 { transform: [{ scale: pressed ? 0.93 : 1 }] },
               ]}
             >
@@ -1080,9 +1081,9 @@ const styles = StyleSheet.create({
   // SOS button
   sosBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: '#dc2626', borderRadius: 18,
+    borderRadius: 18,
     paddingHorizontal: 11, paddingVertical: 7,
-    shadowColor: '#dc2626', shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.5, shadowRadius: 6, elevation: 6,
     borderWidth: 1, borderColor: 'rgba(255,100,100,0.35)',
   },
@@ -1094,7 +1095,7 @@ const styles = StyleSheet.create({
   paymentCashBadge: { alignSelf: 'flex-start', marginTop: Spacing.xs, backgroundColor: '#fef3c7', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: '#fcd34d' },
   paymentPaidBadge: { alignSelf: 'flex-start', marginTop: Spacing.xs, backgroundColor: '#dcfce7', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: '#86efac' },
   paymentBadgeText: { fontSize: 11 },
-  primaryBtn: { borderRadius: 18, overflow: 'hidden' },
+  primaryBtn: { borderRadius: Radius.lg, overflow: 'hidden' },
   primaryBtnGrad: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
   primaryBtnText: { fontSize: 15, color: '#fff' },
 });
