@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Calendar, CheckCircle, Users } from 'lucide-react-native';
+import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { Typography } from '@/constants/typography';
@@ -17,7 +18,9 @@ export function CompletedTripCard({
   trip: DriverTrip;
   colors: ReturnType<typeof useColors>;
 }) {
-  const { t } = useI18n();
+  const { t, isRTL } = useI18n();
+  const TA = isRTL ? 'right' as const : 'left' as const;
+  const R = isRTL ? 'row-reverse' as const : 'row' as const;
   const netEarnings = formatCurrency(trip.earnings, t.egp);
   const grossRevenue = trip.revenueAmount != null ? formatCurrency(trip.revenueAmount, t.egp) : null;
   const passengersLabel =
@@ -28,23 +31,23 @@ export function CompletedTripCard({
       : '—';
 
   return (
-    <View style={[styles.tripCard, { backgroundColor: '#fff', borderColor: colors.border }]}>
+    <GlassView style={styles.tripCard} borderRadius={14}>
       <View style={[styles.tripCardAccent, { backgroundColor: '#22c55e' }]} />
       <View style={{ flex: 1, gap: 5 }}>
         <Text
-          style={[styles.bookingCardRoute, { color: colors.foreground }]}
+          style={[styles.bookingCardRoute, { color: colors.foreground, textAlign: TA }]}
           numberOfLines={1}
         >
           {trip.routeName ?? t.shuttle_trip_default}
         </Text>
         {!!trip.direction && (
-          <Text style={[styles.metaText, { color: colors.mutedForeground }]} numberOfLines={1}>
+          <Text style={[styles.metaText, { color: colors.mutedForeground, textAlign: TA }]} numberOfLines={1}>
             {trip.direction === 'outbound' ? t.direction_outbound
               : trip.direction === 'return' ? t.direction_return
               : trip.direction}
           </Text>
         )}
-        <View style={styles.metaRow}>
+        <View style={[styles.metaRow, { flexDirection: R }]}>
           {trip.date && (
             <>
               <Calendar size={11} color={colors.mutedForeground} strokeWidth={2} />
@@ -75,13 +78,13 @@ export function CompletedTripCard({
           <Text style={[styles.completedBadgeText, { color: '#16a34a' }]}>{t.completed_label}</Text>
         </View>
       </View>
-    </View>
+    </GlassView>
   );
 }
 
 const styles = StyleSheet.create({
-  bookingCardRoute: { fontSize: Typography.size.sm, fontFamily: 'Inter_700Bold', textAlign: 'right' },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5, justifyContent: 'flex-end' },
+  bookingCardRoute: { fontSize: Typography.size.sm, fontFamily: 'Inter_700Bold' },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   metaText: { fontSize: Typography.size.xs, fontFamily: 'Inter_400Regular' },
   dot: { fontSize: Typography.size.xs },
   tripCard: {

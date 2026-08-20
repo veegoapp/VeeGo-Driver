@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AlertTriangle, Calendar, Clock } from 'lucide-react-native';
+import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { type ShuttleBooking } from '@/lib/shuttleContext';
@@ -20,6 +21,8 @@ export function BookingCard({
 }) {
   const { t, isRTL } = useI18n();
   const locale = isRTL ? 'ar-EG' : 'en-GB';
+  const TA = isRTL ? 'right' as const : 'left' as const;
+  const R = isRTL ? 'row-reverse' as const : 'row' as const;
   // hasRenewal is display-only (pill badge) — driven by backend status
   const hasRenewal = booking.status === 'pending_renewal';
 
@@ -33,23 +36,23 @@ export function BookingCard({
       onPress={onPress}
       style={({ pressed }) => [{ transform: [{ scale: pressed ? 0.98 : 1 }] }]}
     >
-      <View style={[styles.bookingCard, { backgroundColor: '#fff', borderColor: colors.border }]}>
+      <GlassView style={styles.bookingCard} borderRadius={14}>
         <View style={styles.bookingCardAccent} />
         <View style={{ flex: 1, gap: 5 }}>
           <Text
-            style={[styles.bookingCardRoute, { color: colors.foreground }]}
+            style={[styles.bookingCardRoute, { color: colors.foreground, textAlign: TA }]}
             numberOfLines={1}
           >
             {booking.routeName}
           </Text>
           {!!booking.direction && (
-            <Text style={[styles.metaText, { color: colors.mutedForeground }]} numberOfLines={1}>
+            <Text style={[styles.metaText, { color: colors.mutedForeground, textAlign: TA }]} numberOfLines={1}>
               {booking.direction === 'outbound' ? t.direction_outbound
                 : booking.direction === 'return' ? t.direction_return
                 : booking.direction}
             </Text>
           )}
-          <View style={styles.metaRow}>
+          <View style={[styles.metaRow, { flexDirection: R }]}>
             <Clock size={11} color={colors.mutedForeground} strokeWidth={2} />
             <Text style={[styles.metaText, { color: colors.mutedForeground }]}>
               {booking.departureTime}
@@ -92,7 +95,7 @@ export function BookingCard({
             </View>
           )}
         </View>
-      </View>
+      </GlassView>
     </Pressable>
   );
 }
@@ -113,8 +116,8 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     backgroundColor: '#1e1e28',
   },
-  bookingCardRoute: { fontSize: Typography.size.sm, fontFamily: 'Inter_700Bold', textAlign: 'right' },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5, justifyContent: 'flex-end' },
+  bookingCardRoute: { fontSize: Typography.size.sm, fontFamily: 'Inter_700Bold' },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   metaText: { fontSize: Typography.size.xs, fontFamily: 'Inter_400Regular' },
   dot: { fontSize: Typography.size.xs },
   weekPill: {
