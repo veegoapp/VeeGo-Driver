@@ -147,6 +147,12 @@ export default function SelfieScreen() {
         const response = await endpoints.driver.checkin(formData);
         if (!response.ok) throw new Error('Checkin failed');
         const result = await response.json() as { faceDetected?: boolean; message?: string };
+        // The backend emits the DRIVER_CHECKIN_APPROVED/REJECTED socket verdict
+        // before it finishes sending this HTTP response, so on a slow/flaky
+        // connection the socket handler can already have settled the screen
+        // (approved -> navigated away, rejected -> photo cleared + alert shown)
+        // by the time this response resolves. Don't act on stale data.
+        if (settledRef.current) return;
         if (result.faceDetected === false) {
           setPhoto(null);
           showAlert(t.no_face_detected_title, result.message ?? t.no_face_detected_msg);
@@ -164,6 +170,12 @@ export default function SelfieScreen() {
         }, 1200);
       }
     } catch {
+      // Same race as above: the socket verdict can arrive and settle the
+      // screen (most commonly DRIVER_CHECKIN_APPROVED, since it fires before
+      // the HTTP response) before this request's own promise rejects — e.g. a
+      // slow response body read after the upload itself already succeeded
+      // server-side. Showing "upload failed" here would be a false alarm.
+      if (settledRef.current) return;
       showAlert(t.selfie_upload_failed_title, t.selfie_upload_failed_msg);
     } finally {
       setIsUploading(false);
