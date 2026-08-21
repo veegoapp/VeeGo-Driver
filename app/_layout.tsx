@@ -472,7 +472,6 @@ function RootLayoutNav() {
         <Stack.Screen name="shuttle/earnings" />
         <Stack.Screen name="selfie" />
         <Stack.Screen name="suspended" />
-        <Stack.Screen name="shuttle/rate-passengers" />
         <Stack.Screen name="verify-otp" />
         <Stack.Screen name="register-service-type" />
         <Stack.Screen name="register-vehicle" />
