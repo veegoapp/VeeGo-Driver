@@ -725,14 +725,17 @@ export const MapBackdrop = React.memo(function MapBackdrop({
         <Text style={styles.recenterIcon}>⊕</Text>
       </Pressable>
 
-      {/* ── Orientation toggle — nav mode only, below recenter. Lets the      */}
-      {/* driver force the map north-up if the auto course-up rotation ever  */}
-      {/* looks wrong, instead of only being able to recenter onto the same  */}
-      {/* (possibly bad) heading. */}
+      {/* ── Orientation toggle — nav mode only, above theme/recenter. Lets   */}
+      {/* the driver force the map north-up if the auto course-up rotation  */}
+      {/* ever looks wrong, instead of only being able to recenter onto the */}
+      {/* same (possibly bad) heading. Placed above the other two buttons — */}
+      {/* nav mode is exactly when the ride screen's trip sheet auto-       */}
+      {/* collapses to its persistent ~120px bottom peek, which would       */}
+      {/* otherwise sit on top of (and hide) a button placed lower. */}
       {navigationMode && (
         <Pressable
           onPress={handleToggleOrientation}
-          style={[styles.orientationBtn, { bottom: insets.bottom + 58 }]}
+          style={[styles.orientationBtn, { bottom: insets.bottom + 214 }]}
           accessibilityLabel={northUp ? t.course_up_map_label : t.north_up_map_label}
         >
           <Text style={styles.orientationIcon}>{northUp ? '⬆︎N' : '🧭'}</Text>
@@ -869,7 +872,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   recenterIcon: { color: '#3b82f6', fontSize: 20, lineHeight: 22 },
-  // Orientation toggle button — bottom right, below recenter, nav mode only
+  // Orientation toggle button — bottom right, above theme/recenter, nav mode only
   orientationBtn: {
     position: 'absolute',
     right: 16,
