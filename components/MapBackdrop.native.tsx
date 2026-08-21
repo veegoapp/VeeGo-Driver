@@ -3,7 +3,6 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import MapView, { AnimatedRegion, Circle, Marker, MarkerAnimated, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DARK_MAP_STYLE, LIGHT_MAP_STYLE } from '@/constants/mapStyles';
-import colors from '@/constants/colors';
 import { fetchDirectionsRaw } from '@/lib/utils/googleDirections';
 import { useService } from '@/lib/serviceContext';
 import { useI18n } from '@/lib/i18nContext';
@@ -229,8 +228,6 @@ export const MapBackdrop = React.memo(function MapBackdrop({
   const { isDarkMode, setIsDarkMode } = useService();
   const effectiveTheme: 'dark' | 'light' = isDarkMode ? 'dark' : 'light';
   const mapStyle = effectiveTheme === 'dark' ? DARK_MAP_STYLE : LIGHT_MAP_STYLE;
-  // Route line — the app's own navy theme color, not a generic route-blue.
-  const routeLineColor = colors[effectiveTheme].primary;
 
   const insets = useSafeAreaInsets();
   const { t } = useI18n();
@@ -579,23 +576,20 @@ export const MapBackdrop = React.memo(function MapBackdrop({
         toolbarEnabled={false}
         moveOnMarkerPress={false}
       >
-        {/* ── Route line (road-snapped or auto-fetched) ─────────────────── */}
-        {/* Navy — the app's own theme primary color — instead of the generic */}
-        {/* route-blue, and wider than before for better legibility while    */}
-        {/* driving. */}
+        {/* ── Route line (road-snapped or auto-fetched) ────────────────── */}
         {displayRouteCoords && (
           <>
             <Polyline
               coordinates={displayRouteCoords}
-              strokeColor="rgba(255,255,255,0.18)"
-              strokeWidth={11}
+              strokeColor="rgba(255,255,255,0.15)"
+              strokeWidth={8}
               lineCap="round"
               lineJoin="round"
             />
             <Polyline
               coordinates={displayRouteCoords}
-              strokeColor={routeLineColor}
-              strokeWidth={7}
+              strokeColor="#3b82f6"
+              strokeWidth={5}
               lineCap="round"
               lineJoin="round"
             />
