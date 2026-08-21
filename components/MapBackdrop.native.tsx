@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import MapView, { AnimatedRegion, Circle, Marker, MarkerAnimated, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DARK_MAP_STYLE, LIGHT_MAP_STYLE } from '@/constants/mapStyles';
@@ -110,28 +110,34 @@ function circleCoords(
 
 const DEFAULT_CENTER = { latitude: 30.0444, longitude: 31.2357 }; // Cairo fallback
 
+// Top-down car photo, front pointing up at 0deg — matches the marker's own
+// heading source (useDriverSmoothedHeading's `rotation`) 1:1.
+const CAR_TOP_IMAGE = require('../assets/images/vehicles/driver-marker-car-top.png');
+const CAR_TOP_ASPECT = 294 / 635; // width / height
+const CAR_MARKER_HEIGHT = 34;
+const CAR_MARKER_WIDTH = CAR_MARKER_HEIGHT * CAR_TOP_ASPECT;
+
 // ── AnimatedDriverMarker ────────────────────────────────────────────────────────
 //
-// Pill/circle dot — blue fill, white halo ring, no rotation (a
-// symmetrical dot has no facing direction, unlike the previous nav-mode
-// arrow/car icon). Position comes from `animatedCoord`, the one interpolated
-// AnimatedRegion that also drives the follow camera; motion happens natively
-// via AnimatedRegion, so this barely re-renders (previously the ValueXY JS
-// listener re-rendered it ~30 fps per tick).
+// Top-down car icon that rotates to face the smoothed heading. Position comes
+// from `animatedCoord`, the one interpolated AnimatedRegion that also drives
+// the follow camera; motion happens natively via AnimatedRegion, so this
+// barely re-renders. `rotation` is the same Animated.Value the follow camera
+// reads (via headingRef) — passing it straight to MarkerAnimated keeps the
+// icon and the camera perfectly in sync with no extra JS-side listener.
 //
-// tracksViewChanges is a flat `false` here (unlike the old arrow marker,
-// which had to keep it `true` until a double-rAF confirmed its <Svg> child
-// had actually painted on Android — see git history). A plain View with no
-// Svg/image content paints synchronously with its first snapshot, so that
-// paint-timing workaround no longer applies.
+// tracksViewChanges is a flat `false` — the car <Image> is static content
+// once loaded, so react-native-maps doesn't need to keep re-snapshotting it.
 const AnimatedDriverMarker = React.memo(function AnimatedDriverMarker({
   animatedCoord,
+  rotation,
 }: {
   animatedCoord: AnimatedRegion;
+  rotation: Animated.Value;
 }) {
   return (
-    <MarkerAnimated coordinate={animatedCoord} anchor={{ x: 0.5, y: 0.5 }} rotation={0} tracksViewChanges={false}>
-      <View style={styles.driverDot} />
+    <MarkerAnimated coordinate={animatedCoord} anchor={{ x: 0.5, y: 0.5 }} rotation={rotation} flat tracksViewChanges={false}>
+      <Image source={CAR_TOP_IMAGE} style={styles.driverCar} resizeMode="contain" />
     </MarkerAnimated>
   );
 });
@@ -204,7 +210,7 @@ export const MapBackdrop = React.memo(function MapBackdrop({
   // re-seeds heading from the device course). Raw movement keeps the course-up
   // heading live throughout the ride.
   const { animatedCoord, positionRef } = useDriverTrackingBuffer(effectiveDriverLocation);
-  const { headingRef } = useDriverSmoothedHeading(driverLocation);
+  const { rotation: driverRotation, headingRef } = useDriverSmoothedHeading(driverLocation);
 
   // ── Continuous follow camera (Driver D3) ──────────────────────────────────
   // rAF setCamera loop reading the shared positionRef + headingRef, keeping the
@@ -701,7 +707,7 @@ export const MapBackdrop = React.memo(function MapBackdrop({
         {/* same source that drives the follow camera. Motion is native          */}
         {/* (AnimatedRegion), so this barely re-renders.                         */}
         {driverLocation && (
-          <AnimatedDriverMarker animatedCoord={animatedCoord} />
+          <AnimatedDriverMarker animatedCoord={animatedCoord} rotation={driverRotation} />
         )}
       </MapView>
 
@@ -748,16 +754,11 @@ export const MapBackdrop = React.memo(function MapBackdrop({
 // ── Styles ─────────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  // Driver marker — pill/circle dot. Solid white halo ring, subtle elevation
-  // so it reads as sitting slightly above the route line. Symmetrical, so it
-  // never needs to rotate with heading (see AnimatedDriverMarker's rotation={0}).
-  driverDot: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: '#3b82f6',
-    borderWidth: 3,
-    borderColor: '#ffffff',
+  // Driver marker — top-down car icon, rotates to face the smoothed heading
+  // (see AnimatedDriverMarker's rotation prop).
+  driverCar: {
+    width: CAR_MARKER_WIDTH,
+    height: CAR_MARKER_HEIGHT,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
