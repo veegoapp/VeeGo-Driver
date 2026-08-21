@@ -9,7 +9,7 @@
  */
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Banknote, CheckCircle2, CreditCard, Home, Smartphone, Wallet } from 'lucide-react-native';
+import { Banknote, CheckCircle2, CreditCard, Home, Smartphone, Star, Wallet } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
@@ -73,6 +73,10 @@ export default function TripCompleteScreen() {
     // Clear all in-trip state (stop index, passengers, startedTripId) before navigating
     resetTrip();
     router.replace('/(shuttle)/home' as any);
+  };
+
+  const handleRatePassengers = () => {
+    router.push({ pathname: '/shuttle/rate-passengers', params: { tripId: String(tripId ?? '') } } as any);
   };
 
   return (
@@ -235,6 +239,20 @@ export default function TripCompleteScreen() {
           { paddingBottom: Math.max(insets.bottom, 24), opacity: fadeAnim },
         ]}
       >
+        {tripId != null && (
+          <Pressable
+            onPress={handleRatePassengers}
+            style={({ pressed }) => [
+              styles.rateBtn,
+              { borderColor: colors.border, opacity: pressed ? 0.88 : 1 },
+            ]}
+          >
+            <Star size={18} color={colors.foreground} strokeWidth={2} />
+            <Text style={[styles.rateBtnText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
+              {t.rate_passengers_btn}
+            </Text>
+          </Pressable>
+        )}
         <Pressable
           onPress={handleReturnHome}
           style={({ pressed }) => [{ borderRadius: 18, overflow: 'hidden', opacity: pressed ? 0.88 : 1, width: '100%' }]}
@@ -301,7 +319,17 @@ const styles = StyleSheet.create({
   },
   totalLabel: { fontSize: Typography.size.sm },
   totalAmount: { fontSize: Typography.size.md },
-  bottomBar: { paddingHorizontal: 20, paddingTop: Spacing.md },
+  bottomBar: { paddingHorizontal: 20, paddingTop: Spacing.md, gap: Spacing.sm },
+  rateBtn: {
+    height: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderRadius: 18,
+    borderWidth: 1,
+  },
+  rateBtnText: { fontSize: Typography.size.sm },
   ctaBtn: {
     height: 58,
     flexDirection: 'row',

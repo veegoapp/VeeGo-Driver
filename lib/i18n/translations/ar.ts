@@ -1060,6 +1060,8 @@ export const ar: Translations = {
   driver_referral_unavailable_title: 'ادعُ سائق جديد',
   driver_referral_unavailable_sub: 'الميزة دي مش متاحة دلوقتي.',
   // ── Rate passengers screen ────────────────────────────────────────────────────
+  rate_passengers_title: 'تقييم الركاب',
+  rate_passengers_btn: 'تقييم الركاب',
   n_passengers_to_rate: '{n} ركاب للتقييم',
   no_passengers_to_rate: 'لا يوجد ركاب للتقييم في هذه الرحلة',
   rated_label: '✓ تم التقييم',

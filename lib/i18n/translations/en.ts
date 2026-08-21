@@ -1059,6 +1059,8 @@ export const en = {
   driver_referral_unavailable_title: 'Invite a Driver',
   driver_referral_unavailable_sub: "This feature isn't available right now.",
   // ── Rate passengers screen ────────────────────────────────────────────────────
+  rate_passengers_title: 'Rate Passengers',
+  rate_passengers_btn: 'Rate Passengers',
   n_passengers_to_rate: '{n} passengers to rate',
   no_passengers_to_rate: 'No passengers to rate for this trip.',
   rated_label: '✓ Rated',
