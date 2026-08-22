@@ -4,22 +4,20 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
-import { type ShuttleBooking, type ShuttleLine } from '@/lib/shuttleContext';
+import { type ShuttleLine, formatDate } from '@/lib/shuttleContext';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
 
-// Extracted verbatim from app/(shuttle)/home.tsx — pure presentational
-// upcoming trip card displayed in the home screen list.
+// One card per individual trip (not per weekly booking) — each trip has its
+// own date, passengers, and activation status, so each gets its own card.
 export function UpcomingTripCard({
-  booking,
   line,
   colors,
   isRTL,
   onPress,
 }: {
-  booking: ShuttleBooking;
-  line?: ShuttleLine;
+  line: ShuttleLine;
   colors: ReturnType<typeof useColors>;
   isRTL: boolean;
   onPress: () => void;
@@ -27,6 +25,7 @@ export function UpcomingTripCard({
   const { t } = useI18n();
   const TA = isRTL ? 'right' as const : 'left' as const;
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
+  const isPending = line.thresholdMet === false;
   return (
     <Pressable
       onPress={onPress}
@@ -36,52 +35,48 @@ export function UpcomingTripCard({
         <View style={[styles.upcomingAccent, { backgroundColor: '#1e1e28', alignSelf: 'stretch', height: undefined }]} />
         <View style={{ flex: 1, gap: 6 }}>
           <Text style={[styles.upcomingRouteName, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]} numberOfLines={1}>
-            {(isRTL && booking.routeNameAr) ? booking.routeNameAr : booking.routeName}
+            {line.name}
           </Text>
-          {(booking.fromStation || booking.toStation || line) && (
-            <Text style={[{ fontSize: Typography.size.xs, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]} numberOfLines={1}>
-              {booking.fromStation ?? line?.from} → {booking.toStation ?? line?.to}
-            </Text>
-          )}
-          {!!(booking.direction ?? line?.direction) && (
+          <Text style={[{ fontSize: Typography.size.xs, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]} numberOfLines={1}>
+            {line.from} → {line.to}
+          </Text>
+          {!!line.direction && (
             <Text style={[{ fontSize: Typography.size.xs, color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold', textAlign: TA }]} numberOfLines={1}>
-              {(booking.direction ?? line?.direction) === 'outbound' ? t.direction_outbound
-                : (booking.direction ?? line?.direction) === 'return' ? t.direction_return
-                : (booking.direction ?? line?.direction)}
+              {line.direction === 'outbound' ? t.direction_outbound
+                : line.direction === 'return' ? t.direction_return
+                : line.direction}
             </Text>
           )}
           {/* Date & Exact Time */}
           <View style={[styles.upcomingMeta, { flexDirection: R }]}>
             <Calendar size={12} color={colors.mutedForeground} strokeWidth={2} />
             <Text style={[styles.upcomingMetaText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-              {booking.trip?.tripDatetimes?.[0]?.split('T')[0] ?? booking.weekStart}
+              {formatDate(line.departureIso)}
             </Text>
             <Text style={[styles.upcomingMetaDot, { color: colors.border }]}>·</Text>
             <Clock size={12} color={colors.mutedForeground} strokeWidth={2} />
             <Text style={[styles.upcomingMetaText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-              {booking.departureTime}
+              {line.departure}
             </Text>
           </View>
           {/* Vehicle / Line info + Passenger Count */}
           <View style={[{ flexDirection: R, gap: 6, flexWrap: 'wrap', marginTop: 2 }]}>
-            {line && line.vehicleType !== 'Unknown' && (
+            {line.vehicleType !== 'Unknown' && (
               <View style={[styles.vehicleBadge, { backgroundColor: '#1e1e2810', borderColor: '#1e1e2820' }]}>
                 <Text style={[styles.vehicleBadgeText, { color: '#2d2d42', fontFamily: 'Inter_600SemiBold' }]}>
                   {line.vehicleType} · {line.lineNumber}
                 </Text>
               </View>
             )}
-            {line && (
-              <View style={[styles.seatBadge, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
-                <Users size={11} color={colors.mutedForeground} strokeWidth={2} />
-                <Text style={[styles.seatBadgeText, { color: colors.foreground, fontFamily: 'Inter_600SemiBold' }]}>
-                  {t.passengers_label_count}: {line.bookedSeats} / {line.totalSeats}
-                </Text>
-              </View>
-            )}
+            <View style={[styles.seatBadge, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+              <Users size={11} color={colors.mutedForeground} strokeWidth={2} />
+              <Text style={[styles.seatBadgeText, { color: colors.foreground, fontFamily: 'Inter_600SemiBold' }]}>
+                {t.passengers_label_count}: {line.bookedSeats} / {line.totalSeats}
+              </Text>
+            </View>
           </View>
           {/* Passenger progress bar */}
-          {line && line.totalSeats > 0 && (
+          {line.totalSeats > 0 && (
             <View style={styles.paxBarWrap}>
               <View style={[styles.paxBarTrack, { backgroundColor: colors.border }]}>
                 <View
@@ -89,7 +84,7 @@ export function UpcomingTripCard({
                     styles.paxBarFill,
                     {
                       width: `${Math.min(100, Math.round((line.bookedSeats / line.totalSeats) * 100))}%` as any,
-                      backgroundColor: booking.trip?.thresholdMet === false ? '#F59E0B' : '#1e1e28',
+                      backgroundColor: isPending ? '#F59E0B' : '#1e1e28',
                     },
                   ]}
                 />
@@ -101,7 +96,7 @@ export function UpcomingTripCard({
           )}
         </View>
         <View style={{ alignItems: 'flex-end', justifyContent: 'space-between', alignSelf: 'stretch', paddingTop: 2, gap: 6 }}>
-          {booking.trip && !booking.trip.thresholdMet ? (
+          {isPending ? (
             <View style={[styles.upcomingStatusBadge, { backgroundColor: '#FEF3C7', borderColor: '#FCD34D' }]}>
               <Text style={[styles.upcomingStatusText, { color: '#92400E', fontFamily: 'Inter_700Bold' }]}>
                 {t.status_pending}

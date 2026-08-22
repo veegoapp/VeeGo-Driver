@@ -37,6 +37,11 @@ export type BackendTrip = {
   bookedSeats?: number;
   price: number;
   status: string;
+  // Per-trip activation threshold, added by listDriverTrips (driverTripService.ts)
+  // alongside minRequired/thresholdMet — mirrors what the passenger app and
+  // admin dashboard already show per trip.
+  minRequired?: number;
+  thresholdMet?: boolean;
   // Trip leg (e.g. 'outbound' | 'return'). Optional — GET /driver/trips has
   // not been confirmed to send this field; do not assume it is present.
   direction?: string;
@@ -80,9 +85,10 @@ export type BackendStationWithPassengers = BackendStation & {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-export function mapStatus(s: string): 'upcoming' | 'in-progress' | 'completed' {
-  if (s === 'active') return 'in-progress';
-  if (s === 'completed' || s === 'cancelled') return 'completed';
+export function mapStatus(s: string): 'upcoming' | 'in-progress' | 'completed' | 'cancelled' {
+  if (s === 'active' || s === 'boarding') return 'in-progress';
+  if (s === 'completed') return 'completed';
+  if (s === 'cancelled') return 'cancelled';
   return 'upcoming';
 }
 
@@ -93,6 +99,22 @@ export function formatTime(iso: string): string {
       hour: '2-digit',
       minute: '2-digit',
       hour12: false,
+    });
+  } catch {
+    return '—';
+  }
+}
+
+// Short weekday + day/month date, e.g. "Mon, 25 Aug" — used to tell same-route
+// trips on different days apart in a per-trip list (formatTime alone only
+// shows the time-of-day and would make every day look identical).
+export function formatDate(iso: string | undefined): string {
+  if (!iso) return '—';
+  try {
+    return new Date(iso).toLocaleDateString('en-US', {
+      weekday: 'short',
+      day: '2-digit',
+      month: 'short',
     });
   } catch {
     return '—';
@@ -230,11 +252,14 @@ export function buildLine(route: BackendRoute, trip: BackendTrip | undefined): S
     to: route.toLocation ?? route.to ?? '—',
     departure: trip ? formatTime(trip.departureTime) : '—',
     arrival: trip ? formatTime(trip.arrivalTime) : '—',
+    departureIso: trip?.departureTime,
     status: trip ? mapStatus(trip.status) : 'upcoming',
     passengers: booked,
     capacity: total,
     bookedSeats: booked,
     totalSeats: total,
+    minRequired: trip?.minRequired,
+    thresholdMet: trip?.thresholdMet,
     vehicleType: deriveVehicleType(total),
     assigned: !!trip,
     stationCount: route.stationCount ?? 0,

@@ -24,7 +24,7 @@ import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { endpoints } from '@/lib/api';
-import { useShuttle, findLineForRoute, type ShuttleBooking, type ShuttleLine } from '@/lib/shuttleContext';
+import { useShuttle } from '@/lib/shuttleContext';
 import { useReferral } from '@/lib/referralContext';
 import { useSocket } from '@/lib/socketContext';
 import { useServiceControl } from '@/lib/serviceControlContext';
@@ -173,9 +173,13 @@ export default function ShuttleHomeScreen() {
   const nextStop = stops[currentStopIndex + 1] ?? null;
   const progress = stops.length > 0 ? currentStopIndex / stops.length : 0;
 
-  const upcomingBookings = myBookings.filter(
-    b => b.status === 'booked' || b.status === 'active' || b.status === 'pending_renewal'
-  );
+  // One card per actual trip, not per weekly booking — each day within a
+  // booked week is an independent trip with its own passengers and status,
+  // and a trip that got auto-cancelled or expired must stop showing here
+  // even while the rest of the week's booking stays active.
+  const upcomingLines = allLines
+    .filter(l => l.tripId && l.status === 'upcoming')
+    .sort((a, b) => new Date(a.departureIso ?? 0).getTime() - new Date(b.departureIso ?? 0).getTime());
 
   // Fix 2: listen for shuttle:checkin:required — plus the periodic ("long_shift")
   // driver check-in, which shuttle drivers need too if they stay online 10+ hours
@@ -637,7 +641,7 @@ export default function ShuttleHomeScreen() {
           {t.upcoming_trips}
         </Text>
 
-        {upcomingBookings.length === 0 ? (
+        {upcomingLines.length === 0 ? (
           <GlassView style={[styles.upcomingEmpty, { borderColor: colors.border }]} borderRadius={16}>
             <Calendar size={20} color={colors.mutedForeground} strokeWidth={2} />
             <Text style={[styles.upcomingEmptyText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
@@ -646,22 +650,23 @@ export default function ShuttleHomeScreen() {
           </GlassView>
         ) : (
           <View style={{ gap: 10 }}>
-            {upcomingBookings.map(booking => {
-              // A routeId can now back more than one line (outbound + return
-              // trip on the same route) — disambiguate by direction/departure
-              // time instead of assuming a 1:1 routeId match.
-              const line = findLineForRoute(allLines, booking.routeId, {
-                direction: booking.direction,
-                departureTime: booking.departureTime,
-              });
+            {upcomingLines.map(line => {
+              // The weekly booking this trip belongs to — still needed to open
+              // /shuttle/trip-details, which is keyed by bookingId (the
+              // driver's Start/Cancel Trip flow is scoped to the booking's
+              // "next representative trip", not yet addressable per exact day).
+              const booking = myBookings.find(b =>
+                String(b.routeId) === String(line.routeId) &&
+                (!b.direction || !line.direction || b.direction === line.direction)
+              );
               return (
                 <UpcomingTripCard
-                  key={booking.id}
-                  booking={booking}
+                  key={line.id}
                   line={line}
                   colors={colors}
                   isRTL={isRTL}
-                  onPress={() =>
+                  onPress={() => {
+                    if (!booking) return;
                     router.push({
                       pathname: '/shuttle/trip-details' as any,
                       params: {
@@ -677,8 +682,8 @@ export default function ShuttleHomeScreen() {
                         status: booking.status,
                         direction: booking.direction ?? '',
                       },
-                    })
-                  }
+                    });
+                  }}
                 />
               );
             })}
@@ -686,7 +691,7 @@ export default function ShuttleHomeScreen() {
         )}
 
         {/* No active booking — only shown when there are no upcoming or active trips */}
-        {upcomingBookings.length === 0 && !activeLine && (
+        {upcomingLines.length === 0 && !activeLine && (
           <GlassView style={[styles.noLineCard, { marginTop: Spacing.lg }]} borderRadius={20}>
             <GitBranch size={32} color={colors.mutedForeground} strokeWidth={2} />
             <Text style={[styles.noLineTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.no_booking}</Text>

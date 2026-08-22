@@ -80,11 +80,17 @@ export type ShuttleLine = {
   to: string;
   departure: string;
   arrival: string;
-  status: 'upcoming' | 'in-progress' | 'completed';
+  // Full ISO departure timestamp (date + time), not just the "HH:MM" display
+  // string in `departure` — needed to tell same-route trips on different days
+  // apart and to sort/display them chronologically.
+  departureIso?: string;
+  status: 'upcoming' | 'in-progress' | 'completed' | 'cancelled';
   passengers: number;
   capacity: number;
   bookedSeats: number;
   totalSeats: number;
+  minRequired?: number;
+  thresholdMet?: boolean;
   vehicleType: VehicleType;
   assigned: boolean;
   stationCount: number;

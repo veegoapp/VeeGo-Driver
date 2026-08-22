@@ -22,7 +22,7 @@ import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
 import { TAB_BAR_HEIGHT_BASE } from '@/constants/tabBar';
-import { BookingCard } from '@/components/BookingCard';
+import { UpcomingTripCard } from '@/components/UpcomingTripCard';
 import { CompletedTripCard } from '@/components/CompletedTripCard';
 import { MainTabBtn } from '@/components/MainTabBtn';
 import { RenewalBanner } from '@/components/RenewalBanner';
@@ -141,7 +141,7 @@ export default function BookingsScreen() {
   const TA = isRTL ? 'right' as const : 'left' as const;
   const locale = language === 'ar' ? 'ar-EG' : 'en-GB';
 
-  const { myBookings, renewalBooking, refetch } = useShuttle();
+  const { myBookings, allLines, renewalBooking, refetch } = useShuttle();
   const queryClient = useQueryClient();
 
   const [mainTab, setMainTab] = useState<MainTab>('upcoming');
@@ -158,19 +158,23 @@ export default function BookingsScreen() {
     queryFn: () => endpoints.shuttle.driverTrips(tripPage, TRIP_LIMIT),
     staleTime: 30_000,
   });
-  const driverTripsData = driverTripsRaw as { trips?: DriverTrip[]; total?: number } | undefined;
-  const driverTrips: DriverTrip[] = driverTripsData?.trips ?? [];
+  // Backend (GET /shuttle/driver/my-trips) returns { data, total, page, limit },
+  // and each item's id field is `tripId`, not `id` — remapped here since
+  // DriverTrip (and CompletedTripCard's key={trip.id}) expects `id`.
+  const driverTripsData = driverTripsRaw as { data?: (DriverTrip & { tripId?: string | number })[]; total?: number } | undefined;
+  const driverTrips: DriverTrip[] = (driverTripsData?.data ?? []).map((t) => ({ ...t, id: String(t.tripId ?? t.id) }));
   const driverTripsTotal = driverTripsData?.total ?? 0;
   const hasMoreTrips = driverTrips.length > 0 && tripPage * TRIP_LIMIT < driverTripsTotal;
 
   // ── Derived booking lists ──────────────────────────────────────────────────
 
-  // 'booked' is the confirmed-booking status returned by the backend;
-  // 'active' is an alias used in some backend versions;
-  // 'pending_renewal' means the driver must confirm for the next week.
-  const upcomingBookings = myBookings.filter(
-    b => b.status === 'booked' || b.status === 'active' || b.status === 'pending_renewal'
-  );
+  // One card per actual trip, not per weekly booking — matches home.tsx's
+  // Upcoming Trips list (each day is an independent trip with its own
+  // passengers/status; a cancelled or expired trip must stop showing here
+  // even while the rest of the week's booking stays active).
+  const upcomingLines = allLines
+    .filter(l => l.tripId && l.status === 'upcoming')
+    .sort((a, b) => new Date(a.departureIso ?? 0).getTime() - new Date(b.departureIso ?? 0).getTime());
   if (__DEV__) {
     const currentSunStr = toLocalDateString(getCurrentWeekSunday());
     console.log('[Bookings] myBookings count:', myBookings.length);
@@ -182,7 +186,7 @@ export default function BookingsScreen() {
         `[Bookings] id=${b.id} status="${b.status}" weekStart="${b.weekStart}" → normalized="${normalized}" bucket="${bucket}"`
       );
     });
-    console.log('[Bookings] upcomingBookings:', upcomingBookings.length);
+    console.log('[Bookings] upcomingLines:', upcomingLines.length);
   }
 
   // ── Mutations ──────────────────────────────────────────────────────────────
@@ -310,7 +314,7 @@ export default function BookingsScreen() {
         <View style={[styles.mainTabRow, { borderColor: colors.border }]}>
           <MainTabBtn
             label={t.upcoming_trips}
-            count={upcomingBookings.length}
+            count={upcomingLines.length}
             active={mainTab === 'upcoming'}
             onPress={() => setMainTab('upcoming')}
             colors={colors}
@@ -327,7 +331,7 @@ export default function BookingsScreen() {
         {/* ── Upcoming tab ── */}
         {mainTab === 'upcoming' && (
           <>
-            {upcomingBookings.length === 0 ? (
+            {upcomingLines.length === 0 ? (
               <View style={styles.smartEmptyState}>
                 <Calendar size={40} color={colors.mutedForeground} strokeWidth={1.2} />
                 <Text style={[styles.smartEmptyTitle, { color: colors.foreground }]}>
@@ -350,28 +354,38 @@ export default function BookingsScreen() {
               </View>
             ) : (
               <View style={{ gap: Spacing.sm, marginTop: Spacing.xs }}>
-                {upcomingBookings.map(b => (
-                  <BookingCard
-                    key={b.id}
-                    booking={b}
-                    colors={colors}
-                    onPress={() =>
-                      router.push({
-                        pathname: '/shuttle/trip-details',
-                        params: {
-                          bookingId: String(b.id),
-                          routeId: String(b.routeId),
-                          routeName: b.routeName,
-                          routeNameAr: b.routeNameAr ?? '',
-                          departureTime: b.departureTime,
-                          weekStart: b.weekStart ?? '',
-                          weekEnd: b.weekEnd ?? '',
-                          status: b.status,
-                        },
-                      } as any)
-                    }
-                  />
-                ))}
+                {upcomingLines.map(line => {
+                  // The weekly booking this trip belongs to — still needed to
+                  // open /shuttle/trip-details, which is keyed by bookingId.
+                  const b = myBookings.find(mb =>
+                    String(mb.routeId) === String(line.routeId) &&
+                    (!mb.direction || !line.direction || mb.direction === line.direction)
+                  );
+                  return (
+                    <UpcomingTripCard
+                      key={line.id}
+                      line={line}
+                      colors={colors}
+                      isRTL={isRTL}
+                      onPress={() => {
+                        if (!b) return;
+                        router.push({
+                          pathname: '/shuttle/trip-details',
+                          params: {
+                            bookingId: String(b.id),
+                            routeId: String(b.routeId),
+                            routeName: b.routeName,
+                            routeNameAr: b.routeNameAr ?? '',
+                            departureTime: b.departureTime,
+                            weekStart: b.weekStart ?? '',
+                            weekEnd: b.weekEnd ?? '',
+                            status: b.status,
+                          },
+                        } as any);
+                      }}
+                    />
+                  );
+                })}
               </View>
             )}
           </>
