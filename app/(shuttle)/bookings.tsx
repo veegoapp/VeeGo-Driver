@@ -356,7 +356,9 @@ export default function BookingsScreen() {
               <View style={{ gap: Spacing.sm, marginTop: Spacing.xs }}>
                 {upcomingLines.map(line => {
                   // The weekly booking this trip belongs to — still needed to
-                  // open /shuttle/trip-details, which is keyed by bookingId.
+                  // open /shuttle/trip-details for the Start Trip flow.
+                  // tripId is passed separately so Cancel acts on this exact
+                  // trip, not the week.
                   const b = myBookings.find(mb =>
                     String(mb.routeId) === String(line.routeId) &&
                     (!mb.direction || !line.direction || mb.direction === line.direction)
@@ -373,6 +375,7 @@ export default function BookingsScreen() {
                           pathname: '/shuttle/trip-details',
                           params: {
                             bookingId: String(b.id),
+                            tripId: line.tripId ?? '',
                             routeId: String(b.routeId),
                             routeName: b.routeName,
                             routeNameAr: b.routeNameAr ?? '',

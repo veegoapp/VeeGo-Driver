@@ -27,6 +27,9 @@ import { Radius } from '@/constants/radius';
 
 type Params = {
   bookingId: string;
+  // The specific trip within the booking's week that the driver tapped —
+  // Cancel acts on this exact trip, never the whole week's booking.
+  tripId?: string;
   routeId: string;
   // Full booking snapshot passed by the home screen so this screen renders
   // correctly even when ShuttleProvider is not in scope (different route group).
@@ -56,7 +59,7 @@ export default function TripDetailsScreen() {
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
 
   const {
-    bookingId, routeId,
+    bookingId, tripId, routeId,
     routeName: paramRouteName,
     routeNameAr: paramRouteNameAr,
     departureTime: paramDepartureTime,
@@ -139,6 +142,10 @@ export default function TripDetailsScreen() {
     router.push({
       pathname: '/shuttle/trip-cancel' as any,
       params: {
+        // tripId (this exact trip) is what actually gets cancelled — bookingId
+        // is passed through only for the referral flow, which is still
+        // booking-scoped.
+        tripId: tripId ?? line?.tripId ?? '',
         bookingId: bookingId ?? '',
         routeName: effectiveBooking?.routeName ?? line?.name ?? '',
         departureTime: effectiveBooking?.departureTime ?? '',

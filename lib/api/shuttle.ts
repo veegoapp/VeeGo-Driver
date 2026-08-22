@@ -201,7 +201,11 @@ export const tripsEndpoints = {
   start: (tripId: string) => api.patch(`/driver/trips/${tripId}/start`),
   complete: (tripId: string) => api.patch(`/driver/trips/${tripId}/complete`),
   cancel: (tripId: string, reason: string) =>
-    api.patch(`/driver/trips/${tripId}/cancel`, { reason }),
+    api.patch<{ penaltyAmount?: number | null }>(`/driver/trips/${tripId}/cancel`, { reason }),
+  cancelPreview: (tripId: string) =>
+    api.get<{ penaltyAmount: number | null; minutesUntilDeparture: number | null; departureDatetime: string | null }>(
+      `/driver/trips/${tripId}/cancel-preview`
+    ),
   stations: (tripId: string) => api.get(`/driver/trips/${tripId}/stations`),
   stationsEta: (tripId: string) => api.get<StationEtaResponse>(`/driver/trips/${tripId}/stations/eta`),
   // POST /driver/shuttle/trips/:tripId/sos

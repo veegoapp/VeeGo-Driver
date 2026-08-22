@@ -652,9 +652,9 @@ export default function ShuttleHomeScreen() {
           <View style={{ gap: 10 }}>
             {upcomingLines.map(line => {
               // The weekly booking this trip belongs to — still needed to open
-              // /shuttle/trip-details, which is keyed by bookingId (the
-              // driver's Start/Cancel Trip flow is scoped to the booking's
-              // "next representative trip", not yet addressable per exact day).
+              // /shuttle/trip-details for the Start Trip flow (still scoped to
+              // the booking's "next representative trip"). tripId is passed
+              // separately so Cancel acts on this exact trip, not the week.
               const booking = myBookings.find(b =>
                 String(b.routeId) === String(line.routeId) &&
                 (!b.direction || !line.direction || b.direction === line.direction)
@@ -671,6 +671,7 @@ export default function ShuttleHomeScreen() {
                       pathname: '/shuttle/trip-details' as any,
                       params: {
                         bookingId: String(booking.id),
+                        tripId: line.tripId ?? '',
                         routeId: String(booking.routeId),
                         // Pass full booking snapshot so trip-details can render
                         // even when ShuttleProvider is not in scope for that route group.

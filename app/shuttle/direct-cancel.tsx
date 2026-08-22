@@ -24,7 +24,7 @@ import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
 
 type Params = {
-  bookingId: string;
+  tripId: string;
   routeName: string;
   routeNameAr?: string;
   departureTime: string;
@@ -40,7 +40,7 @@ export default function DirectCancelScreen() {
   const queryClient = useQueryClient();
 
   const { refetch } = useShuttle();
-  const { bookingId, routeName, routeNameAr, departureTime } = useLocalSearchParams<Params>();
+  const { tripId, routeName, routeNameAr, departureTime } = useLocalSearchParams<Params>();
   const displayRouteName = (isRTL && routeNameAr) ? routeNameAr : (routeName ?? '—');
 
   const [selectedReason, setSelectedReason] = useState<string | null>(null);
@@ -51,9 +51,9 @@ export default function DirectCancelScreen() {
   const [penaltyAmount, setPenaltyAmount] = useState<number | null>(null);
 
   const { data: previewData } = useQuery({
-    queryKey: ['cancel-preview', bookingId],
-    queryFn: () => endpoints.shuttle.cancelPreview(bookingId!),
-    enabled: !!bookingId,
+    queryKey: ['trip-cancel-preview', tripId],
+    queryFn: () => endpoints.trips.cancelPreview(tripId!),
+    enabled: !!tripId,
     retry: 1,
   });
 
@@ -64,10 +64,11 @@ export default function DirectCancelScreen() {
   });
 
   const cancelMutation = useMutation({
-    mutationFn: () => endpoints.shuttle.cancelBookingFinal(bookingId!, selectedReason!),
+    mutationFn: () => endpoints.trips.cancel(tripId!, selectedReason!),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['shuttle-driver-trips'] });
+      queryClient.invalidateQueries({ queryKey: ['shuttle-lines'] });
       refetch();
       // Store penalty from backend response; keep null if field is absent.
       const raw = data as { penaltyAmount?: unknown } | null;
@@ -178,7 +179,7 @@ export default function DirectCancelScreen() {
             </Text>
             {previewData != null ? (
               <Text style={[{ fontSize: Typography.size.xs, color: '#991B1B', fontFamily: 'Inter_700Bold', marginTop: 3, textAlign: TA }]}>
-                {previewData.penaltyAmount > 0
+                {(previewData.penaltyAmount ?? 0) > 0
                   ? t.cancel_penalty_preview.replace('{n}', String(previewData.penaltyAmount))
                   : t.no_penalty_preview}
               </Text>
