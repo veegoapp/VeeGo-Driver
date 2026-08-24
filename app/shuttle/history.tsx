@@ -341,7 +341,6 @@ const TripCard = React.memo(function TripCard({
       pathname: '/shuttle/history-detail' as any,
       params: {
         tripId: trip.id,
-        bookingId: trip.bookingId ?? '',
         routeName: trip.routeName,
         completedAt: trip.completedAt ? trip.completedAt.toISOString() : '',
         earnedAmount: trip.earnedAmount != null ? String(trip.earnedAmount) : '',

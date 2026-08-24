@@ -140,46 +140,11 @@ export const shuttleEndpoints = {
   revenueSummary: (tripId: string) =>
     api.get<TripRevenueSummary>(`/driver/trips/${tripId}/revenue-summary`),
 
-  referTrip: (bookingId: string, driverCode: string) =>
-    api.post<{ referralId?: number }>(`/shuttle/route-bookings/${bookingId}/refer`, { driverCode }),
-
   acceptReferral: (referralId: string) =>
     api.post(`/shuttle/referrals/${referralId}/accept`),
 
   declineReferral: (referralId: string) =>
     api.post(`/shuttle/referrals/${referralId}/decline`),
-
-  // POST /shuttle/route-bookings/:id/final-cancel
-  // Body:     { reason: string }
-  // Response: { success: boolean; penaltyAmount?: number; message?: string }
-  //   penaltyAmount — amount deducted from driver wallet (0 = no penalty, absent = unknown)
-  //   message       — optional human-readable note from backend (e.g. "Penalty waived")
-  cancelBookingFinal: (bookingId: string, reason: string) =>
-    api.post<{ success: boolean; penaltyAmount?: number; message?: string }>(
-      `/shuttle/route-bookings/${bookingId}/final-cancel`,
-      { reason }
-    ),
-
-  cancelPreview: (bookingId: string) =>
-    api.get<{ penaltyAmount: number; minutesUntilDeparture: number; departureDatetime?: string }>(
-      `/shuttle/route-bookings/${bookingId}/cancel-preview`
-    ),
-
-  // NOTE: `direction` on the top-level response and per-station is optional —
-  // not confirmed present on GET /shuttle/route-bookings/:id/trip-detail today.
-  // Typed here so callers can read it once the backend adds it, without
-  // masking its current absence.
-  tripDetail: (bookingId: string) =>
-    api.get<{
-      bookingId: number;
-      tripDatetime: string;
-      routeName: string;
-      routeNameAr?: string;
-      bookedSeats: number;
-      totalSeats: number;
-      direction?: string;
-      stations: Array<{ id: number; name: string; order: number; eta: string; direction?: string }>;
-    }>(`/shuttle/route-bookings/${bookingId}/trip-detail`),
 
   myReferralCode: () => api.get<{ code: string }>('/driver/me/referral-code'),
 
@@ -196,6 +161,22 @@ export const tripsEndpoints = {
     return api.get(`/driver/trips?${params.join('&')}`);
   },
   detail: (tripId: string) => api.get(`/driver/trips/${tripId}`),
+  // GET /driver/trips/:id/detail — the "Start Trip" preview screen's data for
+  // this exact trip (route, seats, station schedule) — replaces the old
+  // bookingId-keyed GET /shuttle/route-bookings/:id/trip-detail, which only
+  // ever returned a "next representative trip" for the whole week's booking.
+  startDetail: (tripId: string) =>
+    api.get<{
+      tripId: number;
+      tripDatetime: string;
+      routeName: string | null;
+      routeNameAr: string | null;
+      bookedSeats: number;
+      totalSeats: number;
+      direction?: string;
+      status: string;
+      stations: Array<{ id: number; name: string; order: number; eta: string | null; direction?: string }>;
+    }>(`/driver/trips/${tripId}/detail`),
   accept: (tripId: string) => api.patch(`/driver/trips/${tripId}/accept`),
   reject: (tripId: string) => api.patch(`/driver/trips/${tripId}/reject`),
   start: (tripId: string) => api.patch(`/driver/trips/${tripId}/start`),

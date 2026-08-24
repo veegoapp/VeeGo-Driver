@@ -22,7 +22,6 @@ import { Spacing } from '@/constants/spacing';
 
 type Params = {
   tripId: string;
-  bookingId: string;
   routeName: string;
   completedAt: string;
   earnedAmount: string;
@@ -33,7 +32,7 @@ type Station = {
   id: number;
   name: string;
   order: number;
-  eta: string;
+  eta?: string;
 };
 
 export default function HistoryDetailScreen() {
@@ -45,15 +44,13 @@ export default function HistoryDetailScreen() {
   const TA = isRTL ? 'right' as const : 'left' as const;
   const locale = language === 'ar' ? 'ar-EG' : 'en-GB';
 
-  const { bookingId, routeName, completedAt, earnedAmount, passengerCount } =
+  const { tripId, routeName, completedAt, earnedAmount, passengerCount } =
     useLocalSearchParams<Params>();
 
-  const hasBookingId = !!bookingId;
-
   const { data: tripDetail, isLoading: detailLoading } = useQuery({
-    queryKey: ['shuttle-trip-detail', bookingId],
-    queryFn: () => endpoints.shuttle.tripDetail(bookingId!),
-    enabled: hasBookingId,
+    queryKey: ['trip-start-detail', tripId],
+    queryFn: () => endpoints.trips.startDetail(tripId!),
+    enabled: !!tripId,
     retry: 1,
   });
 
@@ -80,7 +77,7 @@ export default function HistoryDetailScreen() {
   const earned = earnedAmount ? parseFloat(earnedAmount) : null;
   const paxCount = passengerCount ? parseInt(passengerCount, 10) : null;
 
-  const stations: Station[] = tripDetail?.stations ?? [];
+  const stations: Station[] = (tripDetail?.stations ?? []).map(s => ({ ...s, eta: s.eta ?? undefined }));
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -170,7 +167,7 @@ export default function HistoryDetailScreen() {
           </View>
         ) : stations.length > 0 ? (
           <StationTimeline stations={stations} colors={colors} R={R} TA={TA} t={{ from: t.from, to: t.to }} />
-        ) : !hasBookingId ? (
+        ) : !tripId ? (
           <GlassView style={[styles.emptyStations, { marginTop: Spacing.md }]} borderRadius={16}>
             <MapPin size={24} color={colors.mutedForeground} strokeWidth={1.5} />
             <Text style={[{ fontSize: 13, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: 'center', marginTop: Spacing.sm }]}>

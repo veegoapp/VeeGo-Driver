@@ -102,10 +102,14 @@ export default function TripDetailsScreen() {
     departureTime: effectiveBooking?.departureTime,
   });
 
+  // The trip this screen is actually about — every real navigation into this
+  // screen passes tripId; line?.tripId is a fallback for older deep links.
+  const effectiveTripId = tripId || line?.tripId;
+
   const { data: tripDetailData, isLoading: stationsLoading } = useQuery({
-    queryKey: ['shuttle-trip-detail', bookingId],
-    queryFn: () => endpoints.shuttle.tripDetail(bookingId!),
-    enabled: !!bookingId,
+    queryKey: ['trip-start-detail', effectiveTripId],
+    queryFn: () => endpoints.trips.startDetail(effectiveTripId!),
+    enabled: !!effectiveTripId,
   });
 
   const stations: Station[] = useMemo(() => {
@@ -143,7 +147,7 @@ export default function TripDetailsScreen() {
       pathname: '/shuttle/trip-cancel' as any,
       params: {
         // Both cancel and refer act on this exact trip, not the whole week.
-        tripId: tripId ?? line?.tripId ?? '',
+        tripId: effectiveTripId ?? '',
         routeName: effectiveBooking?.routeName ?? line?.name ?? '',
         departureTime: effectiveBooking?.departureTime ?? '',
         fromStation: line?.from ?? '',
@@ -331,17 +335,15 @@ export default function TripDetailsScreen() {
           <Pressable
             disabled={!isStartEnabled}
             onPress={async () => {
-              if (!bookingId || starting) return;
+              if (!effectiveTripId || starting) return;
               setStarting(true);
               try {
-                const tripId = line?.tripId;
-                if (!tripId) throw new Error('No trip assigned to this route yet');
                 // PATCH /driver/trips/:id/start performs the status transition
                 // and broadcasts SHUTTLE_TRIP_STATUS/ADMIN_TRACK_TRIP itself —
                 // the DRIVER_TRIP_START socket emit that used to duplicate this
                 // broadcast was removed (D5-6/D8-4: dead handler, payload mismatch).
-                await endpoints.trips.start(String(tripId));
-                setStartedTripId(String(tripId));
+                await endpoints.trips.start(String(effectiveTripId));
+                setStartedTripId(String(effectiveTripId));
                 refetch();
                 router.push('/shuttle/trip-active' as any);
               } catch {

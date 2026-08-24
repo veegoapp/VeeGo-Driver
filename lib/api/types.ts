@@ -90,8 +90,8 @@ export interface DriverProfileEnriched {
 }
 
 // Driver-invites-driver referral program (GET /driver/referral-code).
-// Distinct from the shuttle "route handoff" driverCode feature (VGO- prefix,
-// endpoints.shuttle.referTrip/acceptReferral) — that is an unrelated backend system.
+// Distinct from the shuttle "trip handoff" driverCode feature (VGO- prefix,
+// endpoints.trips.refer/acceptReferral) — that is an unrelated backend system.
 export interface DriverReferralInfo {
   code: string;
   config: {
