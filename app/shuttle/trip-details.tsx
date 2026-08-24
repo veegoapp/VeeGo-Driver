@@ -142,11 +142,8 @@ export default function TripDetailsScreen() {
     router.push({
       pathname: '/shuttle/trip-cancel' as any,
       params: {
-        // tripId (this exact trip) is what actually gets cancelled — bookingId
-        // is passed through only for the referral flow, which is still
-        // booking-scoped.
+        // Both cancel and refer act on this exact trip, not the whole week.
         tripId: tripId ?? line?.tripId ?? '',
-        bookingId: bookingId ?? '',
         routeName: effectiveBooking?.routeName ?? line?.name ?? '',
         departureTime: effectiveBooking?.departureTime ?? '',
         fromStation: line?.from ?? '',

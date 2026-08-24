@@ -36,7 +36,8 @@ import { Radius } from '@/constants/radius';
 
 type Params = {
   referralId: string;
-  bookingId: string;
+  tripId?: string;
+  bookingId?: string;
   routeName: string;
   routeNameAr?: string;
   departureTime: string;

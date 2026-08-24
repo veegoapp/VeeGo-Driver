@@ -24,7 +24,8 @@ import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
 
 type Params = {
-  bookingId: string;
+  // The single trip being referred to another driver — not the whole week.
+  tripId: string;
   routeName: string;
   routeNameAr?: string;
   departureTime: string;
@@ -39,7 +40,7 @@ export default function ReferralRequestScreen() {
   const { t, isRTL } = useI18n();
   const TA = isRTL ? 'right' as const : 'left' as const;
 
-  const { bookingId, routeName: routeNameRaw, routeNameAr, departureTime, fromStation, toStation } =
+  const { tripId, routeName: routeNameRaw, routeNameAr, departureTime, fromStation, toStation } =
     useLocalSearchParams<Params>();
   const routeName = (isRTL && routeNameAr) ? routeNameAr : (routeNameRaw ?? '—');
 
@@ -60,7 +61,7 @@ export default function ReferralRequestScreen() {
     }
     setLoading(true);
     try {
-      const result = await endpoints.shuttle.referTrip(bookingId!, driverCode.trim());
+      const result = await endpoints.trips.refer(tripId!, driverCode.trim());
       if (result?.referralId) setPendingReferralId(String(result.referralId));
       setSubmitted(true);
     } catch {
@@ -73,10 +74,10 @@ export default function ReferralRequestScreen() {
   useEffect(() => {
     if (!socket || !submitted) return;
 
-    const handleAccepted = (data: { referralId?: number | string; bookingId?: number | string }) => {
+    const handleAccepted = (data: { referralId?: number | string; tripId?: number | string }) => {
       const matchById = pendingReferralId && String(data.referralId) === pendingReferralId;
-      const matchByBooking = !pendingReferralId && String(data.bookingId) === String(bookingId);
-      if (matchById || matchByBooking) setReferralResult('accepted');
+      const matchByTrip = !pendingReferralId && String(data.tripId) === String(tripId);
+      if (matchById || matchByTrip) setReferralResult('accepted');
     };
 
     const handleDeclined = (data: { referralId?: number | string }) => {
@@ -91,7 +92,7 @@ export default function ReferralRequestScreen() {
       socket.off(SOCKET_EVENTS.REFERRAL_ACCEPTED, handleAccepted);
       socket.off(SOCKET_EVENTS.REFERRAL_DECLINED, handleDeclined);
     };
-  }, [socket, submitted, pendingReferralId, bookingId]);
+  }, [socket, submitted, pendingReferralId, tripId]);
 
   return (
     <KeyboardAvoidingView

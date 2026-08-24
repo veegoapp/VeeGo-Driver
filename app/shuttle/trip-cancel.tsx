@@ -20,11 +20,9 @@ import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
 
 type Params = {
-  // The specific trip to cancel — used for the direct-cancel path.
+  // The specific trip being cancelled or referred — both paths act on this
+  // one trip only, not the driver's whole week.
   tripId: string;
-  // The weekly booking — still used for the "refer to another driver" path,
-  // which remains booking-scoped (finding a driver to take over the week).
-  bookingId: string;
   routeName: string;
   departureTime: string;
   fromStation: string;
@@ -39,7 +37,7 @@ export default function TripCancelScreen() {
   const TA = isRTL ? 'right' as const : 'left' as const;
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
 
-  const { tripId, bookingId, routeName, departureTime, fromStation, toStation } = useLocalSearchParams<Params>();
+  const { tripId, routeName, departureTime, fromStation, toStation } = useLocalSearchParams<Params>();
 
   const { data: previewData, isLoading: previewLoading } = useQuery({
     queryKey: ['trip-cancel-preview', tripId],
@@ -54,7 +52,7 @@ export default function TripCancelScreen() {
   const handleRefer = () => {
     router.push({
       pathname: '/shuttle/referral-request' as any,
-      params: { bookingId, routeName, departureTime, fromStation, toStation },
+      params: { tripId, routeName, departureTime, fromStation, toStation },
     });
   };
 

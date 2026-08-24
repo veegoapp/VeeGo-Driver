@@ -2,7 +2,10 @@ import React, { createContext, useCallback, useContext, useState } from 'react';
 
 export type IncomingReferralPayload = {
   referralId: string;
-  bookingId: string;
+  // Exactly one of these identifies what's being referred — a single trip
+  // (the current default) or, for the older weekly-handoff path, a booking.
+  tripId?: string;
+  bookingId?: string;
   routeName: string;
   routeNameAr?: string;
   departureTime: string;

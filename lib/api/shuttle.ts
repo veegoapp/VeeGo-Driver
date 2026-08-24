@@ -206,6 +206,8 @@ export const tripsEndpoints = {
     api.get<{ penaltyAmount: number | null; minutesUntilDeparture: number | null; departureDatetime: string | null }>(
       `/driver/trips/${tripId}/cancel-preview`
     ),
+  refer: (tripId: string, driverCode: string) =>
+    api.post<{ referralId?: number }>(`/driver/trips/${tripId}/refer`, { driverCode }),
   stations: (tripId: string) => api.get(`/driver/trips/${tripId}/stations`),
   stationsEta: (tripId: string) => api.get<StationEtaResponse>(`/driver/trips/${tripId}/stations/eta`),
   // POST /driver/shuttle/trips/:tripId/sos

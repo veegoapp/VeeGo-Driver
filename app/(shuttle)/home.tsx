@@ -597,7 +597,8 @@ export default function ShuttleHomeScreen() {
                   pathname: '/shuttle/referral-incoming' as any,
                   params: {
                     referralId: first.referralId,
-                    bookingId: first.bookingId,
+                    tripId: first.tripId ?? '',
+                    bookingId: first.bookingId ?? '',
                     routeName: first.routeName,
                     routeNameAr: first.routeNameAr ?? '',
                     departureTime: first.departureTime,
@@ -609,7 +610,9 @@ export default function ShuttleHomeScreen() {
                     totalSeats: first.totalSeats ?? '',
                     lineNumber: first.lineNumber ?? '',
                     vehicleType: first.vehicleType ?? '',
-                    weekStart: first.weekStart ?? '',
+                    // weekStart is only sent for the older weekly-handoff path;
+                    // a single-trip referral shows its own departure date instead.
+                    weekStart: first.weekStart ?? first.departureTime ?? '',
                   },
                 })
               }
