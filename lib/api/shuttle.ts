@@ -17,7 +17,6 @@ export const shuttleEndpoints = {
 
   // ── Route Bookings ───────────────────────────────────────────────────────
   myBookings: () => api.get('/shuttle/route-bookings'),
-  bookingDetail: (id: string) => api.get(`/shuttle/route-bookings/${id}`),
 
   // POST-RECONNECT STATE SYNC
   // Called immediately when the server emits shuttle:state:sync on connect/reconnect.
