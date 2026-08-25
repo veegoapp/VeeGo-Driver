@@ -489,7 +489,7 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
     socket.on(SOCKET_EVENTS.SHUTTLE_TRIP_STATUS, handleTripStatus);
     socket.on(SOCKET_EVENTS.SHUTTLE_STATE_SYNC, handleStateSync);
     socket.on(SOCKET_EVENTS.TRIP_ACTIVATED, handleTripActivated);
-    socket.io.on('reconnect', handleReconnect);
+    socket.io.on(SOCKET_EVENTS.RECONNECT, handleReconnect);
 
     return () => {
       socket.off(SOCKET_EVENTS.NOTIFICATION_NEW, handleNotification);
