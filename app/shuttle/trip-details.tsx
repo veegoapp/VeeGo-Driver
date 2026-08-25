@@ -152,7 +152,7 @@ export default function TripDetailsScreen() {
         // Both cancel and refer act on this exact trip, not the whole week.
         tripId: effectiveTripId ?? '',
         routeName: effectiveBooking?.routeName ?? line?.name ?? '',
-        departureTime: effectiveBooking?.departureTime ?? '',
+        departureTime: effectiveBooking?.departureTime ?? line?.departure ?? '',
         fromStation: line?.from ?? '',
         toStation: line?.to ?? '',
       },

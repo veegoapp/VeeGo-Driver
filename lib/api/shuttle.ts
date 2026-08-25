@@ -139,6 +139,9 @@ export const shuttleEndpoints = {
   revenueSummary: (tripId: string) =>
     api.get<TripRevenueSummary>(`/driver/trips/${tripId}/revenue-summary`),
 
+  incomingReferrals: () =>
+    api.get<{ data: Array<Record<string, unknown>> }>('/shuttle/referrals/incoming'),
+
   acceptReferral: (referralId: string) =>
     api.post(`/shuttle/referrals/${referralId}/accept`),
 

@@ -219,6 +219,10 @@ export default function ShuttleLinesScreen() {
       queryClient.invalidateQueries({ queryKey: ['shuttle-available-weeks', bookingRoute?.id] });
       queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['shuttle-lines'] });
+      // Upcoming Trips reads from shuttle-driver-trips, not shuttle-lines —
+      // without this the newly booked week doesn't appear there until a
+      // socket event or the app backgrounding forces a refetch.
+      queryClient.invalidateQueries({ queryKey: ['shuttle-driver-trips'] });
       // Keep the sheet open — driver can still browse other weeks/slots.
       // Only reset the slot selection so the sheet reflects the new state.
       setSelectedSlot(null);

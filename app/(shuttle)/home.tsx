@@ -669,22 +669,24 @@ export default function ShuttleHomeScreen() {
                   colors={colors}
                   isRTL={isRTL}
                   onPress={() => {
-                    if (!booking) return;
+                    // A trip picked up via referral or admin single-trip
+                    // assignment has no matching weekly booking — fall back
+                    // to the line's own fields instead of no-op'ing.
                     router.push({
                       pathname: '/shuttle/trip-details' as any,
                       params: {
-                        bookingId: String(booking.id),
+                        bookingId: booking ? String(booking.id) : '',
                         tripId: line.tripId ?? '',
-                        routeId: String(booking.routeId),
+                        routeId: String(booking?.routeId ?? line.routeId),
                         // Pass full booking snapshot so trip-details can render
                         // even when ShuttleProvider is not in scope for that route group.
-                        routeName: booking.routeName,
-                        routeNameAr: booking.routeNameAr ?? '',
-                        departureTime: booking.departureTime,
-                        weekStart: booking.weekStart,
-                        weekEnd: booking.weekEnd ?? '',
-                        status: booking.status,
-                        direction: booking.direction ?? '',
+                        routeName: booking?.routeName ?? line.name,
+                        routeNameAr: booking?.routeNameAr ?? '',
+                        departureTime: booking?.departureTime ?? line.departure,
+                        weekStart: booking?.weekStart ?? '',
+                        weekEnd: booking?.weekEnd ?? '',
+                        status: booking?.status ?? '',
+                        direction: booking?.direction ?? line.direction ?? '',
                       },
                     });
                   }}

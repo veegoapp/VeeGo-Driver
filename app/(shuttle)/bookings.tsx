@@ -356,19 +356,22 @@ export default function BookingsScreen() {
                       colors={colors}
                       isRTL={isRTL}
                       onPress={() => {
-                        if (!b) return;
+                        // A trip picked up via referral or admin single-trip
+                        // assignment has no matching weekly booking — fall
+                        // back to the line's own fields instead of no-op'ing.
                         router.push({
                           pathname: '/shuttle/trip-details',
                           params: {
-                            bookingId: String(b.id),
+                            bookingId: b ? String(b.id) : '',
                             tripId: line.tripId ?? '',
-                            routeId: String(b.routeId),
-                            routeName: b.routeName,
-                            routeNameAr: b.routeNameAr ?? '',
-                            departureTime: b.departureTime,
-                            weekStart: b.weekStart ?? '',
-                            weekEnd: b.weekEnd ?? '',
-                            status: b.status,
+                            routeId: String(b?.routeId ?? line.routeId),
+                            routeName: b?.routeName ?? line.name,
+                            routeNameAr: b?.routeNameAr ?? '',
+                            departureTime: b?.departureTime ?? line.departure,
+                            weekStart: b?.weekStart ?? '',
+                            weekEnd: b?.weekEnd ?? '',
+                            status: b?.status ?? '',
+                            direction: b?.direction ?? line.direction ?? '',
                           },
                         } as any);
                       }}
