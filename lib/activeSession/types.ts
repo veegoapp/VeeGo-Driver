@@ -92,7 +92,7 @@ export type DriverShuttlePassenger = {
 export type DriverShuttleWeeklyBooking = {
   id: number;
   routeId: number;
-  timeSlotId: number;
+  timeSlotId: string | null;
   direction: string;
   weekStart: string;
   weekEnd: string;
