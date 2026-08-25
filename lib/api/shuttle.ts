@@ -164,6 +164,7 @@ export const tripsEndpoints = {
     }>(`/driver/trips/${tripId}/detail`),
   accept: (tripId: string) => api.patch(`/driver/trips/${tripId}/accept`),
   reject: (tripId: string) => api.patch(`/driver/trips/${tripId}/reject`),
+  board: (tripId: string) => api.patch(`/driver/trips/${tripId}/board`),
   start: (tripId: string) => api.patch(`/driver/trips/${tripId}/start`),
   complete: (tripId: string) => api.patch(`/driver/trips/${tripId}/complete`),
   cancel: (tripId: string, reason: string) =>

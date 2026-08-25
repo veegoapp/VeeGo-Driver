@@ -480,6 +480,8 @@ export const ar: Translations = {
   bonus_completed: 'مكتمل',
   trip_details_title: 'تفاصيل الرحلة',
   start_trip: 'بدء الرحلة',
+  arrived_start_boarding: 'وصلت — ابدأ التصعيد',
+  arrived_failed: 'تعذر تسجيل الوصول. حاول مرة أخرى.',
   cancel_trip_action: 'إلغاء الرحلة',
   start_trip_hint: 'متاح قبل ٣٠ دقيقة من الموعد',
   route_timeline: 'محطات الخط',
