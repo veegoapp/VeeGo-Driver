@@ -1,6 +1,6 @@
 import { showAlert } from '@/lib/alert';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { safeBack } from '@/lib/navUtils';
 import {
   AlertTriangle, ArrowRight, Banknote, Check, ChevronLeft, Clock, MapPin, Navigation2, Share2, Users, X,
@@ -92,9 +92,14 @@ export default function ShuttleTripActiveScreen() {
   const isLastStop = stops.length > 0 && currentStopIndex >= stops.length - 1;
   // Prefer session tripId (authoritative); fall back to ShuttleContext while
   // DriverShuttleSession is not yet initialized or not yet providing a value.
-  // Normalize to string | undefined to preserve compatibility with API endpoints
-  // and socket comparisons that expect a string.
-  const _rawTripId = shuttleSession?.tripId ?? activeLine?.tripId;
+  // Route param set by the Start Trip flow (app/shuttle/trip-details.tsx) —
+  // takes priority over ShuttleContext's ambient "activeLine" (first line
+  // with status in-progress), which can still be stale or resolve to a
+  // different trip right after Start and would join live-tracking to the
+  // wrong trip. Normalize to string | undefined to preserve compatibility
+  // with API endpoints and socket comparisons that expect a string.
+  const { tripId: routeTripId } = useLocalSearchParams<{ tripId?: string }>();
+  const _rawTripId = shuttleSession?.tripId ?? routeTripId ?? activeLine?.tripId;
   const tripId: string | undefined = _rawTripId != null ? String(_rawTripId) : undefined;
   // Prefer session direction for display; fall back to ShuttleContext.
   const direction = shuttleSession?.direction ?? activeLine?.direction;
@@ -423,9 +428,12 @@ export default function ShuttleTripActiveScreen() {
         },
       });
     } catch {
-      router.replace('/shuttle/trip-complete' as any);
+      // The completion request failed server-side — do NOT navigate to the
+      // success screen. Restore the exit guard and let the driver retry.
+      isFinishingRef.current = false;
+      showAlert(t.error, t.trip_complete_error);
     }
-  }, [activeLine]);
+  }, [activeLine, t]);
 
   const updatePassengerStatus = useCallback((passengerId: string, status: PassengerStatus) => {
     setPassengerStatuses(prev => ({ ...prev, [passengerId]: status }));

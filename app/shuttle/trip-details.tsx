@@ -125,10 +125,13 @@ export default function TripDetailsScreen() {
   }, []);
 
   const isStartEnabled = useMemo(() => {
+    // Opens 30 min before departure and stays open indefinitely after — a
+    // late driver must still be able to start (the backend enforces no
+    // lateness cutoff of its own; this is purely an early-start guard).
     if (tripDetailData?.tripDatetime) {
       const dept = new Date(tripDetailData.tripDatetime);
       const diff = (dept.getTime() - Date.now()) / 60000;
-      return diff >= 0 && diff <= 30;
+      return diff <= 30;
     }
     // Fallback to time-only check while tripDetail is loading
     const time = effectiveBooking?.departureTime;
@@ -139,7 +142,7 @@ export default function TripDetailsScreen() {
     const m = parseInt(match[2], 10);
     const now = new Date();
     const diff = (h * 60 + m) - (now.getHours() * 60 + now.getMinutes());
-    return diff >= 0 && diff <= 30;
+    return diff <= 30;
   }, [tripDetailData?.tripDatetime, effectiveBooking?.departureTime]);
 
   const handleCancelPress = () => {
@@ -345,7 +348,14 @@ export default function TripDetailsScreen() {
                 await endpoints.trips.start(String(effectiveTripId));
                 setStartedTripId(String(effectiveTripId));
                 refetch();
-                router.push('/shuttle/trip-active' as any);
+                // Pass the tripId explicitly — ShuttleContext's ambient
+                // "activeLine" (first line with status in-progress) can still
+                // be stale or point at a different trip right after Start,
+                // which would join live-tracking to the wrong trip.
+                router.push({
+                  pathname: '/shuttle/trip-active' as any,
+                  params: { tripId: String(effectiveTripId) },
+                });
               } catch {
                 setStartedTripId(null);
                 showAlert('', t.start_trip_failed);
