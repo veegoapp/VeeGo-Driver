@@ -63,7 +63,7 @@ export default function ShuttleHomeScreen() {
   const { socket, connected: socketConnected } = useSocket();
   const { currency } = useServiceControl();
 
-  const { activeLine, stops, currentStopIndex, allLines, routes, renewalBooking, myBookings, tripCancelledBanner, dismissTripCancelledBanner, bookingStatusBanner, dismissBookingStatusBanner, refetch } = useShuttle();
+  const { activeLine, stops, currentStopIndex, allLines, routes, renewalBooking, myBookings, tripCancelledBanner, dismissTripCancelledBanner, bookingStatusBanner, dismissBookingStatusBanner, refetch, error: shuttleError } = useShuttle();
 
   // Broadcast GPS location every 5 s while the driver is online
   useLocationBroadcast({ enabled: online, tripId: activeLine?.tripId ?? null });
@@ -492,8 +492,10 @@ export default function ShuttleHomeScreen() {
           <StatItem label={t.active} value={String(allLines.filter(l => l.status === 'in-progress').length)} colors={colors} />
         </GlassView>
 
-        {/* Active trip card */}
-        {activeLine && online && (
+        {/* Active trip card — shown regardless of the online toggle: this is
+            the only entry point back into the active-trip screen, and going
+            offline mid-trip must not hide it. */}
+        {activeLine && (
           <Animated.View style={[{ marginTop: Spacing.lg, opacity: cardAnim, transform: [{ translateY: cardAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
             <GlassView strong style={[styles.activeCard, { borderColor: '#1e1e2833' }]} borderRadius={24}>
               <View style={styles.activeCardHeader}>
@@ -644,7 +646,16 @@ export default function ShuttleHomeScreen() {
           {t.upcoming_trips}
         </Text>
 
-        {upcomingLines.length === 0 ? (
+        {shuttleError ? (
+          <Pressable onPress={() => refetch()}>
+            <GlassView style={[styles.upcomingEmpty, { borderColor: '#ef4444' }]} borderRadius={16}>
+              <Calendar size={20} color="#ef4444" strokeWidth={2} />
+              <Text style={[styles.upcomingEmptyText, { color: '#ef4444', fontFamily: 'Inter_400Regular' }]}>
+                {t.trips_load_failed}
+              </Text>
+            </GlassView>
+          </Pressable>
+        ) : upcomingLines.length === 0 ? (
           <GlassView style={[styles.upcomingEmpty, { borderColor: colors.border }]} borderRadius={16}>
             <Calendar size={20} color={colors.mutedForeground} strokeWidth={2} />
             <Text style={[styles.upcomingEmptyText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
@@ -669,22 +680,24 @@ export default function ShuttleHomeScreen() {
                   colors={colors}
                   isRTL={isRTL}
                   onPress={() => {
-                    if (!booking) return;
+                    // A trip picked up via referral or admin single-trip
+                    // assignment has no matching weekly booking — fall back
+                    // to the line's own fields instead of no-op'ing.
                     router.push({
                       pathname: '/shuttle/trip-details' as any,
                       params: {
-                        bookingId: String(booking.id),
+                        bookingId: booking ? String(booking.id) : '',
                         tripId: line.tripId ?? '',
-                        routeId: String(booking.routeId),
+                        routeId: String(booking?.routeId ?? line.routeId),
                         // Pass full booking snapshot so trip-details can render
                         // even when ShuttleProvider is not in scope for that route group.
-                        routeName: booking.routeName,
-                        routeNameAr: booking.routeNameAr ?? '',
-                        departureTime: booking.departureTime,
-                        weekStart: booking.weekStart,
-                        weekEnd: booking.weekEnd ?? '',
-                        status: booking.status,
-                        direction: booking.direction ?? '',
+                        routeName: booking?.routeName ?? line.name,
+                        routeNameAr: booking?.routeNameAr ?? '',
+                        departureTime: booking?.departureTime ?? line.departure,
+                        weekStart: booking?.weekStart ?? '',
+                        weekEnd: booking?.weekEnd ?? '',
+                        status: booking?.status ?? '',
+                        direction: booking?.direction ?? line.direction ?? '',
                       },
                     });
                   }}

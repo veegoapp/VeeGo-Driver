@@ -1,6 +1,6 @@
 import { showAlert } from '@/lib/alert';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { safeBack } from '@/lib/navUtils';
 import {
   AlertTriangle, ArrowRight, Banknote, Check, ChevronLeft, Clock, MapPin, Navigation2, Share2, Users, X,
@@ -17,6 +17,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useDriverLocation, haversineMeters } from '@/hooks/useDriverLocation';
+import { useGPSPermissionRecheck } from '@/hooks/useGPSProvider';
 import { useRoadEta } from '@/hooks/useRoadEta';
 import { useRoadPolyline } from '@/hooks/useRoadPolyline';
 import { useActiveLocationTracking } from '@/hooks/useActiveLocationTracking';
@@ -92,9 +93,14 @@ export default function ShuttleTripActiveScreen() {
   const isLastStop = stops.length > 0 && currentStopIndex >= stops.length - 1;
   // Prefer session tripId (authoritative); fall back to ShuttleContext while
   // DriverShuttleSession is not yet initialized or not yet providing a value.
-  // Normalize to string | undefined to preserve compatibility with API endpoints
-  // and socket comparisons that expect a string.
-  const _rawTripId = shuttleSession?.tripId ?? activeLine?.tripId;
+  // Route param set by the Start Trip flow (app/shuttle/trip-details.tsx) —
+  // takes priority over ShuttleContext's ambient "activeLine" (first line
+  // with status in-progress), which can still be stale or resolve to a
+  // different trip right after Start and would join live-tracking to the
+  // wrong trip. Normalize to string | undefined to preserve compatibility
+  // with API endpoints and socket comparisons that expect a string.
+  const { tripId: routeTripId } = useLocalSearchParams<{ tripId?: string }>();
+  const _rawTripId = shuttleSession?.tripId ?? routeTripId ?? activeLine?.tripId;
   const tripId: string | undefined = _rawTripId != null ? String(_rawTripId) : undefined;
   // Prefer session direction for display; fall back to ShuttleContext.
   const direction = shuttleSession?.direction ?? activeLine?.direction;
@@ -132,8 +138,10 @@ export default function ShuttleTripActiveScreen() {
   }, [activeLine, shuttleSession, tripId]);
 
   // ── GPS ────────────────────────────────────────────────────────────────────
-  const { position: gpsPos } = useDriverLocation(!!activeLine || !!shuttleSession);
+  const tripIsLive = !!activeLine || !!shuttleSession;
+  const { position: gpsPos, permissionDenied: gpsPermissionDenied } = useDriverLocation(tripIsLive);
   const effectivePos = gpsPos;
+  const recheckGpsPermission = useGPSPermissionRecheck();
 
   // Haversine used only for proximity-based phase transitions (fast, no network)
   const proximityM = useMemo(() => {
@@ -389,7 +397,23 @@ export default function ShuttleTripActiveScreen() {
         }
 
         setFailedStationActions([]);
-        await endpoints.trips.stationCompleted(tripId, stationId);
+        // A dropped network here (after per-passenger boarding/no-show calls
+        // already succeeded) used to fall through to the generic outer catch
+        // with no retry — a plain re-tap would then re-run those already-
+        // successful per-passenger calls too. Retry just this call instead.
+        try {
+          await endpoints.trips.stationCompleted(tripId, stationId);
+        } catch {
+          showAlert(
+            t.error,
+            t.station_action_error,
+            [
+              { text: t.cancel, style: 'cancel' },
+              { text: t.retry_label, onPress: () => { handleNextStop([]); } },
+            ]
+          );
+          return;
+        }
         void fetchStationEtas(); // refresh ETAs after recording completion
       }
       nextStop();
@@ -402,16 +426,19 @@ export default function ShuttleTripActiveScreen() {
   }, [isNextLoading, tripId, stationId, passengerStatuses, passengers, nextStop, t, fetchStationEtas]);
 
   const handleFinishRoute = useCallback(async () => {
-    if (!activeLine) return;
+    // Use the screen's own resolved tripId (session → route param →
+    // ShuttleContext fallback) — activeLine.tripId alone can be stale or
+    // point at a different trip than the one actually on screen, which used
+    // to leave Finish Route silently doing nothing (or completing the wrong
+    // trip) when the route's data was missing from the routes list.
+    if (!tripId) return;
     isFinishingRef.current = true;
     try {
-      const id = activeLine.tripId;
-      if (!id) throw new Error('No trip ID');
       // PATCH /driver/trips/:id/complete performs the status transition and
       // broadcasts SHUTTLE_TRIP_STATUS/ADMIN_TRACK_TRIP itself — the
       // DRIVER_TRIP_COMPLETE socket emit that used to duplicate this
       // broadcast was removed (D5-6/D8-4: dead handler, payload mismatch).
-      const result = await endpoints.trips.complete(id) as ShuttleCompleteResponse;
+      const result = await endpoints.trips.complete(tripId) as ShuttleCompleteResponse;
       const earned = result?.earnedAmount ?? result?.data?.earnedAmount;
       const balance = result?.walletBalance ?? result?.data?.walletBalance;
       router.replace({
@@ -419,13 +446,16 @@ export default function ShuttleTripActiveScreen() {
         params: {
           earnedAmount: earned != null ? String(earned) : '',
           walletBalance: balance != null ? String(balance) : '',
-          tripId: activeLine.tripId ?? '',
+          tripId,
         },
       });
     } catch {
-      router.replace('/shuttle/trip-complete' as any);
+      // The completion request failed server-side — do NOT navigate to the
+      // success screen. Restore the exit guard and let the driver retry.
+      isFinishingRef.current = false;
+      showAlert(t.error, t.trip_complete_error);
     }
-  }, [activeLine]);
+  }, [tripId, t]);
 
   const updatePassengerStatus = useCallback((passengerId: string, status: PassengerStatus) => {
     setPassengerStatuses(prev => ({ ...prev, [passengerId]: status }));
@@ -560,6 +590,34 @@ export default function ShuttleTripActiveScreen() {
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <View style={styles.container}>
+      {/* GPS permission is required to run a trip — an empty map with no
+          location broadcast to passengers used to fail completely silently.
+          Block trip actions entirely until it's granted. */}
+      {tripIsLive && gpsPermissionDenied && (
+        <View style={[StyleSheet.absoluteFill, styles.gpsBlockOverlay, { paddingTop: topPad }]}>
+          <GlassView strong style={styles.gpsBlockCard} borderRadius={24}>
+            <AlertTriangle size={32} color="#ef4444" strokeWidth={2} />
+            <Text style={[styles.gpsBlockTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
+              {t.gps_permission_required_title}
+            </Text>
+            <Text style={[styles.gpsBlockBody, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
+              {t.gps_permission_required_body}
+            </Text>
+            <Pressable
+              style={[styles.gpsBlockBtn, { backgroundColor: '#3D52D5' }]}
+              onPress={() => Linking.openSettings().catch(() => {})}
+            >
+              <Text style={[styles.gpsBlockBtnText, { fontFamily: 'Inter_700Bold' }]}>{t.open_settings}</Text>
+            </Pressable>
+            <Pressable style={styles.gpsBlockRetryBtn} onPress={recheckGpsPermission}>
+              <Text style={[styles.gpsBlockRetryText, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>
+                {t.ive_enabled_it}
+              </Text>
+            </Pressable>
+          </GlassView>
+        </View>
+      )}
+
       {/* ── Map — fills full screen, both sheets overlay on top ──────────── */}
       <View style={StyleSheet.absoluteFill}>
         <MapBackdrop
@@ -1006,6 +1064,23 @@ const AtStopSheet = React.memo(function AtStopSheet({
 
 const styles = StyleSheet.create({
   container: { flex: 1, overflow: 'hidden' },
+
+  // GPS permission block
+  gpsBlockOverlay: {
+    zIndex: 100,
+    elevation: 100,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.xl,
+  },
+  gpsBlockCard: { padding: Spacing.xl, alignItems: 'center', gap: 10, width: '100%', maxWidth: 360 },
+  gpsBlockTitle: { fontSize: Typography.size.lg, textAlign: 'center', marginTop: 4 },
+  gpsBlockBody: { fontSize: 13, textAlign: 'center', lineHeight: 19 },
+  gpsBlockBtn: { alignSelf: 'stretch', height: 48, borderRadius: Radius.lg, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
+  gpsBlockBtnText: { color: '#fff', fontSize: 15 },
+  gpsBlockRetryBtn: { paddingVertical: 10 },
+  gpsBlockRetryText: { fontSize: 13 },
 
   // Top bar
   topBar: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, paddingHorizontal: Spacing.lg },

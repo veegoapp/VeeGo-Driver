@@ -118,6 +118,15 @@ export default function ShuttleProfileScreen() {
     retry: 1,
   });
 
+  // The real referral code — enriched?.referralCode is never actually
+  // populated by the backend, so this used to fall back to a fabricated
+  // "VGO-XXXX"-style code that fails validation on the receiving end.
+  const { data: shuttleReferralInfo } = useQuery({
+    queryKey: ['driver-shuttle-referral-code'],
+    queryFn: endpoints.shuttle.myReferralCode,
+    retry: 1,
+  });
+
   // Merge: prefer enriched, degrade to base
   const id = enriched?.id ?? base?.id ?? null;
   const name = enriched?.name ?? base?.name ?? null;
@@ -131,13 +140,15 @@ export default function ShuttleProfileScreen() {
   // const bonusTargets = enriched?.bonusTargets ?? [];
 
   const referralCode: string = enriched?.referralCode
-    ?? (id ? `VGO-${String(id).slice(0, 4).toUpperCase()}` : 'VGO-XXXX');
+    ?? shuttleReferralInfo?.code
+    ?? '';
 
   const avatarUri = avatar
     ?? `https://ui-avatars.com/api/?name=${encodeURIComponent(name ?? 'Driver')}&background=1e1e28&color=fff&size=256`;
 
   // ── Clipboard ─────────────────────────────────────────────────────────
   const handleCopyCode = async () => {
+    if (!referralCode) return;
     try {
       await Clipboard.setStringAsync(referralCode);
     } catch {
@@ -312,7 +323,7 @@ export default function ShuttleProfileScreen() {
               {t.referral_code_section}
             </Text>
             <Text style={[styles.referralCode, { color: colors.foreground, textAlign: TA }]}>
-              {referralCode}
+              {referralCode || '—'}
             </Text>
             <Text style={[styles.referralHint, { color: colors.mutedForeground, textAlign: TA }]}>
               {t.referral_code_copy_hint}

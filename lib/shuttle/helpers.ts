@@ -92,10 +92,13 @@ export function mapStatus(s: string): 'upcoming' | 'in-progress' | 'completed' |
   return 'upcoming';
 }
 
-export function formatTime(iso: string): string {
+// locale defaults to 'en-US' for callers that don't have a language context
+// available — pass the app's current locale (e.g. 'ar-EG' when isRTL) to
+// keep this consistent with the rest of the app's date/time formatting.
+export function formatTime(iso: string, locale = 'en-US'): string {
   if (!iso) return '—';
   try {
-    return new Date(iso).toLocaleTimeString('en-US', {
+    return new Date(iso).toLocaleTimeString(locale, {
       hour: '2-digit',
       minute: '2-digit',
       hour12: false,
@@ -108,10 +111,10 @@ export function formatTime(iso: string): string {
 // Short weekday + day/month date, e.g. "Mon, 25 Aug" — used to tell same-route
 // trips on different days apart in a per-trip list (formatTime alone only
 // shows the time-of-day and would make every day look identical).
-export function formatDate(iso: string | undefined): string {
+export function formatDate(iso: string | undefined, locale = 'en-US'): string {
   if (!iso) return '—';
   try {
-    return new Date(iso).toLocaleDateString('en-US', {
+    return new Date(iso).toLocaleDateString(locale, {
       weekday: 'short',
       day: '2-digit',
       month: 'short',

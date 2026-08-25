@@ -12,6 +12,7 @@ import { showAlert } from '@/lib/alert';
  */
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { safeBack } from '@/lib/navUtils';
 import { Calendar, Check, ChevronLeft, Clock, Users, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
@@ -86,6 +87,7 @@ export default function ReferralIncomingScreen() {
   const [resolved, setResolved] = useState<'accepted' | 'declined' | null>(null);
 
   const { dismissReferral } = useReferral();
+  const queryClient = useQueryClient();
 
   // Auto-clear the badge for this referral as soon as the screen is viewed
   useEffect(() => {
@@ -96,6 +98,11 @@ export default function ReferralIncomingScreen() {
     setAccepting(true);
     try {
       await endpoints.shuttle.acceptReferral(referralId!);
+      // Without this, the accepting driver returns home and the referred
+      // trip is absent from Upcoming Trips until a manual refresh.
+      queryClient.invalidateQueries({ queryKey: ['shuttle-driver-trips'] });
+      queryClient.invalidateQueries({ queryKey: ['shuttle-lines'] });
+      queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
       setResolved('accepted');
     } catch {
       showAlert('', t.accept_trip_failed);

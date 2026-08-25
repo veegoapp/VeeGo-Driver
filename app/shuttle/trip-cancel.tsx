@@ -39,7 +39,7 @@ export default function TripCancelScreen() {
 
   const { tripId, routeName, departureTime, fromStation, toStation } = useLocalSearchParams<Params>();
 
-  const { data: previewData, isLoading: previewLoading } = useQuery({
+  const { data: previewData, isLoading: previewLoading, isError: previewError, refetch: refetchPreview } = useQuery({
     queryKey: ['trip-cancel-preview', tripId],
     queryFn: () => endpoints.trips.cancelPreview(tripId!),
     enabled: !!tripId,
@@ -91,6 +91,20 @@ export default function TripCancelScreen() {
             </View>
           </View>
         </GlassView>
+
+        {/* Penalty preview failed — the driver must not be able to confirm a
+            cancellation with zero indication a wallet deduction is coming,
+            so Direct Cancel below is blocked until this succeeds. */}
+        {previewError && (
+          <Pressable onPress={() => refetchPreview()}>
+            <View style={[styles.penaltyBanner, { backgroundColor: '#FEF2F2', borderColor: '#FCA5A5' }]}>
+              <AlertCircle size={16} color="#DC2626" strokeWidth={2} />
+              <Text style={[{ fontSize: 13, fontFamily: 'Inter_700Bold', color: '#DC2626', flex: 1, textAlign: TA }]}>
+                {t.cancel_penalty_check_failed}
+              </Text>
+            </View>
+          </Pressable>
+        )}
 
         {/* Penalty preview banner */}
         {(previewLoading || previewData != null) && (
@@ -157,10 +171,13 @@ export default function TripCancelScreen() {
             </GlassView>
           </Pressable>
 
-          {/* Option B: Direct cancellation */}
+          {/* Option B: Direct cancellation — blocked while the penalty
+              preview hasn't succeeded, so a wallet deduction can never be a
+              surprise. */}
           <Pressable
-            onPress={handleDirectCancel}
-            style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.99 : 1 }] }]}
+            onPress={previewError ? undefined : handleDirectCancel}
+            disabled={previewError}
+            style={({ pressed }) => [{ opacity: previewError ? 0.5 : pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.99 : 1 }] }]}
           >
             <GlassView style={[styles.optionCard, { flexDirection: R, borderColor: '#FCA5A580', borderWidth: 1 }]} borderRadius={20}>
               <View style={[styles.optionIcon, { backgroundColor: '#FEF2F2' }]}>

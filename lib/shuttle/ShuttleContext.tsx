@@ -199,12 +199,24 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
     else tripsByRouteId.set(trip.routeId, [trip]);
   }
 
+  const routesById = new Map(backendRoutes.map(r => [r.id, r]));
   const allLines: ShuttleLine[] = backendRoutes.flatMap(route => {
     const trips = tripsByRouteId.get(route.id);
     return trips && trips.length > 0
       ? trips.map(trip => buildLine(route, trip))
       : [buildLine(route, undefined)];
   });
+
+  // GET /shuttle/lines (backendRoutes) only returns active routes — a trip
+  // on a route that's since been deactivated or filtered out would otherwise
+  // silently vanish from Upcoming Trips, the active-trip lookup, and the
+  // stats row. Build a degraded line for those instead of dropping them.
+  for (const [routeId, trips] of tripsByRouteId) {
+    if (routesById.has(routeId)) continue;
+    for (const trip of trips) {
+      allLines.push(buildLine({ id: routeId, name: '—', estimatedDuration: 0, basePrice: 0 }, trip));
+    }
+  }
 
   // A route can now have more than one line (outbound + return); this keeps
   // the pre-existing "single active trip drives the map" assumption used by
@@ -364,6 +376,7 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
       }
       queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['shuttle-lines'] });
+      queryClient.invalidateQueries({ queryKey: ['shuttle-driver-trips'] });
       setBookingStatusBanner({
         type: 'cancelled',
         message: data?.reason
@@ -389,10 +402,15 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
       });
     };
 
-    // Trip crossed the minimum-passenger threshold (pending → active)
+    // Trip crossed the minimum-passenger threshold (pending → active), or was
+    // started/completed/cancelled — also invalidate shuttle-driver-trips,
+    // which is what actually drives each trip card's status/list membership
+    // (shuttle-lines alone left a live cancellation's badge stale and the
+    // card sitting in the wrong list with a Cancel button that still fired).
     const handleTripStatus = () => {
       queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['shuttle-lines'] });
+      queryClient.invalidateQueries({ queryKey: ['shuttle-driver-trips'] });
     };
 
     // Task 3c: SHUTTLE_BOOKING_CREATED — silent refresh of bookings.
@@ -471,7 +489,7 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
     socket.on(SOCKET_EVENTS.SHUTTLE_TRIP_STATUS, handleTripStatus);
     socket.on(SOCKET_EVENTS.SHUTTLE_STATE_SYNC, handleStateSync);
     socket.on(SOCKET_EVENTS.TRIP_ACTIVATED, handleTripActivated);
-    socket.io.on('reconnect', handleReconnect);
+    socket.io.on(SOCKET_EVENTS.RECONNECT, handleReconnect);
 
     return () => {
       socket.off(SOCKET_EVENTS.NOTIFICATION_NEW, handleNotification);
@@ -527,7 +545,10 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
         loading:
           routesLoading || bookingsLoading || tripsLoading || stationsLoading,
         listLoading: routesLoading || bookingsLoading,
-        error: (routesError ?? bookingsError) as Error | null,
+        // tripsError used to be silently dropped here — a /driver/trips
+        // fetch failure rendered the exact same empty state as genuinely
+        // having no trips, with zero indication anything had gone wrong.
+        error: (routesError ?? bookingsError ?? tripsError) as Error | null,
         refetch,
         nextStop,
         togglePassenger,

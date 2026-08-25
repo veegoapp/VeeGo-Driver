@@ -1,6 +1,7 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { Calendar, CheckCircle, Users } from 'lucide-react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { router } from 'expo-router';
+import { Calendar, CheckCircle, XCircle, Users } from 'lucide-react-native';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
@@ -22,6 +23,14 @@ export function CompletedTripCard({
   const TA = isRTL ? 'right' as const : 'left' as const;
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
   const netEarnings = formatCurrency(trip.earnings, t.egp);
+  // trip.status carries the real backend status — a cancelled/no-show trip
+  // used to render hardcoded green "Completed" with an earnings figure
+  // attached regardless. Only "completed" gets the green treatment.
+  const isCancelled = trip.status === 'cancelled';
+  const statusColor = isCancelled ? '#ef4444' : '#22c55e';
+  const statusColorDark = isCancelled ? '#dc2626' : '#16a34a';
+  const StatusIcon = isCancelled ? XCircle : CheckCircle;
+  const statusLabel = isCancelled ? t.status_cancelled : t.completed_label;
   const grossRevenue = trip.revenueAmount != null ? formatCurrency(trip.revenueAmount, t.egp) : null;
   const passengersLabel =
     trip.boardedPassengers != null && trip.totalPassengers != null
@@ -31,8 +40,20 @@ export function CompletedTripCard({
       : '—';
 
   return (
+    <Pressable
+      onPress={() => router.push({
+        pathname: '/shuttle/history-detail' as any,
+        params: {
+          tripId: trip.id,
+          routeName: trip.routeName ?? '',
+          completedAt: trip.date ?? '',
+          earnedAmount: trip.earnings != null ? String(trip.earnings) : '',
+          passengerCount: trip.boardedPassengers != null ? String(trip.boardedPassengers) : '',
+        },
+      })}
+    >
     <GlassView style={styles.tripCard} borderRadius={14}>
-      <View style={[styles.tripCardAccent, { backgroundColor: '#22c55e' }]} />
+      <View style={[styles.tripCardAccent, { backgroundColor: statusColor }]} />
       <View style={{ flex: 1, gap: 5 }}>
         <Text
           style={[styles.bookingCardRoute, { color: colors.foreground, textAlign: TA }]}
@@ -65,7 +86,7 @@ export function CompletedTripCard({
       </View>
 
       <View style={{ alignItems: 'flex-end', gap: Spacing.xs }}>
-        <Text style={[styles.earningsText, { color: '#16a34a' }]}>
+        <Text style={[styles.earningsText, { color: statusColorDark }]}>
           {netEarnings}
         </Text>
         {grossRevenue && (
@@ -73,12 +94,13 @@ export function CompletedTripCard({
             {t.gross_revenue} {grossRevenue}
           </Text>
         )}
-        <View style={[styles.completedBadge, { backgroundColor: '#22c55e18' }]}>
-          <CheckCircle size={9} color="#16a34a" strokeWidth={2.5} />
-          <Text style={[styles.completedBadgeText, { color: '#16a34a' }]}>{t.completed_label}</Text>
+        <View style={[styles.completedBadge, { backgroundColor: `${statusColor}18` }]}>
+          <StatusIcon size={9} color={statusColorDark} strokeWidth={2.5} />
+          <Text style={[styles.completedBadgeText, { color: statusColorDark }]}>{statusLabel}</Text>
         </View>
       </View>
     </GlassView>
+    </Pressable>
   );
 }
 

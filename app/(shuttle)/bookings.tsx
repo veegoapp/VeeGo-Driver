@@ -77,7 +77,7 @@ export function getWeekBucket(weekStart: string): WeekBucket {
   return 'other';
 }
 
-export function formatWeekRange(weekStart: string, weekEnd?: string, locale = 'ar-EG'): string {
+export function formatWeekRange(weekStart: string, weekEnd?: string, locale = 'en-US'): string {
   if (!weekStart) return '—';
   try {
     const s = new Date(weekStart + 'T00:00:00Z');
@@ -128,7 +128,7 @@ export default function BookingsScreen() {
   const TA = isRTL ? 'right' as const : 'left' as const;
   const locale = language === 'ar' ? 'ar-EG' : 'en-GB';
 
-  const { myBookings, allLines, renewalBooking, refetch } = useShuttle();
+  const { myBookings, allLines, renewalBooking, refetch, error: shuttleError } = useShuttle();
   const queryClient = useQueryClient();
 
   const [mainTab, setMainTab] = useState<MainTab>('upcoming');
@@ -317,7 +317,14 @@ export default function BookingsScreen() {
         {/* ── Upcoming tab ── */}
         {mainTab === 'upcoming' && (
           <>
-            {upcomingLines.length === 0 ? (
+            {shuttleError ? (
+              <Pressable onPress={() => refetch()} style={styles.smartEmptyState}>
+                <Calendar size={40} color="#ef4444" strokeWidth={1.2} />
+                <Text style={[styles.smartEmptyTitle, { color: '#ef4444' }]}>
+                  {t.trips_load_failed}
+                </Text>
+              </Pressable>
+            ) : upcomingLines.length === 0 ? (
               <View style={styles.smartEmptyState}>
                 <Calendar size={40} color={colors.mutedForeground} strokeWidth={1.2} />
                 <Text style={[styles.smartEmptyTitle, { color: colors.foreground }]}>
@@ -356,19 +363,22 @@ export default function BookingsScreen() {
                       colors={colors}
                       isRTL={isRTL}
                       onPress={() => {
-                        if (!b) return;
+                        // A trip picked up via referral or admin single-trip
+                        // assignment has no matching weekly booking — fall
+                        // back to the line's own fields instead of no-op'ing.
                         router.push({
                           pathname: '/shuttle/trip-details',
                           params: {
-                            bookingId: String(b.id),
+                            bookingId: b ? String(b.id) : '',
                             tripId: line.tripId ?? '',
-                            routeId: String(b.routeId),
-                            routeName: b.routeName,
-                            routeNameAr: b.routeNameAr ?? '',
-                            departureTime: b.departureTime,
-                            weekStart: b.weekStart ?? '',
-                            weekEnd: b.weekEnd ?? '',
-                            status: b.status,
+                            routeId: String(b?.routeId ?? line.routeId),
+                            routeName: b?.routeName ?? line.name,
+                            routeNameAr: b?.routeNameAr ?? '',
+                            departureTime: b?.departureTime ?? line.departure,
+                            weekStart: b?.weekStart ?? '',
+                            weekEnd: b?.weekEnd ?? '',
+                            status: b?.status ?? '',
+                            direction: b?.direction ?? line.direction ?? '',
                           },
                         } as any);
                       }}

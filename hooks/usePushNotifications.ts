@@ -152,7 +152,14 @@ export function usePushNotifications(onRideRequest?: () => void) {
           // (lib/sendNotification.ts). Reuses the same active-trip navigation
           // as the live in-progress screen — there is no separate destination.
           if (data?.type === 'shuttle_approaching' && data.tripId) {
-            router.push('/shuttle/trip-active');
+            // Pass tripId explicitly — trip-active.tsx prefers this over
+            // ShuttleContext's ambient "activeLine", which used to leave a
+            // tap on a notification for a non-active trip landing on a
+            // blank map with dashes everywhere.
+            router.push({
+              pathname: '/shuttle/trip-active' as any,
+              params: { tripId: String(data.tripId) },
+            });
             return;
           }
 
