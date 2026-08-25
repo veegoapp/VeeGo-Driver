@@ -1,5 +1,5 @@
 import { api } from './_client';
-import type { TripCashSummary, TripRevenueSummary, FinancialAnalytics, StationEtaResponse } from './types';
+import type { TripRevenueSummary, FinancialAnalytics, StationEtaResponse } from './types';
 
 export const shuttleEndpoints = {
   lines: () => api.get('/shuttle/lines'),
@@ -7,13 +7,6 @@ export const shuttleEndpoints = {
 
   availableWeeks: (routeId: string | number) =>
     api.get(`/shuttle/lines/${routeId}/available-weeks`),
-
-  // GET /shuttle/available-slots — only returns slots with full-week coverage
-  availableSlots: (routeId: string | number, weekStart: string) =>
-    api.get(`/shuttle/available-slots?routeId=${routeId}&weekStart=${weekStart}`),
-
-  timeslots: (routeId: string | number, weekStart?: string) =>
-    api.get(`/shuttle/timeslots/${routeId}${weekStart ? `?weekStart=${weekStart}` : ''}`),
 
   // ── Route Bookings ───────────────────────────────────────────────────────
   myBookings: () => api.get('/shuttle/route-bookings'),
@@ -24,9 +17,6 @@ export const shuttleEndpoints = {
   // the driver always sees up-to-date state after any offline period.
   // Response shape: { bookings: RawDriverBooking[]; trips: BackendTrip[] }
   stateSnapshot: () => api.get('/shuttle/driver/state-snapshot'),
-
-  createBooking: (data: { routeId: string | number; timeSlotId: string | number; weekStart: string }) =>
-    api.post('/shuttle/route-bookings', data),
 
   // ── bookWeek ────────────────────────────────────────────────────────────
   // ── WEDNESDAY RETENTION CRON (7:00 AM EET / Cairo = UTC+2) ─────────────
@@ -98,12 +88,8 @@ export const shuttleEndpoints = {
     }
   ) => api.post(`/shuttle/lines/${routeId}/book-week`, data),
 
-  cancelBooking: (id: string) => api.del(`/shuttle/route-bookings/${id}`),
   confirmRenewal: (id: string) => api.post(`/shuttle/route-bookings/${id}/confirm-renewal`),
   declineRenewal: (id: string) => api.post(`/shuttle/route-bookings/${id}/decline-renewal`),
-
-  bookingLiveDetail: (id: string) =>
-    api.get(`/shuttle/route-bookings/${id}/detail`),
 
   // Note: the legacy start/complete wrappers (POST /shuttle/route-bookings/:id/start,
   // POST /shuttle/lines/:id/complete) were removed (D3-1/D3-2) — use
@@ -132,9 +118,6 @@ export const shuttleEndpoints = {
 
   noShowBooking: (bookingId: string) =>
     api.patch(`/driver/bookings/${bookingId}/absent`),
-
-  cashSummary: (tripId: string) =>
-    api.get<TripCashSummary>(`/driver/trips/${tripId}/cash-summary`),
 
   revenueSummary: (tripId: string) =>
     api.get<TripRevenueSummary>(`/driver/trips/${tripId}/revenue-summary`),

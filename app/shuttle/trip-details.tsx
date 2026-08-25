@@ -1,8 +1,8 @@
 import { showAlert } from '@/lib/alert';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Calendar, ChevronLeft, Clock, MapPin, Users } from 'lucide-react-native';
-import React, { useEffect, useMemo, useState } from 'react';
+import { AlertCircle, Calendar, ChevronLeft, Clock, MapPin, Users } from 'lucide-react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -71,6 +71,13 @@ export default function TripDetailsScreen() {
 
   const { myBookings, allLines, listLoading, setStartedTripId, refetch } = useShuttle();
   const [starting, setStarting] = useState(false);
+  // Synchronous re-entrancy guard — `starting` state read inside the async
+  // onPress handler is a stale render-closure value: two taps in the same
+  // frame (before React re-renders) both read `starting === false` and both
+  // fire. A ref is read/written synchronously and closes this gap, matching
+  // the same pattern used elsewhere in the app (e.g. isCompletingRef in
+  // app/ride/[rideId].tsx).
+  const startingRef = useRef(false);
 
   // Use String() coercion on both sides — defends against numeric IDs at runtime.
   // myBookings may be empty when this screen is outside ShuttleProvider's scope
@@ -105,6 +112,13 @@ export default function TripDetailsScreen() {
   // The trip this screen is actually about — every real navigation into this
   // screen passes tripId; line?.tripId is a fallback for older deep links.
   const effectiveTripId = tripId || line?.tripId;
+
+  // An admin cancelling this trip while the driver sits on this pre-start
+  // screen used to be invisible — the driver would tap Start on a screen
+  // that still looked live and get a generic failure message with no
+  // context. line.status now refreshes reliably on the same socket event
+  // that drives this cancellation, so surface it here directly.
+  const isCancelled = line?.status === 'cancelled';
 
   const { data: tripDetailData, isLoading: stationsLoading } = useQuery({
     queryKey: ['trip-start-detail', effectiveTripId],
@@ -208,7 +222,7 @@ export default function TripDetailsScreen() {
   const departureTime = effectiveBooking?.departureTime ?? line?.departure ?? '—';
   const tripDatetime = tripDetailData?.tripDatetime ?? null;
   const tripDate = tripDatetime
-    ? new Date(tripDatetime).toLocaleDateString('en-GB', {
+    ? new Date(tripDatetime).toLocaleDateString(isRTL ? 'ar-EG' : 'en-GB', {
         weekday: 'short', day: 'numeric', month: 'short',
         timeZone: 'Africa/Cairo',
       })
@@ -263,6 +277,15 @@ export default function TripDetailsScreen() {
             </Text>
           </View>
         </View>
+
+        {isCancelled && (
+          <View style={[styles.cancelledBanner, { backgroundColor: '#FEF2F2', borderColor: '#FCA5A5', flexDirection: R, marginTop: Spacing.md }]}>
+            <AlertCircle size={16} color="#DC2626" strokeWidth={2} />
+            <Text style={[{ fontSize: 13, color: '#DC2626', fontFamily: 'Inter_700Bold', flex: 1, textAlign: TA }]}>
+              {t.trip_was_cancelled}
+            </Text>
+          </View>
+        )}
 
         {/* Info cards row: Date / Time / Passengers */}
         <View style={[styles.infoRow, { flexDirection: R, marginTop: 20 }]}>
@@ -336,9 +359,10 @@ export default function TripDetailsScreen() {
         {/* Start Trip — disabled until 30 min before departure */}
         <View style={{ flex: 1 }}>
           <Pressable
-            disabled={!isStartEnabled}
+            disabled={!isStartEnabled || isCancelled}
             onPress={async () => {
-              if (!effectiveTripId || starting) return;
+              if (!effectiveTripId || startingRef.current || isCancelled) return;
+              startingRef.current = true;
               setStarting(true);
               try {
                 // PATCH /driver/trips/:id/start performs the status transition
@@ -360,12 +384,13 @@ export default function TripDetailsScreen() {
                 setStartedTripId(null);
                 showAlert('', t.start_trip_failed);
               } finally {
+                startingRef.current = false;
                 setStarting(false);
               }
             }}
-            style={({ pressed }) => [{ borderRadius: Radius.lg, overflow: 'hidden', opacity: !isStartEnabled ? 1 : starting ? 0.7 : pressed ? 0.88 : 1 }]}
+            style={({ pressed }) => [{ borderRadius: Radius.lg, overflow: 'hidden', opacity: (!isStartEnabled || isCancelled) ? 1 : starting ? 0.7 : pressed ? 0.88 : 1 }]}
           >
-            {isStartEnabled ? (
+            {isStartEnabled && !isCancelled ? (
               <LinearGradient
                 colors={colors.gradientPrimary}
                 start={{ x: 0, y: 0 }}
@@ -382,14 +407,15 @@ export default function TripDetailsScreen() {
               <View style={[styles.startBtnDisabled, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
                 <Text style={[{ fontSize: 15, color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>{t.start_trip}</Text>
                 <Text style={[{ fontSize: 11, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', marginTop: 2, textAlign: 'center' }]}>
-                  {t.start_trip_hint}
+                  {isCancelled ? t.trip_was_cancelled : t.start_trip_hint}
                 </Text>
               </View>
             )}
           </Pressable>
         </View>
 
-        {/* Cancel Trip */}
+        {/* Cancel Trip — nothing to cancel once the trip is already cancelled */}
+        {!isCancelled && (
         <Pressable
           onPress={handleCancelPress}
           style={({ pressed }) => [
@@ -401,6 +427,7 @@ export default function TripDetailsScreen() {
             {t.cancel_trip_action}
           </Text>
         </Pressable>
+        )}
       </View>
     </View>
   );
@@ -431,6 +458,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   statusDot: { width: 7, height: 7, borderRadius: 4 },
+  cancelledBanner: {
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 10,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+  },
   statusText: { fontSize: Typography.size.xs },
   infoRow: { gap: 10 },
   infoCard: {

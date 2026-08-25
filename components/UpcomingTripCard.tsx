@@ -22,10 +22,16 @@ export function UpcomingTripCard({
   isRTL: boolean;
   onPress: () => void;
 }) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
+  // Matches the locale convention already used in history.tsx/history-detail.tsx.
+  const dateLocale = language === 'ar' ? 'ar-EG' : 'en-GB';
   const TA = isRTL ? 'right' as const : 'left' as const;
   const R = isRTL ? 'row-reverse' as const : 'row' as const;
-  const isPending = line.thresholdMet === false;
+  // Only a confirmed thresholdMet === true counts as "Active" — when the
+  // field is simply absent from the response, that used to fall through to
+  // the green "Active" badge on a trip that hasn't actually met its minimum
+  // and may still auto-cancel. Default to the safer "pending" state instead.
+  const isPending = line.thresholdMet !== true;
   return (
     <Pressable
       onPress={onPress}
@@ -51,7 +57,7 @@ export function UpcomingTripCard({
           <View style={[styles.upcomingMeta, { flexDirection: R }]}>
             <Calendar size={12} color={colors.mutedForeground} strokeWidth={2} />
             <Text style={[styles.upcomingMetaText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-              {formatDate(line.departureIso)}
+              {formatDate(line.departureIso, dateLocale)}
             </Text>
             <Text style={[styles.upcomingMetaDot, { color: colors.border }]}>·</Text>
             <Clock size={12} color={colors.mutedForeground} strokeWidth={2} />

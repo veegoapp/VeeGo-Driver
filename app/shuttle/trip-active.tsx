@@ -397,7 +397,23 @@ export default function ShuttleTripActiveScreen() {
         }
 
         setFailedStationActions([]);
-        await endpoints.trips.stationCompleted(tripId, stationId);
+        // A dropped network here (after per-passenger boarding/no-show calls
+        // already succeeded) used to fall through to the generic outer catch
+        // with no retry — a plain re-tap would then re-run those already-
+        // successful per-passenger calls too. Retry just this call instead.
+        try {
+          await endpoints.trips.stationCompleted(tripId, stationId);
+        } catch {
+          showAlert(
+            t.error,
+            t.station_action_error,
+            [
+              { text: t.cancel, style: 'cancel' },
+              { text: t.retry_label, onPress: () => { handleNextStop([]); } },
+            ]
+          );
+          return;
+        }
         void fetchStationEtas(); // refresh ETAs after recording completion
       }
       nextStop();

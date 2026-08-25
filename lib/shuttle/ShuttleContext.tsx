@@ -545,7 +545,10 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
         loading:
           routesLoading || bookingsLoading || tripsLoading || stationsLoading,
         listLoading: routesLoading || bookingsLoading,
-        error: (routesError ?? bookingsError) as Error | null,
+        // tripsError used to be silently dropped here — a /driver/trips
+        // fetch failure rendered the exact same empty state as genuinely
+        // having no trips, with zero indication anything had gone wrong.
+        error: (routesError ?? bookingsError ?? tripsError) as Error | null,
         refetch,
         nextStop,
         togglePassenger,

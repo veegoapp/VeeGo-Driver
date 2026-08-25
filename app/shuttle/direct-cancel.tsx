@@ -50,7 +50,7 @@ export default function DirectCancelScreen() {
   // n > 0 = penalty amount deducted from wallet
   const [penaltyAmount, setPenaltyAmount] = useState<number | null>(null);
 
-  const { data: previewData } = useQuery({
+  const { data: previewData, isError: previewError, refetch: refetchPreview } = useQuery({
     queryKey: ['trip-cancel-preview', tripId],
     queryFn: () => endpoints.trips.cancelPreview(tripId!),
     enabled: !!tripId,
@@ -183,6 +183,12 @@ export default function DirectCancelScreen() {
                   ? t.cancel_penalty_preview.replace('{n}', String(previewData.penaltyAmount))
                   : t.no_penalty_preview}
               </Text>
+            ) : previewError ? (
+              <Pressable onPress={() => refetchPreview()}>
+                <Text style={[{ fontSize: Typography.size.xs, color: '#991B1B', fontFamily: 'Inter_700Bold', marginTop: 3, textAlign: TA }]}>
+                  {t.cancel_penalty_check_failed}
+                </Text>
+              </Pressable>
             ) : null}
             <Text style={[{ fontSize: Typography.size.xs, color: '#991B1B', fontFamily: 'Inter_400Regular', marginTop: 3, textAlign: TA }]}>
               {t.passengers_admin_reassign}
@@ -240,11 +246,11 @@ export default function DirectCancelScreen() {
       <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 20), borderTopColor: colors.border, backgroundColor: colors.background }]}>
         <Pressable
           onPress={handleConfirmCancel}
-          disabled={cancelMutation.isPending || !selectedReason}
+          disabled={cancelMutation.isPending || !selectedReason || previewError}
           style={({ pressed }) => [
             styles.confirmBtn,
             {
-              backgroundColor: selectedReason ? '#DC2626' : colors.secondary,
+              backgroundColor: selectedReason && !previewError ? '#DC2626' : colors.secondary,
               opacity: pressed ? 0.88 : cancelMutation.isPending ? 0.7 : 1,
             },
           ]}
