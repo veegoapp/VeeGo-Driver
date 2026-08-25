@@ -480,6 +480,8 @@ export const en = {
   bonus_completed: 'Completed',
   trip_details_title: 'Trip Details',
   start_trip: 'Start Trip',
+  arrived_start_boarding: "Arrived — Start Boarding",
+  arrived_failed: 'Could not check in as arrived. Please try again.',
   cancel_trip_action: 'Cancel Trip',
   start_trip_hint: 'Available 30 min before departure',
   route_timeline: 'Route Timeline',

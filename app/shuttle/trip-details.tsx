@@ -78,6 +78,12 @@ export default function TripDetailsScreen() {
   // the same pattern used elsewhere in the app (e.g. isCompletingRef in
   // app/ride/[rideId].tsx).
   const startingRef = useRef(false);
+  // Arrival/boarding step — PATCH /driver/trips/:id/board moves the trip
+  // from driver_assigned to boarding (visible to passengers/admin as "the
+  // bus is here now") without starting the trip yet; the existing Start
+  // Trip button below still owns the boarding -> active transition.
+  const [boarding, setBoarding] = useState(false);
+  const boardingRef = useRef(false);
 
   // Use String() coercion on both sides — defends against numeric IDs at runtime.
   // myBookings may be empty when this screen is outside ShuttleProvider's scope
@@ -125,6 +131,8 @@ export default function TripDetailsScreen() {
     queryFn: () => endpoints.trips.startDetail(effectiveTripId!),
     enabled: !!effectiveTripId,
   });
+
+  const isBoardingStatus = tripDetailData?.status === 'boarding';
 
   const stations: Station[] = useMemo(() => {
     if (!tripDetailData?.stations) return [];
@@ -356,7 +364,44 @@ export default function TripDetailsScreen() {
 
       {/* Bottom action bar */}
       <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 20), borderTopColor: colors.border, backgroundColor: colors.background }]}>
-        {/* Start Trip — disabled until 30 min before departure */}
+        {/* Arrived / Start Boarding — first step, shown until the driver has
+            checked in as physically at the departure point. Start Trip
+            (below) then takes over as the second step once boarding. */}
+        {isStartEnabled && !isCancelled && !isBoardingStatus ? (
+          <View style={{ flex: 1 }}>
+            <Pressable
+              disabled={!isStartEnabled}
+              onPress={async () => {
+                if (!effectiveTripId || boardingRef.current) return;
+                boardingRef.current = true;
+                setBoarding(true);
+                try {
+                  await endpoints.trips.board(String(effectiveTripId));
+                  refetch();
+                } catch {
+                  showAlert('', t.arrived_failed);
+                } finally {
+                  boardingRef.current = false;
+                  setBoarding(false);
+                }
+              }}
+              style={({ pressed }) => [{ borderRadius: Radius.lg, overflow: 'hidden', opacity: boarding ? 0.7 : pressed ? 0.88 : 1 }]}
+            >
+              <LinearGradient
+                colors={colors.gradientPrimary}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.startBtn}
+              >
+                {boarding ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={[styles.startBtnText, { fontFamily: 'Inter_700Bold' }]}>{t.arrived_start_boarding}</Text>
+                )}
+              </LinearGradient>
+            </Pressable>
+          </View>
+        ) : (
         <View style={{ flex: 1 }}>
           <Pressable
             disabled={!isStartEnabled || isCancelled}
@@ -413,6 +458,7 @@ export default function TripDetailsScreen() {
             )}
           </Pressable>
         </View>
+        )}
 
         {/* Cancel Trip — nothing to cancel once the trip is already cancelled */}
         {!isCancelled && (
