@@ -3,7 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { AlertTriangle, Check, ChevronUp, Clock, Delete, Map, MessageCircle, Navigation, Phone, Share2, Shield, Star } from 'lucide-react-native';
 import React, { useCallback, useRef, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Animated, Easing, Image, Linking, Modal, Platform, Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Animated, Easing, Image, Linking, Modal, Platform, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { RideMap } from '@/components/RideMap';
@@ -42,6 +42,18 @@ const GOLD = '#C8A535';
 const CHARCOAL = '#1C1C1E';
 const CHARCOAL_SURFACE = '#26262A';
 const CARD_BORDER = 'rgba(255,255,255,0.08)';
+
+// "C" light palette for the redesigned post-trip fare page + rating card, and
+// the "D" change-confirm card — matching the approved passenger-app designs.
+const C_BG = '#EEF0F2';
+const C_SURF = '#FFFFFF';
+const C_INK = '#14151A';
+const C_INK_SOFT = '#6B7178';
+const C_CAP = '#9AA0A6';
+const C_HAIR = '#EEF0F1';
+const C_TEAL = '#0E9F8E';
+const C_MINT = '#3DDC97';
+const C_STARC = '#F5A623';
 
 type Phase = 'to_pickup' | 'arrived' | 'in_trip' | 'completed';
 type PhaseCopy = { label: string; cta: string; next: Phase };
@@ -98,6 +110,8 @@ export default function RideScreen() {
   const [rating, setRating] = useState(0);
   const [ratingComment, setRatingComment] = useState('');
   const [ratingSubmitting, setRatingSubmitting] = useState(false);
+  // Post-trip two-step: full-screen fare page → rating card (approved design).
+  const [completedStep, setCompletedStep] = useState<'fare' | 'rating'>('fare');
   const [busy, setBusy] = useState(false);
   const [sosBusy, setSosBusy] = useState(false);
   const [shareBusy, setShareBusy] = useState(false);
@@ -929,85 +943,95 @@ export default function RideScreen() {
       </View>
 
       {phase === 'completed' && (
-        <Animated.View style={[styles.completedOverlay, { opacity: completedAnim, backgroundColor: colors.background + 'CC' }]}>
-          <Animated.View style={[styles.checkCircle, { transform: [{ scale: checkScale }] }]}>
-            <LinearGradient colors={['#2d2d42', '#1e1e28']} style={styles.checkCircleGrad}>
-              <Check size={48} color={colors.primaryForeground} strokeWidth={3} />
-            </LinearGradient>
-          </Animated.View>
-          <Text style={[styles.completedTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.trip_done_title}</Text>
-          <Text style={[styles.fareEarned, { color: GOLD, fontFamily: 'Inter_700Bold' }]}>
-            {completionResult != null
-              // Cash rides: the amount still owed in person. Non-cash rides:
-              // netCashPayable is correctly 0 (already settled via wallet/card),
-              // so the headline shows driverCut (what was actually earned)
-              // instead of a misleading "0.00 EGP".
-              ? `${(completionResult.netCashPayable > 0 ? completionResult.netCashPayable : completionResult.driverCut).toFixed(2)} ${t.egp}`
-              : '—'}
-          </Text>
-          <Text style={[styles.fareNote, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-            {completionResult != null && completionResult.netCashPayable > 0 ? t.cash_to_collect : t.added_to_earnings}
-          </Text>
-          {completionResult != null && (
-            <Pressable onPress={() => setViewDetailsOpen(true)} style={styles.viewDetailsBtn} accessibilityLabel={t.view_details}>
-              <Text style={[styles.viewDetailsBtnText, { color: GOLD, fontFamily: 'Inter_600SemiBold' }]}>{t.view_details}</Text>
-            </Pressable>
-          )}
-          {creditedChange > 0 && (
-            <Text style={[styles.fareNote, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-              {t.change_credited_note.replace('{amount}', creditedChange.toFixed(2)).replace('{egp}', t.egp)}
-            </Text>
-          )}
+        <Animated.View style={[styles.completedOverlayC, { opacity: completedAnim }]}>
+          {completedStep === 'fare' ? (
+            /* ── STEP 1 · full-screen Fare page (C) ── */
+            <View style={{ flex: 1 }}>
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: 26, paddingTop: insets.top + 36, paddingBottom: 24 }}
+              >
+                <Animated.View style={[styles.checkCircleC, { transform: [{ scale: checkScale }] }]}>
+                  <Check size={40} color="#ffffff" strokeWidth={3} />
+                </Animated.View>
+                <Text style={styles.pageTitleC}>{t.trip_done_title}</Text>
 
-          <View style={[styles.ratingCard, { backgroundColor: CHARCOAL, borderColor: CARD_BORDER, borderWidth: 1 }]}>
-            <View style={styles.ratingCardHeader}>
-              {passengerAvatar && !riderAvatarFailed ? (
-                <Image source={{ uri: passengerAvatar }} style={styles.ratingAvatar} resizeMode="cover" />
-              ) : (
-                <View style={[styles.ratingAvatar, { justifyContent: 'center', alignItems: 'center', backgroundColor: CHARCOAL_SURFACE }]}>
-                  <Text style={{ color: '#ffffff', fontSize: 11, fontFamily: 'Inter_700Bold' }}>{passengerInitials}</Text>
-                </View>
-              )}
-              <Text style={[styles.ratingCardLabel, { color: '#B0B0B5', fontFamily: 'Inter_700Bold' }]}>{t.rate_rider_label.replace('{name}', passengerName ?? '—')}</Text>
-            </View>
-            <View style={styles.starsRow}>
-              {[1, 2, 3, 4, 5].map(n => (
-                <Pressable key={n} onPress={() => setRating(n)}>
-                  <Star size={36} color={n <= rating ? GOLD : '#5A5A5E'} fill={n <= rating ? GOLD : 'transparent'} strokeWidth={2} />
-                </Pressable>
-              ))}
-            </View>
-            {rating > 0 && (
-              <TextInput
-                style={[styles.commentInput, { color: '#ffffff', borderColor: CARD_BORDER, backgroundColor: CHARCOAL_SURFACE }]}
-                placeholder={t.rating_comment_placeholder}
-                placeholderTextColor="#8A8A8E"
-                value={ratingComment}
-                onChangeText={setRatingComment}
-                maxLength={500}
-                multiline
-              />
-            )}
-          </View>
-
-          <View style={styles.ratingActionsRow}>
-            <Pressable onPress={handleSkipRating} disabled={ratingSubmitting} style={[styles.skipBtn, { borderColor: colors.border }]}>
-              <Text style={[styles.skipBtnText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.skip_btn}</Text>
-            </Pressable>
-            <Pressable
-              onPress={handleSubmitRating}
-              disabled={rating === 0 || ratingSubmitting}
-              style={[styles.doneBtn, { opacity: rating === 0 || ratingSubmitting ? 0.5 : 1 }]}
-            >
-              <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.doneBtnGrad}>
-                {ratingSubmitting ? (
-                  <ActivityIndicator color={colors.primaryForeground} />
-                ) : (
-                  <Text style={[styles.doneBtnText, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>{t.submit_rating_btn}</Text>
+                {completionResult != null && (
+                  <>
+                    <Text style={styles.heroCapC}>
+                      {completionResult.netCashPayable > 0 ? t.cash_to_collect : t.added_to_earnings}
+                    </Text>
+                    <View style={styles.heroRowC}>
+                      <Text style={styles.heroAmountC}>
+                        {(completionResult.netCashPayable > 0 ? completionResult.netCashPayable : completionResult.driverCut).toFixed(2)}
+                      </Text>
+                      <Text style={styles.heroCurC}>{t.egp}</Text>
+                    </View>
+                    {completionResult.netCashPayable > 0 && (
+                      <Text style={styles.heroNoteC}>
+                        {t.added_to_earnings} · {completionResult.driverCut.toFixed(2)} {t.egp}
+                      </Text>
+                    )}
+                    <Pressable onPress={() => setViewDetailsOpen(true)} style={styles.viewDetailsBtnC} accessibilityLabel={t.view_details}>
+                      <Text style={styles.viewDetailsTxtC}>{t.view_details}</Text>
+                    </Pressable>
+                  </>
                 )}
-              </LinearGradient>
-            </Pressable>
-          </View>
+                {creditedChange > 0 && (
+                  <Text style={styles.heroNoteC}>
+                    {t.change_credited_note.replace('{amount}', creditedChange.toFixed(2)).replace('{egp}', t.egp)}
+                  </Text>
+                )}
+              </ScrollView>
+              <View style={[styles.footerC, { paddingBottom: insets.bottom + 24 }]}>
+                <Pressable onPress={() => setCompletedStep('rating')} style={styles.primaryBtnC}>
+                  <Text style={styles.primaryBtnTxtC}>{'Continue'}</Text>
+                </Pressable>
+              </View>
+            </View>
+          ) : (
+            /* ── STEP 2 · Rating card (C) ── */
+            <View style={styles.ratingWrapC}>
+              <View style={styles.ratingCardC}>
+                {passengerAvatar && !riderAvatarFailed ? (
+                  <Image source={{ uri: passengerAvatar }} style={styles.ratingAvatarC} resizeMode="cover" />
+                ) : (
+                  <View style={[styles.ratingAvatarC, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#EEEADF' }]}>
+                    <Text style={{ color: '#4A463D', fontSize: 22, fontFamily: 'Inter_700Bold' }}>{passengerInitials}</Text>
+                  </View>
+                )}
+                <Text style={styles.ratingTitleC}>{t.rate_rider_label.replace('{name}', passengerName ?? '—')}</Text>
+                <View style={styles.starsRowC}>
+                  {[1, 2, 3, 4, 5].map(n => (
+                    <Pressable key={n} onPress={() => setRating(n)}>
+                      <Star size={38} color={n <= rating ? C_STARC : '#D3D6DA'} fill={n <= rating ? C_STARC : 'transparent'} strokeWidth={n <= rating ? 0 : 1.4} />
+                    </Pressable>
+                  ))}
+                </View>
+                {rating > 0 && (
+                  <TextInput
+                    style={styles.commentInputC}
+                    placeholder={t.rating_comment_placeholder}
+                    placeholderTextColor={C_CAP}
+                    value={ratingComment}
+                    onChangeText={setRatingComment}
+                    maxLength={500}
+                    multiline
+                  />
+                )}
+                <Pressable
+                  onPress={handleSubmitRating}
+                  disabled={rating === 0 || ratingSubmitting}
+                  style={[styles.primaryBtnC, { marginTop: 20, opacity: rating === 0 || ratingSubmitting ? 0.5 : 1 }]}
+                >
+                  {ratingSubmitting ? <ActivityIndicator color="#ffffff" /> : <Text style={styles.primaryBtnTxtC}>{t.submit_rating_btn}</Text>}
+                </Pressable>
+                <Pressable onPress={handleSkipRating} disabled={ratingSubmitting} style={styles.skipBtnC}>
+                  <Text style={styles.skipTxtC}>{t.skip_btn}</Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
         </Animated.View>
       )}
 
@@ -1238,37 +1262,34 @@ export default function RideScreen() {
       {/* ── Confirm change → wallet ────────────────────────────────────── */}
       <Modal visible={confirmChangeOpen} transparent animationType="fade" onRequestClose={handleCancelConfirmChange}>
         <View style={styles.modalBackdrop}>
-          <GlassView strong style={styles.modalCard} borderRadius={24}>
-            <Text style={[styles.modalTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.confirm_change_title}</Text>
-
-            <View style={styles.summaryRow}>
-              <Text style={[styles.summaryLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{t.ride_amount_label}</Text>
-              <Text style={[styles.summaryValue, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{fareAmount.toFixed(2)} {t.egp}</Text>
+          <View style={styles.changeCardC}>
+            <View style={styles.changeHeroC}>
+              <Text style={styles.changeCapC}>{t.change_to_wallet_label}</Text>
+              <View style={styles.changeHeroRow}>
+                <Text style={styles.changeHeroAmt}>{Math.max(0, computedChange).toFixed(2)}</Text>
+                <Text style={styles.changeHeroCur}>{t.egp}</Text>
+              </View>
             </View>
-            <View style={styles.summaryRow}>
-              <Text style={[styles.summaryLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{t.amount_received_label}</Text>
-              <Text style={[styles.summaryValue, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{parsedAmountReceived.toFixed(2)} {t.egp}</Text>
+            <View style={styles.changeBodyC}>
+              <View style={styles.cRow}>
+                <Text style={styles.cLabel}>{t.amount_received_label}</Text>
+                <Text style={styles.cVal}>{parsedAmountReceived.toFixed(2)}</Text>
+              </View>
+              <View style={styles.cHair} />
+              <View style={styles.cRow}>
+                <Text style={styles.cLabel}>{t.ride_amount_label}</Text>
+                <Text style={styles.cVal}>{fareAmount.toFixed(2)}</Text>
+              </View>
+              <View style={styles.cActionsRow}>
+                <Pressable onPress={handleCancelConfirmChange} disabled={submittingChange} style={[styles.cCancelBtn, { opacity: submittingChange ? 0.6 : 1 }]}>
+                  <Text style={styles.cCancelTxt}>{t.cancel}</Text>
+                </Pressable>
+                <Pressable onPress={handleConfirmChange} disabled={submittingChange} style={[styles.cConfirmBtn, { opacity: submittingChange ? 0.7 : 1 }]}>
+                  {submittingChange ? <ActivityIndicator color="#ffffff" /> : <Text style={styles.cConfirmTxt}>{t.confirm}</Text>}
+                </Pressable>
+              </View>
             </View>
-            <View style={styles.summaryRow}>
-              <Text style={[styles.summaryLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{t.change_to_wallet_label}</Text>
-              <Text style={[styles.summaryValue, { color: colors.primary, fontFamily: 'Inter_700Bold' }]}>{Math.max(0, computedChange).toFixed(2)} {t.egp}</Text>
-            </View>
-
-            <View style={styles.modalActionsRow}>
-              <Pressable onPress={handleCancelConfirmChange} disabled={submittingChange} style={[styles.modalCancelBtn, { backgroundColor: colors.secondary, opacity: submittingChange ? 0.6 : 1 }]}>
-                <Text style={[styles.modalCancelBtnText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.cancel}</Text>
-              </Pressable>
-              <Pressable onPress={handleConfirmChange} disabled={submittingChange} style={[styles.modalConfirmBtn, { opacity: submittingChange ? 0.7 : 1 }]}>
-                <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.modalConfirmBtnGrad}>
-                  {submittingChange ? (
-                    <ActivityIndicator color={colors.primaryForeground} />
-                  ) : (
-                    <Text style={[styles.modalConfirmBtnText, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>{t.confirm}</Text>
-                  )}
-                </LinearGradient>
-              </Pressable>
-            </View>
-          </GlassView>
+          </View>
         </View>
       </Modal>
 
@@ -1426,4 +1447,45 @@ const styles = StyleSheet.create({
   sosBtn: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, backgroundColor: '#ef4444', paddingHorizontal: Spacing.md, paddingVertical: 6, borderRadius: 10 },
   sosBtnText: { fontSize: Typography.size.xs },
   commentInput: { borderWidth: 1, borderRadius: Radius.md, paddingHorizontal: 14, paddingVertical: 10, fontSize: Typography.size.sm, fontFamily: 'Inter_400Regular', marginTop: Spacing.md, minHeight: 60, textAlignVertical: 'top' },
+
+  /* ── "C" post-trip fare page + rating card ── */
+  completedOverlayC: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: C_BG, zIndex: 1000 },
+  checkCircleC: { width: 68, height: 68, borderRadius: 34, backgroundColor: '#14151A', alignItems: 'center', justifyContent: 'center', alignSelf: 'center' },
+  pageTitleC: { fontSize: 24, fontFamily: 'Inter_700Bold', color: C_INK, textAlign: 'center', marginTop: 18 },
+  heroCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.4, color: C_CAP, textAlign: 'center', marginTop: 26, textTransform: 'uppercase' },
+  heroRowC: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', gap: 8, marginTop: 6 },
+  heroAmountC: { fontSize: 52, fontFamily: 'Inter_700Bold', color: C_TEAL, lineHeight: 54 },
+  heroCurC: { fontSize: 19, fontFamily: 'Inter_700Bold', color: C_TEAL },
+  heroNoteC: { fontSize: 13, fontFamily: 'Inter_600SemiBold', color: C_INK_SOFT, textAlign: 'center', marginTop: 8 },
+  viewDetailsBtnC: { alignSelf: 'center', marginTop: 6, paddingVertical: 4, paddingHorizontal: 8 },
+  viewDetailsTxtC: { fontSize: 13, fontFamily: 'Inter_700Bold', color: C_TEAL, textDecorationLine: 'underline' },
+  footerC: { paddingHorizontal: 26, paddingTop: 12, backgroundColor: C_BG },
+  primaryBtnC: { height: 54, borderRadius: 15, backgroundColor: '#14151A', alignItems: 'center', justifyContent: 'center' },
+  primaryBtnTxtC: { color: '#ffffff', fontSize: 15, fontFamily: 'Inter_700Bold', letterSpacing: 0.3 },
+  ratingWrapC: { flex: 1, justifyContent: 'flex-end', paddingHorizontal: 20, paddingBottom: 34 },
+  ratingCardC: { backgroundColor: C_SURF, borderRadius: 28, padding: 24, alignItems: 'center' },
+  ratingAvatarC: { width: 60, height: 60, borderRadius: 30, marginTop: 4 },
+  ratingTitleC: { fontSize: 18, fontFamily: 'Inter_700Bold', color: C_INK, textAlign: 'center', marginTop: 12 },
+  starsRowC: { flexDirection: 'row', gap: 14, marginTop: 20 },
+  commentInputC: { alignSelf: 'stretch', borderWidth: 1, borderColor: C_HAIR, borderRadius: 14, backgroundColor: '#F6F7F8', paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, fontFamily: 'Inter_400Regular', marginTop: 18, minHeight: 60, textAlignVertical: 'top', color: C_INK },
+  skipBtnC: { marginTop: 14, paddingVertical: 6 },
+  skipTxtC: { fontSize: 13, fontFamily: 'Inter_700Bold', color: C_CAP },
+
+  /* ── "D" change-confirm card ── */
+  changeCardC: { width: '100%', borderRadius: 24, overflow: 'hidden', backgroundColor: C_SURF },
+  changeHeroC: { backgroundColor: '#14151A', paddingVertical: 22, alignItems: 'center' },
+  changeCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.4, color: C_CAP, textTransform: 'uppercase' },
+  changeHeroRow: { flexDirection: 'row', alignItems: 'baseline', gap: 7, marginTop: 8 },
+  changeHeroAmt: { fontSize: 44, fontFamily: 'Inter_700Bold', color: C_MINT, lineHeight: 46 },
+  changeHeroCur: { fontSize: 16, fontFamily: 'Inter_700Bold', color: '#8A9096' },
+  changeBodyC: { padding: 20 },
+  cRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 13 },
+  cLabel: { fontSize: 14, fontFamily: 'Inter_600SemiBold', color: C_INK_SOFT },
+  cVal: { fontSize: 16, fontFamily: 'Inter_700Bold', color: C_INK },
+  cHair: { height: 1, backgroundColor: C_HAIR },
+  cActionsRow: { flexDirection: 'row', gap: 12, marginTop: 18 },
+  cCancelBtn: { flex: 1, height: 50, borderRadius: 14, borderWidth: 1, borderColor: '#D3D6DA', alignItems: 'center', justifyContent: 'center' },
+  cCancelTxt: { fontSize: 14, fontFamily: 'Inter_700Bold', color: C_INK_SOFT },
+  cConfirmBtn: { flex: 1.4, height: 50, borderRadius: 14, backgroundColor: '#14151A', alignItems: 'center', justifyContent: 'center' },
+  cConfirmTxt: { fontSize: 15, fontFamily: 'Inter_700Bold', color: '#ffffff' },
 });
