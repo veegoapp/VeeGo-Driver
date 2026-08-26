@@ -135,9 +135,23 @@ const AnimatedDriverMarker = React.memo(function AnimatedDriverMarker({
   animatedCoord: AnimatedRegion;
   rotation: Animated.Value;
 }) {
+  // Start with tracksViewChanges=true and flip it to false only once the car
+  // PNG has actually decoded (onLoad). Hardcoding `false` — the previous
+  // behavior — made react-native-maps snapshot this custom marker to a bitmap
+  // on Android on the very first render, BEFORE the <Image> finished loading,
+  // capturing a blank bitmap that was then never refreshed (tracksViewChanges
+  // never became true again). The driver's own car silhouette therefore never
+  // appeared on the map. This mirrors the passenger app's DriverMarker, which
+  // flips the same flag on its onImageLoad callback for exactly this reason.
+  const [carReady, setCarReady] = useState(false);
   return (
-    <MarkerAnimated coordinate={animatedCoord} anchor={{ x: 0.5, y: 0.5 }} rotation={rotation} flat tracksViewChanges={false}>
-      <Image source={CAR_TOP_IMAGE} style={styles.driverCar} resizeMode="contain" />
+    <MarkerAnimated coordinate={animatedCoord} anchor={{ x: 0.5, y: 0.5 }} rotation={rotation} flat tracksViewChanges={!carReady}>
+      <Image
+        source={CAR_TOP_IMAGE}
+        style={styles.driverCar}
+        resizeMode="contain"
+        onLoad={() => setCarReady(true)}
+      />
     </MarkerAnimated>
   );
 });
