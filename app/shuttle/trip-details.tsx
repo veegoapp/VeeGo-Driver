@@ -1,12 +1,9 @@
 import { showAlert } from '@/lib/alert';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { AlertCircle, Calendar, ChevronLeft, Clock, MapPin, Users } from 'lucide-react-native';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -15,15 +12,24 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
-import { GlassView } from '@/components/GlassView';
 import { StationTimeline } from '@/components/StationTimeline';
-import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { useShuttle, findLineForRoute } from '@/lib/shuttleContext';
 import { endpoints } from '@/lib/api';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
-import { Radius } from '@/constants/radius';
+
+// "C" split-panel palette — matches the ride/shuttle screens.
+const C_BG = '#EEF0F2';
+const C_INK = '#14151A';
+const C_CAP = '#9AA0A6';
+const C_HAIR = '#EEF0F1';
+const C_MINT = '#3DDC97';
+const C_RED = '#D92D20';
+// Shape expected by the shared StationTimeline component — fixed C tones
+// instead of the theme's colors object, without touching that shared file
+// (still used, unredesigned, by app/shuttle/history-detail.tsx).
+const timelineColorsC = { border: C_HAIR, secondary: '#F0F2F3', foreground: C_INK, mutedForeground: C_CAP };
 
 type Params = {
   bookingId: string;
@@ -51,7 +57,6 @@ type Station = {
 };
 
 export default function TripDetailsScreen() {
-  const colors = useColors();
   const insets = useSafeAreaInsets();
   const topPad = insets.top;
   const { t, isRTL } = useI18n();
@@ -184,18 +189,16 @@ export default function TripDetailsScreen() {
   // Show loading state while context is hydrating — prevents premature "Trip not found".
   if (listLoading && !effectiveBooking && !line) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { paddingTop: topPad + 8, borderBottomColor: colors.border }]}>
-          <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
-            <ChevronLeft size={24} color={colors.foreground} strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
+      <View style={styles.container}>
+        <View style={[styles.headerC, { paddingTop: topPad + 8 }]}>
+          <Pressable onPress={() => router.back()} style={styles.backBtnC} hitSlop={8}>
+            <ChevronLeft size={22} color="#ffffff" strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
           </Pressable>
-          <Text style={[styles.headerTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-            {t.trip_details_title}
-          </Text>
-          <View style={{ width: 40 }} />
+          <Text style={styles.headerTitleC}>{t.trip_details_title}</Text>
+          <View style={{ width: 36 }} />
         </View>
         <View style={styles.emptyState}>
-          <ActivityIndicator size="small" color="#1e1e28" />
+          <ActivityIndicator size="small" color={C_INK} />
         </View>
       </View>
     );
@@ -203,18 +206,16 @@ export default function TripDetailsScreen() {
 
   if (!effectiveBooking && !line) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { paddingTop: topPad + 8, borderBottomColor: colors.border }]}>
-          <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
-            <ChevronLeft size={24} color={colors.foreground} strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
+      <View style={styles.container}>
+        <View style={[styles.headerC, { paddingTop: topPad + 8 }]}>
+          <Pressable onPress={() => router.back()} style={styles.backBtnC} hitSlop={8}>
+            <ChevronLeft size={22} color="#ffffff" strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
           </Pressable>
-          <Text style={[styles.headerTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-            {t.trip_details_title}
-          </Text>
-          <View style={{ width: 40 }} />
+          <Text style={styles.headerTitleC}>{t.trip_details_title}</Text>
+          <View style={{ width: 36 }} />
         </View>
         <View style={styles.emptyState}>
-          <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: Typography.size.sm }}>
+          <Text style={{ color: C_CAP, fontFamily: 'Inter_400Regular', fontSize: Typography.size.sm }}>
             {t.trip_not_found}
           </Text>
         </View>
@@ -245,125 +246,93 @@ export default function TripDetailsScreen() {
     : direction;
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={styles.container}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: topPad + 8, borderBottomColor: colors.border }]}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
-          <ChevronLeft size={24} color={colors.foreground} strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
+      <View style={[styles.headerC, { paddingTop: topPad + 8 }]}>
+        <Pressable onPress={() => router.back()} style={styles.backBtnC} hitSlop={8}>
+          <ChevronLeft size={22} color="#ffffff" strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-          {t.trip_details_title}
-        </Text>
-        <View style={{ width: 40 }} />
+        <Text style={styles.headerTitleC}>{t.trip_details_title}</Text>
+        <View style={{ width: 36 }} />
       </View>
 
-      <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 140 }}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Route name */}
-        <View style={{ marginTop: Spacing.xl }}>
-          <Text style={[styles.routeName, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
-            {routeName}
-          </Text>
-          <Text style={[styles.routeSubtitle, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>
-            {from} → {to}
-          </Text>
-          {!!directionLabel && (
-            <Text style={[styles.routeSubtitle, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold', textAlign: TA, marginTop: 2 }]}>
-              {directionLabel}
-            </Text>
-          )}
-        </View>
+      <View style={styles.heroC}>
+        <Text style={[styles.routeNameC, { textAlign: TA }]}>{routeName}</Text>
+        <Text style={[styles.routeSubtitleC, { textAlign: TA }]}>{from} → {to}</Text>
+        {!!directionLabel && (
+          <Text style={[styles.routeSubtitleC, { textAlign: TA, marginTop: 2 }]}>{directionLabel}</Text>
+        )}
 
-        {/* Status badge */}
-        <View style={[{ flexDirection: R, marginTop: Spacing.md }]}>
-          <View style={[styles.statusBadge, { backgroundColor: '#1e1e2812', borderColor: '#1e1e2825' }]}>
-            <View style={[styles.statusDot, { backgroundColor: '#1e1e28' }]} />
-            <Text style={[styles.statusText, { color: '#2d2d42', fontFamily: 'Inter_700Bold' }]}>
-                {effectiveBooking?.status === 'active' ? t.active : t.status_booked}
+        <View style={[{ flexDirection: R, marginTop: 12 }]}>
+          <View style={styles.statusBadgeC}>
+            <View style={styles.statusDotC} />
+            <Text style={styles.statusTextC}>
+              {effectiveBooking?.status === 'active' ? t.active : t.status_booked}
             </Text>
           </View>
         </View>
+      </View>
 
+      <ScrollView
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 18, paddingBottom: 140 }}
+        showsVerticalScrollIndicator={false}
+      >
         {isCancelled && (
-          <View style={[styles.cancelledBanner, { backgroundColor: '#FEF2F2', borderColor: '#FCA5A5', flexDirection: R, marginTop: Spacing.md }]}>
-            <AlertCircle size={16} color="#DC2626" strokeWidth={2} />
-            <Text style={[{ fontSize: 13, color: '#DC2626', fontFamily: 'Inter_700Bold', flex: 1, textAlign: TA }]}>
-              {t.trip_was_cancelled}
-            </Text>
+          <View style={[styles.cancelledBannerC, { flexDirection: R, marginBottom: Spacing.md }]}>
+            <AlertCircle size={16} color={C_RED} strokeWidth={2} />
+            <Text style={[styles.cancelledTextC, { textAlign: TA }]}>{t.trip_was_cancelled}</Text>
           </View>
         )}
 
         {/* Info cards row: Date / Time / Passengers */}
-        <View style={[styles.infoRow, { flexDirection: R, marginTop: 20 }]}>
-          <GlassView style={styles.infoCard} borderRadius={16}>
-            <Calendar size={18} color="#2d2d42" strokeWidth={2} />
-            <Text style={[styles.infoCardLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>
-              {t.date}
-            </Text>
-            <Text style={[styles.infoCardValue, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-              {tripDate}
-            </Text>
-          </GlassView>
-          <GlassView style={styles.infoCard} borderRadius={16}>
-            <Clock size={18} color="#2d2d42" strokeWidth={2} />
-            <Text style={[styles.infoCardLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>
-              {t.time_label}
-            </Text>
-            <Text style={[styles.infoCardValue, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-              {departureTime}
-            </Text>
-          </GlassView>
-          <GlassView style={styles.infoCard} borderRadius={16}>
-            <Users size={18} color="#2d2d42" strokeWidth={2} />
-            <Text style={[styles.infoCardLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>
-              {t.passengers_label_count}
-            </Text>
-            <Text style={[styles.infoCardValue, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-              {bookedSeats} / {totalSeats}
-            </Text>
-          </GlassView>
+        <View style={[styles.infoRow, { flexDirection: R }]}>
+          <View style={styles.infoCardC}>
+            <Calendar size={18} color={C_INK} strokeWidth={2} />
+            <Text style={styles.infoCardLabelC}>{t.date}</Text>
+            <Text style={styles.infoCardValueC}>{tripDate}</Text>
+          </View>
+          <View style={styles.infoCardC}>
+            <Clock size={18} color={C_INK} strokeWidth={2} />
+            <Text style={styles.infoCardLabelC}>{t.time_label}</Text>
+            <Text style={styles.infoCardValueC}>{departureTime}</Text>
+          </View>
+          <View style={styles.infoCardC}>
+            <Users size={18} color={C_INK} strokeWidth={2} />
+            <Text style={styles.infoCardLabelC}>{t.passengers_label_count}</Text>
+            <Text style={styles.infoCardValueC}>{bookedSeats} / {totalSeats}</Text>
+          </View>
         </View>
 
         {/* Vehicle & Line info card */}
-        <GlassView style={[styles.vehicleCard, { marginTop: Spacing.md }]} borderRadius={16}>
+        <View style={[styles.vehicleCardC, { marginTop: Spacing.md }]}>
           <View style={[{ flexDirection: R, alignItems: 'center', gap: 14 }]}>
-            <View style={[styles.vehicleIconWrap, { backgroundColor: '#1e1e2810' }]}>
+            <View style={styles.vehicleIconWrapC}>
               <Text style={{ fontSize: Typography.size.xl }}>🚐</Text>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[{ fontSize: 11, color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textTransform: 'uppercase', letterSpacing: 0.8, textAlign: TA }]}>
-                {t.vehicle_line_label}
-              </Text>
-              <Text style={[{ fontSize: Typography.size.md, color: colors.foreground, fontFamily: 'Inter_700Bold', marginTop: 3, textAlign: TA }]}>
-                {vehicleType} · {lineNumber}
-              </Text>
+              <Text style={[styles.vehicleCapC, { textAlign: TA }]}>{t.vehicle_line_label}</Text>
+              <Text style={[styles.vehicleValC, { textAlign: TA }]}>{vehicleType} · {lineNumber}</Text>
             </View>
           </View>
-        </GlassView>
+        </View>
 
         {/* Route Timeline */}
-        <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA, marginTop: 28 }]}>
-          {t.route_timeline}
-        </Text>
+        <Text style={[styles.sectionTitleC, { textAlign: TA, marginTop: 26 }]}>{t.route_timeline}</Text>
 
         {stationsLoading ? (
-          <ActivityIndicator size="small" color="#1e1e28" style={{ marginTop: Spacing.lg }} />
+          <ActivityIndicator size="small" color={C_INK} style={{ marginTop: Spacing.lg }} />
         ) : stations.length > 0 ? (
-          <StationTimeline stations={stations} colors={colors} R={R} TA={TA} t={{ from: t.from, to: t.to }} />
+          <StationTimeline stations={stations} colors={timelineColorsC} R={R} TA={TA} t={{ from: t.from, to: t.to }} />
         ) : (
-          <GlassView style={{ marginTop: Spacing.md, padding: Spacing.xl, alignItems: 'center', gap: 10 }} borderRadius={16}>
-            <MapPin size={24} color={colors.mutedForeground} strokeWidth={2} />
-            <Text style={[{ fontSize: 13, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: 'center' }]}>
-              {from} → {to}
-            </Text>
-          </GlassView>
+          <View style={styles.emptyTimelineC}>
+            <MapPin size={24} color={C_CAP} strokeWidth={2} />
+            <Text style={styles.emptyTimelineTextC}>{from} → {to}</Text>
+          </View>
         )}
       </ScrollView>
 
       {/* Bottom action bar */}
-      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 20), borderTopColor: colors.border, backgroundColor: colors.background }]}>
+      <View style={[styles.bottomBarC, { paddingBottom: Math.max(insets.bottom, 20) }]}>
         {/* Arrived / Start Boarding — first step, shown until the driver has
             checked in as physically at the departure point. Start Trip
             (below) then takes over as the second step once boarding. */}
@@ -385,20 +354,13 @@ export default function TripDetailsScreen() {
                   setBoarding(false);
                 }
               }}
-              style={({ pressed }) => [{ borderRadius: Radius.lg, overflow: 'hidden', opacity: boarding ? 0.7 : pressed ? 0.88 : 1 }]}
+              style={[styles.startBtnC, { opacity: boarding ? 0.7 : 1 }]}
             >
-              <LinearGradient
-                colors={colors.gradientPrimary}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.startBtn}
-              >
-                {boarding ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Text style={[styles.startBtnText, { fontFamily: 'Inter_700Bold' }]}>{t.arrived_start_boarding}</Text>
-                )}
-              </LinearGradient>
+              {boarding ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : (
+                <Text style={styles.startBtnTextC}>{t.arrived_start_boarding}</Text>
+              )}
             </Pressable>
           </View>
         ) : (
@@ -433,25 +395,20 @@ export default function TripDetailsScreen() {
                 setStarting(false);
               }
             }}
-            style={({ pressed }) => [{ borderRadius: Radius.lg, overflow: 'hidden', opacity: (!isStartEnabled || isCancelled) ? 1 : starting ? 0.7 : pressed ? 0.88 : 1 }]}
+            style={({ pressed }) => [{ opacity: (!isStartEnabled || isCancelled) ? 1 : starting ? 0.7 : pressed ? 0.88 : 1 }]}
           >
             {isStartEnabled && !isCancelled ? (
-              <LinearGradient
-                colors={colors.gradientPrimary}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.startBtn}
-              >
+              <View style={styles.startBtnC}>
                 {starting ? (
-                  <ActivityIndicator size="small" color="#fff" />
+                  <ActivityIndicator size="small" color="#ffffff" />
                 ) : (
-                  <Text style={[styles.startBtnText, { fontFamily: 'Inter_700Bold' }]}>{t.start_trip}</Text>
+                  <Text style={styles.startBtnTextC}>{t.start_trip}</Text>
                 )}
-              </LinearGradient>
+              </View>
             ) : (
-              <View style={[styles.startBtnDisabled, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
-                <Text style={[{ fontSize: 15, color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>{t.start_trip}</Text>
-                <Text style={[{ fontSize: 11, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', marginTop: 2, textAlign: 'center' }]}>
+              <View style={styles.startBtnDisabledC}>
+                <Text style={styles.startBtnDisabledTextC}>{t.start_trip}</Text>
+                <Text style={styles.startBtnHintC}>
                   {isCancelled ? t.trip_was_cancelled : t.start_trip_hint}
                 </Text>
               </View>
@@ -464,14 +421,9 @@ export default function TripDetailsScreen() {
         {!isCancelled && (
         <Pressable
           onPress={handleCancelPress}
-          style={({ pressed }) => [
-            styles.cancelBtn,
-            { borderColor: '#FCA5A5', backgroundColor: pressed ? '#FEF2F2' : 'transparent' },
-          ]}
+          style={({ pressed }) => [styles.cancelBtnC, { backgroundColor: pressed ? '#FEF2F2' : 'transparent' }]}
         >
-          <Text style={[styles.cancelBtnText, { color: '#DC2626', fontFamily: 'Inter_700Bold' }]}>
-            {t.cancel_trip_action}
-          </Text>
+          <Text style={styles.cancelBtnTextC}>{t.cancel_trip_action}</Text>
         </Pressable>
         )}
       </View>
@@ -480,90 +432,100 @@ export default function TripDetailsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: {
+  container: { flex: 1, backgroundColor: C_BG },
+
+  // Dark header + hero
+  headerC: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.lg,
     paddingBottom: Spacing.md,
-    borderBottomWidth: 1,
+    backgroundColor: C_INK,
   },
-  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 17 },
+  backBtnC: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.1)' },
+  headerTitleC: { fontSize: 16, fontFamily: 'Inter_700Bold', color: '#ffffff' },
   emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  routeName: { fontSize: 24, lineHeight: 32 },
-  routeSubtitle: { fontSize: Typography.size.sm, marginTop: Spacing.xs },
-  statusBadge: {
+  heroC: { backgroundColor: C_INK, paddingHorizontal: Spacing.lg, paddingBottom: 20, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
+  routeNameC: { fontSize: 22, lineHeight: 30, fontFamily: 'Inter_700Bold', color: '#ffffff' },
+  routeSubtitleC: { fontSize: Typography.size.sm, fontFamily: 'Inter_600SemiBold', color: '#B7BBC2', marginTop: Spacing.xs },
+  statusBadgeC: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     paddingHorizontal: Spacing.md,
     paddingVertical: 5,
     borderRadius: 99,
-    borderWidth: 1,
+    backgroundColor: 'rgba(255,255,255,0.1)',
   },
-  statusDot: { width: 7, height: 7, borderRadius: 4 },
-  cancelledBanner: {
+  statusDotC: { width: 7, height: 7, borderRadius: 4, backgroundColor: C_MINT },
+  statusTextC: { fontSize: Typography.size.xs, fontFamily: 'Inter_700Bold', color: '#ffffff' },
+  cancelledBannerC: {
     alignItems: 'center',
     gap: 8,
     paddingHorizontal: Spacing.md,
     paddingVertical: 10,
-    borderRadius: Radius.lg,
+    borderRadius: 14,
+    backgroundColor: '#FEF2F2',
     borderWidth: 1,
+    borderColor: '#FCA5A5',
   },
-  statusText: { fontSize: Typography.size.xs },
+  cancelledTextC: { fontSize: 13, color: C_RED, fontFamily: 'Inter_700Bold', flex: 1 },
+
+  // White body cards
   infoRow: { gap: 10 },
-  infoCard: {
+  infoCardC: {
     flex: 1,
     alignItems: 'center',
     padding: 14,
     gap: Spacing.xs,
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
   },
-  infoCardLabel: { fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, textAlign: 'center' },
-  infoCardValue: { fontSize: 15, textAlign: 'center' },
-  vehicleCard: { padding: Spacing.lg },
-  vehicleIconWrap: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  sectionTitle: { fontSize: Typography.size.md },
-  stationRow: { gap: Spacing.md, alignItems: 'flex-start' },
-  stationIndicator: { width: 20, alignItems: 'center', paddingTop: 14 },
-  stationDot: { width: 12, height: 12, borderRadius: 6, borderWidth: 2 },
-  stationLine: { width: 2, flex: 1, minHeight: 16, marginTop: Spacing.xs },
-  terminalBadge: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 3,
-    borderRadius: 6,
-    borderWidth: 1,
-    alignSelf: 'center',
-  },
-  bottomBar: {
+  infoCardLabelC: { fontSize: 10, fontFamily: 'Inter_700Bold', color: C_CAP, textTransform: 'uppercase', letterSpacing: 0.8, textAlign: 'center' },
+  infoCardValueC: { fontSize: 15, fontFamily: 'Inter_700Bold', color: C_INK, textAlign: 'center' },
+  vehicleCardC: { padding: Spacing.lg, backgroundColor: '#ffffff', borderRadius: 16 },
+  vehicleIconWrapC: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F0F2F3' },
+  vehicleCapC: { fontSize: 11, fontFamily: 'Inter_700Bold', color: C_CAP, textTransform: 'uppercase', letterSpacing: 0.8 },
+  vehicleValC: { fontSize: Typography.size.md, fontFamily: 'Inter_700Bold', color: C_INK, marginTop: 3 },
+  sectionTitleC: { fontSize: Typography.size.md, fontFamily: 'Inter_700Bold', color: C_INK },
+  emptyTimelineC: { marginTop: Spacing.md, padding: Spacing.xl, alignItems: 'center', gap: 10, backgroundColor: '#ffffff', borderRadius: 16 },
+  emptyTimelineTextC: { fontSize: 13, fontFamily: 'Inter_400Regular', color: C_CAP, textAlign: 'center' },
+
+  // Bottom action bar
+  bottomBarC: {
     flexDirection: 'row',
     gap: 10,
     paddingHorizontal: Spacing.lg,
     paddingTop: 14,
-    borderTopWidth: 1,
+    backgroundColor: C_BG,
   },
-  startBtn: {
+  startBtnC: {
     height: 54,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: Radius.lg,
+    borderRadius: 15,
+    backgroundColor: C_INK,
   },
-  startBtnText: { color: '#fff', fontSize: 15 },
-  startBtnDisabled: {
+  startBtnTextC: { color: '#ffffff', fontSize: 15, fontFamily: 'Inter_700Bold' },
+  startBtnDisabledC: {
     height: 54,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: Radius.lg,
+    borderRadius: 15,
     borderWidth: 1.5,
+    borderColor: '#D3D6DA',
   },
-  cancelBtn: {
+  startBtnDisabledTextC: { fontSize: 15, fontFamily: 'Inter_700Bold', color: C_CAP },
+  startBtnHintC: { fontSize: 11, fontFamily: 'Inter_400Regular', color: C_CAP, marginTop: 2, textAlign: 'center' },
+  cancelBtnC: {
     height: 54,
     paddingHorizontal: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: Radius.lg,
+    borderRadius: 15,
     borderWidth: 1.5,
+    borderColor: '#FCA5A5',
   },
-  cancelBtnText: { fontSize: Typography.size.sm },
+  cancelBtnTextC: { fontSize: Typography.size.sm, fontFamily: 'Inter_700Bold', color: C_RED },
 });
