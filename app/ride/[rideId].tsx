@@ -120,9 +120,10 @@ export default function RideScreen() {
   const [shareLink, setShareLink] = useState<{ id: number; url: string } | null>(null);
   const [cancelling, setCancelling] = useState(false);
   // Cash-collection confirmation, shown after "Complete trip" on a cash ride
-  // and before the ride is actually completed — lets the driver confirm the
-  // exact fare was received, or branch into the "Other amount" keypad below.
-  const [collectCashOpen, setCollectCashOpen] = useState(false);
+  // and before the ride is actually completed — reuses the same fare-page
+  // overlay below (dark hero + white body) with OK/Other-amount actions
+  // instead of Continue, so there's no separate page for this.
+  const [pendingCashConfirm, setPendingCashConfirm] = useState(false);
   // "Other amount" change flow (cash rides only — see handleCompleteWithChange).
   const [amountSheetOpen, setAmountSheetOpen] = useState(false);
   const [amountInput, setAmountInput] = useState('');
@@ -611,19 +612,19 @@ export default function RideScreen() {
   // every other phase/payment method transitions immediately, as before.
   const handleCtaPress = () => {
     if (phase === 'in_trip' && paymentMethod === 'cash') {
-      setCollectCashOpen(true);
+      setPendingCashConfirm(true);
       return;
     }
     handleNext();
   };
 
-  const handleConfirmExactFare = () => {
-    setCollectCashOpen(false);
-    handleNext();
+  const handleConfirmExactFare = async () => {
+    await handleNext();
+    setPendingCashConfirm(false);
   };
 
   const handleOpenAmountSheet = () => {
-    setCollectCashOpen(false);
+    setPendingCashConfirm(false);
     setAmountInput('');
     setAmountSheetOpen(true);
   };
@@ -965,9 +966,35 @@ export default function RideScreen() {
         </View>
       </View>
 
-      {phase === 'completed' && (
-        <Animated.View style={[styles.completedOverlayC, { opacity: completedAnim }]}>
-          {completedStep === 'fare' ? (
+      {(phase === 'completed' || pendingCashConfirm) && (
+        <Animated.View style={[styles.completedOverlayC, { opacity: phase === 'completed' ? completedAnim : 1 }]}>
+          {pendingCashConfirm ? (
+            /* ── Cash-collection confirmation — same fare-page layout,
+                shown before the ride actually completes ── */
+            <View style={{ flex: 1 }}>
+              <View style={[styles.heroC, { paddingTop: insets.top + 24 }]}>
+                <Text style={styles.heroCapC}>{t.trip_fare_label}</Text>
+                <View style={styles.heroRowC}>
+                  <Text style={styles.heroAmountC}>{fareAmount.toFixed(2)}</Text>
+                  <Text style={styles.heroCurC}>{t.egp}</Text>
+                </View>
+              </View>
+              <View style={{ flex: 1 }} />
+              <View style={[styles.footerC, { paddingBottom: insets.bottom + 24 }]}>
+                <Pressable onPress={handleConfirmExactFare} disabled={busy} style={[styles.primaryBtnC, { opacity: busy ? 0.7 : 1 }]}>
+                  {busy ? <ActivityIndicator color="#ffffff" /> : <Text style={styles.primaryBtnTxtC}>{t.ok}</Text>}
+                </Pressable>
+                <Pressable
+                  onPress={handleOpenAmountSheet}
+                  disabled={busy}
+                  style={[styles.otherAmountBtnC, { marginTop: 10, opacity: busy ? 0.6 : 1 }]}
+                  accessibilityLabel={t.other_amount_btn}
+                >
+                  <Text style={styles.otherAmountBtnTextC}>{t.other_amount_btn}</Text>
+                </Pressable>
+              </View>
+            </View>
+          ) : completedStep === 'fare' ? (
             /* ── STEP 1 · Fare page (C) — dark hero band + white body ── */
             <View style={{ flex: 1 }}>
               <View style={[styles.heroC, { paddingTop: insets.top + 24 }]}>
@@ -1238,35 +1265,6 @@ export default function RideScreen() {
           </View>
         </Animated.View>
       )}
-
-      {/* ── Cash-collection confirmation — shown after "Complete trip" on a
-          cash ride, before the ride is actually completed ─────────────── */}
-      <Modal visible={collectCashOpen} transparent animationType="fade" onRequestClose={() => setCollectCashOpen(false)}>
-        <View style={styles.modalBackdropC}>
-          <View style={styles.collectCardC}>
-            <View style={styles.collectHeroC}>
-              <Text style={styles.collectCapC}>{t.trip_fare_label}</Text>
-              <View style={styles.collectHeroRowC}>
-                <Text style={styles.collectHeroAmtC}>{fareAmount.toFixed(2)}</Text>
-                <Text style={styles.collectHeroCurC}>{t.egp}</Text>
-              </View>
-            </View>
-            <View style={styles.collectBodyC}>
-              <Pressable onPress={handleConfirmExactFare} disabled={busy} style={[styles.primaryBtnC, { opacity: busy ? 0.7 : 1 }]}>
-                {busy ? <ActivityIndicator color="#ffffff" /> : <Text style={styles.primaryBtnTxtC}>{t.ok}</Text>}
-              </Pressable>
-              <Pressable
-                onPress={handleOpenAmountSheet}
-                disabled={busy}
-                style={[styles.otherAmountBtnC, { marginTop: 10, opacity: busy ? 0.6 : 1 }]}
-                accessibilityLabel={t.other_amount_btn}
-              >
-                <Text style={styles.otherAmountBtnTextC}>{t.other_amount_btn}</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
 
       {/* ── "Other amount" numeric keypad ─────────────────────────────── */}
       <Modal visible={amountSheetOpen} transparent animationType="slide" onRequestClose={handleKeypadCancel}>
@@ -1541,15 +1539,6 @@ const styles = StyleSheet.create({
   cCancelTxt: { fontSize: 14, fontFamily: 'Inter_700Bold', color: C_INK_SOFT },
   cConfirmBtn: { flex: 1.4, height: 50, borderRadius: 14, backgroundColor: '#14151A', alignItems: 'center', justifyContent: 'center' },
   cConfirmTxt: { fontSize: 15, fontFamily: 'Inter_700Bold', color: '#ffffff' },
-
-  /* ── "D" cash-collection confirmation (Complete trip → fare → OK/Other amount) ── */
-  collectCardC: { width: '100%', borderRadius: 24, overflow: 'hidden', backgroundColor: C_SURF },
-  collectHeroC: { backgroundColor: '#14151A', paddingVertical: 24, alignItems: 'center' },
-  collectCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.4, color: C_CAP, textTransform: 'uppercase' },
-  collectHeroRowC: { flexDirection: 'row', alignItems: 'baseline', gap: 7, marginTop: 8 },
-  collectHeroAmtC: { fontSize: 44, fontFamily: 'Inter_700Bold', color: C_TEAL, lineHeight: 46 },
-  collectHeroCurC: { fontSize: 16, fontFamily: 'Inter_700Bold', color: C_TEAL },
-  collectBodyC: { padding: 20 },
 
   /* ── "C" Add Remainder keypad ── */
   modalBackdropC: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(20,21,26,0.4)' },
