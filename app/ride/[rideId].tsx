@@ -495,12 +495,9 @@ export default function RideScreen() {
 
   const toggleSheet = useCallback(() => setSheetCollapsed((c) => !c), []);
 
-  // Auto-collapse while actively navigating (to_pickup / in_trip); auto-expand
-  // when arrived (waiting for rider) so the phase controls are reachable.
-  useEffect(() => {
-    setSheetCollapsed(phase === 'to_pickup' || phase === 'in_trip');
-  }, [phase]);
-
+  // The trip card starts fully expanded in every phase — the driver taps
+  // the handle (sheetHandleC, below) to lower it to a peek themselves when
+  // they want more map room. Never auto-collapsed on their behalf.
   useEffect(() => {
     Animated.spring(collapseAnim, {
       toValue: sheetCollapsed ? 1 : 0,
