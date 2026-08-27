@@ -1,6 +1,6 @@
 import { showAlert } from '@/lib/alert';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ChevronLeft, AlertTriangle, Check } from 'lucide-react-native';
+import { ChevronLeft, AlertTriangle, Check, CircleAlert } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -22,7 +22,6 @@ import { Spacing } from '@/constants/spacing';
 const C_BG = '#EEF0F2';
 const C_INK = '#14151A';
 const C_CAP = '#9AA0A6';
-const C_HAIR = '#EEF0F1';
 
 type Params = {
   tripId: string;
@@ -151,81 +150,77 @@ export default function DirectCancelScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Dark hero: back button + trip identity */}
+      {/* Dark hero: back button + the warning itself as the headline */}
       <View style={[styles.heroC, { paddingTop: topPad + 8 }]}>
         <View style={{ flexDirection: R, alignItems: 'center', justifyContent: 'space-between' }}>
           <Pressable onPress={() => router.back()} style={styles.backBtnC} hitSlop={8}>
             <ChevronLeft size={22} color="#ffffff" strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
           </Pressable>
-          <Text style={styles.heroCapC}>{t.direct_cancel}</Text>
+          <Text style={styles.heroCapC}>{displayRouteName} · {departureTime ?? '—'}</Text>
           <View style={{ width: 36 }} />
         </View>
-        <Text style={[styles.heroTitleC, { textAlign: TA }]}>{displayRouteName}</Text>
-        <Text style={[styles.heroSubC, { textAlign: TA }]}>{departureTime ?? '—'}</Text>
-      </View>
 
-      <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 130 }}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Warning banner */}
-        <View style={[styles.warningBannerC, { marginTop: 18 }]}>
-          <AlertTriangle size={20} color="#DC2626" strokeWidth={2} />
+        <View style={{ flexDirection: R, alignItems: 'center', gap: 12, marginTop: 20 }}>
+          <View style={styles.warningIconWrapC}>
+            <AlertTriangle size={22} color="#F3C6C2" strokeWidth={2} />
+          </View>
           <View style={{ flex: 1 }}>
-            <Text style={[{ fontSize: Typography.size.sm, color: '#DC2626', fontFamily: 'Inter_700Bold', textAlign: TA }]}>
-              {t.final_cancel_banner}
-            </Text>
-            {previewData != null ? (
-              <Text style={[{ fontSize: Typography.size.xs, color: '#991B1B', fontFamily: 'Inter_700Bold', marginTop: 3, textAlign: TA }]}>
-                {(previewData.penaltyAmount ?? 0) > 0
-                  ? t.cancel_penalty_preview.replace('{n}', String(previewData.penaltyAmount))
-                  : t.no_penalty_preview}
-              </Text>
-            ) : previewError ? (
-              <Pressable onPress={() => refetchPreview()}>
-                <Text style={[{ fontSize: Typography.size.xs, color: '#991B1B', fontFamily: 'Inter_700Bold', marginTop: 3, textAlign: TA }]}>
-                  {t.cancel_penalty_check_failed}
-                </Text>
-              </Pressable>
-            ) : null}
-            <Text style={[{ fontSize: Typography.size.xs, color: '#991B1B', fontFamily: 'Inter_400Regular', marginTop: 3, textAlign: TA }]}>
-              {t.passengers_admin_reassign}
-            </Text>
+            <Text style={[styles.heroTitleC, { textAlign: TA }]}>{t.final_cancel_banner}</Text>
+            <Text style={[styles.heroSubC, { textAlign: TA }]}>{t.passengers_admin_reassign}</Text>
           </View>
         </View>
 
-        {/* Reasons list */}
-        <Text style={[styles.sectionTitleC, { textAlign: TA, marginTop: 24 }]}>{t.cancel_reasons_title}</Text>
+        {/* Penalty readout — receipt style, in the hero */}
+        {previewError ? (
+          <Pressable onPress={() => refetchPreview()} style={styles.heroReadoutC}>
+            <Text style={[styles.heroReadoutTextC, { textAlign: TA }]}>{t.cancel_penalty_check_failed}</Text>
+          </Pressable>
+        ) : (
+          <View style={[styles.heroReadoutC, { flexDirection: R, alignItems: 'center', justifyContent: 'space-between' }]}>
+            <Text style={[styles.heroReadoutCapC, { textAlign: TA }]}>{t.cancellation_penalty_label}</Text>
+            <Text style={styles.heroReadoutValC}>
+              {previewData != null ? Math.max(0, previewData.penaltyAmount ?? 0) : '—'} {t.egp}
+            </Text>
+          </View>
+        )}
+      </View>
+
+      <ScrollView
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 22, paddingBottom: 130 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Reasons — icon-led selectable chips */}
+        <Text style={[styles.sectionTitleC, { textAlign: TA }]}>{t.cancel_reasons_title}</Text>
         <Text style={[styles.sectionSubC, { textAlign: TA, marginTop: Spacing.xs, marginBottom: 14 }]}>
           {t.choose_cancel_reason}
         </Text>
 
-        <View style={styles.reasonsCardC}>
-          {cancelReasons.map((reason, idx) => {
-            const isSelected = selectedReason === reason.key;
-            const isLast = idx === cancelReasons.length - 1;
-            const label = (isRTL && reason.labelAr) ? reason.labelAr : reason.label;
-            return (
-              <Pressable
-                key={reason.key}
-                onPress={() => setSelectedReason(reason.key)}
-                style={({ pressed }) => [
-                  styles.reasonRow,
-                  { flexDirection: R },
-                  !isLast && { borderBottomWidth: 1, borderBottomColor: C_HAIR },
-                  { backgroundColor: pressed ? '#F6F7F8' : isSelected ? '#F0F2F3' : 'transparent' },
-                ]}
-              >
-                <View style={[styles.radioC, { borderColor: isSelected ? C_INK : '#D3D6DA' }]}>
-                  {isSelected && <View style={styles.radioDotC} />}
-                </View>
-                <Text style={[styles.reasonTextC, { fontFamily: isSelected ? 'Inter_700Bold' : 'Inter_400Regular', textAlign: TA, flex: 1 }]}>
-                  {label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        {cancelReasons.map((reason) => {
+          const isSelected = selectedReason === reason.key;
+          const label = (isRTL && reason.labelAr) ? reason.labelAr : reason.label;
+          return (
+            <Pressable
+              key={reason.key}
+              onPress={() => setSelectedReason(reason.key)}
+              style={({ pressed }) => [
+                styles.reasonChipC,
+                { flexDirection: R },
+                isSelected && { borderColor: C_INK },
+                { backgroundColor: pressed ? '#F6F7F8' : '#ffffff' },
+              ]}
+            >
+              <View style={styles.reasonIconC}>
+                <CircleAlert size={18} color={isSelected ? C_INK : C_CAP} strokeWidth={2} />
+              </View>
+              <Text style={[styles.reasonTextC, { fontFamily: isSelected ? 'Inter_700Bold' : 'Inter_400Regular', textAlign: TA, flex: 1 }]}>
+                {label}
+              </Text>
+              <View style={[styles.reasonCheckC, isSelected ? { backgroundColor: C_INK } : { borderWidth: 2, borderColor: '#D3D6DA' }]}>
+                {isSelected && <Check size={12} color="#ffffff" strokeWidth={3} />}
+              </View>
+            </Pressable>
+          );
+        })}
       </ScrollView>
 
       {/* Confirm cancel button */}
@@ -259,42 +254,38 @@ const styles = StyleSheet.create({
   heroC: {
     backgroundColor: C_INK,
     paddingHorizontal: Spacing.lg,
-    paddingBottom: 20,
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
+    paddingBottom: 22,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
   },
   backBtnC: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.1)' },
   heroCapC: { fontSize: 13, fontFamily: 'Inter_700Bold', color: '#ffffff' },
-  heroTitleC: { fontSize: 20, fontFamily: 'Inter_700Bold', color: '#ffffff', marginTop: 16 },
-  heroSubC: { fontSize: 13, fontFamily: 'Inter_600SemiBold', color: '#B7BBC2', marginTop: 4 },
-  warningBannerC: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-    padding: 14,
+  heroTitleC: { fontSize: 18, fontFamily: 'Inter_700Bold', color: '#ffffff' },
+  heroSubC: { fontSize: 13, fontFamily: 'Inter_600SemiBold', color: '#B7BBC2', marginTop: 2 },
+  warningIconWrapC: { width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(217,45,32,.18)', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  heroReadoutC: {
     borderRadius: 16,
-    backgroundColor: '#FEF2F2',
-    borderWidth: 1,
-    borderColor: '#FCA5A5',
+    padding: 14,
+    marginTop: 18,
+    backgroundColor: 'rgba(255,255,255,0.08)',
   },
+  heroReadoutCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.2, color: '#8A9096', textTransform: 'uppercase' },
+  heroReadoutValC: { fontSize: 20, fontFamily: 'Inter_700Bold', color: '#ffffff' },
+  heroReadoutTextC: { fontSize: 13, fontFamily: 'Inter_700Bold', color: '#F3C6C2' },
   sectionTitleC: { fontSize: Typography.size.md, fontFamily: 'Inter_700Bold', color: C_INK },
   sectionSubC: { fontSize: 13, fontFamily: 'Inter_400Regular', color: C_CAP },
-  reasonsCardC: { backgroundColor: '#ffffff', borderRadius: 16, overflow: 'hidden' },
-  reasonRow: {
+  reasonChipC: {
     alignItems: 'center',
-    gap: 14,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.lg,
+    gap: 12,
+    padding: 16,
+    marginBottom: 10,
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
   },
-  radioC: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  radioDotC: { width: 10, height: 10, borderRadius: 5, backgroundColor: C_INK },
+  reasonIconC: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#F0F2F3', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  reasonCheckC: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   reasonTextC: { fontSize: Typography.size.sm, color: C_INK },
   bottomBarC: {
     paddingHorizontal: Spacing.lg,
