@@ -3,7 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { AlertTriangle, Check, ChevronUp, Clock, Delete, Map, MessageCircle, Navigation, Phone, Share2, Shield, Star } from 'lucide-react-native';
 import React, { useCallback, useRef, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Animated, Easing, Image, Linking, Modal, Platform, Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Animated, Easing, Image, Linking, Modal, Platform, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { RideMap } from '@/components/RideMap';
@@ -42,6 +42,20 @@ const GOLD = '#C8A535';
 const CHARCOAL = '#1C1C1E';
 const CHARCOAL_SURFACE = '#26262A';
 const CARD_BORDER = 'rgba(255,255,255,0.08)';
+
+// "C" light palette for the redesigned post-trip fare page + rating card, and
+// the "D" change-confirm card — matching the approved passenger-app designs.
+const C_BG = '#EEF0F2';
+const C_SURF = '#FFFFFF';
+const C_INK = '#14151A';
+const C_INK_SOFT = '#6B7178';
+const C_CAP = '#9AA0A6';
+const C_HAIR = '#EEF0F1';
+const C_TEAL = '#0E9F8E';
+const C_MINT = '#3DDC97';
+const C_STARC = '#F5A623';
+const C_CAP_ON_DARK = '#8A9096';
+const C_RED = '#D92D20';
 
 type Phase = 'to_pickup' | 'arrived' | 'in_trip' | 'completed';
 type PhaseCopy = { label: string; cta: string; next: Phase };
@@ -98,6 +112,8 @@ export default function RideScreen() {
   const [rating, setRating] = useState(0);
   const [ratingComment, setRatingComment] = useState('');
   const [ratingSubmitting, setRatingSubmitting] = useState(false);
+  // Post-trip two-step: full-screen fare page → rating card (approved design).
+  const [completedStep, setCompletedStep] = useState<'fare' | 'rating'>('fare');
   const [busy, setBusy] = useState(false);
   const [sosBusy, setSosBusy] = useState(false);
   const [shareBusy, setShareBusy] = useState(false);
@@ -646,6 +662,7 @@ export default function RideScreen() {
       setConfirmChangeOpen(false);
       setAmountInput('');
       setPhase('completed');
+      setCompletedStep('rating');
     } catch (err: unknown) {
       const body = (err as { body?: { error?: string } })?.body;
       showAlert(t.action_failed_title, body?.error ?? t.try_again_msg);
@@ -929,85 +946,118 @@ export default function RideScreen() {
       </View>
 
       {phase === 'completed' && (
-        <Animated.View style={[styles.completedOverlay, { opacity: completedAnim, backgroundColor: colors.background + 'CC' }]}>
-          <Animated.View style={[styles.checkCircle, { transform: [{ scale: checkScale }] }]}>
-            <LinearGradient colors={['#2d2d42', '#1e1e28']} style={styles.checkCircleGrad}>
-              <Check size={48} color={colors.primaryForeground} strokeWidth={3} />
-            </LinearGradient>
-          </Animated.View>
-          <Text style={[styles.completedTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.trip_done_title}</Text>
-          <Text style={[styles.fareEarned, { color: GOLD, fontFamily: 'Inter_700Bold' }]}>
-            {completionResult != null
-              // Cash rides: the amount still owed in person. Non-cash rides:
-              // netCashPayable is correctly 0 (already settled via wallet/card),
-              // so the headline shows driverCut (what was actually earned)
-              // instead of a misleading "0.00 EGP".
-              ? `${(completionResult.netCashPayable > 0 ? completionResult.netCashPayable : completionResult.driverCut).toFixed(2)} ${t.egp}`
-              : '—'}
-          </Text>
-          <Text style={[styles.fareNote, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-            {completionResult != null && completionResult.netCashPayable > 0 ? t.cash_to_collect : t.added_to_earnings}
-          </Text>
-          {completionResult != null && (
-            <Pressable onPress={() => setViewDetailsOpen(true)} style={styles.viewDetailsBtn} accessibilityLabel={t.view_details}>
-              <Text style={[styles.viewDetailsBtnText, { color: GOLD, fontFamily: 'Inter_600SemiBold' }]}>{t.view_details}</Text>
-            </Pressable>
-          )}
-          {creditedChange > 0 && (
-            <Text style={[styles.fareNote, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-              {t.change_credited_note.replace('{amount}', creditedChange.toFixed(2)).replace('{egp}', t.egp)}
-            </Text>
-          )}
+        <Animated.View style={[styles.completedOverlayC, { opacity: completedAnim }]}>
+          {completedStep === 'fare' ? (
+            /* ── STEP 1 · Fare page (C) — dark hero band + white body ── */
+            <View style={{ flex: 1 }}>
+              <View style={[styles.heroC, { paddingTop: insets.top + 24 }]}>
+                <Animated.View style={[styles.checkCircleC, { transform: [{ scale: checkScale }] }]}>
+                  <Check size={32} color="#ffffff" strokeWidth={3} />
+                </Animated.View>
+                <Text style={styles.pageTitleC}>{t.trip_done_title}</Text>
 
-          <View style={[styles.ratingCard, { backgroundColor: CHARCOAL, borderColor: CARD_BORDER, borderWidth: 1 }]}>
-            <View style={styles.ratingCardHeader}>
-              {passengerAvatar && !riderAvatarFailed ? (
-                <Image source={{ uri: passengerAvatar }} style={styles.ratingAvatar} resizeMode="cover" />
-              ) : (
-                <View style={[styles.ratingAvatar, { justifyContent: 'center', alignItems: 'center', backgroundColor: CHARCOAL_SURFACE }]}>
-                  <Text style={{ color: '#ffffff', fontSize: 11, fontFamily: 'Inter_700Bold' }}>{passengerInitials}</Text>
-                </View>
-              )}
-              <Text style={[styles.ratingCardLabel, { color: '#B0B0B5', fontFamily: 'Inter_700Bold' }]}>{t.rate_rider_label.replace('{name}', passengerName ?? '—')}</Text>
-            </View>
-            <View style={styles.starsRow}>
-              {[1, 2, 3, 4, 5].map(n => (
-                <Pressable key={n} onPress={() => setRating(n)}>
-                  <Star size={36} color={n <= rating ? GOLD : '#5A5A5E'} fill={n <= rating ? GOLD : 'transparent'} strokeWidth={2} />
-                </Pressable>
-              ))}
-            </View>
-            {rating > 0 && (
-              <TextInput
-                style={[styles.commentInput, { color: '#ffffff', borderColor: CARD_BORDER, backgroundColor: CHARCOAL_SURFACE }]}
-                placeholder={t.rating_comment_placeholder}
-                placeholderTextColor="#8A8A8E"
-                value={ratingComment}
-                onChangeText={setRatingComment}
-                maxLength={500}
-                multiline
-              />
-            )}
-          </View>
-
-          <View style={styles.ratingActionsRow}>
-            <Pressable onPress={handleSkipRating} disabled={ratingSubmitting} style={[styles.skipBtn, { borderColor: colors.border }]}>
-              <Text style={[styles.skipBtnText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.skip_btn}</Text>
-            </Pressable>
-            <Pressable
-              onPress={handleSubmitRating}
-              disabled={rating === 0 || ratingSubmitting}
-              style={[styles.doneBtn, { opacity: rating === 0 || ratingSubmitting ? 0.5 : 1 }]}
-            >
-              <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.doneBtnGrad}>
-                {ratingSubmitting ? (
-                  <ActivityIndicator color={colors.primaryForeground} />
-                ) : (
-                  <Text style={[styles.doneBtnText, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>{t.submit_rating_btn}</Text>
+                {completionResult != null && (
+                  <>
+                    <Text style={styles.heroCapC}>
+                      {completionResult.netCashPayable > 0 ? t.cash_to_collect : t.added_to_earnings}
+                    </Text>
+                    <View style={styles.heroRowC}>
+                      <Text style={styles.heroAmountC}>
+                        {(completionResult.netCashPayable > 0 ? completionResult.netCashPayable : completionResult.driverCut).toFixed(2)}
+                      </Text>
+                      <Text style={styles.heroCurC}>{t.egp}</Text>
+                    </View>
+                    {completionResult.netCashPayable > 0 && (
+                      <Text style={styles.heroNoteC}>
+                        {t.added_to_earnings} · {completionResult.driverCut.toFixed(2)} {t.egp}
+                      </Text>
+                    )}
+                    <Pressable onPress={() => setViewDetailsOpen(true)} style={styles.viewDetailsBtnC} accessibilityLabel={t.view_details}>
+                      <Text style={styles.viewDetailsTxtC}>{t.view_details}</Text>
+                    </Pressable>
+                  </>
                 )}
-              </LinearGradient>
-            </Pressable>
-          </View>
+              </View>
+
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: 26, paddingTop: 22, paddingBottom: 24 }}
+              >
+                {creditedChange > 0 && (
+                  <Text style={styles.bodyNoteC}>
+                    {t.change_credited_note.replace('{amount}', creditedChange.toFixed(2)).replace('{egp}', t.egp)}
+                  </Text>
+                )}
+              </ScrollView>
+              <View style={[styles.footerC, { paddingBottom: insets.bottom + 24 }]}>
+                <Pressable onPress={() => setCompletedStep('rating')} style={styles.primaryBtnC}>
+                  <Text style={styles.primaryBtnTxtC}>{'Continue'}</Text>
+                </Pressable>
+                {paymentMethod === 'cash' && (
+                  <Pressable
+                    onPress={handleOpenAmountSheet}
+                    disabled={busy}
+                    style={[styles.otherAmountBtnC, { marginTop: 10, opacity: busy ? 0.6 : 1 }]}
+                    accessibilityLabel={t.other_amount_btn}
+                  >
+                    <Text style={styles.otherAmountBtnTextC}>{t.other_amount_btn}</Text>
+                  </Pressable>
+                )}
+              </View>
+            </View>
+          ) : (
+            /* ── STEP 2 · Rating card (C) — dark header row + white body ── */
+            <View style={styles.ratingWrapC}>
+              <View style={styles.ratingCardC}>
+                <View style={styles.ratingHeaderC}>
+                  {passengerAvatar && !riderAvatarFailed ? (
+                    <Image source={{ uri: passengerAvatar }} style={styles.ratingAvatarC} resizeMode="cover" />
+                  ) : (
+                    <View style={[styles.ratingAvatarC, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#26272E' }]}>
+                      <Text style={{ color: '#ffffff', fontSize: 18, fontFamily: 'Inter_700Bold' }}>{passengerInitials}</Text>
+                    </View>
+                  )}
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={styles.ratingCapC}>{t.trip_done_title}</Text>
+                    <Text style={styles.ratingTitleC} numberOfLines={1}>
+                      {t.rate_rider_label.replace('{name}', passengerName ?? '—')}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.ratingBodyC}>
+                  <View style={styles.starsRowC}>
+                    {[1, 2, 3, 4, 5].map(n => (
+                      <Pressable key={n} onPress={() => setRating(n)}>
+                        <Star size={38} color={n <= rating ? C_STARC : '#D3D6DA'} fill={n <= rating ? C_STARC : 'transparent'} strokeWidth={n <= rating ? 0 : 1.4} />
+                      </Pressable>
+                    ))}
+                  </View>
+                  {rating > 0 && (
+                    <TextInput
+                      style={styles.commentInputC}
+                      placeholder={t.rating_comment_placeholder}
+                      placeholderTextColor={C_CAP}
+                      value={ratingComment}
+                      onChangeText={setRatingComment}
+                      maxLength={500}
+                      multiline
+                    />
+                  )}
+                  <Pressable
+                    onPress={handleSubmitRating}
+                    disabled={rating === 0 || ratingSubmitting}
+                    style={[styles.primaryBtnC, { marginTop: 20, opacity: rating === 0 || ratingSubmitting ? 0.5 : 1 }]}
+                  >
+                    {ratingSubmitting ? <ActivityIndicator color="#ffffff" /> : <Text style={styles.primaryBtnTxtC}>{t.submit_rating_btn}</Text>}
+                  </Pressable>
+                  <Pressable onPress={handleSkipRating} disabled={ratingSubmitting} style={styles.skipBtnC}>
+                    <Text style={styles.skipTxtC}>{t.skip_btn}</Text>
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+          )}
         </Animated.View>
       )}
 
@@ -1042,233 +1092,220 @@ export default function RideScreen() {
             },
           ]}
         >
-          <GlassView strong style={styles.sheetCard} borderRadius={24}>
-            <Pressable
-              onPress={toggleSheet}
-              hitSlop={16}
-              accessibilityRole="button"
-              accessibilityLabel={sheetCollapsed ? t.expand_trip_card_label : t.collapse_trip_card_label}
-            >
-              <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
-            </Pressable>
-
-            <View style={styles.riderRow}>
-              {passengerAvatar && !riderAvatarFailed ? (
-                <Image
-                  source={{ uri: passengerAvatar }}
-                  style={styles.riderAvatar}
-                  resizeMode="cover"
-                  onError={() => setRiderAvatarFailed(true)}
-                />
-              ) : (
-                <View style={[styles.riderAvatar, { justifyContent: 'center', alignItems: 'center', backgroundColor: colors.secondary }]}>
-                  <Text style={{ color: colors.mutedForeground, fontSize: 16, fontFamily: 'Inter_700Bold' }}>{passengerInitials}</Text>
-                </View>
-              )}
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={[styles.riderName, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]} numberOfLines={1}>{passengerName ?? '—'}</Text>
-                <View style={styles.riderMeta}>
-                  <Star size={12} color={colors.accent} fill={colors.accent} strokeWidth={2} />
-                  <Text style={[styles.riderMetaText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-                    {'—'} · {paymentMethod ?? '—'} · {parseFloat(String(displayFare ?? 0)).toFixed(2)} {t.egp}
-                  </Text>
-                </View>
+          <View style={styles.splitCard}>
+            <View style={styles.leftPanelC}>
+              <Pressable
+                onPress={toggleSheet}
+                hitSlop={16}
+                accessibilityRole="button"
+                accessibilityLabel={sheetCollapsed ? t.expand_trip_card_label : t.collapse_trip_card_label}
+              >
+                <View style={styles.sheetHandleC} />
+              </Pressable>
+              <View style={styles.statusRowC}>
+                <View style={styles.statusDotC} />
+                <Text style={styles.leftLabelC} numberOfLines={2}>{p.label}</Text>
               </View>
-              <Pressable
-                style={[styles.actionBtn, { backgroundColor: colors.primary + '26' }]}
-                onPress={() => router.push({ pathname: '/ride/chat', params: { rideId: rideId ?? '' } } as any)}
-                accessibilityLabel={t.message_rider_title}
-              >
-                <MessageCircle size={20} color={colors.primary} strokeWidth={2} />
-              </Pressable>
-              <Pressable
-                style={[styles.actionBtn, { backgroundColor: colors.primary + '26' }]}
-                onPress={() => {
-                  const phone = passengerPhone;
-                  if (phone) Linking.openURL(`tel:${phone}`).catch(() => {});
-                }}
-                accessibilityLabel={t.call_rider_label}
-              >
-                <Phone size={20} color={colors.primary} strokeWidth={2} />
-              </Pressable>
+              <View style={{ flex: 1 }} />
+              <Text style={styles.leftCapC}>{t.fare_label}</Text>
+              <Text style={styles.leftFareValC} numberOfLines={1}>{fareAmount.toFixed(2)} {t.egp}</Text>
             </View>
 
-            {/* Waiting charge ticker — visible only in 'arrived' phase */}
-            {phase === 'arrived' && waitingCharge != null && (
-              <Animated.View
-                style={[
-                  styles.waitingTicker,
-                  {
-                    backgroundColor: waitingCharge.capped ? colors.secondary : '#D5B23D18',
-                    borderColor: waitingCharge.capped ? colors.border : '#D5B23D55',
-                    opacity: waitingCharge.capped ? 1 : pulseAnim,
-                  },
-                ]}
-              >
-                <Clock size={13} color={waitingCharge.capped ? colors.mutedForeground : '#D5B23D'} strokeWidth={2.5} />
-                <Text style={[styles.waitingTickerText, { color: waitingCharge.capped ? colors.mutedForeground : '#D5B23D', fontFamily: 'Inter_700Bold' }]}>
-                  {`Waiting fee: +${waitingCharge.amount.toFixed(2)} ${t.egp} · ${waitingCharge.minutes} min`}
-                </Text>
-                {waitingCharge.capped && (
-                  <View style={styles.cappedBadge}>
-                    <Text style={[styles.cappedText, { fontFamily: 'Inter_700Bold' }]}>{t.capped_badge}</Text>
+            <View style={styles.rightPanelC}>
+              <View style={styles.riderRowC}>
+                {passengerAvatar && !riderAvatarFailed ? (
+                  <Image
+                    source={{ uri: passengerAvatar }}
+                    style={styles.riderAvatarC}
+                    resizeMode="cover"
+                    onError={() => setRiderAvatarFailed(true)}
+                  />
+                ) : (
+                  <View style={[styles.riderAvatarC, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#F0F2F3' }]}>
+                    <Text style={{ color: C_INK, fontSize: 14, fontFamily: 'Inter_700Bold' }}>{passengerInitials}</Text>
                   </View>
                 )}
-              </Animated.View>
-            )}
-
-            <Text style={[styles.phaseLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>{p.label}</Text>
-
-            <Pressable onPress={handleNext} disabled={busy} style={styles.ctaBtn}>
-              <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[styles.ctaBtnGrad, { opacity: busy ? 0.7 : 1 }]}>
-                <ChevronUp size={20} color={colors.primaryForeground} strokeWidth={2} />
-                <Text style={[styles.ctaBtnText, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>{p.cta}</Text>
-                {phase === 'in_trip' && (
-                  <Text style={[styles.ctaBtnFare, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>
-                    · {fareAmount.toFixed(2)} {t.egp}
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={styles.riderNameC} numberOfLines={1}>{passengerName ?? '—'}</Text>
+                  <Text style={styles.riderMetaC} numberOfLines={1}>
+                    {paymentMethod ?? '—'} · {fareAmount.toFixed(2)} {t.egp}
                   </Text>
-                )}
-              </LinearGradient>
-            </Pressable>
-
-            {phase === 'in_trip' && paymentMethod === 'cash' && (
-              <Pressable
-                onPress={handleOpenAmountSheet}
-                disabled={busy}
-                style={[styles.otherAmountBtn, { backgroundColor: colors.secondary, borderColor: colors.border, opacity: busy ? 0.6 : 1 }]}
-                accessibilityLabel={t.other_amount_btn}
-              >
-                <Text style={[styles.otherAmountBtnText, { color: colors.foreground, fontFamily: 'Inter_600SemiBold' }]}>{t.other_amount_btn}</Text>
-              </Pressable>
-            )}
-
-            {(phase === 'to_pickup' || phase === 'arrived') && (
-              <Pressable
-                onPress={handleCancelRide}
-                disabled={cancelling}
-                style={[styles.cancelRideBtn, { opacity: cancelling ? 0.6 : 1 }]}
-                accessibilityLabel={t.cancel_ride}
-              >
-                {cancelling ? (
-                  <ActivityIndicator size="small" color={colors.destructive} />
-                ) : (
-                  <Text style={[styles.cancelRideBtnText, { color: colors.destructive, fontFamily: 'Inter_600SemiBold' }]}>{t.cancel_ride}</Text>
-                )}
-              </Pressable>
-            )}
-
-            <View style={styles.bottomRow}>
-              <View style={styles.safetyRow}>
-                <Shield size={14} color={colors.mutedForeground} strokeWidth={2} />
-                <Text style={[styles.safetyText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{t.safety_toolkit_trip}</Text>
+                </View>
+                <Pressable
+                  style={styles.actionBtnC}
+                  onPress={() => router.push({ pathname: '/ride/chat', params: { rideId: rideId ?? '' } } as any)}
+                  accessibilityLabel={t.message_rider_title}
+                >
+                  <MessageCircle size={16} color={C_INK} strokeWidth={1.8} />
+                </Pressable>
+                <Pressable
+                  style={styles.actionBtnC}
+                  onPress={() => {
+                    const phone = passengerPhone;
+                    if (phone) Linking.openURL(`tel:${phone}`).catch(() => {});
+                  }}
+                  accessibilityLabel={t.call_rider_label}
+                >
+                  <Phone size={16} color={C_INK} strokeWidth={1.8} />
+                </Pressable>
               </View>
-              <View style={styles.bottomActions}>
-                <Pressable
-                  onPress={handleShareTrip}
-                  disabled={shareBusy}
-                  style={[styles.shareBtn, { backgroundColor: colors.secondary, opacity: shareBusy ? 0.6 : 1 }]}
-                  accessibilityLabel={t.share_trip_label}
+
+              {/* Waiting charge ticker — visible only in 'arrived' phase */}
+              {phase === 'arrived' && waitingCharge != null && (
+                <Animated.View
+                  style={[
+                    styles.waitingTickerC,
+                    {
+                      backgroundColor: waitingCharge.capped ? '#F0F2F3' : '#D5B23D18',
+                      borderColor: waitingCharge.capped ? C_HAIR : '#D5B23D55',
+                      opacity: waitingCharge.capped ? 1 : pulseAnim,
+                    },
+                  ]}
                 >
-                  <Share2 size={14} color={colors.foreground} strokeWidth={2} />
-                  <Text style={[styles.shareBtnText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-                    {shareLink ? t.trip_share_revoke_btn : t.trip_share_btn}
+                  <Clock size={13} color={waitingCharge.capped ? C_INK_SOFT : '#D5B23D'} strokeWidth={2.5} />
+                  <Text style={[styles.waitingTickerTextC, { color: waitingCharge.capped ? C_INK_SOFT : '#D5B23D' }]}>
+                    {`Waiting fee: +${waitingCharge.amount.toFixed(2)} ${t.egp} · ${waitingCharge.minutes} min`}
                   </Text>
-                </Pressable>
+                  {waitingCharge.capped && (
+                    <View style={styles.cappedBadgeC}>
+                      <Text style={styles.cappedTextC}>{t.capped_badge}</Text>
+                    </View>
+                  )}
+                </Animated.View>
+              )}
+
+              <Pressable onPress={handleNext} disabled={busy} style={[styles.ctaBtnC, { opacity: busy ? 0.7 : 1 }]}>
+                <ChevronUp size={16} color="#ffffff" strokeWidth={2.5} />
+                <Text style={styles.ctaBtnTextC}>{p.cta}</Text>
+              </Pressable>
+
+              {(phase === 'to_pickup' || phase === 'arrived') && (
                 <Pressable
-                  onPress={handleSOS}
-                  disabled={sosBusy}
-                  style={[styles.sosBtn, { opacity: sosBusy ? 0.6 : 1 }]}
-                  accessibilityLabel={t.send_sos_label}
+                  onPress={handleCancelRide}
+                  disabled={cancelling}
+                  style={[styles.cancelRideBtnC, { opacity: cancelling ? 0.6 : 1 }]}
+                  accessibilityLabel={t.cancel_ride}
                 >
-                  <AlertTriangle size={14} color={colors.destructiveForeground} strokeWidth={2} />
-                  <Text style={[styles.sosBtnText, { color: colors.destructiveForeground, fontFamily: 'Inter_700Bold' }]}>{t.sos_label}</Text>
+                  {cancelling ? (
+                    <ActivityIndicator size="small" color={C_RED} />
+                  ) : (
+                    <Text style={styles.cancelRideBtnTextC}>{t.cancel_ride}</Text>
+                  )}
                 </Pressable>
+              )}
+
+              <View style={styles.hairC} />
+
+              <View style={styles.bottomRowC}>
+                <View style={styles.safetyRowC}>
+                  <Shield size={13} color={C_INK_SOFT} strokeWidth={2} />
+                  <Text style={styles.safetyTextC} numberOfLines={1}>{t.safety_toolkit_trip}</Text>
+                </View>
+                <View style={styles.bottomActionsC}>
+                  <Pressable
+                    onPress={handleShareTrip}
+                    disabled={shareBusy}
+                    style={[styles.shareBtnC, { opacity: shareBusy ? 0.6 : 1 }]}
+                    accessibilityLabel={t.share_trip_label}
+                  >
+                    <Share2 size={13} color={C_INK} strokeWidth={2} />
+                    <Text style={styles.shareBtnTextC}>
+                      {shareLink ? t.trip_share_revoke_btn : t.trip_share_btn}
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={handleSOS}
+                    disabled={sosBusy}
+                    style={[styles.sosBtnC, { opacity: sosBusy ? 0.6 : 1 }]}
+                    accessibilityLabel={t.send_sos_label}
+                  >
+                    <AlertTriangle size={13} color={C_RED} strokeWidth={2} />
+                    <Text style={styles.sosBtnTextC}>{t.sos_label}</Text>
+                  </Pressable>
+                </View>
               </View>
             </View>
-          </GlassView>
+          </View>
         </Animated.View>
       )}
 
       {/* ── "Other amount" numeric keypad ─────────────────────────────── */}
       <Modal visible={amountSheetOpen} transparent animationType="slide" onRequestClose={handleKeypadCancel}>
-        <View style={styles.modalBackdrop}>
-          <GlassView strong style={styles.modalCard} borderRadius={24}>
-            <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
-            <Text style={[styles.modalTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.amount_received_title}</Text>
-            <Text style={[styles.amountDisplay, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-              {amountInput || '0'} {t.egp}
+        <View style={styles.modalBackdropC}>
+          <View style={styles.keypadCardC}>
+            <View style={styles.sheetHandleDarkC} />
+            <Text style={styles.keypadCapC}>{t.amount_received_title}</Text>
+            <Text style={styles.keypadAmountC}>
+              {amountInput || '0'} <Text style={styles.keypadAmountCurC}>{t.egp}</Text>
             </Text>
 
-            {KEYPAD_ROWS.map((row, ri) => (
-              <View key={ri} style={styles.keypadRow}>
-                {row.map((key) => (
-                  <Pressable
-                    key={key}
-                    onPress={() => (key === 'back' ? handleKeypadBackspace() : handleKeypadDigit(key))}
-                    style={[styles.keypadKey, { backgroundColor: colors.secondary }]}
-                  >
-                    {key === 'back' ? (
-                      <Delete size={20} color={colors.foreground} strokeWidth={2} />
-                    ) : (
-                      <Text style={[styles.keypadKeyText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{key}</Text>
-                    )}
-                  </Pressable>
-                ))}
-              </View>
-            ))}
+            <View style={styles.keypadGridC}>
+              {KEYPAD_ROWS.map((row, ri) => (
+                <View key={ri} style={styles.keypadRowC}>
+                  {row.map((key) => (
+                    <Pressable
+                      key={key}
+                      onPress={() => (key === 'back' ? handleKeypadBackspace() : handleKeypadDigit(key))}
+                      style={styles.keypadKeyC}
+                    >
+                      {key === 'back' ? (
+                        <Delete size={20} color={C_INK} strokeWidth={1.8} />
+                      ) : (
+                        <Text style={styles.keypadKeyTextC}>{key}</Text>
+                      )}
+                    </Pressable>
+                  ))}
+                </View>
+              ))}
+            </View>
 
-            <View style={styles.modalActionsRow}>
-              <Pressable onPress={handleKeypadCancel} style={[styles.modalCancelBtn, { backgroundColor: colors.secondary }]}>
-                <Text style={[styles.modalCancelBtnText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.cancel}</Text>
+            <View style={styles.keypadActionsRowC}>
+              <Pressable onPress={handleKeypadCancel} style={styles.keypadCancelBtnC}>
+                <Text style={styles.keypadCancelTxtC}>{t.cancel}</Text>
               </Pressable>
               <Pressable
                 onPress={handleKeypadOk}
                 disabled={parsedAmountReceived <= 0}
-                style={[styles.modalConfirmBtn, { opacity: parsedAmountReceived <= 0 ? 0.5 : 1 }]}
+                style={[styles.keypadOkBtnC, { opacity: parsedAmountReceived <= 0 ? 0.5 : 1 }]}
               >
-                <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.modalConfirmBtnGrad}>
-                  <Text style={[styles.modalConfirmBtnText, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>{t.ok}</Text>
-                </LinearGradient>
+                <Text style={styles.keypadOkTxtC}>{t.ok}</Text>
               </Pressable>
             </View>
-          </GlassView>
+          </View>
         </View>
       </Modal>
 
       {/* ── Confirm change → wallet ────────────────────────────────────── */}
       <Modal visible={confirmChangeOpen} transparent animationType="fade" onRequestClose={handleCancelConfirmChange}>
         <View style={styles.modalBackdrop}>
-          <GlassView strong style={styles.modalCard} borderRadius={24}>
-            <Text style={[styles.modalTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.confirm_change_title}</Text>
-
-            <View style={styles.summaryRow}>
-              <Text style={[styles.summaryLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{t.ride_amount_label}</Text>
-              <Text style={[styles.summaryValue, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{fareAmount.toFixed(2)} {t.egp}</Text>
+          <View style={styles.changeCardC}>
+            <View style={styles.changeHeroC}>
+              <Text style={styles.changeCapC}>{t.change_to_wallet_label}</Text>
+              <View style={styles.changeHeroRow}>
+                <Text style={styles.changeHeroAmt}>{Math.max(0, computedChange).toFixed(2)}</Text>
+                <Text style={styles.changeHeroCur}>{t.egp}</Text>
+              </View>
             </View>
-            <View style={styles.summaryRow}>
-              <Text style={[styles.summaryLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{t.amount_received_label}</Text>
-              <Text style={[styles.summaryValue, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{parsedAmountReceived.toFixed(2)} {t.egp}</Text>
+            <View style={styles.changeBodyC}>
+              <View style={styles.cRow}>
+                <Text style={styles.cLabel}>{t.amount_received_label}</Text>
+                <Text style={styles.cVal}>{parsedAmountReceived.toFixed(2)}</Text>
+              </View>
+              <View style={styles.cHair} />
+              <View style={styles.cRow}>
+                <Text style={styles.cLabel}>{t.ride_amount_label}</Text>
+                <Text style={styles.cVal}>{fareAmount.toFixed(2)}</Text>
+              </View>
+              <View style={styles.cActionsRow}>
+                <Pressable onPress={handleCancelConfirmChange} disabled={submittingChange} style={[styles.cCancelBtn, { opacity: submittingChange ? 0.6 : 1 }]}>
+                  <Text style={styles.cCancelTxt}>{t.cancel}</Text>
+                </Pressable>
+                <Pressable onPress={handleConfirmChange} disabled={submittingChange} style={[styles.cConfirmBtn, { opacity: submittingChange ? 0.7 : 1 }]}>
+                  {submittingChange ? <ActivityIndicator color="#ffffff" /> : <Text style={styles.cConfirmTxt}>{t.confirm}</Text>}
+                </Pressable>
+              </View>
             </View>
-            <View style={styles.summaryRow}>
-              <Text style={[styles.summaryLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{t.change_to_wallet_label}</Text>
-              <Text style={[styles.summaryValue, { color: colors.primary, fontFamily: 'Inter_700Bold' }]}>{Math.max(0, computedChange).toFixed(2)} {t.egp}</Text>
-            </View>
-
-            <View style={styles.modalActionsRow}>
-              <Pressable onPress={handleCancelConfirmChange} disabled={submittingChange} style={[styles.modalCancelBtn, { backgroundColor: colors.secondary, opacity: submittingChange ? 0.6 : 1 }]}>
-                <Text style={[styles.modalCancelBtnText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.cancel}</Text>
-              </Pressable>
-              <Pressable onPress={handleConfirmChange} disabled={submittingChange} style={[styles.modalConfirmBtn, { opacity: submittingChange ? 0.7 : 1 }]}>
-                <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.modalConfirmBtnGrad}>
-                  {submittingChange ? (
-                    <ActivityIndicator color={colors.primaryForeground} />
-                  ) : (
-                    <Text style={[styles.modalConfirmBtnText, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>{t.confirm}</Text>
-                  )}
-                </LinearGradient>
-              </Pressable>
-            </View>
-          </GlassView>
+          </View>
         </View>
       </Modal>
 
@@ -1354,55 +1391,17 @@ const styles = StyleSheet.create({
   doneBtnGrad: { height: 56, alignItems: 'center', justifyContent: 'center' },
   doneBtnText: { fontSize: Typography.size.md },
   sheet: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: Spacing.md, paddingBottom: Spacing.md, zIndex: 30 },
-  sheetCard: { padding: 20 },
   sheetHandle: { width: 48, height: 6, borderRadius: 3, alignSelf: 'center', marginBottom: Spacing.lg },
-  riderRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
-  riderAvatar: { width: 48, height: 48, borderRadius: Radius.xl, backgroundColor: '#e5e5ea' },
-  riderName: { fontSize: Typography.size.md },
-  riderMeta: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginTop: 2 },
-  riderMetaText: { fontSize: Typography.size.xs },
-  actionBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  waitingTicker: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    marginTop: 14, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
-    borderRadius: Radius.md, borderWidth: 1,
-  },
-  waitingTickerText: { fontSize: 13, flex: 1 },
-  cappedBadge: { backgroundColor: '#ef444422', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
-  cappedText: { fontSize: 9, color: '#ef4444', letterSpacing: 0.8 },
-  phaseLabel: { fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase', marginTop: Spacing.lg },
-  ctaBtn: { marginTop: Spacing.md, borderRadius: Radius.lg, overflow: 'hidden', elevation: Shadows.large.elevation, shadowColor: '#2d2d42', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 12 },
-  ctaBtnGrad: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
-  ctaBtnText: { fontSize: Typography.size.md },
-  ctaBtnFare: { fontSize: Typography.size.md },
-  otherAmountBtn: { marginTop: Spacing.sm, height: 44, borderRadius: Radius.md, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
-  otherAmountBtnText: { fontSize: Typography.size.sm },
-  cancelRideBtn: { alignItems: 'center', justifyContent: 'center', paddingVertical: 10, marginTop: Spacing.xs },
-  cancelRideBtnText: { fontSize: Typography.size.sm },
   modalBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' },
   modalCard: { padding: 20, paddingBottom: 32 },
   modalTitle: { fontSize: Typography.size.md, textAlign: 'center', marginBottom: Spacing.md },
-  amountDisplay: { fontSize: 34, textAlign: 'center', marginBottom: Spacing.lg },
-  keypadRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.sm },
-  keypadKey: { flex: 1, height: 52, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
-  keypadKeyText: { fontSize: Typography.size.lg },
-  modalActionsRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.md },
   modalCancelBtn: { flex: 1, height: 52, borderRadius: Radius.lg, alignItems: 'center', justifyContent: 'center' },
   modalCancelBtnText: { fontSize: Typography.size.md },
-  modalConfirmBtn: { flex: 1, borderRadius: Radius.lg, overflow: 'hidden' },
-  modalConfirmBtnGrad: { height: 52, alignItems: 'center', justifyContent: 'center' },
-  modalConfirmBtnText: { fontSize: Typography.size.md },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10 },
   summaryRowTotal: { borderTopWidth: 1, marginTop: 4, paddingTop: 14 },
   summaryLabel: { fontSize: Typography.size.sm },
   summaryValue: { fontSize: Typography.size.md },
   summaryValueHighlight: { fontSize: Typography.size.lg },
-  viewDetailsBtn: { marginTop: Spacing.xs, paddingVertical: 6, paddingHorizontal: 10 },
-  viewDetailsBtnText: { fontSize: Typography.size.sm, textDecorationLine: 'underline' },
-  bottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: Spacing.md },
-  safetyRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  safetyText: { fontSize: Typography.size.xs },
-  bottomActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   floatingNavBtn: {
     position: 'absolute',
     right: 16,
@@ -1421,9 +1420,103 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
   },
-  shareBtn: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, paddingHorizontal: Spacing.md, paddingVertical: 6, borderRadius: 10 },
-  shareBtnText: { fontSize: Typography.size.xs },
-  sosBtn: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, backgroundColor: '#ef4444', paddingHorizontal: Spacing.md, paddingVertical: 6, borderRadius: 10 },
-  sosBtnText: { fontSize: Typography.size.xs },
   commentInput: { borderWidth: 1, borderRadius: Radius.md, paddingHorizontal: 14, paddingVertical: 10, fontSize: Typography.size.sm, fontFamily: 'Inter_400Regular', marginTop: Spacing.md, minHeight: 60, textAlignVertical: 'top' },
+
+  /* ── "C" active-ride split card (to_pickup / arrived / in_trip) ── */
+  splitCard: { borderRadius: 24, overflow: 'hidden', flexDirection: 'row', elevation: Shadows.large.elevation, shadowColor: '#000', shadowOffset: { width: 0, height: -6 }, shadowOpacity: 0.16, shadowRadius: 20 },
+  leftPanelC: { width: 104, flexShrink: 0, backgroundColor: '#14151A', paddingHorizontal: 12, paddingVertical: 16 },
+  sheetHandleC: { width: 32, height: 5, borderRadius: 2.5, backgroundColor: 'rgba(255,255,255,0.22)', marginBottom: 14 },
+  statusRowC: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  statusDotC: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: C_MINT },
+  leftLabelC: { flex: 1, fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 0.6, color: 'rgba(255,255,255,0.92)', textTransform: 'uppercase' },
+  leftCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 0.6, color: C_CAP, textTransform: 'uppercase' },
+  leftFareValC: { fontSize: 14, fontFamily: 'Inter_700Bold', color: '#ffffff', marginTop: 1 },
+  rightPanelC: { flex: 1, backgroundColor: '#ffffff', padding: 16, paddingBottom: 14 },
+  riderRowC: { flexDirection: 'row', alignItems: 'center', gap: 11 },
+  riderAvatarC: { width: 44, height: 44, borderRadius: 22 },
+  riderNameC: { fontSize: 13.5, fontFamily: 'Inter_700Bold', color: C_INK },
+  riderMetaC: { fontSize: 11, fontFamily: 'Inter_600SemiBold', color: C_CAP, marginTop: 1 },
+  actionBtnC: { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(20,21,26,0.08)', alignItems: 'center', justifyContent: 'center' },
+  waitingTickerC: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, borderWidth: 1 },
+  waitingTickerTextC: { fontSize: 12, fontFamily: 'Inter_700Bold', flex: 1 },
+  cappedBadgeC: { backgroundColor: '#ef444422', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+  cappedTextC: { fontSize: 9, fontFamily: 'Inter_700Bold', color: '#ef4444', letterSpacing: 0.6 },
+  ctaBtnC: { marginTop: 14, height: 48, borderRadius: 24, backgroundColor: '#14151A', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  ctaBtnTextC: { fontSize: 13.5, fontFamily: 'Inter_700Bold', color: '#ffffff' },
+  otherAmountBtnC: { marginTop: 10, height: 42, borderRadius: 14, borderWidth: 1.5, borderColor: '#E2E5E8', alignItems: 'center', justifyContent: 'center' },
+  otherAmountBtnTextC: { fontSize: 12.5, fontFamily: 'Inter_700Bold', color: C_INK },
+  cancelRideBtnC: { alignItems: 'center', justifyContent: 'center', paddingVertical: 8, marginTop: 8 },
+  cancelRideBtnTextC: { fontSize: 12.5, fontFamily: 'Inter_700Bold', color: C_RED },
+  hairC: { height: 1, backgroundColor: C_HAIR, marginTop: 4, marginBottom: 10 },
+  bottomRowC: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  safetyRowC: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0, marginRight: 8 },
+  safetyTextC: { fontSize: 11, fontFamily: 'Inter_600SemiBold', color: C_INK_SOFT, flexShrink: 1 },
+  bottomActionsC: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  shareBtnC: { flexDirection: 'row', alignItems: 'center', gap: 5, height: 30, paddingHorizontal: 12, borderRadius: 15, backgroundColor: '#F0F2F3' },
+  shareBtnTextC: { fontSize: 11, fontFamily: 'Inter_700Bold', color: C_INK },
+  sosBtnC: { flexDirection: 'row', alignItems: 'center', gap: 5, height: 30, paddingHorizontal: 12, borderRadius: 15, borderWidth: 1.5, borderColor: '#F3C6C2' },
+  sosBtnTextC: { fontSize: 11, fontFamily: 'Inter_700Bold', color: C_RED },
+
+  /* ── "C" post-trip fare page + rating card — dark panel/band + white body ── */
+  completedOverlayC: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: C_BG, zIndex: 1000 },
+  heroC: { backgroundColor: '#14151A', paddingHorizontal: 26, paddingBottom: 22, alignItems: 'center', borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
+  checkCircleC: { width: 60, height: 60, borderRadius: 30, backgroundColor: C_TEAL, alignItems: 'center', justifyContent: 'center', alignSelf: 'center' },
+  pageTitleC: { fontSize: 22, fontFamily: 'Inter_700Bold', color: '#ffffff', textAlign: 'center', marginTop: 16 },
+  heroCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.4, color: C_CAP_ON_DARK, textAlign: 'center', marginTop: 22, textTransform: 'uppercase' },
+  heroRowC: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', gap: 8, marginTop: 6 },
+  heroAmountC: { fontSize: 48, fontFamily: 'Inter_700Bold', color: C_TEAL, lineHeight: 50 },
+  heroCurC: { fontSize: 18, fontFamily: 'Inter_700Bold', color: C_TEAL },
+  heroNoteC: { fontSize: 13, fontFamily: 'Inter_600SemiBold', color: '#B7BBC2', textAlign: 'center', marginTop: 8 },
+  viewDetailsBtnC: { alignSelf: 'center', marginTop: 6, paddingVertical: 4, paddingHorizontal: 8 },
+  viewDetailsTxtC: { fontSize: 13, fontFamily: 'Inter_700Bold', color: C_TEAL, textDecorationLine: 'underline' },
+  bodyNoteC: { fontSize: 13, fontFamily: 'Inter_600SemiBold', color: C_INK_SOFT, textAlign: 'center', marginTop: 4 },
+  footerC: { paddingHorizontal: 26, paddingTop: 12, backgroundColor: C_BG },
+  primaryBtnC: { height: 54, borderRadius: 15, backgroundColor: '#14151A', alignItems: 'center', justifyContent: 'center' },
+  primaryBtnTxtC: { color: '#ffffff', fontSize: 15, fontFamily: 'Inter_700Bold', letterSpacing: 0.3 },
+  ratingWrapC: { flex: 1, justifyContent: 'flex-end' },
+  ratingCardC: { borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: 'hidden' },
+  ratingHeaderC: { backgroundColor: '#14151A', flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 24, paddingVertical: 24 },
+  ratingAvatarC: { width: 52, height: 52, borderRadius: 26 },
+  ratingCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.4, color: C_CAP_ON_DARK, textTransform: 'uppercase' },
+  ratingTitleC: { fontSize: 18, fontFamily: 'Inter_700Bold', color: '#ffffff', marginTop: 4 },
+  ratingBodyC: { backgroundColor: C_SURF, padding: 24 },
+  starsRowC: { flexDirection: 'row', justifyContent: 'center', gap: 14 },
+  commentInputC: { alignSelf: 'stretch', borderWidth: 1, borderColor: C_HAIR, borderRadius: 14, backgroundColor: '#F6F7F8', paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, fontFamily: 'Inter_400Regular', marginTop: 22, minHeight: 60, textAlignVertical: 'top', color: C_INK },
+  skipBtnC: { alignSelf: 'center', marginTop: 14, paddingVertical: 6 },
+  skipTxtC: { fontSize: 13, fontFamily: 'Inter_700Bold', color: C_CAP },
+
+  /* ── "D" change-confirm card ── */
+  changeCardC: { width: '100%', borderRadius: 24, overflow: 'hidden', backgroundColor: C_SURF },
+  changeHeroC: { backgroundColor: '#14151A', paddingVertical: 22, alignItems: 'center' },
+  changeCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.4, color: C_CAP, textTransform: 'uppercase' },
+  changeHeroRow: { flexDirection: 'row', alignItems: 'baseline', gap: 7, marginTop: 8 },
+  changeHeroAmt: { fontSize: 44, fontFamily: 'Inter_700Bold', color: C_MINT, lineHeight: 46 },
+  changeHeroCur: { fontSize: 16, fontFamily: 'Inter_700Bold', color: '#8A9096' },
+  changeBodyC: { padding: 20 },
+  cRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 13 },
+  cLabel: { fontSize: 14, fontFamily: 'Inter_600SemiBold', color: C_INK_SOFT },
+  cVal: { fontSize: 16, fontFamily: 'Inter_700Bold', color: C_INK },
+  cHair: { height: 1, backgroundColor: C_HAIR },
+  cActionsRow: { flexDirection: 'row', gap: 12, marginTop: 18 },
+  cCancelBtn: { flex: 1, height: 50, borderRadius: 14, borderWidth: 1, borderColor: '#D3D6DA', alignItems: 'center', justifyContent: 'center' },
+  cCancelTxt: { fontSize: 14, fontFamily: 'Inter_700Bold', color: C_INK_SOFT },
+  cConfirmBtn: { flex: 1.4, height: 50, borderRadius: 14, backgroundColor: '#14151A', alignItems: 'center', justifyContent: 'center' },
+  cConfirmTxt: { fontSize: 15, fontFamily: 'Inter_700Bold', color: '#ffffff' },
+
+  /* ── "C" Add Remainder keypad ── */
+  modalBackdropC: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(20,21,26,0.4)' },
+  keypadCardC: { backgroundColor: C_SURF, borderTopLeftRadius: 26, borderTopRightRadius: 26, paddingHorizontal: 22, paddingTop: 14, paddingBottom: 30 },
+  sheetHandleDarkC: { width: 40, height: 5, borderRadius: 2.5, backgroundColor: 'rgba(0,0,0,0.14)', alignSelf: 'center', marginBottom: 18 },
+  keypadCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.2, color: C_CAP, textAlign: 'center', textTransform: 'uppercase' },
+  keypadAmountC: { fontSize: 38, fontFamily: 'Inter_700Bold', color: C_INK, textAlign: 'center', marginTop: 8, letterSpacing: -0.5 },
+  keypadAmountCurC: { fontSize: 18, fontFamily: 'Inter_700Bold', color: C_CAP },
+  keypadGridC: { marginTop: 22, gap: 10 },
+  keypadRowC: { flexDirection: 'row', gap: 10 },
+  keypadKeyC: { flex: 1, height: 56, borderRadius: 16, backgroundColor: '#F0F2F3', alignItems: 'center', justifyContent: 'center' },
+  keypadKeyTextC: { fontSize: 20, fontFamily: 'Inter_700Bold', color: C_INK },
+  keypadActionsRowC: { flexDirection: 'row', gap: 12, marginTop: 20 },
+  keypadCancelBtnC: { flex: 1, height: 50, borderRadius: 14, borderWidth: 1.5, borderColor: '#E2E5E8', alignItems: 'center', justifyContent: 'center' },
+  keypadCancelTxtC: { fontSize: 14, fontFamily: 'Inter_700Bold', color: C_INK_SOFT },
+  keypadOkBtnC: { flex: 1.4, height: 50, borderRadius: 14, backgroundColor: '#14151A', alignItems: 'center', justifyContent: 'center' },
+  keypadOkTxtC: { fontSize: 15, fontFamily: 'Inter_700Bold', color: '#ffffff' },
 });

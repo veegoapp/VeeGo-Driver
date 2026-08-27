@@ -1,9 +1,8 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { ChevronLeft, ArrowRight, X, AlertCircle } from 'lucide-react-native';
+import { ChevronLeft, RefreshCw, X, AlertCircle } from 'lucide-react-native';
 import React from 'react';
 import {
   ActivityIndicator,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -11,13 +10,15 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
-import { GlassView } from '@/components/GlassView';
-import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
-import { Radius } from '@/constants/radius';
+
+// "C" split-panel palette — matches the ride/shuttle screens.
+const C_BG = '#EEF0F2';
+const C_INK = '#14151A';
+const C_CAP = '#9AA0A6';
 
 type Params = {
   // The specific trip being cancelled or referred — both paths act on this
@@ -30,7 +31,6 @@ type Params = {
 };
 
 export default function TripCancelScreen() {
-  const colors = useColors();
   const insets = useSafeAreaInsets();
   const topPad = insets.top;
   const { t, isRTL } = useI18n();
@@ -64,111 +64,78 @@ export default function TripCancelScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: topPad + 8, borderBottomColor: colors.border }]}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
-          <ChevronLeft size={24} color={colors.foreground} strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
-        </Pressable>
-        <Text style={[styles.headerTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-          {t.cancel_trip_action}
-        </Text>
-        <View style={{ width: 40 }} />
-      </View>
+    <View style={styles.container}>
+      {/* Dark hero: back button + cancel headline + penalty readout */}
+      <View style={[styles.heroC, { paddingTop: topPad + 8 }]}>
+        <View style={{ flexDirection: R, alignItems: 'center', justifyContent: 'space-between' }}>
+          <Pressable onPress={() => router.back()} style={styles.backBtnC} hitSlop={8}>
+            <ChevronLeft size={22} color="#ffffff" strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
+          </Pressable>
+          <Text style={styles.heroCapC}>
+            {routeName ?? '—'} · {departureTime ?? '—'}
+          </Text>
+          <View style={{ width: 36 }} />
+        </View>
 
-      <View style={{ flex: 1, paddingHorizontal: 20 }}>
-        {/* Trip summary */}
-        <GlassView style={[styles.tripSummary, { marginTop: Spacing.xl }]} borderRadius={16}>
-          <View style={[{ flexDirection: R, alignItems: 'center', gap: 10 }]}>
-            <View style={[styles.summaryDot, { backgroundColor: '#1e1e28' }]} />
-            <View style={{ flex: 1 }}>
-              <Text style={[{ fontSize: 15, color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
-                {routeName ?? '—'}
-              </Text>
-              <Text style={[{ fontSize: 13, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', marginTop: 3, textAlign: TA }]}>
-                {departureTime ?? '—'} · {fromStation ?? '—'} → {toStation ?? '—'}
-              </Text>
-            </View>
-          </View>
-        </GlassView>
+        <Text style={[styles.heroTitleC, { textAlign: TA }]}>{t.cancel_trip_action}?</Text>
+        <Text style={[styles.heroSubC, { textAlign: TA }]}>{fromStation ?? '—'} → {toStation ?? '—'}</Text>
 
-        {/* Penalty preview failed — the driver must not be able to confirm a
-            cancellation with zero indication a wallet deduction is coming,
-            so Direct Cancel below is blocked until this succeeds. */}
-        {previewError && (
-          <Pressable onPress={() => refetchPreview()}>
-            <View style={[styles.penaltyBanner, { backgroundColor: '#FEF2F2', borderColor: '#FCA5A5' }]}>
-              <AlertCircle size={16} color="#DC2626" strokeWidth={2} />
-              <Text style={[{ fontSize: 13, fontFamily: 'Inter_700Bold', color: '#DC2626', flex: 1, textAlign: TA }]}>
-                {t.cancel_penalty_check_failed}
-              </Text>
+        {/* Penalty readout — receipt style, right in the hero */}
+        {previewError ? (
+          <Pressable onPress={() => refetchPreview()} style={styles.heroReadoutC}>
+            <View style={{ flexDirection: R, alignItems: 'center', gap: 10 }}>
+              <AlertCircle size={16} color="#F3C6C2" strokeWidth={2} />
+              <Text style={[styles.heroReadoutTextC, { textAlign: TA, flex: 1 }]}>{t.cancel_penalty_check_failed}</Text>
             </View>
           </Pressable>
-        )}
-
-        {/* Penalty preview banner */}
-        {(previewLoading || previewData != null) && (
+        ) : previewLoading ? (
+          <View style={[styles.heroReadoutC, { flexDirection: R, alignItems: 'center', gap: 10 }]}>
+            <ActivityIndicator size="small" color="#B7BBC2" />
+            <Text style={styles.heroReadoutTextC}>{t.checking_penalty}</Text>
+          </View>
+        ) : previewData != null && (
           <View style={[
-            styles.penaltyBanner,
-            { backgroundColor: hasPenalty ? '#FEF2F2' : '#F0FDF4', borderColor: hasPenalty ? '#FCA5A5' : '#86efac' },
+            styles.heroReadoutC,
+            { flexDirection: R, alignItems: 'center', justifyContent: 'space-between', backgroundColor: hasPenalty ? 'rgba(217,45,32,.16)' : 'rgba(61,220,151,.12)', borderColor: hasPenalty ? 'rgba(217,45,32,.35)' : 'rgba(61,220,151,.35)' },
           ]}>
-            {previewLoading ? (
-              <ActivityIndicator size="small" color={colors.mutedForeground} />
-            ) : (
-              <>
-                <AlertCircle size={16} color={hasPenalty ? '#DC2626' : '#16a34a'} strokeWidth={2} />
-                <Text style={[{
-                  fontSize: 13,
-                  fontFamily: 'Inter_700Bold',
-                  color: hasPenalty ? '#DC2626' : '#15803d',
-                  flex: 1,
-                  textAlign: TA,
-                }]}>
-                  {hasPenalty
-                    ? t.cancel_penalty_preview.replace('{n}', String(previewData!.penaltyAmount))
-                    : t.no_penalty_line}
-                </Text>
-                {previewData?.minutesUntilDeparture != null && (
-                  <Text style={{ fontSize: 11, color: hasPenalty ? '#991B1B' : '#166534', fontFamily: 'Inter_400Regular' }}>
-                    {previewData.minutesUntilDeparture}m left
-                  </Text>
-                )}
-              </>
-            )}
+            <View>
+              <Text style={[styles.heroReadoutCapC, { color: hasPenalty ? '#F3C6C2' : '#3DDC97', textAlign: TA }]}>
+                {t.cancellation_penalty_label}
+              </Text>
+              {previewData.minutesUntilDeparture != null && (
+                <Text style={[styles.heroReadoutSubC, { textAlign: TA }]}>{previewData.minutesUntilDeparture}m left</Text>
+              )}
+            </View>
+            <Text style={[styles.heroReadoutValC, { color: hasPenalty ? '#F3C6C2' : '#3DDC97' }]}>
+              {hasPenalty ? previewData.penaltyAmount : 0} {t.egp}
+            </Text>
           </View>
         )}
+      </View>
 
-        {/* Choice title */}
-        <Text style={[styles.choiceTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA, marginTop: 20 }]}>
-          {t.cancel_options_title}
-        </Text>
+      <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 22 }}>
+        <Text style={[styles.choiceTitleC, { textAlign: TA, marginBottom: 10 }]}>{t.cancel_options_title}</Text>
 
-        <View style={{ gap: Spacing.md, marginTop: Spacing.lg }}>
-          {/* Option A: Refer to another driver */}
+        <View style={{ gap: Spacing.md }}>
+          {/* Option A: Refer to another driver — the recommended path */}
           <Pressable
             onPress={handleRefer}
             style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.99 : 1 }] }]}
           >
-            <GlassView style={[styles.optionCard, { flexDirection: R }]} borderRadius={20}>
-              <View style={[styles.optionIcon, { backgroundColor: '#1e1e2812' }]}>
-                <Text style={{ fontSize: 24 }}>🔄</Text>
+            <View style={[styles.optionCardC, { flexDirection: R }]}>
+              <View style={styles.optionIconC}>
+                <RefreshCw size={22} color={C_INK} strokeWidth={2} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.optionTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
-                  {t.refer_to_driver}
-                </Text>
-                <Text style={[styles.optionSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>
-                  {t.refer_to_driver_sub}
-                </Text>
-                {/* No penalty for referral */}
-                {previewData != null && (
-                  <Text style={[{ fontSize: 11, color: '#15803d', fontFamily: 'Inter_700Bold', marginTop: 5, textAlign: TA }]}>
-                    {t.no_penalty_referral}
-                  </Text>
-                )}
+                <View style={{ flexDirection: R, alignItems: 'center', gap: 8 }}>
+                  <Text style={[styles.optionTitleC, { textAlign: TA }]}>{t.refer_to_driver}</Text>
+                  <View style={styles.recommendedTagC}>
+                    <Text style={styles.recommendedTagTextC}>{t.recommended_label}</Text>
+                  </View>
+                </View>
+                <Text style={[styles.optionSubC, { textAlign: TA }]}>{t.refer_to_driver_sub}</Text>
               </View>
-              <ArrowRight size={18} color={colors.mutedForeground} strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
-            </GlassView>
+            </View>
           </Pressable>
 
           {/* Option B: Direct cancellation — blocked while the penalty
@@ -179,41 +146,15 @@ export default function TripCancelScreen() {
             disabled={previewError}
             style={({ pressed }) => [{ opacity: previewError ? 0.5 : pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.99 : 1 }] }]}
           >
-            <GlassView style={[styles.optionCard, { flexDirection: R, borderColor: '#FCA5A580', borderWidth: 1 }]} borderRadius={20}>
-              <View style={[styles.optionIcon, { backgroundColor: '#FEF2F2' }]}>
+            <View style={[styles.optionCardC, { flexDirection: R }]}>
+              <View style={[styles.optionIconC, { backgroundColor: '#FEF2F2' }]}>
                 <X size={22} color="#DC2626" strokeWidth={2.5} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.optionTitle, { color: '#DC2626', fontFamily: 'Inter_700Bold', textAlign: TA }]}>
-                  {t.direct_cancel}
-                </Text>
-                <Text style={[styles.optionSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>
-                  {t.direct_cancel_sub}
-                </Text>
-                {/* Penalty amount sourced from backend */}
-                {previewLoading && (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 5 }}>
-                    <ActivityIndicator size="small" color="#DC2626" />
-                    <Text style={{ fontSize: 11, color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }}>
-                      {t.checking_penalty}
-                    </Text>
-                  </View>
-                )}
-                {!previewLoading && hasPenalty && (
-                  <View style={[styles.penaltyTag, { backgroundColor: '#FEE2E2' }]}>
-                    <Text style={{ fontSize: Typography.size.xs, color: '#DC2626', fontFamily: 'Inter_700Bold' }}>
-                      {previewData!.penaltyAmount} {t.egp} {t.penalty_label}
-                    </Text>
-                  </View>
-                )}
-                {!previewLoading && previewData != null && !hasPenalty && (
-                  <Text style={[{ fontSize: 11, color: '#15803d', fontFamily: 'Inter_700Bold', marginTop: 5, textAlign: TA }]}>
-                    {t.no_penalty_preview}
-                  </Text>
-                )}
+                <Text style={[styles.optionTitleC, { color: '#DC2626', textAlign: TA }]}>{t.direct_cancel}</Text>
+                <Text style={[styles.optionSubC, { textAlign: TA }]}>{t.direct_cancel_sub}</Text>
               </View>
-              <ArrowRight size={18} color="#DC2626" strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
-            </GlassView>
+            </View>
           </Pressable>
         </View>
       </View>
@@ -222,50 +163,48 @@ export default function TripCancelScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  container: { flex: 1, backgroundColor: C_BG },
+  heroC: {
+    backgroundColor: C_INK,
     paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.md,
-    borderBottomWidth: 1,
+    paddingBottom: 22,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
   },
-  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 17 },
-  tripSummary: { padding: Spacing.lg },
-  summaryDot: { width: 10, height: 10, borderRadius: 5 },
-  penaltyBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: Radius.md,
+  backBtnC: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.1)' },
+  heroCapC: { fontSize: 13, fontFamily: 'Inter_700Bold', color: '#ffffff' },
+  heroTitleC: { fontSize: 22, fontFamily: 'Inter_700Bold', color: '#ffffff', marginTop: 22 },
+  heroSubC: { fontSize: 13, fontFamily: 'Inter_600SemiBold', color: '#B7BBC2', marginTop: 4 },
+  heroReadoutC: {
+    borderRadius: 16,
     borderWidth: 1,
-    marginTop: 14,
-    minHeight: 40,
+    padding: 14,
+    marginTop: 20,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'transparent',
   },
-  choiceTitle: { fontSize: Typography.size.lg },
-  optionCard: {
+  heroReadoutCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.2, textTransform: 'uppercase' },
+  heroReadoutSubC: { fontSize: 12, fontFamily: 'Inter_600SemiBold', color: '#B7BBC2', marginTop: 2 },
+  heroReadoutValC: { fontSize: 22, fontFamily: 'Inter_700Bold' },
+  heroReadoutTextC: { fontSize: 13, fontFamily: 'Inter_700Bold', color: '#F3C6C2' },
+  choiceTitleC: { fontSize: Typography.size.lg, fontFamily: 'Inter_700Bold', color: C_INK },
+  optionCardC: {
     alignItems: 'center',
     gap: 14,
     padding: 18,
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
   },
-  optionIcon: {
+  optionIconC: {
     width: 52,
     height: 52,
-    borderRadius: Radius.lg,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#F0F2F3',
   },
-  optionTitle: { fontSize: Typography.size.md },
-  optionSub: { fontSize: 13, marginTop: 3, lineHeight: 18 },
-  penaltyTag: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: Spacing.xs,
-    borderRadius: Radius.sm,
-    marginTop: 6,
-  },
+  optionTitleC: { fontSize: Typography.size.md, fontFamily: 'Inter_700Bold', color: C_INK },
+  optionSubC: { fontSize: 13, fontFamily: 'Inter_400Regular', color: C_CAP, marginTop: 5, lineHeight: 18 },
+  recommendedTagC: { backgroundColor: '#DDF4EB', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 },
+  recommendedTagTextC: { fontSize: 10, fontFamily: 'Inter_700Bold', color: '#0E9F8E' },
 });

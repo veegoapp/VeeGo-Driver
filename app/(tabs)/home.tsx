@@ -50,6 +50,16 @@ export const TAB_BAR_HEIGHT = 96;
 // The backend's actual round timeout is otherwise read from the payload.
 const OFFER_TIMEOUT_MS = 12000;
 
+// "C" split-panel palette for the trip-request card — matches the approved
+// driver-app design (dark left panel + white right panel).
+const C_INK = '#14151A';
+const C_INK_SOFT = '#6B7178';
+const C_CAP = '#9AA0A6';
+const C_HAIR = '#EEF0F1';
+const C_MINT = '#3DDC97';
+const C_STARC = '#F5A623';
+const C_RED = '#D92D20';
+
 // Foreground GPS is always requested/tracked while Home has focus (not gated
 // on "online") so the map can center on the driver's real position instead of
 // staying on a fallback. Isolated into its own component (rather than calling
@@ -1105,106 +1115,98 @@ export default function HomeScreen() {
 
       {request && (
         <Animated.View style={[styles.requestSheet, { paddingBottom: TAB_BAR_HEIGHT_BASE + insets.bottom + Spacing.md, transform: [{ translateY: sheetAnim }] }]}>
-          <GlassView strong style={[styles.requestCard, { borderColor: colors.primary + '4D' }]} borderRadius={24}>
-            <View style={[styles.requestHeader, { flexDirection: R }]}>
-              <View style={[styles.requestHeaderLeft, { flexDirection: R }]}>
-                <View style={[styles.liveDot, { backgroundColor: colors.primary }]} />
-                <Text style={[styles.requestType, { color: colors.accent, fontFamily: 'Inter_700Bold' }]}>
-                  {t.new_trip} · {request.type}
-                </Text>
+          <View style={styles.requestSplitCard}>
+            {/* dark left panel: countdown */}
+            <View style={styles.requestLeftPanelC}>
+              <Text style={styles.requestLeftCapC} numberOfLines={1}>{t.new_trip}</Text>
+              <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                <View style={styles.countdownRingC}>
+                  <Text style={styles.countdownTextC}>{countdown}s</Text>
+                </View>
               </View>
-              <View style={[styles.requestHeaderRight, { flexDirection: R }]}>
-                <Text style={[styles.countdownText, { color: colors.destructive, fontFamily: 'Inter_700Bold' }]}>
-                  {countdown}s
-                </Text>
+              <Text style={styles.requestLeftCapC} numberOfLines={1}>{request.type}</Text>
+            </View>
+
+            {/* white right panel */}
+            <View style={styles.requestRightPanelC}>
+              <View style={[styles.requestFareRowC, { flexDirection: R }]}>
+                <View>
+                  <Text style={[styles.fareAmountC, { textAlign: TA }]}>
+                    {(request.fare ?? 0).toFixed(2)} <Text style={styles.fareCurrencyC}>{t.egp}</Text>
+                  </Text>
+                  <Text style={[styles.fareDetailsC, { textAlign: TA }]}>
+                    {request.payment} · {request.duration}
+                  </Text>
+                </View>
+                <View style={[styles.riderInfoC, { flexDirection: R }]}>
+                  <Image source={{ uri: request.rider.avatar }} style={styles.riderAvatarC} contentFit="cover" />
+                  <View>
+                    <Text style={[styles.riderNameC, { textAlign: TA }]}>{request.rider.name}</Text>
+                    {request.rider.rating != null && (
+                      <View style={[styles.riderRatingRowC, { flexDirection: R }]}>
+                        <Star size={11} color={C_STARC} fill={C_STARC} strokeWidth={0} />
+                        <Text style={styles.riderRatingC}>{request.rider.rating}</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.hairRequestC} />
+
+              <View style={[styles.routeContainerC, { flexDirection: R }]}>
+                <View style={styles.routeDotsC}>
+                  <View style={styles.routeDotTopC} />
+                  <View style={styles.routeLineC} />
+                  <View style={styles.routeDotBottomC} />
+                </View>
+                <View style={styles.routeAddressesC}>
+                  <View>
+                    <Text style={[styles.routeLabelC, { textAlign: TA }]}>
+                      PICKUP · {request.pickup.distance} · {request.pickup.eta}
+                    </Text>
+                    <Text style={[styles.routeAddressC, { textAlign: TA }]}>{request.pickup.address}</Text>
+                  </View>
+                  <View>
+                    <Text style={[styles.routeLabelC, { textAlign: TA }]}>
+                      DROPOFF · {request.dropoff.distance}
+                    </Text>
+                    <Text style={[styles.routeAddressC, { textAlign: TA }]}>{request.dropoff.address}</Text>
+                  </View>
+                </View>
+              </View>
+
+              <View style={[styles.requestActionsC, { flexDirection: R }]}>
                 <Pressable
                   onPress={dismissRequest}
                   disabled={declining}
-                  style={[styles.closeBtn, { backgroundColor: colors.secondary, opacity: declining ? 0.7 : 1 }]}
+                  style={[styles.declineBtnC, { opacity: declining ? 0.7 : 1 }]}
+                  accessibilityLabel={t.decline_ride_label}
                 >
-                  <X size={16} color={colors.foreground} strokeWidth={2} />
+                  {declining
+                    ? <ActivityIndicator size="small" color={C_INK} />
+                    : <Text style={styles.declineBtnTextC}>{t.decline}</Text>
+                  }
+                </Pressable>
+                <Pressable
+                  onPress={acceptRequest}
+                  disabled={acceptingRide}
+                  style={[styles.acceptBtnC, { flexDirection: R, opacity: acceptingRide ? 0.7 : 1 }]}
+                  accessibilityLabel={t.accept_ride_label}
+                >
+                  {acceptingRide
+                    ? <ActivityIndicator size="small" color="#ffffff" />
+                    : <Check size={16} color="#ffffff" strokeWidth={2.5} />
+                  }
+                  <Text style={styles.acceptBtnTextC}>{t.accept_trip}</Text>
                 </Pressable>
               </View>
             </View>
+          </View>
 
-            <View style={[styles.requestFareRow, { flexDirection: R }]}>
-              <View>
-                <Text style={[styles.fareAmount, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
-                  {(request.fare ?? 0).toFixed(2)} <Text style={[styles.fareCurrency, { color: colors.mutedForeground }]}>{t.egp}</Text>
-                </Text>
-                <Text style={[styles.fareDetails, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>
-                  {request.payment} · {request.duration}
-                </Text>
-              </View>
-              <View style={[styles.riderInfo, { flexDirection: R }]}>
-                <Image source={{ uri: request.rider.avatar }} style={styles.riderAvatar} contentFit="cover" />
-                <View>
-                  <Text style={[styles.riderName, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{request.rider.name}</Text>
-                  {request.rider.rating != null && (
-                    <View style={[styles.riderRatingRow, { flexDirection: R }]}>
-                      <Star size={12} color={colors.accent} fill={colors.accent} strokeWidth={2} />
-                      <Text style={[styles.riderRating, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{request.rider.rating}</Text>
-                    </View>
-                  )}
-                </View>
-              </View>
-            </View>
-
-            <View style={[styles.routeContainer, { flexDirection: R }]}>
-              <View style={styles.routeDots}>
-                <View style={[styles.routeDotTop, { backgroundColor: colors.primary }]} />
-                <View style={[styles.routeLine, { backgroundColor: colors.border }]} />
-                <View style={[styles.routeDotBottom, { backgroundColor: colors.accent }]} />
-              </View>
-              <View style={styles.routeAddresses}>
-                <View>
-                  <Text style={[styles.routeLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
-                    PICKUP · {request.pickup.distance} · {request.pickup.eta}
-                  </Text>
-                  <Text style={[styles.routeAddress, { color: colors.foreground, fontFamily: 'Inter_600SemiBold', textAlign: TA }]}>{request.pickup.address}</Text>
-                </View>
-                <View>
-                  <Text style={[styles.routeLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
-                    DROPOFF · {request.dropoff.distance}
-                  </Text>
-                  <Text style={[styles.routeAddress, { color: colors.foreground, fontFamily: 'Inter_600SemiBold', textAlign: TA }]}>{request.dropoff.address}</Text>
-                </View>
-              </View>
-            </View>
-
-            <View style={[styles.requestActions, { flexDirection: R }]}>
-              <Pressable
-                onPress={dismissRequest}
-                disabled={declining}
-                style={[styles.declineBtn, { backgroundColor: colors.secondary, opacity: declining ? 0.7 : 1 }]}
-                accessibilityLabel={t.decline_ride_label}
-              >
-                {declining
-                  ? <ActivityIndicator size="small" color={colors.foreground} />
-                  : <Text style={[styles.declineBtnText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.decline}</Text>
-                }
-              </Pressable>
-              <Pressable
-                onPress={acceptRequest}
-                disabled={acceptingRide}
-                style={[styles.acceptBtn, { opacity: acceptingRide ? 0.7 : 1 }]}
-                accessibilityLabel={t.accept_ride_label}
-              >
-                <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[styles.acceptBtnGrad, { flexDirection: R }]}>
-                  {acceptingRide
-                    ? <ActivityIndicator size="small" color={colors.primaryForeground} />
-                    : <Check size={20} color={colors.primaryForeground} strokeWidth={2} />
-                  }
-                  <Text style={[styles.acceptBtnText, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>{t.accept_trip}</Text>
-                </LinearGradient>
-              </Pressable>
-            </View>
-
-            <Animated.View style={[styles.timerBar, {
-              backgroundColor: colors.destructive,
-              transform: [{ scaleX: timerAnim }],
-            }]} />
-          </GlassView>
+          <Animated.View style={[styles.timerBarC, {
+            transform: [{ scaleX: timerAnim }],
+          }]} />
         </Animated.View>
       )}
     </View>
@@ -1267,38 +1269,38 @@ const styles = StyleSheet.create({
   statusPill: { paddingHorizontal: Spacing.lg, paddingVertical: 6 },
   statusPillText: { fontSize: Typography.size.xs },
   requestSheet: { position: 'absolute', bottom: 24, left: 0, right: 0, paddingHorizontal: Spacing.md, paddingBottom: Spacing.md, zIndex: 50 },
-  requestCard: { padding: 20, borderWidth: 2 },
-  requestHeader: { alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.md },
-  requestHeaderLeft: { alignItems: 'center', gap: Spacing.sm },
-  requestHeaderRight: { alignItems: 'center', gap: Spacing.sm },
-  countdownText: { fontSize: Typography.size.sm },
-  liveDot: { width: 8, height: 8, borderRadius: 4 },
-  requestType: { fontSize: Typography.size.xs, letterSpacing: 1, textTransform: 'uppercase' },
-  closeBtn: { width: 32, height: 32, borderRadius: Radius.lg, alignItems: 'center', justifyContent: 'center' },
-  requestFareRow: { alignItems: 'flex-end', justifyContent: 'space-between' },
-  fareAmount: { fontSize: 36, lineHeight: 42 },
-  fareCurrency: { fontSize: Typography.size.lg },
-  fareDetails: { fontSize: Typography.size.xs, marginTop: 2 },
-  riderInfo: { alignItems: 'center', gap: Spacing.sm },
-  riderAvatar: { width: 40, height: 40, borderRadius: 20 },
-  riderName: { fontSize: Typography.size.sm },
-  riderRatingRow: { alignItems: 'center', gap: Spacing.xs },
-  riderRating: { fontSize: Typography.size.xs },
-  routeContainer: { gap: Spacing.md, marginTop: Spacing.lg },
-  routeDots: { alignItems: 'center', paddingTop: Spacing.xs },
-  routeDotTop: { width: 12, height: 12, borderRadius: 6 },
-  routeLine: { width: 1, flex: 1, marginVertical: Spacing.xs },
-  routeDotBottom: { width: 12, height: 12, borderRadius: 3 },
-  routeAddresses: { flex: 1, gap: Spacing.md },
-  routeLabel: { fontSize: 10, letterSpacing: 0.8, textTransform: 'uppercase' },
-  routeAddress: { fontSize: Typography.size.sm, marginTop: 2 },
-  requestActions: { gap: Spacing.sm, marginTop: 20 },
-  declineBtn: { flex: 2, height: 56, borderRadius: Radius.lg, alignItems: 'center', justifyContent: 'center' },
-  declineBtnText: { fontSize: 15 },
-  acceptBtn: { flex: 3, height: 56, borderRadius: Radius.lg, overflow: 'hidden', elevation: Shadows.large.elevation, shadowColor: '#2d2d42', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 12 },
-  acceptBtnGrad: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
-  acceptBtnText: { fontSize: 15 },
-  timerBar: { height: 4, width: '100%', borderRadius: 2, marginTop: Spacing.md, transformOrigin: '0% 50%' },
+
+  /* ── "C" trip-request split card ── */
+  requestSplitCard: { borderRadius: 24, overflow: 'hidden', flexDirection: 'row', elevation: Shadows.large.elevation, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.22, shadowRadius: 24 },
+  requestLeftPanelC: { width: 96, flexShrink: 0, backgroundColor: C_INK, paddingHorizontal: 12, paddingVertical: 18, alignItems: 'center' },
+  requestLeftCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.1, color: C_CAP, textTransform: 'uppercase' },
+  countdownRingC: { width: 56, height: 56, borderRadius: 28, borderWidth: 3, borderColor: C_RED, alignItems: 'center', justifyContent: 'center' },
+  countdownTextC: { fontSize: 19, fontFamily: 'Inter_700Bold', color: '#ffffff' },
+  requestRightPanelC: { flex: 1, backgroundColor: '#ffffff', padding: 18 },
+  requestFareRowC: { alignItems: 'flex-start', justifyContent: 'space-between' },
+  fareAmountC: { fontSize: 24, fontFamily: 'Inter_700Bold', color: C_INK, letterSpacing: -0.5 },
+  fareCurrencyC: { fontSize: 13, fontFamily: 'Inter_700Bold', color: C_CAP },
+  fareDetailsC: { fontSize: 11.5, fontFamily: 'Inter_600SemiBold', color: C_CAP, marginTop: 1 },
+  riderInfoC: { alignItems: 'center', gap: 8 },
+  riderAvatarC: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#F0F2F3' },
+  riderNameC: { fontSize: 12.5, fontFamily: 'Inter_700Bold', color: C_INK },
+  riderRatingRowC: { alignItems: 'center', gap: 3, marginTop: 2 },
+  riderRatingC: { fontSize: 11, fontFamily: 'Inter_700Bold', color: C_INK_SOFT },
+  hairRequestC: { height: 1, backgroundColor: C_HAIR, marginVertical: 14 },
+  routeContainerC: { gap: 10 },
+  routeDotsC: { alignItems: 'center', paddingTop: 3 },
+  routeDotTopC: { width: 8, height: 8, borderRadius: 4, backgroundColor: C_INK },
+  routeLineC: { width: 2, flex: 1, backgroundColor: C_HAIR, marginVertical: 2 },
+  routeDotBottomC: { width: 8, height: 8, borderRadius: 4, backgroundColor: C_MINT },
+  routeAddressesC: { flex: 1 },
+  routeLabelC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 0.6, color: C_CAP, textTransform: 'uppercase' },
+  routeAddressC: { fontSize: 12.5, fontFamily: 'Inter_700Bold', color: C_INK, marginTop: 2, marginBottom: 12 },
+  requestActionsC: { gap: 10, marginTop: 16 },
+  declineBtnC: { flex: 1, height: 48, borderRadius: 24, borderWidth: 1.5, borderColor: '#E2E5E8', alignItems: 'center', justifyContent: 'center' },
+  declineBtnTextC: { fontSize: 13, fontFamily: 'Inter_700Bold', color: C_INK },
+  acceptBtnC: { flex: 1.4, height: 48, borderRadius: 24, backgroundColor: C_INK, alignItems: 'center', justifyContent: 'center', gap: 6 },
+  acceptBtnTextC: { fontSize: 13, fontFamily: 'Inter_700Bold', color: '#ffffff' },
+  timerBarC: { height: 3, width: '100%', borderRadius: 1.5, marginTop: Spacing.sm, backgroundColor: C_RED, transformOrigin: '0% 50%' },
   // Active Promotions card
   promoHomeInner: {},
   promoHomeBody: { alignItems: 'flex-start', gap: Spacing.md, padding: Spacing.md },

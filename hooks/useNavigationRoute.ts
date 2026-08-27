@@ -38,6 +38,9 @@ const REROUTE_MIN_MOVE_M = 20;
 /** Network timeout for /directions fetches (both the initial leg fetch and reroutes). */
 const FETCH_TIMEOUT_MS = 8_000;
 
+/** Delay before retrying the initial leg fetch after a failed or empty /directions call. */
+const LEG_RETRY_MS = 5_000;
+
 type DirectionsResult = { polyline: Coord[] } | null;
 
 /** Shared /directions fetch used by both the initial leg fetch and reroutes. */
@@ -96,12 +99,29 @@ export function useNavigationRoute(
   // change (new leg) triggers another initial fetch.
   const lastLegDestKeyRef = useRef<string | null>(null);
 
+  // Retry plumbing for the initial leg fetch below. A single failed /directions
+  // call (timeout, transient network/API error, or a <2-point result) used to
+  // blank the route line for the ENTIRE leg: the destination key was marked
+  // "done" before the fetch resolved, so the effect never re-ran, and because
+  // off-route rerouting requires a non-null route it stayed disabled too — the
+  // driver's navigation line simply vanished and never came back. retryTick
+  // re-fires the effect after LEG_RETRY_MS on every failed fetch until one
+  // succeeds.
+  const [retryTick, setRetryTick] = useState(0);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // ── Initial leg fetch — driverPos → destination, once per leg ───────────
   // Folds in what useRoadPolyline used to do from the ride screen. Keyed on
   // destination (not driverPos), plus a one-shot retry once driverPos becomes
   // available if it wasn't yet when the destination first appeared.
   useEffect(() => {
     if (!enabled || !destination || !driverPos) return;
+
+    // Cancel any pending retry from a previous run before (re)deciding below.
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
 
     const destKey = `${destination.latitude.toFixed(5)},${destination.longitude.toFixed(5)}`;
     if (destKey === lastLegDestKeyRef.current) return;
@@ -111,14 +131,23 @@ export function useNavigationRoute(
     const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
     const origin = { latitude: driverPos.latitude, longitude: driverPos.longitude };
 
+    // Clear the "done" key and schedule a delayed re-fire so the same leg is
+    // retried instead of being permanently left without a route line.
+    const scheduleLegRetry = () => {
+      lastLegDestKeyRef.current = null;
+      retryTimerRef.current = setTimeout(() => setRetryTick((t) => t + 1), LEG_RETRY_MS);
+    };
+
     fetchDirections(origin, destination, ctrl.signal)
       .then((result) => {
         if (result) setCurrentRoute(result.polyline);
+        else scheduleLegRetry();
       })
       .catch(() => {
-        // Leg fetch failed — routeCoords stays null; off-route reroute logic
-        // below will pick it up once a driver position is off-route, and
-        // this effect will retry on the next genuine destination change.
+        // Leg fetch failed (network/timeout) — retry shortly so the line
+        // reappears; the off-route reroute logic below cannot recover on its
+        // own while the route is still null.
+        scheduleLegRetry();
       })
       .finally(() => clearTimeout(timer));
 
@@ -128,8 +157,9 @@ export function useNavigationRoute(
     };
   // driverPos's lat/lng are intentionally excluded — only whether a position
   // exists yet matters here (one-shot retry), not its continuous value.
+  // retryTick re-fires this effect after a failed fetch.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, destination?.latitude, destination?.longitude, driverPos != null]);
+  }, [enabled, destination?.latitude, destination?.longitude, driverPos != null, retryTick]);
 
   // ── Reset when navigation is disabled (phase change, completed, etc.) ───
   useEffect(() => {
@@ -137,6 +167,10 @@ export function useNavigationRoute(
     setCurrentRoute(null);
     setIsOffRoute(false);
     lastLegDestKeyRef.current = null;
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
     abortRef.current?.abort();
   }, [enabled]);
 

@@ -4,7 +4,6 @@ import { ChevronLeft, Star } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -13,15 +12,19 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { GlassView } from '@/components/GlassView';
-import { useColors } from '@/hooks/useColors';
 import { AppLoader } from '@/components/ui/AppLoader';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints, ApiError } from '@/lib/api';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
-import { Radius } from '@/constants/radius';
-import { Shadows } from '@/constants/shadows';
+
+// "C" split-panel palette — matches the ride/shuttle screens.
+const C_BG = '#EEF0F2';
+const C_INK = '#14151A';
+const C_CAP = '#9AA0A6';
+const C_CAP_ON_DARK = '#8A9096';
+const C_TEAL = '#0E9F8E';
+const C_STARC = '#F5A623';
 
 type Passenger = {
   id: string;
@@ -39,7 +42,6 @@ type BackendPassenger = {
 };
 
 export default function RatePassengersScreen() {
-  const colors = useColors();
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
   const topPad = insets.top;
@@ -120,7 +122,7 @@ export default function RatePassengersScreen() {
 
   if (loading) {
     return (
-      <View style={[s.center, { backgroundColor: colors.background }]}>
+      <View style={s.center}>
         <AppLoader />
       </View>
     );
@@ -128,65 +130,51 @@ export default function RatePassengersScreen() {
 
   if (done) {
     return (
-      <View style={[s.center, { backgroundColor: colors.background }]}>
-        <Text style={{ fontSize: 48 }}>⭐</Text>
-        <Text style={[s.doneTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-          {t.ratings_sent}
-        </Text>
+      <View style={s.center}>
+        <View style={s.doneCircleC}>
+          <Star size={30} color="#ffffff" fill="#ffffff" strokeWidth={0} />
+        </View>
+        <Text style={s.doneTitleC}>{t.ratings_sent}</Text>
       </View>
     );
   }
 
   return (
-    <View style={[s.root, { backgroundColor: colors.background }]}>
+    <View style={s.root}>
+      <View style={[s.headerC, { paddingTop: topPad + 12 }]}>
+        <Pressable onPress={() => router.back()} style={s.backBtnC}>
+          <ChevronLeft size={20} color="#ffffff" strokeWidth={2} />
+        </Pressable>
+        <Text style={s.headerCapC}>{t.trip_completed_title}</Text>
+        <Text style={s.pageTitleC}>{t.rate_passengers_title}</Text>
+        <Text style={s.pageSubC}>
+          {t.n_passengers_to_rate.replace('{n}', String(passengers.length))}
+        </Text>
+      </View>
+
       <ScrollView
-        contentContainerStyle={{ paddingTop: topPad + 8, paddingBottom: botPad + 100, paddingHorizontal: Spacing.lg }}
+        contentContainerStyle={{ paddingTop: 18, paddingBottom: botPad + 100, paddingHorizontal: Spacing.lg }}
         showsVerticalScrollIndicator={false}
       >
-        <View style={s.header}>
-          <Pressable
-            onPress={() => router.back()}
-            style={[s.backBtn, { backgroundColor: colors.glass, borderColor: colors.border }]}
-          >
-            <ChevronLeft size={20} color={colors.foreground} strokeWidth={2} />
-          </Pressable>
-          <View style={{ flex: 1 }}>
-            <Text style={[s.pageTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-              {t.rate_passengers_title}
-            </Text>
-            <Text style={[s.pageSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-              {t.n_passengers_to_rate.replace('{n}', String(passengers.length))}
-            </Text>
-          </View>
-        </View>
-
         {passengers.length === 0 ? (
-          <View style={[s.center, { marginTop: 60 }]}>
-            <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: Typography.size.sm, textAlign: 'center' }}>
-              {t.no_passengers_to_rate}
-            </Text>
+          <View style={[s.center, { flex: 0, marginTop: 60 }]}>
+            <Text style={s.emptyTextC}>{t.no_passengers_to_rate}</Text>
           </View>
         ) : (
-          <View style={{ gap: 10, marginTop: 20 }}>
+          <View style={{ gap: 10 }}>
             {passengers.map(p => (
-              <GlassView key={p.id} style={s.card} borderRadius={20}>
+              <View key={p.id} style={s.cardC}>
                 <View style={s.cardRow}>
                   {p.avatar ? (
-                    <Image source={{ uri: p.avatar }} style={[s.avatar, { borderColor: colors.border }]} contentFit="cover" />
+                    <Image source={{ uri: p.avatar }} style={s.avatarC} contentFit="cover" />
                   ) : (
-                    <View style={[s.avatarFallback, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+                    <View style={s.avatarFallbackC}>
                       <Text style={{ fontSize: Typography.size.lg }}>👤</Text>
                     </View>
                   )}
                   <View style={{ flex: 1 }}>
-                    <Text style={[s.passengerName, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-                      {p.name}
-                    </Text>
-                    {p.rated && (
-                      <Text style={{ color: '#22c55e', fontSize: Typography.size.xs, fontFamily: 'Inter_600SemiBold' }}>
-                        {t.rated_label}
-                      </Text>
-                    )}
+                    <Text style={s.passengerNameC}>{p.name}</Text>
+                    {p.rated && <Text style={s.ratedTextC}>{t.rated_label}</Text>}
                   </View>
                 </View>
                 <View style={s.starsRow}>
@@ -199,14 +187,14 @@ export default function RatePassengersScreen() {
                     >
                       <Star
                         size={32}
-                        color={n <= p.stars ? '#f59e0b' : colors.border}
-                        fill={n <= p.stars ? '#f59e0b' : 'transparent'}
-                        strokeWidth={2}
+                        color={n <= p.stars ? C_STARC : '#D3D6DA'}
+                        fill={n <= p.stars ? C_STARC : 'transparent'}
+                        strokeWidth={n <= p.stars ? 0 : 1.4}
                       />
                     </Pressable>
                   ))}
                 </View>
-              </GlassView>
+              </View>
             ))}
           </View>
         )}
@@ -217,14 +205,12 @@ export default function RatePassengersScreen() {
           <Pressable
             onPress={handleSubmit}
             disabled={submitting}
-            style={[s.submitBtn, { opacity: submitting ? 0.7 : 1 }]}
+            style={[s.submitBtnC, { opacity: submitting ? 0.7 : 1 }]}
           >
             {submitting ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color="#ffffff" />
             ) : (
-              <Text style={[s.submitBtnText, { fontFamily: 'Inter_700Bold' }]}>
-                {t.submit_ratings_btn}
-              </Text>
+              <Text style={s.submitBtnTextC}>{t.submit_ratings_btn}</Text>
             )}
           </Pressable>
         </View>
@@ -234,31 +220,38 @@ export default function RatePassengersScreen() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.md },
-  header: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
-  backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  pageTitle: { fontSize: 20 },
-  pageSub: { fontSize: Typography.size.xs, marginTop: 2 },
-  card: { padding: Spacing.lg, gap: 14 },
+  root: { flex: 1, backgroundColor: C_BG },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.md, backgroundColor: C_BG },
+
+  // Dark header band
+  headerC: { backgroundColor: C_INK, paddingHorizontal: Spacing.lg, paddingBottom: 22, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
+  backBtnC: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.1)', marginBottom: 14 },
+  headerCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.4, color: C_CAP_ON_DARK, textTransform: 'uppercase' },
+  pageTitleC: { fontSize: 22, fontFamily: 'Inter_700Bold', color: '#ffffff', marginTop: 6 },
+  pageSubC: { fontSize: Typography.size.sm, fontFamily: 'Inter_600SemiBold', color: '#B7BBC2', marginTop: 3 },
+
+  // Passenger cards
+  cardC: { backgroundColor: '#ffffff', borderRadius: 18, padding: Spacing.lg, gap: 14 },
   cardRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
-  avatar: { width: 48, height: 48, borderRadius: Radius.xl, borderWidth: 2 },
-  avatarFallback: { width: 48, height: 48, borderRadius: Radius.xl, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
-  passengerName: { fontSize: 15 },
+  avatarC: { width: 44, height: 44, borderRadius: 22 },
+  avatarFallbackC: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#F0F2F3', alignItems: 'center', justifyContent: 'center' },
+  passengerNameC: { fontSize: 14, fontFamily: 'Inter_700Bold', color: C_INK },
+  ratedTextC: { color: C_TEAL, fontSize: Typography.size.xs, fontFamily: 'Inter_600SemiBold', marginTop: 2 },
   starsRow: { flexDirection: 'row', gap: Spacing.sm, justifyContent: 'center' },
-  doneTitle: { fontSize: 20, textAlign: 'center', marginTop: Spacing.sm },
+  emptyTextC: { color: C_CAP, fontFamily: 'Inter_400Regular', fontSize: Typography.size.sm, textAlign: 'center' },
+
+  // Done state
+  doneCircleC: { width: 64, height: 64, borderRadius: 32, backgroundColor: C_STARC, alignItems: 'center', justifyContent: 'center' },
+  doneTitleC: { fontSize: 18, fontFamily: 'Inter_700Bold', color: C_INK, textAlign: 'center', marginTop: Spacing.sm },
+
+  // Bottom CTA
   bottomAction: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: Spacing.lg, paddingTop: Spacing.sm },
-  submitBtn: {
-    height: 56,
-    borderRadius: 20,
-    backgroundColor: '#1e1e28',
+  submitBtnC: {
+    height: 54,
+    borderRadius: 15,
+    backgroundColor: C_INK,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#1e1e28',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-    elevation: Shadows.large.elevation,
   },
-  submitBtnText: { color: '#fff', fontSize: 15 },
+  submitBtnTextC: { color: '#ffffff', fontSize: 15, fontFamily: 'Inter_700Bold' },
 });
