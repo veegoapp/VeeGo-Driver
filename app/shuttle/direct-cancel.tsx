@@ -151,13 +151,17 @@ export default function DirectCancelScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={[styles.headerC, { paddingTop: topPad + 8 }]}>
-        <Pressable onPress={() => router.back()} style={styles.backBtnC} hitSlop={8}>
-          <ChevronLeft size={22} color="#ffffff" strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
-        </Pressable>
-        <Text style={styles.headerTitleC}>{t.direct_cancel}</Text>
-        <View style={{ width: 36 }} />
+      {/* Dark hero: back button + trip identity */}
+      <View style={[styles.heroC, { paddingTop: topPad + 8 }]}>
+        <View style={{ flexDirection: R, alignItems: 'center', justifyContent: 'space-between' }}>
+          <Pressable onPress={() => router.back()} style={styles.backBtnC} hitSlop={8}>
+            <ChevronLeft size={22} color="#ffffff" strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
+          </Pressable>
+          <Text style={styles.heroCapC}>{t.direct_cancel}</Text>
+          <View style={{ width: 36 }} />
+        </View>
+        <Text style={[styles.heroTitleC, { textAlign: TA }]}>{displayRouteName}</Text>
+        <Text style={[styles.heroSubC, { textAlign: TA }]}>{departureTime ?? '—'}</Text>
       </View>
 
       <ScrollView
@@ -165,7 +169,7 @@ export default function DirectCancelScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Warning banner */}
-        <View style={[styles.warningBannerC, { marginTop: 20 }]}>
+        <View style={[styles.warningBannerC, { marginTop: 18 }]}>
           <AlertTriangle size={20} color="#DC2626" strokeWidth={2} />
           <View style={{ flex: 1 }}>
             <Text style={[{ fontSize: Typography.size.sm, color: '#DC2626', fontFamily: 'Inter_700Bold', textAlign: TA }]}>
@@ -190,14 +194,8 @@ export default function DirectCancelScreen() {
           </View>
         </View>
 
-        {/* Trip summary */}
-        <View style={[styles.tripSummaryC, { marginTop: Spacing.lg }]}>
-          <Text style={[styles.summaryTitleC, { textAlign: TA }]}>{displayRouteName}</Text>
-          <Text style={[styles.summarySubC, { textAlign: TA }]}>{departureTime ?? '—'}</Text>
-        </View>
-
         {/* Reasons list */}
-        <Text style={[styles.sectionTitleC, { textAlign: TA, marginTop: 28 }]}>{t.cancel_reasons_title}</Text>
+        <Text style={[styles.sectionTitleC, { textAlign: TA, marginTop: 24 }]}>{t.cancel_reasons_title}</Text>
         <Text style={[styles.sectionSubC, { textAlign: TA, marginTop: Spacing.xs, marginBottom: 14 }]}>
           {t.choose_cancel_reason}
         </Text>
@@ -258,16 +256,17 @@ export default function DirectCancelScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C_BG },
-  headerC: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.md,
+  heroC: {
     backgroundColor: C_INK,
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: 20,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
   },
   backBtnC: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.1)' },
-  headerTitleC: { fontSize: 16, fontFamily: 'Inter_700Bold', color: '#ffffff' },
+  heroCapC: { fontSize: 13, fontFamily: 'Inter_700Bold', color: '#ffffff' },
+  heroTitleC: { fontSize: 20, fontFamily: 'Inter_700Bold', color: '#ffffff', marginTop: 16 },
+  heroSubC: { fontSize: 13, fontFamily: 'Inter_600SemiBold', color: '#B7BBC2', marginTop: 4 },
   warningBannerC: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -278,9 +277,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#FCA5A5',
   },
-  tripSummaryC: { padding: Spacing.lg, backgroundColor: '#ffffff', borderRadius: 16 },
-  summaryTitleC: { fontSize: 15, fontFamily: 'Inter_700Bold', color: C_INK },
-  summarySubC: { fontSize: 13, fontFamily: 'Inter_400Regular', color: C_CAP, marginTop: Spacing.xs },
   sectionTitleC: { fontSize: Typography.size.md, fontFamily: 'Inter_700Bold', color: C_INK },
   sectionSubC: { fontSize: 13, fontFamily: 'Inter_400Regular', color: C_CAP },
   reasonsCardC: { backgroundColor: '#ffffff', borderRadius: 16, overflow: 'hidden' },
