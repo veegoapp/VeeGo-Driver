@@ -54,6 +54,7 @@ const C_HAIR = '#EEF0F1';
 const C_TEAL = '#0E9F8E';
 const C_MINT = '#3DDC97';
 const C_STARC = '#F5A623';
+const C_CAP_ON_DARK = '#8A9096';
 
 type Phase = 'to_pickup' | 'arrived' | 'in_trip' | 'completed';
 type PhaseCopy = { label: string; cta: string; next: Phase };
@@ -945,14 +946,11 @@ export default function RideScreen() {
       {phase === 'completed' && (
         <Animated.View style={[styles.completedOverlayC, { opacity: completedAnim }]}>
           {completedStep === 'fare' ? (
-            /* ── STEP 1 · full-screen Fare page (C) ── */
+            /* ── STEP 1 · Fare page (C) — dark hero band + white body ── */
             <View style={{ flex: 1 }}>
-              <ScrollView
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal: 26, paddingTop: insets.top + 36, paddingBottom: 24 }}
-              >
+              <View style={[styles.heroC, { paddingTop: insets.top + 24 }]}>
                 <Animated.View style={[styles.checkCircleC, { transform: [{ scale: checkScale }] }]}>
-                  <Check size={40} color="#ffffff" strokeWidth={3} />
+                  <Check size={32} color="#ffffff" strokeWidth={3} />
                 </Animated.View>
                 <Text style={styles.pageTitleC}>{t.trip_done_title}</Text>
 
@@ -977,8 +975,14 @@ export default function RideScreen() {
                     </Pressable>
                   </>
                 )}
+              </View>
+
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: 26, paddingTop: 22, paddingBottom: 24 }}
+              >
                 {creditedChange > 0 && (
-                  <Text style={styles.heroNoteC}>
+                  <Text style={styles.bodyNoteC}>
                     {t.change_credited_note.replace('{amount}', creditedChange.toFixed(2)).replace('{egp}', t.egp)}
                   </Text>
                 )}
@@ -990,45 +994,55 @@ export default function RideScreen() {
               </View>
             </View>
           ) : (
-            /* ── STEP 2 · Rating card (C) ── */
+            /* ── STEP 2 · Rating card (C) — dark header row + white body ── */
             <View style={styles.ratingWrapC}>
               <View style={styles.ratingCardC}>
-                {passengerAvatar && !riderAvatarFailed ? (
-                  <Image source={{ uri: passengerAvatar }} style={styles.ratingAvatarC} resizeMode="cover" />
-                ) : (
-                  <View style={[styles.ratingAvatarC, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#EEEADF' }]}>
-                    <Text style={{ color: '#4A463D', fontSize: 22, fontFamily: 'Inter_700Bold' }}>{passengerInitials}</Text>
+                <View style={styles.ratingHeaderC}>
+                  {passengerAvatar && !riderAvatarFailed ? (
+                    <Image source={{ uri: passengerAvatar }} style={styles.ratingAvatarC} resizeMode="cover" />
+                  ) : (
+                    <View style={[styles.ratingAvatarC, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#26272E' }]}>
+                      <Text style={{ color: '#ffffff', fontSize: 18, fontFamily: 'Inter_700Bold' }}>{passengerInitials}</Text>
+                    </View>
+                  )}
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={styles.ratingCapC}>{t.trip_done_title}</Text>
+                    <Text style={styles.ratingTitleC} numberOfLines={1}>
+                      {t.rate_rider_label.replace('{name}', passengerName ?? '—')}
+                    </Text>
                   </View>
-                )}
-                <Text style={styles.ratingTitleC}>{t.rate_rider_label.replace('{name}', passengerName ?? '—')}</Text>
-                <View style={styles.starsRowC}>
-                  {[1, 2, 3, 4, 5].map(n => (
-                    <Pressable key={n} onPress={() => setRating(n)}>
-                      <Star size={38} color={n <= rating ? C_STARC : '#D3D6DA'} fill={n <= rating ? C_STARC : 'transparent'} strokeWidth={n <= rating ? 0 : 1.4} />
-                    </Pressable>
-                  ))}
                 </View>
-                {rating > 0 && (
-                  <TextInput
-                    style={styles.commentInputC}
-                    placeholder={t.rating_comment_placeholder}
-                    placeholderTextColor={C_CAP}
-                    value={ratingComment}
-                    onChangeText={setRatingComment}
-                    maxLength={500}
-                    multiline
-                  />
-                )}
-                <Pressable
-                  onPress={handleSubmitRating}
-                  disabled={rating === 0 || ratingSubmitting}
-                  style={[styles.primaryBtnC, { marginTop: 20, opacity: rating === 0 || ratingSubmitting ? 0.5 : 1 }]}
-                >
-                  {ratingSubmitting ? <ActivityIndicator color="#ffffff" /> : <Text style={styles.primaryBtnTxtC}>{t.submit_rating_btn}</Text>}
-                </Pressable>
-                <Pressable onPress={handleSkipRating} disabled={ratingSubmitting} style={styles.skipBtnC}>
-                  <Text style={styles.skipTxtC}>{t.skip_btn}</Text>
-                </Pressable>
+
+                <View style={styles.ratingBodyC}>
+                  <View style={styles.starsRowC}>
+                    {[1, 2, 3, 4, 5].map(n => (
+                      <Pressable key={n} onPress={() => setRating(n)}>
+                        <Star size={38} color={n <= rating ? C_STARC : '#D3D6DA'} fill={n <= rating ? C_STARC : 'transparent'} strokeWidth={n <= rating ? 0 : 1.4} />
+                      </Pressable>
+                    ))}
+                  </View>
+                  {rating > 0 && (
+                    <TextInput
+                      style={styles.commentInputC}
+                      placeholder={t.rating_comment_placeholder}
+                      placeholderTextColor={C_CAP}
+                      value={ratingComment}
+                      onChangeText={setRatingComment}
+                      maxLength={500}
+                      multiline
+                    />
+                  )}
+                  <Pressable
+                    onPress={handleSubmitRating}
+                    disabled={rating === 0 || ratingSubmitting}
+                    style={[styles.primaryBtnC, { marginTop: 20, opacity: rating === 0 || ratingSubmitting ? 0.5 : 1 }]}
+                  >
+                    {ratingSubmitting ? <ActivityIndicator color="#ffffff" /> : <Text style={styles.primaryBtnTxtC}>{t.submit_rating_btn}</Text>}
+                  </Pressable>
+                  <Pressable onPress={handleSkipRating} disabled={ratingSubmitting} style={styles.skipBtnC}>
+                    <Text style={styles.skipTxtC}>{t.skip_btn}</Text>
+                  </Pressable>
+                </View>
               </View>
             </View>
           )}
@@ -1448,27 +1462,32 @@ const styles = StyleSheet.create({
   sosBtnText: { fontSize: Typography.size.xs },
   commentInput: { borderWidth: 1, borderRadius: Radius.md, paddingHorizontal: 14, paddingVertical: 10, fontSize: Typography.size.sm, fontFamily: 'Inter_400Regular', marginTop: Spacing.md, minHeight: 60, textAlignVertical: 'top' },
 
-  /* ── "C" post-trip fare page + rating card ── */
+  /* ── "C" post-trip fare page + rating card — dark panel/band + white body ── */
   completedOverlayC: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: C_BG, zIndex: 1000 },
-  checkCircleC: { width: 68, height: 68, borderRadius: 34, backgroundColor: '#14151A', alignItems: 'center', justifyContent: 'center', alignSelf: 'center' },
-  pageTitleC: { fontSize: 24, fontFamily: 'Inter_700Bold', color: C_INK, textAlign: 'center', marginTop: 18 },
-  heroCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.4, color: C_CAP, textAlign: 'center', marginTop: 26, textTransform: 'uppercase' },
+  heroC: { backgroundColor: '#14151A', paddingHorizontal: 26, paddingBottom: 22, alignItems: 'center', borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
+  checkCircleC: { width: 60, height: 60, borderRadius: 30, backgroundColor: C_TEAL, alignItems: 'center', justifyContent: 'center', alignSelf: 'center' },
+  pageTitleC: { fontSize: 22, fontFamily: 'Inter_700Bold', color: '#ffffff', textAlign: 'center', marginTop: 16 },
+  heroCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.4, color: C_CAP_ON_DARK, textAlign: 'center', marginTop: 22, textTransform: 'uppercase' },
   heroRowC: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', gap: 8, marginTop: 6 },
-  heroAmountC: { fontSize: 52, fontFamily: 'Inter_700Bold', color: C_TEAL, lineHeight: 54 },
-  heroCurC: { fontSize: 19, fontFamily: 'Inter_700Bold', color: C_TEAL },
-  heroNoteC: { fontSize: 13, fontFamily: 'Inter_600SemiBold', color: C_INK_SOFT, textAlign: 'center', marginTop: 8 },
+  heroAmountC: { fontSize: 48, fontFamily: 'Inter_700Bold', color: C_TEAL, lineHeight: 50 },
+  heroCurC: { fontSize: 18, fontFamily: 'Inter_700Bold', color: C_TEAL },
+  heroNoteC: { fontSize: 13, fontFamily: 'Inter_600SemiBold', color: '#B7BBC2', textAlign: 'center', marginTop: 8 },
   viewDetailsBtnC: { alignSelf: 'center', marginTop: 6, paddingVertical: 4, paddingHorizontal: 8 },
   viewDetailsTxtC: { fontSize: 13, fontFamily: 'Inter_700Bold', color: C_TEAL, textDecorationLine: 'underline' },
+  bodyNoteC: { fontSize: 13, fontFamily: 'Inter_600SemiBold', color: C_INK_SOFT, textAlign: 'center', marginTop: 4 },
   footerC: { paddingHorizontal: 26, paddingTop: 12, backgroundColor: C_BG },
   primaryBtnC: { height: 54, borderRadius: 15, backgroundColor: '#14151A', alignItems: 'center', justifyContent: 'center' },
   primaryBtnTxtC: { color: '#ffffff', fontSize: 15, fontFamily: 'Inter_700Bold', letterSpacing: 0.3 },
-  ratingWrapC: { flex: 1, justifyContent: 'flex-end', paddingHorizontal: 20, paddingBottom: 34 },
-  ratingCardC: { backgroundColor: C_SURF, borderRadius: 28, padding: 24, alignItems: 'center' },
-  ratingAvatarC: { width: 60, height: 60, borderRadius: 30, marginTop: 4 },
-  ratingTitleC: { fontSize: 18, fontFamily: 'Inter_700Bold', color: C_INK, textAlign: 'center', marginTop: 12 },
-  starsRowC: { flexDirection: 'row', gap: 14, marginTop: 20 },
-  commentInputC: { alignSelf: 'stretch', borderWidth: 1, borderColor: C_HAIR, borderRadius: 14, backgroundColor: '#F6F7F8', paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, fontFamily: 'Inter_400Regular', marginTop: 18, minHeight: 60, textAlignVertical: 'top', color: C_INK },
-  skipBtnC: { marginTop: 14, paddingVertical: 6 },
+  ratingWrapC: { flex: 1, justifyContent: 'flex-end' },
+  ratingCardC: { borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: 'hidden' },
+  ratingHeaderC: { backgroundColor: '#14151A', flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 24, paddingVertical: 24 },
+  ratingAvatarC: { width: 52, height: 52, borderRadius: 26 },
+  ratingCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.4, color: C_CAP_ON_DARK, textTransform: 'uppercase' },
+  ratingTitleC: { fontSize: 18, fontFamily: 'Inter_700Bold', color: '#ffffff', marginTop: 4 },
+  ratingBodyC: { backgroundColor: C_SURF, padding: 24 },
+  starsRowC: { flexDirection: 'row', justifyContent: 'center', gap: 14 },
+  commentInputC: { alignSelf: 'stretch', borderWidth: 1, borderColor: C_HAIR, borderRadius: 14, backgroundColor: '#F6F7F8', paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, fontFamily: 'Inter_400Regular', marginTop: 22, minHeight: 60, textAlignVertical: 'top', color: C_INK },
+  skipBtnC: { alignSelf: 'center', marginTop: 14, paddingVertical: 6 },
   skipTxtC: { fontSize: 13, fontFamily: 'Inter_700Bold', color: C_CAP },
 
   /* ── "D" change-confirm card ── */
