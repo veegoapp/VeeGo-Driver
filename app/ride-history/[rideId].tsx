@@ -243,12 +243,20 @@ export default function RideHistoryDetailScreen() {
                 <FinRow label={t.waiting_charge_label} value={`+${financial.waitingCharge.toFixed(2)} ${t.egp}`} colors={colors} isRTL={isRTL} />
               )}
 
-              {/* Cash-specific: how much of it was actually cash-in-hand */}
+              {/* Cash-specific: the full fare is always what the driver physically
+                  collected from the rider at trip end — what they may still owe
+                  is only their commission share, not the fare itself. */}
               {financial.paymentMethod === 'cash' && (
                 <>
                   <FinRow label={t.cash_collected_label} value={`${(financial.cashCollectedAmount ?? 0).toFixed(2)} ${t.egp}`} colors={colors} isRTL={isRTL} />
-                  {financial.cashStatus === 'pending' && (
-                    <FinRow label={t.cash_owed_label} value={`${Math.max(0, (financial.cashDueAmount ?? 0) - (financial.cashCollectedAmount ?? 0)).toFixed(2)} ${t.egp}`} negative colors={colors} isRTL={isRTL} />
+                  {!!financial.commissionOwed && !financial.commissionSettled && (
+                    <FinRow
+                      label={t.commission_owed_label}
+                      value={`${Math.max(0, financial.commissionOwed - (financial.commissionPaid ?? 0)).toFixed(2)} ${t.egp}`}
+                      negative
+                      colors={colors}
+                      isRTL={isRTL}
+                    />
                   )}
                 </>
               )}
@@ -278,6 +286,20 @@ export default function RideHistoryDetailScreen() {
                 </Text>
                 <Text style={[{ fontSize: Typography.size.sm, color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
                   {(financial.platformCommissionAmount ?? 0).toFixed(2)} {t.egp}
+                </Text>
+              </View>
+
+              {/* Reconciles the top "net earnings" stat (your share + peak
+                  bonus) against the fare it was confusingly read as equal
+                  to — it isn't; the bonus is extra platform-funded money on
+                  top of the fare, not a slice of it. */}
+              <View style={[styles.divider, { backgroundColor: colors.divider }]} />
+              <View style={[{ flexDirection: R, alignItems: 'center', justifyContent: 'space-between' }]}>
+                <Text style={[{ fontSize: Typography.size.sm, color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
+                  {t.total_net_earnings_label}
+                </Text>
+                <Text style={[{ fontSize: Typography.size.md, color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
+                  {((financial.driverEarningsAmount ?? 0) + (financial.peakBonusAmount ?? 0)).toFixed(2)} {t.egp}
                 </Text>
               </View>
             </GlassView>

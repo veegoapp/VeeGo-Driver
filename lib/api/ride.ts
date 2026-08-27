@@ -25,6 +25,12 @@ export type RideFinancialDetail = {
   cashDueAmount?: number;
   cashCollectedAmount?: number;
   cashStatus?: 'collected' | 'pending' | 'not_applicable';
+  // The driver's real, ledger-backed commission debt on this cash ride (the
+  // platform's cut only — not the full fare, which the driver rightfully
+  // keeps most of). null when the ride wasn't paid in cash.
+  commissionOwed?: number | null;
+  commissionPaid?: number | null;
+  commissionSettled?: boolean;
 };
 
 export const ridesEndpoints = {
