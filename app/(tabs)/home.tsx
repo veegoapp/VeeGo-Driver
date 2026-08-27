@@ -1085,40 +1085,52 @@ export default function HomeScreen() {
         </View>
       )}
 
-      {!request && (
-        <View style={[styles.onlineToggleWrap, { bottom: TAB_BAR_HEIGHT + 60 }]}>
-          <View style={styles.pulseContainer}>
-            {online && (
-              <Animated.View style={[styles.pulseRing, {
-                backgroundColor: colors.primary + '40',
-                transform: [{ scale: pulseScale }],
-                opacity: pulseOpacity,
-              }]} />
+      {/* Always mounted (not conditional on `request`) — the pulse ring runs
+          on a native-driver Animated.loop that's started once and never
+          restarted; unmounting/remounting this view every time a ride offer
+          shows and gets dismissed forced the native animated node to detach
+          and reattach, which could land mid-cycle and visibly freeze the
+          pulse for a moment. Hidden (not removed) behind the request sheet
+          via opacity/pointerEvents instead, so the loop never loses its view. */}
+      <View
+        style={[
+          styles.onlineToggleWrap,
+          { bottom: TAB_BAR_HEIGHT + 60 },
+          request ? { opacity: 0 } : null,
+        ]}
+        pointerEvents={request ? 'none' : 'auto'}
+      >
+        <View style={styles.pulseContainer}>
+          {online && (
+            <Animated.View style={[styles.pulseRing, {
+              backgroundColor: colors.primary + '40',
+              transform: [{ scale: pulseScale }],
+              opacity: pulseOpacity,
+            }]} />
+          )}
+          <Pressable
+            onPress={handleToggleOnline}
+            disabled={togglingOnline}
+            accessibilityLabel={online ? t.go_offline_label : t.go_online_label}
+            style={({ pressed }) => [styles.onlineBtn, { transform: [{ scale: pressed ? 0.95 : 1 }], opacity: togglingOnline ? 0.7 : 1 }]}
+          >
+            {online ? (
+              <LinearGradient colors={['#2d2d42', '#1e1e28']} style={styles.onlineBtnGrad}>
+                <Text style={[styles.onlineBtnText, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>{t.online_status}</Text>
+              </LinearGradient>
+            ) : (
+              <View style={[styles.onlineBtnOff, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+                <Text style={[styles.onlineBtnText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.go}</Text>
+              </View>
             )}
-            <Pressable
-              onPress={handleToggleOnline}
-              disabled={togglingOnline}
-              accessibilityLabel={online ? t.go_offline_label : t.go_online_label}
-              style={({ pressed }) => [styles.onlineBtn, { transform: [{ scale: pressed ? 0.95 : 1 }], opacity: togglingOnline ? 0.7 : 1 }]}
-            >
-              {online ? (
-                <LinearGradient colors={['#2d2d42', '#1e1e28']} style={styles.onlineBtnGrad}>
-                  <Text style={[styles.onlineBtnText, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>{t.online_status}</Text>
-                </LinearGradient>
-              ) : (
-                <View style={[styles.onlineBtnOff, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
-                  <Text style={[styles.onlineBtnText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.go}</Text>
-                </View>
-              )}
-            </Pressable>
-          </View>
-          <GlassView style={styles.statusPill} borderRadius={20}>
-            <Text style={[styles.statusPillText, { color: colors.foreground, fontFamily: 'Inter_600SemiBold', textAlign: 'center' }]}>
-              {togglingOnline ? '...' : online ? t.youre_online : t.youre_offline}
-            </Text>
-          </GlassView>
+          </Pressable>
         </View>
-      )}
+        <GlassView style={styles.statusPill} borderRadius={20}>
+          <Text style={[styles.statusPillText, { color: colors.foreground, fontFamily: 'Inter_600SemiBold', textAlign: 'center' }]}>
+            {togglingOnline ? '...' : online ? t.youre_online : t.youre_offline}
+          </Text>
+        </GlassView>
+      </View>
 
       {request && (
         <Animated.View style={[styles.requestSheet, { paddingBottom: TAB_BAR_HEIGHT_BASE + insets.bottom + Spacing.md, transform: [{ translateY: sheetAnim }] }]}>
