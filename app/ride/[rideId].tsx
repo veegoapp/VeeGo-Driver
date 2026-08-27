@@ -119,11 +119,6 @@ export default function RideScreen() {
   const [shareBusy, setShareBusy] = useState(false);
   const [shareLink, setShareLink] = useState<{ id: number; url: string } | null>(null);
   const [cancelling, setCancelling] = useState(false);
-  // Cash-collection confirmation, shown after "Complete trip" on a cash ride
-  // and before the ride is actually completed — reuses the same fare-page
-  // overlay below (dark hero + white body) with OK/Other-amount actions
-  // instead of Continue, so there's no separate page for this.
-  const [pendingCashConfirm, setPendingCashConfirm] = useState(false);
   // "Other amount" change flow (cash rides only — see handleCompleteWithChange).
   const [amountSheetOpen, setAmountSheetOpen] = useState(false);
   const [amountInput, setAmountInput] = useState('');
@@ -607,24 +602,7 @@ export default function RideScreen() {
   const parsedAmountReceived = parseFloat(amountInput) || 0;
   const computedChange = Math.round((parsedAmountReceived - fareAmount) * 100) / 100;
 
-  // In-trip CTA: cash rides stop at a cash-collection confirmation before the
-  // ride actually completes (OK = exact fare / Other amount = keypad below);
-  // every other phase/payment method transitions immediately, as before.
-  const handleCtaPress = () => {
-    if (phase === 'in_trip' && paymentMethod === 'cash') {
-      setPendingCashConfirm(true);
-      return;
-    }
-    handleNext();
-  };
-
-  const handleConfirmExactFare = async () => {
-    await handleNext();
-    setPendingCashConfirm(false);
-  };
-
   const handleOpenAmountSheet = () => {
-    setPendingCashConfirm(false);
     setAmountInput('');
     setAmountSheetOpen(true);
   };
@@ -684,6 +662,7 @@ export default function RideScreen() {
       setConfirmChangeOpen(false);
       setAmountInput('');
       setPhase('completed');
+      setCompletedStep('rating');
     } catch (err: unknown) {
       const body = (err as { body?: { error?: string } })?.body;
       showAlert(t.action_failed_title, body?.error ?? t.try_again_msg);
@@ -966,35 +945,9 @@ export default function RideScreen() {
         </View>
       </View>
 
-      {(phase === 'completed' || pendingCashConfirm) && (
-        <Animated.View style={[styles.completedOverlayC, { opacity: phase === 'completed' ? completedAnim : 1 }]}>
-          {pendingCashConfirm ? (
-            /* ── Cash-collection confirmation — same fare-page layout,
-                shown before the ride actually completes ── */
-            <View style={{ flex: 1 }}>
-              <View style={[styles.heroC, { paddingTop: insets.top + 24 }]}>
-                <Text style={styles.heroCapC}>{t.trip_fare_label}</Text>
-                <View style={styles.heroRowC}>
-                  <Text style={styles.heroAmountC}>{fareAmount.toFixed(2)}</Text>
-                  <Text style={styles.heroCurC}>{t.egp}</Text>
-                </View>
-              </View>
-              <View style={{ flex: 1 }} />
-              <View style={[styles.footerC, { paddingBottom: insets.bottom + 24 }]}>
-                <Pressable onPress={handleConfirmExactFare} disabled={busy} style={[styles.primaryBtnC, { opacity: busy ? 0.7 : 1 }]}>
-                  {busy ? <ActivityIndicator color="#ffffff" /> : <Text style={styles.primaryBtnTxtC}>{t.ok}</Text>}
-                </Pressable>
-                <Pressable
-                  onPress={handleOpenAmountSheet}
-                  disabled={busy}
-                  style={[styles.otherAmountBtnC, { marginTop: 10, opacity: busy ? 0.6 : 1 }]}
-                  accessibilityLabel={t.other_amount_btn}
-                >
-                  <Text style={styles.otherAmountBtnTextC}>{t.other_amount_btn}</Text>
-                </Pressable>
-              </View>
-            </View>
-          ) : completedStep === 'fare' ? (
+      {phase === 'completed' && (
+        <Animated.View style={[styles.completedOverlayC, { opacity: completedAnim }]}>
+          {completedStep === 'fare' ? (
             /* ── STEP 1 · Fare page (C) — dark hero band + white body ── */
             <View style={{ flex: 1 }}>
               <View style={[styles.heroC, { paddingTop: insets.top + 24 }]}>
@@ -1040,6 +993,16 @@ export default function RideScreen() {
                 <Pressable onPress={() => setCompletedStep('rating')} style={styles.primaryBtnC}>
                   <Text style={styles.primaryBtnTxtC}>{'Continue'}</Text>
                 </Pressable>
+                {paymentMethod === 'cash' && (
+                  <Pressable
+                    onPress={handleOpenAmountSheet}
+                    disabled={busy}
+                    style={[styles.otherAmountBtnC, { marginTop: 10, opacity: busy ? 0.6 : 1 }]}
+                    accessibilityLabel={t.other_amount_btn}
+                  >
+                    <Text style={styles.otherAmountBtnTextC}>{t.other_amount_btn}</Text>
+                  </Pressable>
+                )}
               </View>
             </View>
           ) : (
@@ -1211,7 +1174,7 @@ export default function RideScreen() {
                 </Animated.View>
               )}
 
-              <Pressable onPress={handleCtaPress} disabled={busy} style={[styles.ctaBtnC, { opacity: busy ? 0.7 : 1 }]}>
+              <Pressable onPress={handleNext} disabled={busy} style={[styles.ctaBtnC, { opacity: busy ? 0.7 : 1 }]}>
                 <ChevronUp size={16} color="#ffffff" strokeWidth={2.5} />
                 <Text style={styles.ctaBtnTextC}>{p.cta}</Text>
               </Pressable>
