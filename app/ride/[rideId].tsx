@@ -1236,47 +1236,47 @@ export default function RideScreen() {
 
       {/* ── "Other amount" numeric keypad ─────────────────────────────── */}
       <Modal visible={amountSheetOpen} transparent animationType="slide" onRequestClose={handleKeypadCancel}>
-        <View style={styles.modalBackdrop}>
-          <GlassView strong style={styles.modalCard} borderRadius={24}>
-            <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
-            <Text style={[styles.modalTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.amount_received_title}</Text>
-            <Text style={[styles.amountDisplay, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-              {amountInput || '0'} {t.egp}
+        <View style={styles.modalBackdropC}>
+          <View style={styles.keypadCardC}>
+            <View style={styles.sheetHandleDarkC} />
+            <Text style={styles.keypadCapC}>{t.amount_received_title}</Text>
+            <Text style={styles.keypadAmountC}>
+              {amountInput || '0'} <Text style={styles.keypadAmountCurC}>{t.egp}</Text>
             </Text>
 
-            {KEYPAD_ROWS.map((row, ri) => (
-              <View key={ri} style={styles.keypadRow}>
-                {row.map((key) => (
-                  <Pressable
-                    key={key}
-                    onPress={() => (key === 'back' ? handleKeypadBackspace() : handleKeypadDigit(key))}
-                    style={[styles.keypadKey, { backgroundColor: colors.secondary }]}
-                  >
-                    {key === 'back' ? (
-                      <Delete size={20} color={colors.foreground} strokeWidth={2} />
-                    ) : (
-                      <Text style={[styles.keypadKeyText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{key}</Text>
-                    )}
-                  </Pressable>
-                ))}
-              </View>
-            ))}
+            <View style={styles.keypadGridC}>
+              {KEYPAD_ROWS.map((row, ri) => (
+                <View key={ri} style={styles.keypadRowC}>
+                  {row.map((key) => (
+                    <Pressable
+                      key={key}
+                      onPress={() => (key === 'back' ? handleKeypadBackspace() : handleKeypadDigit(key))}
+                      style={styles.keypadKeyC}
+                    >
+                      {key === 'back' ? (
+                        <Delete size={20} color={C_INK} strokeWidth={1.8} />
+                      ) : (
+                        <Text style={styles.keypadKeyTextC}>{key}</Text>
+                      )}
+                    </Pressable>
+                  ))}
+                </View>
+              ))}
+            </View>
 
-            <View style={styles.modalActionsRow}>
-              <Pressable onPress={handleKeypadCancel} style={[styles.modalCancelBtn, { backgroundColor: colors.secondary }]}>
-                <Text style={[styles.modalCancelBtnText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.cancel}</Text>
+            <View style={styles.keypadActionsRowC}>
+              <Pressable onPress={handleKeypadCancel} style={styles.keypadCancelBtnC}>
+                <Text style={styles.keypadCancelTxtC}>{t.cancel}</Text>
               </Pressable>
               <Pressable
                 onPress={handleKeypadOk}
                 disabled={parsedAmountReceived <= 0}
-                style={[styles.modalConfirmBtn, { opacity: parsedAmountReceived <= 0 ? 0.5 : 1 }]}
+                style={[styles.keypadOkBtnC, { opacity: parsedAmountReceived <= 0 ? 0.5 : 1 }]}
               >
-                <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.modalConfirmBtnGrad}>
-                  <Text style={[styles.modalConfirmBtnText, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>{t.ok}</Text>
-                </LinearGradient>
+                <Text style={styles.keypadOkTxtC}>{t.ok}</Text>
               </Pressable>
             </View>
-          </GlassView>
+          </View>
         </View>
       </Modal>
 
@@ -1400,16 +1400,8 @@ const styles = StyleSheet.create({
   modalBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' },
   modalCard: { padding: 20, paddingBottom: 32 },
   modalTitle: { fontSize: Typography.size.md, textAlign: 'center', marginBottom: Spacing.md },
-  amountDisplay: { fontSize: 34, textAlign: 'center', marginBottom: Spacing.lg },
-  keypadRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.sm },
-  keypadKey: { flex: 1, height: 52, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
-  keypadKeyText: { fontSize: Typography.size.lg },
-  modalActionsRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.md },
   modalCancelBtn: { flex: 1, height: 52, borderRadius: Radius.lg, alignItems: 'center', justifyContent: 'center' },
   modalCancelBtnText: { fontSize: Typography.size.md },
-  modalConfirmBtn: { flex: 1, borderRadius: Radius.lg, overflow: 'hidden' },
-  modalConfirmBtnGrad: { height: 52, alignItems: 'center', justifyContent: 'center' },
-  modalConfirmBtnText: { fontSize: Typography.size.md },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10 },
   summaryRowTotal: { borderTopWidth: 1, marginTop: 4, paddingTop: 14 },
   summaryLabel: { fontSize: Typography.size.sm },
@@ -1515,4 +1507,21 @@ const styles = StyleSheet.create({
   cCancelTxt: { fontSize: 14, fontFamily: 'Inter_700Bold', color: C_INK_SOFT },
   cConfirmBtn: { flex: 1.4, height: 50, borderRadius: 14, backgroundColor: '#14151A', alignItems: 'center', justifyContent: 'center' },
   cConfirmTxt: { fontSize: 15, fontFamily: 'Inter_700Bold', color: '#ffffff' },
+
+  /* ── "C" Add Remainder keypad ── */
+  modalBackdropC: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(20,21,26,0.4)' },
+  keypadCardC: { backgroundColor: C_SURF, borderTopLeftRadius: 26, borderTopRightRadius: 26, paddingHorizontal: 22, paddingTop: 14, paddingBottom: 30 },
+  sheetHandleDarkC: { width: 40, height: 5, borderRadius: 2.5, backgroundColor: 'rgba(0,0,0,0.14)', alignSelf: 'center', marginBottom: 18 },
+  keypadCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.2, color: C_CAP, textAlign: 'center', textTransform: 'uppercase' },
+  keypadAmountC: { fontSize: 38, fontFamily: 'Inter_700Bold', color: C_INK, textAlign: 'center', marginTop: 8, letterSpacing: -0.5 },
+  keypadAmountCurC: { fontSize: 18, fontFamily: 'Inter_700Bold', color: C_CAP },
+  keypadGridC: { marginTop: 22, gap: 10 },
+  keypadRowC: { flexDirection: 'row', gap: 10 },
+  keypadKeyC: { flex: 1, height: 56, borderRadius: 16, backgroundColor: '#F0F2F3', alignItems: 'center', justifyContent: 'center' },
+  keypadKeyTextC: { fontSize: 20, fontFamily: 'Inter_700Bold', color: C_INK },
+  keypadActionsRowC: { flexDirection: 'row', gap: 12, marginTop: 20 },
+  keypadCancelBtnC: { flex: 1, height: 50, borderRadius: 14, borderWidth: 1.5, borderColor: '#E2E5E8', alignItems: 'center', justifyContent: 'center' },
+  keypadCancelTxtC: { fontSize: 14, fontFamily: 'Inter_700Bold', color: C_INK_SOFT },
+  keypadOkBtnC: { flex: 1.4, height: 50, borderRadius: 14, backgroundColor: '#14151A', alignItems: 'center', justifyContent: 'center' },
+  keypadOkTxtC: { fontSize: 15, fontFamily: 'Inter_700Bold', color: '#ffffff' },
 });
