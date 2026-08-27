@@ -4,8 +4,6 @@ import { ChevronLeft, AlertTriangle, Check } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -14,14 +12,17 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { GlassView } from '@/components/GlassView';
-import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints, ApiError } from '@/lib/api';
 import { useShuttle } from '@/lib/shuttleContext';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
-import { Radius } from '@/constants/radius';
+
+// "C" split-panel palette — matches the ride/shuttle screens.
+const C_BG = '#EEF0F2';
+const C_INK = '#14151A';
+const C_CAP = '#9AA0A6';
+const C_HAIR = '#EEF0F1';
 
 type Params = {
   tripId: string;
@@ -31,7 +32,6 @@ type Params = {
 };
 
 export default function DirectCancelScreen() {
-  const colors = useColors();
   const insets = useSafeAreaInsets();
   const topPad = insets.top;
   const { t, isRTL } = useI18n();
@@ -123,15 +123,13 @@ export default function DirectCancelScreen() {
         : t.passengers_notified;
 
     return (
-      <View style={[styles.container, styles.successWrap, { backgroundColor: colors.background }]}>
-        <View style={[styles.successIcon, { backgroundColor: hasPenalty ? '#FEF2F2' : '#F0FDF4' }]}>
+      <View style={[styles.container, styles.successWrap]}>
+        <View style={[styles.successIconC, { backgroundColor: hasPenalty ? '#FEF2F2' : '#F0FDF4' }]}>
           <Check size={36} color={hasPenalty ? '#DC2626' : '#16a34a'} strokeWidth={2.5} />
         </View>
-        <Text style={[{ fontSize: 20, color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: 'center' }]}>
-          {t.trip_cancelled_title}
-        </Text>
+        <Text style={styles.successTitleC}>{t.trip_cancelled_title}</Text>
         {hasPenalty && (
-          <View style={[styles.penaltyBadge, { backgroundColor: '#FEF2F2', borderColor: '#FCA5A5' }]}>
+          <View style={[styles.penaltyBadgeC, { backgroundColor: '#FEF2F2', borderColor: '#FCA5A5' }]}>
             <Text style={{ fontSize: Typography.size.lg, color: '#DC2626', fontFamily: 'Inter_700Bold', textAlign: 'center' }}>
               {penaltyAmount} {t.egp}
             </Text>
@@ -140,30 +138,26 @@ export default function DirectCancelScreen() {
             </Text>
           </View>
         )}
-        <Text style={[{ fontSize: Typography.size.sm, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: 'center', lineHeight: 22 }]}>
-          {penaltyLine}
-        </Text>
+        <Text style={styles.successBodyC}>{penaltyLine}</Text>
         <Pressable
           onPress={() => router.replace('/(shuttle)/home' as any)}
-          style={[styles.doneBtn, { backgroundColor: '#1e1e28' }]}
+          style={styles.doneBtnC}
         >
-          <Text style={[styles.doneBtnText, { fontFamily: 'Inter_700Bold' }]}>{t.return_home}</Text>
+          <Text style={styles.doneBtnTextC}>{t.return_home}</Text>
         </Pressable>
       </View>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={styles.container}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: topPad + 8, borderBottomColor: colors.border }]}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
-          <ChevronLeft size={24} color={colors.foreground} strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
+      <View style={[styles.headerC, { paddingTop: topPad + 8 }]}>
+        <Pressable onPress={() => router.back()} style={styles.backBtnC} hitSlop={8}>
+          <ChevronLeft size={22} color="#ffffff" strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-          {t.direct_cancel}
-        </Text>
-        <View style={{ width: 40 }} />
+        <Text style={styles.headerTitleC}>{t.direct_cancel}</Text>
+        <View style={{ width: 36 }} />
       </View>
 
       <ScrollView
@@ -171,7 +165,7 @@ export default function DirectCancelScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Warning banner */}
-        <GlassView style={[styles.warningBanner, { backgroundColor: '#FEF2F2', borderColor: '#FCA5A5' }]} borderRadius={16}>
+        <View style={[styles.warningBannerC, { marginTop: 20 }]}>
           <AlertTriangle size={20} color="#DC2626" strokeWidth={2} />
           <View style={{ flex: 1 }}>
             <Text style={[{ fontSize: Typography.size.sm, color: '#DC2626', fontFamily: 'Inter_700Bold', textAlign: TA }]}>
@@ -194,27 +188,21 @@ export default function DirectCancelScreen() {
               {t.passengers_admin_reassign}
             </Text>
           </View>
-        </GlassView>
+        </View>
 
         {/* Trip summary */}
-        <GlassView style={[styles.tripSummary, { marginTop: Spacing.lg }]} borderRadius={16}>
-          <Text style={[{ fontSize: 15, color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
-            {displayRouteName}
-          </Text>
-          <Text style={[{ fontSize: 13, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', marginTop: Spacing.xs, textAlign: TA }]}>
-            {departureTime ?? '—'}
-          </Text>
-        </GlassView>
+        <View style={[styles.tripSummaryC, { marginTop: Spacing.lg }]}>
+          <Text style={[styles.summaryTitleC, { textAlign: TA }]}>{displayRouteName}</Text>
+          <Text style={[styles.summarySubC, { textAlign: TA }]}>{departureTime ?? '—'}</Text>
+        </View>
 
         {/* Reasons list */}
-        <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA, marginTop: 28 }]}>
-          {t.cancel_reasons_title}
-        </Text>
-        <Text style={[{ fontSize: 13, color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA, marginTop: Spacing.xs, marginBottom: 14 }]}>
+        <Text style={[styles.sectionTitleC, { textAlign: TA, marginTop: 28 }]}>{t.cancel_reasons_title}</Text>
+        <Text style={[styles.sectionSubC, { textAlign: TA, marginTop: Spacing.xs, marginBottom: 14 }]}>
           {t.choose_cancel_reason}
         </Text>
 
-        <GlassView style={{ overflow: 'hidden' }} borderRadius={16}>
+        <View style={styles.reasonsCardC}>
           {cancelReasons.map((reason, idx) => {
             const isSelected = selectedReason === reason.key;
             const isLast = idx === cancelReasons.length - 1;
@@ -226,31 +214,31 @@ export default function DirectCancelScreen() {
                 style={({ pressed }) => [
                   styles.reasonRow,
                   { flexDirection: R },
-                  !isLast && { borderBottomWidth: 1, borderBottomColor: colors.border },
-                  { backgroundColor: pressed ? colors.secondary + '66' : isSelected ? '#1e1e2808' : 'transparent' },
+                  !isLast && { borderBottomWidth: 1, borderBottomColor: C_HAIR },
+                  { backgroundColor: pressed ? '#F6F7F8' : isSelected ? '#F0F2F3' : 'transparent' },
                 ]}
               >
-                <View style={[styles.radio, { borderColor: isSelected ? '#1e1e28' : colors.border }]}>
-                  {isSelected && <View style={[styles.radioDot, { backgroundColor: '#1e1e28' }]} />}
+                <View style={[styles.radioC, { borderColor: isSelected ? C_INK : '#D3D6DA' }]}>
+                  {isSelected && <View style={styles.radioDotC} />}
                 </View>
-                <Text style={[styles.reasonText, { color: colors.foreground, fontFamily: isSelected ? 'Inter_700Bold' : 'Inter_400Regular', textAlign: TA, flex: 1 }]}>
+                <Text style={[styles.reasonTextC, { fontFamily: isSelected ? 'Inter_700Bold' : 'Inter_400Regular', textAlign: TA, flex: 1 }]}>
                   {label}
                 </Text>
               </Pressable>
             );
           })}
-        </GlassView>
+        </View>
       </ScrollView>
 
       {/* Confirm cancel button */}
-      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 20), borderTopColor: colors.border, backgroundColor: colors.background }]}>
+      <View style={[styles.bottomBarC, { paddingBottom: Math.max(insets.bottom, 20) }]}>
         <Pressable
           onPress={handleConfirmCancel}
           disabled={cancelMutation.isPending || !selectedReason || previewError}
           style={({ pressed }) => [
-            styles.confirmBtn,
+            styles.confirmBtnC,
             {
-              backgroundColor: selectedReason && !previewError ? '#DC2626' : colors.secondary,
+              backgroundColor: selectedReason && !previewError ? '#DC2626' : '#F0F2F3',
               opacity: pressed ? 0.88 : cancelMutation.isPending ? 0.7 : 1,
             },
           ]}
@@ -258,7 +246,7 @@ export default function DirectCancelScreen() {
           {cancelMutation.isPending ? (
             <ActivityIndicator size="small" color="#fff" />
           ) : (
-            <Text style={[styles.confirmBtnText, { color: selectedReason ? '#fff' : colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>
+            <Text style={[styles.confirmBtnTextC, { color: selectedReason ? '#ffffff' : C_CAP }]}>
               {t.confirm_cancel_btn}
             </Text>
           )}
@@ -269,34 +257,40 @@ export default function DirectCancelScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: {
+  container: { flex: 1, backgroundColor: C_BG },
+  headerC: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.lg,
     paddingBottom: Spacing.md,
-    borderBottomWidth: 1,
+    backgroundColor: C_INK,
   },
-  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 17 },
-  warningBanner: {
+  backBtnC: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.1)' },
+  headerTitleC: { fontSize: 16, fontFamily: 'Inter_700Bold', color: '#ffffff' },
+  warningBannerC: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 10,
     padding: 14,
-    marginTop: 20,
+    borderRadius: 16,
+    backgroundColor: '#FEF2F2',
     borderWidth: 1,
+    borderColor: '#FCA5A5',
   },
-  tripSummary: { padding: Spacing.lg },
-  sectionTitle: { fontSize: Typography.size.md },
+  tripSummaryC: { padding: Spacing.lg, backgroundColor: '#ffffff', borderRadius: 16 },
+  summaryTitleC: { fontSize: 15, fontFamily: 'Inter_700Bold', color: C_INK },
+  summarySubC: { fontSize: 13, fontFamily: 'Inter_400Regular', color: C_CAP, marginTop: Spacing.xs },
+  sectionTitleC: { fontSize: Typography.size.md, fontFamily: 'Inter_700Bold', color: C_INK },
+  sectionSubC: { fontSize: 13, fontFamily: 'Inter_400Regular', color: C_CAP },
+  reasonsCardC: { backgroundColor: '#ffffff', borderRadius: 16, overflow: 'hidden' },
   reasonRow: {
     alignItems: 'center',
     gap: 14,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.lg,
   },
-  radio: {
+  radioC: {
     width: 22,
     height: 22,
     borderRadius: 11,
@@ -304,29 +298,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  radioDot: { width: 10, height: 10, borderRadius: 5 },
-  reasonText: { fontSize: Typography.size.sm },
-  bottomBar: {
+  radioDotC: { width: 10, height: 10, borderRadius: 5, backgroundColor: C_INK },
+  reasonTextC: { fontSize: Typography.size.sm, color: C_INK },
+  bottomBarC: {
     paddingHorizontal: Spacing.lg,
     paddingTop: 14,
-    borderTopWidth: 1,
+    backgroundColor: C_BG,
   },
-  confirmBtn: {
+  confirmBtnC: {
     height: 54,
-    borderRadius: Radius.lg,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  confirmBtnText: { fontSize: 15 },
+  confirmBtnTextC: { fontSize: 15, fontFamily: 'Inter_700Bold' },
   successWrap: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xxl, gap: Spacing.lg },
-  successIcon: { width: 96, height: 96, borderRadius: 48, alignItems: 'center', justifyContent: 'center' },
-  penaltyBadge: {
+  successIconC: { width: 96, height: 96, borderRadius: 48, alignItems: 'center', justifyContent: 'center' },
+  successTitleC: { fontSize: 20, fontFamily: 'Inter_700Bold', color: C_INK, textAlign: 'center' },
+  successBodyC: { fontSize: Typography.size.sm, fontFamily: 'Inter_400Regular', color: C_CAP, textAlign: 'center', lineHeight: 22 },
+  penaltyBadgeC: {
     alignItems: 'center',
     paddingHorizontal: 28,
     paddingVertical: 14,
-    borderRadius: Radius.lg,
+    borderRadius: 16,
     borderWidth: 1,
   },
-  doneBtn: { marginTop: Spacing.sm, height: 50, paddingHorizontal: 36, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  doneBtnText: { color: '#fff', fontSize: Typography.size.sm },
+  doneBtnC: { marginTop: Spacing.sm, height: 50, paddingHorizontal: 36, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: C_INK },
+  doneBtnTextC: { color: '#ffffff', fontSize: Typography.size.sm, fontFamily: 'Inter_700Bold' },
 });
