@@ -7,9 +7,8 @@
  * Shuttle Home tab.
  *
  */
-import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Banknote, CheckCircle2, CreditCard, Home, Smartphone, Star, Wallet } from 'lucide-react-native';
+import { Banknote, Check, CreditCard, Home, Smartphone, Star, Wallet } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
@@ -21,13 +20,21 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { GlassView } from '@/components/GlassView';
-import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { useShuttle } from '@/lib/shuttleContext';
 import { endpoints, type TripRevenueSummary } from '@/lib/api';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
+
+// "C" split-panel palette — matches the ride/en-route screens.
+const C_INK = '#14151A';
+const C_INK_SOFT = '#6B7178';
+const C_CAP = '#9AA0A6';
+const C_CAP_ON_DARK = '#8A9096';
+const C_HAIR = '#EEF0F1';
+const C_TEAL = '#0E9F8E';
+const C_MINT = '#3DDC97';
+const C_BG = '#EEF0F2';
 
 type Params = {
   earnedAmount?: string;
@@ -36,7 +43,6 @@ type Params = {
 };
 
 export default function TripCompleteScreen() {
-  const colors = useColors();
   const insets = useSafeAreaInsets();
   const topPad = insets.top;
   const { t, isRTL } = useI18n();
@@ -80,192 +86,132 @@ export default function TripCompleteScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background, paddingTop: topPad }]}>
+    <View style={[styles.container, { paddingTop: topPad }]}>
       <ScrollView contentContainerStyle={styles.inner} showsVerticalScrollIndicator={false}>
 
-        {/* ── Success icon ─────────────────────────────────────────────── */}
-        <Animated.View style={[styles.iconWrap, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
-          <LinearGradient
-            colors={['#dcfce7', '#bbf7d0']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.iconCircle}
-          >
-            <CheckCircle2 size={56} color="#16a34a" strokeWidth={1.8} />
-          </LinearGradient>
-        </Animated.View>
+        {/* ── Dark hero band ────────────────────────────────────────────── */}
+        <Animated.View style={[styles.heroC, { opacity: fadeAnim }]}>
+          <Animated.View style={[styles.checkCircleC, { transform: [{ scale: scaleAnim }] }]}>
+            <Check size={28} color="#ffffff" strokeWidth={3} />
+          </Animated.View>
+          <Animated.View style={{ transform: [{ translateY: slideAnim }], alignItems: 'center' }}>
+            <Text style={styles.titleC}>{t.trip_completed_title}</Text>
+            <Text style={styles.subtitleC}>{t.trip_completed_sub}</Text>
 
-        {/* ── Title & subtitle ─────────────────────────────────────────── */}
-        <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }], alignItems: 'center', gap: 6, marginTop: 20 }}>
-          <Text style={[styles.title, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: 'center' }]}>
-            {t.trip_completed_title}
-          </Text>
-          <Text style={[styles.subtitle, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: 'center' }]}>
-            {t.trip_completed_sub}
-          </Text>
-        </Animated.View>
-
-        {/* ── Earnings cards ───────────────────────────────────────────── */}
-        <Animated.View style={[styles.cardsWrap, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-
-          {/* Earned amount */}
-          <GlassView style={styles.earningsCard} borderRadius={20}>
-            <View style={[styles.cardIconWrap, { backgroundColor: '#dcfce7' }]}>
-              <CheckCircle2 size={22} color="#16a34a" strokeWidth={2} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.cardLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
-                {t.trip_earnings_label}
+            <Text style={styles.heroCapC}>{t.trip_earnings_label}</Text>
+            <View style={styles.heroRowC}>
+              <Text style={styles.heroAmountC}>
+                {earned != null ? earned.toLocaleString('ar-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
               </Text>
-              <View style={[{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'baseline', gap: 6 }]}>
-                <Text style={[styles.cardAmount, { color: '#16a34a', fontFamily: 'Inter_700Bold' }]}>
-                  {earned != null ? earned.toLocaleString('ar-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
-                </Text>
-                <Text style={[styles.cardCurrency, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>{t.egp}</Text>
-              </View>
+              <Text style={styles.heroCurC}>{t.egp}</Text>
             </View>
-          </GlassView>
+          </Animated.View>
+        </Animated.View>
+
+        {/* ── White body ────────────────────────────────────────────────── */}
+        <Animated.View style={[styles.bodyWrapC, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
 
           {/* Wallet balance */}
-          <GlassView style={styles.earningsCard} borderRadius={20}>
-            <View style={[styles.cardIconWrap, { backgroundColor: '#eff6ff' }]}>
-              <Wallet size={22} color="#2563eb" strokeWidth={2} />
+          <View style={styles.walletRowC}>
+            <View style={[styles.iconWrapC, { backgroundColor: '#EAF2FF' }]}>
+              <Wallet size={18} color="#2563eb" strokeWidth={2} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.cardLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
-                {t.wallet_balance_label}
-              </Text>
-              <View style={[{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'baseline', gap: 6 }]}>
-                <Text style={[styles.cardAmount, { color: '#2563eb', fontFamily: 'Inter_700Bold' }]}>
+              <Text style={styles.capC}>{t.wallet_balance_label}</Text>
+              <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'baseline', gap: 4, marginTop: 1 }}>
+                <Text style={styles.walletAmountC}>
                   {balance != null ? balance.toLocaleString('ar-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
                 </Text>
-                <Text style={[styles.cardCurrency, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>{t.egp}</Text>
+                <Text style={styles.walletCurC}>{t.egp}</Text>
               </View>
             </View>
-          </GlassView>
-        </Animated.View>
+          </View>
 
-        {/* ── Payment breakdown (from revenue-summary endpoint) ────────── */}
-        {revenue && (
-          <Animated.View style={[styles.cardsWrap, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-
-            {/* Section header */}
-            <Text style={[styles.sectionHeader, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
-              تفاصيل المدفوعات
-            </Text>
-
-            {/* Cash collected */}
-            <GlassView style={styles.earningsCard} borderRadius={16}>
-              <View style={[styles.cardIconWrap, { backgroundColor: '#fef3c7' }]}>
-                <Banknote size={20} color="#d97706" strokeWidth={2} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.cardLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
-                  كاش محصّل
-                </Text>
-                <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'baseline', gap: 6 }}>
-                  <Text style={[styles.cardAmountSmall, { color: '#d97706', fontFamily: 'Inter_700Bold' }]}>
-                    {revenue.cashCollected.toLocaleString('ar-EG')}
+          {/* Payment breakdown (from revenue-summary endpoint) */}
+          {revenue && (
+            <>
+              <Text style={[styles.capC, { marginTop: 22, marginBottom: 8, textAlign: TA }]}>تفاصيل المدفوعات</Text>
+              <View style={styles.breakdownCardC}>
+                <View style={styles.breakdownRowC}>
+                  <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 8 }}>
+                    <Banknote size={15} color="#d97706" strokeWidth={2} />
+                    <Text style={styles.breakdownLabelC}>كاش محصّل</Text>
+                  </View>
+                  <Text style={[styles.breakdownValC, { color: '#d97706' }]}>
+                    {revenue.cashCollected.toLocaleString('ar-EG')} {t.egp}
                   </Text>
-                  <Text style={[styles.cardCurrency, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>{t.egp}</Text>
                 </View>
                 {revenue.cashShortfall > 0 && (
-                  <Text style={[{ fontSize: 11, color: '#ef4444', fontFamily: 'Inter_400Regular', marginTop: 2, textAlign: TA }]}>
+                  <Text style={[styles.shortfallTextC, { textAlign: TA }]}>
                     ناقص {revenue.cashShortfall} {t.egp} من {revenue.cashExpected} {t.egp}
                   </Text>
                 )}
+
+                {revenue.cardTotal > 0 && (
+                  <>
+                    <View style={styles.hairC} />
+                    <View style={styles.breakdownRowC}>
+                      <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 8 }}>
+                        <CreditCard size={15} color="#2563eb" strokeWidth={2} />
+                        <Text style={styles.breakdownLabelC}>كارت / بطاقة</Text>
+                      </View>
+                      <Text style={[styles.breakdownValC, { color: '#2563eb' }]}>
+                        {revenue.cardTotal.toLocaleString('ar-EG')} {t.egp}
+                      </Text>
+                    </View>
+                  </>
+                )}
+
+                {revenue.walletTotal > 0 && (
+                  <>
+                    <View style={styles.hairC} />
+                    <View style={styles.breakdownRowC}>
+                      <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 8 }}>
+                        <Smartphone size={15} color={C_TEAL} strokeWidth={2} />
+                        <Text style={styles.breakdownLabelC}>محفظة / أونلاين</Text>
+                      </View>
+                      <Text style={[styles.breakdownValC, { color: C_TEAL }]}>
+                        {revenue.walletTotal.toLocaleString('ar-EG')} {t.egp}
+                      </Text>
+                    </View>
+                  </>
+                )}
+
+                <View style={[styles.hairC, { height: 2, backgroundColor: C_INK }]} />
+                <View style={styles.breakdownRowC}>
+                  <Text style={styles.totalLabelC}>إجمالي الرحلة</Text>
+                  <Text style={styles.totalAmountC}>{revenue.totalExpected.toLocaleString('ar-EG')} {t.egp}</Text>
+                </View>
               </View>
-            </GlassView>
+            </>
+          )}
 
-            {/* Card total */}
-            {revenue.cardTotal > 0 && (
-              <GlassView style={styles.earningsCard} borderRadius={16}>
-                <View style={[styles.cardIconWrap, { backgroundColor: '#eff6ff' }]}>
-                  <CreditCard size={20} color="#2563eb" strokeWidth={2} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.cardLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
-                    كارت / بطاقة
-                  </Text>
-                  <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'baseline', gap: 6 }}>
-                    <Text style={[styles.cardAmountSmall, { color: '#2563eb', fontFamily: 'Inter_700Bold' }]}>
-                      {revenue.cardTotal.toLocaleString('ar-EG')}
-                    </Text>
-                    <Text style={[styles.cardCurrency, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>{t.egp}</Text>
-                  </View>
-                </View>
-              </GlassView>
-            )}
-
-            {/* Wallet total */}
-            {revenue.walletTotal > 0 && (
-              <GlassView style={styles.earningsCard} borderRadius={16}>
-                <View style={[styles.cardIconWrap, { backgroundColor: '#f0fdf4' }]}>
-                  <Smartphone size={20} color="#16a34a" strokeWidth={2} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.cardLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
-                    محفظة / أونلاين
-                  </Text>
-                  <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'baseline', gap: 6 }}>
-                    <Text style={[styles.cardAmountSmall, { color: '#16a34a', fontFamily: 'Inter_700Bold' }]}>
-                      {revenue.walletTotal.toLocaleString('ar-EG')}
-                    </Text>
-                    <Text style={[styles.cardCurrency, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>{t.egp}</Text>
-                  </View>
-                </View>
-              </GlassView>
-            )}
-
-            {/* Total row */}
-            <View style={[styles.totalRow, { borderColor: colors.border }]}>
-              <Text style={[styles.totalLabel, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
-                إجمالي الرحلة
-              </Text>
-              <Text style={[styles.totalAmount, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-                {revenue.totalExpected.toLocaleString('ar-EG')} {t.egp}
-              </Text>
-            </View>
-
-          </Animated.View>
-        )}
+        </Animated.View>
 
       </ScrollView>
 
       {/* ── Bottom CTA ───────────────────────────────────────────────────── */}
       <Animated.View
         style={[
-          styles.bottomBar,
+          styles.bottomBarC,
           { paddingBottom: Math.max(insets.bottom, 24), opacity: fadeAnim },
         ]}
       >
         {tripId != null && (
           <Pressable
             onPress={handleRatePassengers}
-            style={({ pressed }) => [
-              styles.rateBtn,
-              { borderColor: colors.border, opacity: pressed ? 0.88 : 1 },
-            ]}
+            style={({ pressed }) => [styles.rateBtnC, { opacity: pressed ? 0.88 : 1 }]}
           >
-            <Star size={18} color={colors.foreground} strokeWidth={2} />
-            <Text style={[styles.rateBtnText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-              {t.rate_passengers_btn}
-            </Text>
+            <Star size={18} color={C_INK} strokeWidth={2} />
+            <Text style={styles.rateBtnTextC}>{t.rate_passengers_btn}</Text>
           </Pressable>
         )}
         <Pressable
           onPress={handleReturnHome}
-          style={({ pressed }) => [{ borderRadius: 18, overflow: 'hidden', opacity: pressed ? 0.88 : 1, width: '100%' }]}
+          style={({ pressed }) => [styles.ctaBtnC, { opacity: pressed ? 0.88 : 1 }]}
         >
-          <LinearGradient
-            colors={colors.gradientPrimary}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.ctaBtn}
-          >
-            <Home size={20} color="#fff" strokeWidth={2} />
-            <Text style={[styles.ctaBtnText, { fontFamily: 'Inter_700Bold' }]}>{t.return_home}</Text>
-          </LinearGradient>
+          <Home size={20} color="#ffffff" strokeWidth={2} />
+          <Text style={styles.ctaBtnTextC}>{t.return_home}</Text>
         </Pressable>
       </Animated.View>
     </View>
@@ -273,70 +219,56 @@ export default function TripCompleteScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  inner: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, paddingTop: 40, paddingBottom: Spacing.xl },
-  iconWrap: { alignItems: 'center' },
-  iconCircle: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#16a34a',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 10,
-  },
-  title: { fontSize: 26, lineHeight: 34 },
-  subtitle: { fontSize: Typography.size.sm, lineHeight: 22 },
-  cardsWrap: { width: '100%', gap: Spacing.md, marginTop: Spacing.xxl },
-  sectionHeader: { fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, marginBottom: Spacing.xs },
-  earningsCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.lg,
-    padding: 18,
-  },
-  cardIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardLabel: { fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: Spacing.xs },
-  cardAmount: { fontSize: 26 },
-  cardAmountSmall: { fontSize: 20 },
-  cardCurrency: { fontSize: 13, marginBottom: 2 },
-  totalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: Spacing.md,
-    borderTopWidth: 1,
-    marginTop: Spacing.xs,
-  },
-  totalLabel: { fontSize: Typography.size.sm },
-  totalAmount: { fontSize: Typography.size.md },
-  bottomBar: { paddingHorizontal: 20, paddingTop: Spacing.md, gap: Spacing.sm },
-  rateBtn: {
-    height: 52,
+  container: { flex: 1, backgroundColor: C_BG },
+  inner: { paddingBottom: Spacing.xl },
+
+  // ── Dark hero band ──────────────────────────────────────────────────
+  heroC: { backgroundColor: C_INK, alignItems: 'center', paddingHorizontal: 28, paddingTop: 36, paddingBottom: 26, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
+  checkCircleC: { width: 60, height: 60, borderRadius: 30, backgroundColor: C_TEAL, alignItems: 'center', justifyContent: 'center' },
+  titleC: { fontSize: 22, fontFamily: 'Inter_700Bold', color: '#ffffff', textAlign: 'center', marginTop: 16 },
+  subtitleC: { fontSize: Typography.size.sm, fontFamily: 'Inter_400Regular', color: '#B7BBC2', textAlign: 'center', marginTop: 4 },
+  heroCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.4, color: C_CAP_ON_DARK, textAlign: 'center', marginTop: 22, textTransform: 'uppercase' },
+  heroRowC: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', gap: 8, marginTop: 6 },
+  heroAmountC: { fontSize: 42, fontFamily: 'Inter_700Bold', color: C_MINT, lineHeight: 44 },
+  heroCurC: { fontSize: 16, fontFamily: 'Inter_700Bold', color: C_MINT },
+
+  // ── White body ──────────────────────────────────────────────────────
+  bodyWrapC: { paddingHorizontal: 22, paddingTop: 20 },
+  capC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.2, color: C_CAP, textTransform: 'uppercase' },
+  iconWrapC: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  walletRowC: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#ffffff', borderRadius: 18, padding: 14 },
+  walletAmountC: { fontSize: 16, fontFamily: 'Inter_700Bold', color: C_INK },
+  walletCurC: { fontSize: 12, fontFamily: 'Inter_700Bold', color: C_CAP },
+  breakdownCardC: { backgroundColor: '#ffffff', borderRadius: 18, paddingHorizontal: 16, paddingVertical: 4 },
+  breakdownRowC: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 },
+  breakdownLabelC: { fontSize: 13.5, fontFamily: 'Inter_600SemiBold', color: C_INK_SOFT },
+  breakdownValC: { fontSize: 15, fontFamily: 'Inter_700Bold' },
+  shortfallTextC: { fontSize: 11, fontFamily: 'Inter_400Regular', color: '#ef4444', marginTop: -8, marginBottom: 8 },
+  hairC: { height: 1, backgroundColor: C_HAIR },
+  totalLabelC: { fontSize: 15, fontFamily: 'Inter_700Bold', color: C_INK },
+  totalAmountC: { fontSize: 17, fontFamily: 'Inter_700Bold', color: C_TEAL },
+
+  // ── Bottom CTA ──────────────────────────────────────────────────────
+  bottomBarC: { paddingHorizontal: 22, paddingTop: Spacing.md, gap: 10 },
+  rateBtnC: {
+    height: 50,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    borderRadius: 18,
-    borderWidth: 1,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#D3D6DA',
   },
-  rateBtnText: { fontSize: Typography.size.sm },
-  ctaBtn: {
-    height: 58,
+  rateBtnTextC: { fontSize: 14, fontFamily: 'Inter_700Bold', color: C_INK },
+  ctaBtnC: {
+    height: 54,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    borderRadius: 18,
+    borderRadius: 15,
+    backgroundColor: C_INK,
   },
-  ctaBtnText: { color: '#fff', fontSize: Typography.size.md },
+  ctaBtnTextC: { color: '#ffffff', fontSize: 15, fontFamily: 'Inter_700Bold' },
 });
