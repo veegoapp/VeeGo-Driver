@@ -486,6 +486,7 @@ export const ar: Translations = {
   start_trip_hint: 'متاح قبل ٣٠ دقيقة من الموعد',
   route_timeline: 'محطات الخط',
   cancel_options_title: 'كيف تريد الإلغاء؟',
+  recommended_label: 'موصى به',
   refer_to_driver: 'تحويل لِسائق آخر',
   refer_to_driver_sub: 'تحويل هذه الرحلة لزميل',
   direct_cancel: 'إلغاء نهائي',

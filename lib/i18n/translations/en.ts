@@ -486,6 +486,7 @@ export const en = {
   start_trip_hint: 'Available 30 min before departure',
   route_timeline: 'Route Timeline',
   cancel_options_title: 'How would you like to cancel?',
+  recommended_label: 'Recommended',
   refer_to_driver: 'Refer to Another Driver',
   refer_to_driver_sub: 'Transfer this trip to a colleague',
   direct_cancel: 'Direct Cancellation',
