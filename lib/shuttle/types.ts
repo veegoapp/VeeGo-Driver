@@ -51,7 +51,8 @@ export type ShuttleStop = {
   id: string;
   name: string;
   address: string;
-  eta: string;
+  /** Real backend-estimated arrival time (GET /driver/trips/:id/stations/eta), formatted as "N min" — null when the backend hasn't produced an estimate yet, never a fabricated placeholder. */
+  eta: string | null;
   boarded: number;
   expected: number;
   status: 'pending' | 'arrived' | 'completed';
@@ -107,7 +108,6 @@ export type BoardingPassenger = {
   phone: string;
   ticket: string;
   checkedIn: boolean;
-  luggage: boolean;
   paymentMethod: 'cash' | 'card' | 'online' | 'unknown';
   fareAmount: number;
   /** Name of the station this passenger is getting off at, when known. */

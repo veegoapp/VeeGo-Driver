@@ -18,10 +18,15 @@ const RideOfferSchema = z.object({
   distanceKm: z.number().optional(),
   estimatedPrice: z.number().optional(),
   expiresInSeconds: z.number().optional(),
+  riderName: z.string().optional(),
+  riderAvatar: z.string().nullable().optional(),
 }).passthrough().transform((raw) => ({
   id: raw.rideId,
   type: raw.vehicleType,
-  rider: { name: "Rider" },
+  // Real passenger identity from the backend (routes/rides.ts, dispatch-manager.ts)
+  // — never a fabricated placeholder. Falls back to a generic label only when
+  // the backend genuinely omits the name (should not happen in practice).
+  rider: { name: raw.riderName ?? 'Passenger', avatar: raw.riderAvatar ?? undefined },
   pickup: {
     address: raw.pickupAddress,
     distance: raw.distanceKm != null ? `${raw.distanceKm.toFixed(1)} km` : undefined,
@@ -49,11 +54,9 @@ export type RideRequest = {
   id: string;
   type?: string;
   rider: { name: string; rating?: number; avatar?: string };
-  pickup: { address: string; distance?: string; eta?: string };
+  pickup: { address: string; distance?: string };
   dropoff: { address: string; distance?: string };
   fare?: number;
-  payment?: string;
-  duration?: string;
   expiresInSeconds?: number;
   [key: string]: unknown;
 };

@@ -23,7 +23,6 @@ export const en = {
   economy_ride: 'Economy ride',
   passengers_hint: '1–4 passengers',
   cash_only: 'Cash only',
-  min_away: 'min away',
   confirm_ride: 'Confirm ride',
   select_locations: 'Select locations',
   select_both: 'Please select both pickup and drop-off.',
