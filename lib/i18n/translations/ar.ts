@@ -25,7 +25,6 @@ export const ar: Translations = {
   economy_ride: 'رحلة اقتصادية',
   passengers_hint: '١–٤ ركاب',
   cash_only: 'نقدي فقط',
-  min_away: 'دقائق',
   confirm_ride: 'تأكيد الرحلة',
   select_locations: 'اختر الموقع',
   select_both: 'الرجاء تحديد نقطتي الانطلاق والوجهة.',

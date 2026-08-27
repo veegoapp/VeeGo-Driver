@@ -268,6 +268,13 @@ export default function HomeScreen() {
   const driverInitials = (driverData?.name ?? '')
     .split(' ').filter(Boolean).map((w: string) => w[0]).join('').toUpperCase().slice(0, 2) || '—';
 
+  // Same fallback pattern for the incoming ride request's rider photo —
+  // never a broken/blank image when there's no photo or the URL fails.
+  const [riderAvatarFailed, setRiderAvatarFailed] = useState(false);
+  useEffect(() => { setRiderAvatarFailed(false); }, [request?.rider.avatar]);
+  const riderInitials = (request?.rider.name ?? '')
+    .split(' ').filter(Boolean).map((w: string) => w[0]).join('').toUpperCase().slice(0, 2) || '—';
+
   // Debug: log when the "Failed to load. Tap to retry." pill renders
   useEffect(() => {
     if (driverError) console.error('[Home:stats-pill] driverError → rendering "Failed to load. Tap to retry."', { driverError });
@@ -1134,12 +1141,25 @@ export default function HomeScreen() {
                   <Text style={[styles.fareAmountC, { textAlign: TA }]}>
                     {(request.fare ?? 0).toFixed(2)} <Text style={styles.fareCurrencyC}>{t.egp}</Text>
                   </Text>
-                  <Text style={[styles.fareDetailsC, { textAlign: TA }]}>
-                    {request.payment} · {request.duration}
-                  </Text>
+                  {!!request.pickup.distance && (
+                    <Text style={[styles.fareDetailsC, { textAlign: TA }]}>
+                      {request.pickup.distance}
+                    </Text>
+                  )}
                 </View>
                 <View style={[styles.riderInfoC, { flexDirection: R }]}>
-                  <Image source={{ uri: request.rider.avatar }} style={styles.riderAvatarC} contentFit="cover" />
+                  {request.rider.avatar && !riderAvatarFailed ? (
+                    <Image
+                      source={{ uri: request.rider.avatar }}
+                      style={styles.riderAvatarC}
+                      contentFit="cover"
+                      onError={() => setRiderAvatarFailed(true)}
+                    />
+                  ) : (
+                    <View style={[styles.riderAvatarC, styles.riderAvatarFallbackC]}>
+                      <Text style={styles.riderAvatarFallbackTextC}>{riderInitials}</Text>
+                    </View>
+                  )}
                   <View>
                     <Text style={[styles.riderNameC, { textAlign: TA }]}>{request.rider.name}</Text>
                     {request.rider.rating != null && (
@@ -1163,7 +1183,7 @@ export default function HomeScreen() {
                 <View style={styles.routeAddressesC}>
                   <View>
                     <Text style={[styles.routeLabelC, { textAlign: TA }]}>
-                      PICKUP · {request.pickup.distance} · {request.pickup.eta}
+                      PICKUP{request.pickup.distance ? ` · ${request.pickup.distance}` : ''}
                     </Text>
                     <Text style={[styles.routeAddressC, { textAlign: TA }]}>{request.pickup.address}</Text>
                   </View>
@@ -1283,6 +1303,8 @@ const styles = StyleSheet.create({
   fareDetailsC: { fontSize: 11.5, fontFamily: 'Inter_600SemiBold', color: C_CAP, marginTop: 1 },
   riderInfoC: { alignItems: 'center', gap: 8 },
   riderAvatarC: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#F0F2F3' },
+  riderAvatarFallbackC: { alignItems: 'center', justifyContent: 'center' },
+  riderAvatarFallbackTextC: { fontSize: 12, fontFamily: 'Inter_700Bold', color: C_INK },
   riderNameC: { fontSize: 12.5, fontFamily: 'Inter_700Bold', color: C_INK },
   riderRatingRowC: { alignItems: 'center', gap: 3, marginTop: 2 },
   riderRatingC: { fontSize: 11, fontFamily: 'Inter_700Bold', color: C_INK_SOFT },

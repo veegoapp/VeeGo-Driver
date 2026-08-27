@@ -245,6 +245,23 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
 
   const tripStations: BackendStationWithPassengers[] = extractTripStations(tripStationsRaw);
 
+  // Real per-station ETA from GET /driver/trips/:id/stations/eta — same
+  // source app/shuttle/trip-active.tsx uses. Previously `stops` below
+  // fabricated a placeholder ("Stop 1", "Stop 2", ...) instead of a real
+  // estimate; this powers the shuttle home screen's "next stop" ETA honestly.
+  const { data: stationEtasRaw } = useQuery({
+    queryKey: ['shuttle-stations-eta', activeTripId],
+    queryFn: () => endpoints.trips.stationsEta(activeTripId!),
+    enabled: !!activeTripId && isAppActive,
+    refetchInterval: 30000,
+  });
+  const stationEtaMinutesById = new Map<string, number | null>();
+  if (stationEtasRaw) {
+    const etas = stationEtasRaw as { nextStation: { stationId: number; etaMinutes: number | null } | null; remainingStations: { stationId: number; etaMinutes: number | null }[] };
+    if (etas.nextStation) stationEtaMinutesById.set(String(etas.nextStation.stationId), etas.nextStation.etaMinutes);
+    for (const s of etas.remainingStations) stationEtaMinutesById.set(String(s.stationId), s.etaMinutes);
+  }
+
   // Gap C: ordered lat/lng coordinates for each active route station
   const stationCoords: Array<{ latitude: number; longitude: number }> = tripStations.map(st => ({
     latitude: st.latitude,
@@ -255,7 +272,10 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
     id: String(st.id),
     name: st.name,
     address: st.name,
-    eta: `Stop ${idx + 1}`,
+    eta: (() => {
+      const minutes = stationEtaMinutesById.get(String(st.id));
+      return minutes != null ? `${minutes} min` : null;
+    })(),
     boarded: idx === currentStopIndex ? passengers.filter(p => p.checkedIn).length : 0,
     expected: idx === currentStopIndex ? passengers.length : 0,
     status:
@@ -317,14 +337,13 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
         return {
           id: String(sp.bookingId),
           name: sp.userName || 'Passenger',
-          avatar: '',
+          avatar: sp.userAvatar || '',
           phone: sp.userPhone || '—',
           ticket: String(sp.bookingId).slice(0, 8).toUpperCase(),
           checkedIn:
             sp.status === 'boarded' ? true :
             sp.status === 'absent' ? false :
             (existing?.checkedIn ?? false),
-          luggage: false,
           paymentMethod,
           fareAmount: sp.fareAmount ?? sp.price ?? sp.amount ?? 0,
           destinationStationName: sp.alightingStationName ?? null,

@@ -68,6 +68,7 @@ type StationPassenger = {
   alightingStationName?: string | null;
   userName: string;
   userPhone: string;
+  userAvatar?: string | null;
   paymentMethod?: string;
   fareAmount?: number;
   price?: number;

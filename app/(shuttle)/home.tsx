@@ -563,7 +563,7 @@ export default function ShuttleHomeScreen() {
                       {nextStop?.name ?? '—'}
                     </Text>
                     <Text style={[styles.stopTileMeta, { color: C_CAP, fontFamily: 'Inter_600SemiBold' }]}>
-                      {nextStop ? `${t.home_eta} ${nextStop.eta}` : '—'}
+                      {nextStop?.eta ? `${t.home_eta} ${nextStop.eta}` : '—'}
                     </Text>
                   </View>
                 </View>

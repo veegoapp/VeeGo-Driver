@@ -6,7 +6,7 @@ import {
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Alert, Dimensions, Linking, Platform, Pressable, ScrollView,
+  Alert, Dimensions, Image, Linking, Platform, Pressable, ScrollView,
   Share, StyleSheet, Text, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -945,11 +945,15 @@ const AtStopSheet = React.memo(function AtStopSheet({
             const isNoShow = status === 'no_show';
             return (
               <View key={p.id} style={styles.passengerRowC}>
-                <View style={[styles.passengerAvatarC, isBoarded && { backgroundColor: '#DDF4EB' }, isNoShow && { backgroundColor: '#F9DEDA' }]}>
-                  <Text style={[styles.passengerInitialC, { color: isBoarded ? C_TEAL : isNoShow ? C_RED : C_INK }]}>
-                    {(p.name || '?')[0].toUpperCase()}
-                  </Text>
-                </View>
+                {p.avatar ? (
+                  <Image source={{ uri: p.avatar }} style={styles.passengerAvatarImgC} />
+                ) : (
+                  <View style={[styles.passengerAvatarC, isBoarded && { backgroundColor: '#DDF4EB' }, isNoShow && { backgroundColor: '#F9DEDA' }]}>
+                    <Text style={[styles.passengerInitialC, { color: isBoarded ? C_TEAL : isNoShow ? C_RED : C_INK }]}>
+                      {(p.name || '?')[0].toUpperCase()}
+                    </Text>
+                  </View>
+                )}
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text style={styles.passengerNameC} numberOfLines={1}>{p.name}</Text>
                   <Text style={styles.passengerPhoneC}>{p.phone}</Text>
@@ -1154,6 +1158,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   passengerAvatarC: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEF0F1' },
+  passengerAvatarImgC: { width: 40, height: 40, borderRadius: 20 },
   passengerInitialC: { fontSize: Typography.size.md, fontFamily: 'Inter_700Bold' },
   passengerNameC: { fontSize: Typography.size.sm, fontFamily: 'Inter_700Bold', color: C_INK, marginBottom: 2 },
   passengerPhoneC: { fontSize: Typography.size.xs, fontFamily: 'Inter_400Regular', color: C_CAP },
