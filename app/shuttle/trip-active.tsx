@@ -1,9 +1,8 @@
 import { showAlert } from '@/lib/alert';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { safeBack } from '@/lib/navUtils';
 import {
-  AlertTriangle, ArrowRight, Banknote, Check, ChevronLeft, Clock, MapPin, Navigation2, Share2, Users, X,
+  AlertTriangle, ArrowRight, Banknote, Check, ChevronLeft, Clock, MapPin, Share2, Users, X,
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -46,6 +45,17 @@ const SHUTTLE_TRIP_CONFIG = {
 } as const;
 
 const { height: SCREEN_H } = Dimensions.get('window');
+
+// "C" split-panel palette — matches the ride screens' design language.
+const C_INK = '#14151A';
+const C_INK_SOFT = '#6B7178';
+const C_CAP = '#9AA0A6';
+const C_CAP_ON_DARK = '#8A9096';
+const C_HAIR = '#EEF0F1';
+const C_TEAL = '#0E9F8E';
+const C_MINT = '#3DDC97';
+const C_AMBER = '#F5A623';
+const C_RED = '#D92D20';
 
 type TripPhase = 'en_route' | 'approaching' | 'at_stop';
 type PassengerStatus = 'not_arrived' | 'boarded' | 'no_show';
@@ -578,9 +588,9 @@ export default function ShuttleTripActiveScreen() {
           key={i}
           style={[
             styles.dot,
-            i < currentStopIndex && { backgroundColor: '#4f46e5' },
-            i === currentStopIndex && { backgroundColor: '#f59e0b', width: 24 },
-            i > currentStopIndex && { backgroundColor: 'rgba(255,255,255,0.18)' },
+            i < currentStopIndex && { backgroundColor: C_TEAL },
+            i === currentStopIndex && { backgroundColor: C_INK, width: 24 },
+            i > currentStopIndex && { backgroundColor: C_HAIR },
           ]}
         />
       ))}
@@ -756,7 +766,6 @@ export default function ShuttleTripActiveScreen() {
       {/* ── Bottom sheet ─────────────────────────────────────────────────── */}
       {phase === 'at_stop' ? (
         <AtStopSheet
-          colors={colors}
           t={t}
           isRTL={isRTL}
           insetsBottom={insets.bottom}
@@ -775,98 +784,85 @@ export default function ShuttleTripActiveScreen() {
           onNextStop={handleNextStop}
         />
       ) : (
-        /* ═══ EN ROUTE / APPROACHING — glass overlay card ══════════════ */
-        <View style={[styles.enRouteSheet, { paddingBottom: insets.bottom + 12 }]}>
-          <View style={styles.enRouteHandle} />
-
-          {/* Progress dots */}
-          {progressDots}
-
-          {/* Next stop card */}
-          {currentStop && (
-            <View style={[styles.nextStopCard, { borderColor: phase === 'approaching' ? '#f59e0b66' : 'rgba(255,255,255,0.12)' }]}>
-              <View style={styles.nextStopCardHeader}>
-                <View style={[styles.stopIndexBadge, { backgroundColor: phase === 'approaching' ? '#f59e0b22' : 'rgba(255,255,255,0.1)' }]}>
-                  <Text style={[styles.stopIndexText, { color: phase === 'approaching' ? '#f59e0b' : 'rgba(255,255,255,0.7)', fontFamily: 'Inter_700Bold' }]}>
-                    {currentStopIndex + 1}
-                  </Text>
-                </View>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={[styles.nextStopLabel, { color: phase === 'approaching' ? '#f59e0b' : 'rgba(255,255,255,0.5)', fontFamily: 'Inter_600SemiBold' }]}>
-                    {phase === 'approaching' ? t.approaching_label : t.next_stop_label}
-                  </Text>
-                  <Text style={[styles.nextStopName, { color: '#fff', fontFamily: 'Inter_700Bold' }]} numberOfLines={1}>
-                    {currentStop.name}
-                  </Text>
-                </View>
-                <View style={styles.distanceBadge}>
-                  <Text style={[styles.distanceText, { color: phase === 'approaching' ? '#f59e0b' : 'rgba(255,255,255,0.9)', fontFamily: 'Inter_700Bold' }]}>
-                    {distanceLabel(distanceM)}
-                  </Text>
-                  {(stationEtas?.nextStation?.etaMinutes != null || roadEta.etaSeconds !== null) && (
-                    <Text style={[styles.etaText, { color: phase === 'approaching' ? '#f59e0b99' : 'rgba(255,255,255,0.45)', fontFamily: 'Inter_400Regular' }]}>
-                      {stationEtas?.nextStation?.etaMinutes != null
-                        ? `~${stationEtas.nextStation.etaMinutes} min`
-                        : etaLabel(roadEta.etaSeconds!)}
-                    </Text>
-                  )}
-                </View>
+        /* ═══ EN ROUTE / APPROACHING — C split panel ══════════════ */
+        <View style={[styles.enRouteWrapC, { paddingBottom: insets.bottom + 12 }]}>
+          <View style={styles.splitCardC}>
+            <View style={styles.leftPanelC}>
+              <View style={styles.statusRowC}>
+                <View style={[styles.statusDotC, { backgroundColor: phase === 'approaching' ? C_AMBER : C_MINT }]} />
+                <Text style={styles.leftLabelC} numberOfLines={2}>
+                  {phase === 'approaching' ? t.approaching_label : t.next_stop_label}
+                </Text>
               </View>
+              <View style={{ flex: 1 }} />
+              <Text style={styles.leftCapC}>{t.home_eta}</Text>
+              <Text style={styles.leftEtaValC} numberOfLines={1}>
+                {stationEtas?.nextStation?.etaMinutes != null
+                  ? `${stationEtas.nextStation.etaMinutes} min`
+                  : roadEta.etaSeconds !== null ? etaLabel(roadEta.etaSeconds).replace('~', '') : '—'}
+              </Text>
+            </View>
 
-              <View style={styles.passengerCountRow}>
-                <Users size={13} color="rgba(255,255,255,0.4)" strokeWidth={2} />
-                <Text style={[styles.passengerCountText, { color: 'rgba(255,255,255,0.4)', fontFamily: 'Inter_400Regular' }]}>
+            <View style={styles.rightPanelC}>
+              {progressDots}
+
+              {currentStop && (
+                <View style={styles.stopRowC}>
+                  <View style={[styles.stopIndexBadgeC, phase === 'approaching' && { backgroundColor: '#FCEBD1' }]}>
+                    <Text style={[styles.stopIndexTextC, phase === 'approaching' && { color: C_AMBER }]}>
+                      {currentStopIndex + 1}
+                    </Text>
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={styles.stopCapC}>
+                      {(phase === 'approaching' ? t.approaching_label : t.next_stop_label)} · {distanceLabel(distanceM)}
+                    </Text>
+                    <Text style={styles.stopNameC} numberOfLines={1}>{currentStop.name}</Text>
+                  </View>
+                </View>
+              )}
+
+              <View style={styles.passengerCountRowC}>
+                <Users size={13} color={C_CAP} strokeWidth={2} />
+                <Text style={styles.passengerCountTextC}>
                   {t.passengers_at_stop_msg
                     .replace('{count}', String(passengers.length))
                     .replace('{pax}', passengers.length === 1 ? t.pax_one : t.pax_many)}
                 </Text>
               </View>
-            </View>
-          )}
 
-          {/* Station timeout banner */}
-          {stationTimeoutVisible && (
-            <View style={[styles.timeoutBanner, { marginTop: 0, marginBottom: Spacing.sm }]}>
-              <AlertTriangle size={14} color="#d97706" strokeWidth={2} />
-              <Text style={[styles.timeoutText, { fontFamily: 'Inter_400Regular', flex: 1 }]}>
-                {t.station_timeout_msg}
-              </Text>
-              <Pressable onPress={() => setStationTimeoutVisible(false)}>
-                <X size={14} color="#d97706" strokeWidth={2} />
+              {/* Station timeout banner */}
+              {stationTimeoutVisible && (
+                <View style={styles.timeoutBannerC}>
+                  <AlertTriangle size={14} color="#d97706" strokeWidth={2} />
+                  <Text style={styles.timeoutTextC}>{t.station_timeout_msg}</Text>
+                  <Pressable onPress={() => setStationTimeoutVisible(false)}>
+                    <X size={14} color="#d97706" strokeWidth={2} />
+                  </Pressable>
+                </View>
+              )}
+
+              {/* Mark Arrived button */}
+              <Pressable
+                onPress={handleArrived}
+                disabled={isArrivingLoading || !currentStop}
+                style={[styles.arrivedBtnC, { opacity: isArrivingLoading ? 0.6 : 1 }]}
+              >
+                <Check size={16} color="#ffffff" strokeWidth={2.5} />
+                <Text style={styles.arrivedBtnTextC}>
+                  {isArrivingLoading ? '…' : t.mark_arrived_label}
+                </Text>
               </Pressable>
+
+              {/* Finish route if last stop */}
+              {isLastStop && (
+                <Pressable onPress={handleFinishRoute} style={styles.finishBtnC}>
+                  <Check size={16} color={C_TEAL} strokeWidth={2} />
+                  <Text style={styles.finishBtnTextC}>{t.finish_route}</Text>
+                </Pressable>
+              )}
             </View>
-          )}
-
-          {/* Mark Arrived button */}
-          <Pressable
-            onPress={handleArrived}
-            disabled={isArrivingLoading || !currentStop}
-            style={[styles.arrivedBtn, { opacity: isArrivingLoading ? 0.6 : 1 }]}
-          >
-            <LinearGradient
-              colors={phase === 'approaching' ? ['#d97706', '#f59e0b'] : ['#4f46e5', '#6366f1']}
-              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-              style={styles.arrivedBtnGrad}
-            >
-              <Check size={18} color="#fff" strokeWidth={2} />
-              <Text style={[styles.arrivedBtnText, { fontFamily: 'Inter_700Bold' }]}>
-                {isArrivingLoading ? '…' : t.mark_arrived_label}
-              </Text>
-            </LinearGradient>
-          </Pressable>
-
-          {/* Finish route if last stop */}
-          {isLastStop && (
-            <Pressable
-              onPress={handleFinishRoute}
-              style={[styles.finishBtn, { backgroundColor: 'rgba(34,197,94,0.15)', borderColor: '#22c55e' }]}
-            >
-              <Check size={16} color="#22c55e" strokeWidth={2} />
-              <Text style={[styles.finishBtnText, { color: '#22c55e', fontFamily: 'Inter_700Bold' }]}>
-                {t.finish_route}
-              </Text>
-            </Pressable>
-          )}
+          </View>
         </View>
       )}
     </View>
@@ -879,7 +875,6 @@ export default function ShuttleTripActiveScreen() {
 // not on every ~1 Hz GPS tick from the parent screen, which none of this JSX
 // reads. Pure JSX relocation: no change to any boarding/timer/completion logic.
 type AtStopSheetProps = {
-  colors: ReturnType<typeof useColors>;
   t: ReturnType<typeof useI18n>['t'];
   isRTL: boolean;
   insetsBottom: number;
@@ -899,49 +894,49 @@ type AtStopSheetProps = {
 };
 
 const AtStopSheet = React.memo(function AtStopSheet({
-  colors, t, isRTL, insetsBottom, currentStop, stopTimer, stationTimeoutVisible, onDismissTimeout,
+  t, isRTL, insetsBottom, currentStop, stopTimer, stationTimeoutVisible, onDismissTimeout,
   passengers, passengerStatuses, onUpdatePassengerStatus, isLastStop, isNextLoading,
   failedStationActions, lastStopProcessingRef, onFinishRoute, onNextStop,
 }: AtStopSheetProps) {
   return (
-    <View style={[styles.atStopSheet, { backgroundColor: colors.card, borderColor: colors.border, maxHeight: SCREEN_H * 0.68 }]}>
-      {/* Header: stop name + timer */}
-      <View style={styles.atStopHeader}>
+    <View style={[styles.atStopSheetC, { maxHeight: SCREEN_H * 0.68 }]}>
+      {/* Dark header: stop name + STOP MODE badge + timer */}
+      <View style={styles.atStopHeaderC}>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <View style={styles.stopModeBadge}>
-            <View style={styles.stopModeDot} />
-            <Text style={[styles.stopModeLabel, { fontFamily: 'Inter_700Bold' }]}>{t.stop_mode_label}</Text>
+          <View style={styles.stopModeBadgeC}>
+            <View style={styles.stopModeDotC} />
+            <Text style={styles.stopModeLabelC}>{t.stop_mode_label}</Text>
           </View>
-          <Text style={[styles.atStopName, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]} numberOfLines={1}>
-            {currentStop?.name ?? '—'}
-          </Text>
+          <Text style={styles.atStopNameC} numberOfLines={1}>{currentStop?.name ?? '—'}</Text>
         </View>
-        <View style={[styles.timerBlock, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
-          <Clock size={13} color={stopTimer > 15 ? '#f59e0b' : '#ef4444'} strokeWidth={2} />
-          <Text style={[styles.timerText, { fontFamily: 'Inter_700Bold', color: stopTimer > 15 ? '#f59e0b' : '#ef4444' }]}>
+        <View style={styles.timerBlockC}>
+          <Clock size={13} color={stopTimer > 15 ? C_AMBER : '#F3C6C2'} strokeWidth={2} />
+          <Text style={[styles.timerTextC, { color: stopTimer > 15 ? C_AMBER : '#F3C6C2' }]}>
             {formatTimer(stopTimer)}
           </Text>
         </View>
       </View>
 
-      {/* Divider */}
-      <View style={[styles.atStopDivider, { backgroundColor: colors.border }]} />
+      {/* White body: timeout banner + passenger list + CTA */}
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={[styles.passengerListC, { paddingBottom: insetsBottom + 8 }]} showsVerticalScrollIndicator={false}>
+        {stationTimeoutVisible && (
+          <View style={styles.timeoutBannerC}>
+            <AlertTriangle size={13} color="#d97706" strokeWidth={2} />
+            <Text style={styles.timeoutTextC}>{t.station_timeout_msg}</Text>
+            <Pressable onPress={onDismissTimeout}><X size={13} color="#d97706" strokeWidth={2} /></Pressable>
+          </View>
+        )}
 
-      {/* Station timeout banner */}
-      {stationTimeoutVisible && (
-        <View style={styles.timeoutBanner}>
-          <AlertTriangle size={13} color="#f59e0b" strokeWidth={2} />
-          <Text style={[styles.timeoutText, { fontFamily: 'Inter_400Regular', flex: 1 }]}>{t.station_timeout_msg}</Text>
-          <Pressable onPress={onDismissTimeout}><X size={13} color="#f59e0b" strokeWidth={2} /></Pressable>
-        </View>
-      )}
+        <Text style={styles.passengerListCapC}>
+          {t.passengers_at_stop_msg
+            .replace('{count}', String(passengers.length))
+            .replace('{pax}', passengers.length === 1 ? t.pax_one : t.pax_many)}
+        </Text>
 
-      {/* Passenger list */}
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={[styles.passengerList, { paddingBottom: insetsBottom + 8 }]} showsVerticalScrollIndicator={false}>
         {passengers.length === 0 ? (
-          <View style={styles.emptyPassengers}>
-            <Users size={26} color={colors.mutedForeground} strokeWidth={1.5} />
-            <Text style={[styles.emptyPassengersText, { fontFamily: 'Inter_400Regular', color: colors.mutedForeground }]}>{t.no_passengers_at_stop}</Text>
+          <View style={styles.emptyPassengersC}>
+            <Users size={26} color={C_CAP} strokeWidth={1.5} />
+            <Text style={styles.emptyPassengersTextC}>{t.no_passengers_at_stop}</Text>
           </View>
         ) : (
           passengers.map(p => {
@@ -949,56 +944,48 @@ const AtStopSheet = React.memo(function AtStopSheet({
             const isBoarded = status === 'boarded';
             const isNoShow = status === 'no_show';
             return (
-              <View key={p.id} style={[
-                styles.passengerRow,
-                { backgroundColor: colors.background, borderColor: colors.border },
-                isBoarded && { borderColor: '#22c55e66', backgroundColor: '#22c55e0a' },
-                isNoShow  && { borderColor: '#ef444466', backgroundColor: '#ef44440a' },
-              ]}>
-                <View style={[styles.passengerAvatar, { backgroundColor: colors.secondary }, isBoarded && { backgroundColor: '#22c55e22' }, isNoShow && { backgroundColor: '#ef444422' }]}>
-                  <Text style={[styles.passengerInitial, { fontFamily: 'Inter_700Bold', color: isBoarded ? '#22c55e' : isNoShow ? '#ef4444' : colors.foreground }]}>
+              <View key={p.id} style={styles.passengerRowC}>
+                <View style={[styles.passengerAvatarC, isBoarded && { backgroundColor: '#DDF4EB' }, isNoShow && { backgroundColor: '#F9DEDA' }]}>
+                  <Text style={[styles.passengerInitialC, { color: isBoarded ? C_TEAL : isNoShow ? C_RED : C_INK }]}>
                     {(p.name || '?')[0].toUpperCase()}
                   </Text>
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={[styles.passengerName, { fontFamily: 'Inter_600SemiBold', color: colors.foreground }]} numberOfLines={1}>{p.name}</Text>
-                  <Text style={[styles.passengerPhone, { fontFamily: 'Inter_400Regular', color: colors.mutedForeground }]}>{p.phone}</Text>
+                  <Text style={styles.passengerNameC} numberOfLines={1}>{p.name}</Text>
+                  <Text style={styles.passengerPhoneC}>{p.phone}</Text>
                   {p.destinationStationName ? (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
-                      <MapPin size={11} color={colors.mutedForeground} strokeWidth={2} />
-                      <Text
-                        style={[styles.passengerPhone, { fontFamily: 'Inter_400Regular', color: colors.mutedForeground }]}
-                        numberOfLines={1}
-                      >
+                      <MapPin size={11} color={C_CAP} strokeWidth={2} />
+                      <Text style={styles.passengerPhoneC} numberOfLines={1}>
                         {t.drop_off_at}: {p.destinationStationName}
                       </Text>
                     </View>
                   ) : null}
                   {p.paymentMethod === 'cash' ? (
-                    <View style={[styles.paymentCashBadge, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}>
+                    <View style={styles.paymentCashBadgeC}>
                       <Banknote size={11} color="#d97706" strokeWidth={2} />
-                      <Text style={[styles.paymentBadgeText, { fontFamily: 'Inter_700Bold', color: '#d97706' }]}>
+                      <Text style={[styles.paymentBadgeTextC, { color: '#d97706' }]}>
                         {p.fareAmount > 0 ? `${p.fareAmount} ${t.egp}` : t.cash_label}
                       </Text>
                     </View>
                   ) : p.paymentMethod === 'card' || p.paymentMethod === 'online' ? (
-                    <View style={styles.paymentPaidBadge}>
-                      <Text style={[styles.paymentBadgeText, { fontFamily: 'Inter_600SemiBold', color: '#16a34a' }]}>{t.paid_badge}</Text>
+                    <View style={styles.paymentPaidBadgeC}>
+                      <Text style={[styles.paymentBadgeTextC, { color: C_TEAL }]}>{t.paid_badge}</Text>
                     </View>
                   ) : null}
                 </View>
-                <View style={styles.statusBtns}>
+                <View style={styles.statusBtnsC}>
                   <Pressable
                     onPress={() => onUpdatePassengerStatus(p.id, isBoarded ? 'not_arrived' : 'boarded')}
-                    style={[styles.statusBtn, isBoarded ? { backgroundColor: '#22c55e', borderColor: '#22c55e' } : { borderColor: 'rgba(34,197,94,0.5)' }]}
+                    style={[styles.statusBtnC, isBoarded ? { backgroundColor: C_TEAL, borderColor: C_TEAL } : { borderColor: '#B9E4DB' }]}
                   >
-                    <Check size={18} color={isBoarded ? '#fff' : '#22c55e'} strokeWidth={2.5} />
+                    <Check size={16} color={isBoarded ? '#ffffff' : C_TEAL} strokeWidth={2.5} />
                   </Pressable>
                   <Pressable
                     onPress={() => onUpdatePassengerStatus(p.id, isNoShow ? 'not_arrived' : 'no_show')}
-                    style={[styles.statusBtn, isNoShow ? { backgroundColor: '#ef4444', borderColor: '#ef4444' } : { borderColor: 'rgba(239,68,68,0.5)' }]}
+                    style={[styles.statusBtnC, isNoShow ? { backgroundColor: C_RED, borderColor: C_RED } : { borderColor: '#F3C6C2' }]}
                   >
-                    <X size={18} color={isNoShow ? '#fff' : '#ef4444'} strokeWidth={2.5} />
+                    <X size={14} color={isNoShow ? '#ffffff' : C_RED} strokeWidth={2.5} />
                   </Pressable>
                 </View>
               </View>
@@ -1020,12 +1007,10 @@ const AtStopSheet = React.memo(function AtStopSheet({
                   lastStopProcessingRef.current = false;
                 }
               }}
-              style={[styles.primaryBtn, { opacity: (lastStopProcessingRef.current || isNextLoading) ? 0.6 : 1 }]}
+              style={[styles.primaryBtnC, { opacity: (lastStopProcessingRef.current || isNextLoading) ? 0.6 : 1 }]}
             >
-              <LinearGradient colors={['#16a34a', '#22c55e']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.primaryBtnGrad}>
-                <Check size={18} color="#fff" strokeWidth={2.5} />
-                <Text style={[styles.primaryBtnText, { fontFamily: 'Inter_700Bold' }]}>{t.finish_route}</Text>
-              </LinearGradient>
+              <Check size={18} color="#ffffff" strokeWidth={2.5} />
+              <Text style={styles.primaryBtnTextC}>{t.finish_route}</Text>
             </Pressable>
           ) : (
             <Pressable
@@ -1039,21 +1024,18 @@ const AtStopSheet = React.memo(function AtStopSheet({
                   lastStopProcessingRef.current = false;
                 }
               }}
-              style={[styles.primaryBtn, { opacity: (lastStopProcessingRef.current || isNextLoading) ? 0.6 : 1 }]}
+              style={[styles.primaryBtnC, { opacity: (lastStopProcessingRef.current || isNextLoading) ? 0.6 : 1 }]}
             >
-              <LinearGradient colors={['#4f46e5', '#6366f1']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.primaryBtnGrad}>
-                <Navigation2 size={18} color="#fff" strokeWidth={2} />
-                <Text style={[styles.primaryBtnText, { fontFamily: 'Inter_700Bold' }]}>
-                  {isNextLoading
-                    ? '…'
-                    : failedStationActions.length > 0
-                    ? t.retry_failed_label.replace('{count}', String(failedStationActions.length))
-                    : t.depart_to_next_stop_label}
-                </Text>
-                {!isNextLoading && (
-                  <ArrowRight size={16} color="#fff" strokeWidth={2.5} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
-                )}
-              </LinearGradient>
+              <Text style={styles.primaryBtnTextC}>
+                {isNextLoading
+                  ? '…'
+                  : failedStationActions.length > 0
+                  ? t.retry_failed_label.replace('{count}', String(failedStationActions.length))
+                  : t.depart_to_next_stop_label}
+              </Text>
+              {!isNextLoading && (
+                <ArrowRight size={16} color="#ffffff" strokeWidth={2.5} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
+              )}
             </Pressable>
           )}
         </View>
@@ -1119,87 +1101,64 @@ const styles = StyleSheet.create({
   approachBadge: { backgroundColor: '#f59e0b22', borderRadius: 10, paddingHorizontal: Spacing.sm, paddingVertical: 3, alignItems: 'center' },
   approachBadgeText: { fontSize: Typography.size.xs, color: '#f59e0b' },
 
-  // At stop sheet — absolute bottom overlay, height fits content
-  atStopSheet: { position: 'absolute', bottom: 0, left: 0, right: 0, borderTopLeftRadius: 28, borderTopRightRadius: 28, borderTopWidth: 1, borderLeftWidth: 1, borderRightWidth: 1 },
-  atStopDivider: { height: 1, marginHorizontal: Spacing.lg },
+  // ── "C" en-route / approaching split card ──────────────────────────────
+  enRouteWrapC: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: Spacing.md, paddingTop: 10 },
+  splitCardC: { borderRadius: 24, overflow: 'hidden', flexDirection: 'row', elevation: 8, shadowColor: '#000', shadowOffset: { width: 0, height: -6 }, shadowOpacity: 0.16, shadowRadius: 20 },
+  leftPanelC: { width: 104, flexShrink: 0, backgroundColor: C_INK, paddingHorizontal: 12, paddingVertical: 16 },
+  statusRowC: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  statusDotC: { width: 7, height: 7, borderRadius: 3.5 },
+  leftLabelC: { flex: 1, fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 0.6, color: 'rgba(255,255,255,0.92)', textTransform: 'uppercase' },
+  leftCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 0.6, color: C_CAP, textTransform: 'uppercase' },
+  leftEtaValC: { fontSize: 18, fontFamily: 'Inter_700Bold', color: C_MINT, marginTop: 1 },
+  rightPanelC: { flex: 1, backgroundColor: '#ffffff', padding: 16 },
+  progressDots: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginBottom: Spacing.md },
+  dot: { height: 6, width: 14, borderRadius: 3 },
+  stopRowC: { flexDirection: 'row', alignItems: 'center', gap: 11 },
+  stopIndexBadgeC: { width: 32, height: 32, borderRadius: 10, backgroundColor: '#F0F2F3', alignItems: 'center', justifyContent: 'center' },
+  stopIndexTextC: { fontSize: 13, fontFamily: 'Inter_700Bold', color: C_INK },
+  stopCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 0.5, color: C_CAP, textTransform: 'uppercase' },
+  stopNameC: { fontSize: 14.5, fontFamily: 'Inter_700Bold', color: C_INK, marginTop: 1 },
+  passengerCountRowC: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12 },
+  passengerCountTextC: { fontSize: 11.5, fontFamily: 'Inter_600SemiBold', color: C_CAP },
+  arrivedBtnC: { marginTop: 14, height: 48, borderRadius: 24, backgroundColor: C_INK, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  arrivedBtnTextC: { fontSize: 13.5, fontFamily: 'Inter_700Bold', color: '#ffffff' },
+  finishBtnC: { marginTop: 10, height: 44, borderRadius: 14, borderWidth: 1.5, borderColor: '#B9E4DB', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  finishBtnTextC: { fontSize: 13, fontFamily: 'Inter_700Bold', color: C_TEAL },
 
-  // En route sheet — glass overlay at bottom of screen
-  enRouteSheet: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: Spacing.lg,
-    paddingTop: 10,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    backgroundColor: 'rgba(12,12,22,0.82)',
-    borderTopWidth: 1,
-    borderLeftWidth: 1,
-    borderRightWidth: 1,
-    borderColor: 'rgba(255,255,255,0.10)',
-  },
-  enRouteHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.2)', alignSelf: 'center', marginBottom: Spacing.md },
+  // ── "C" at-stop sheet — dark header band + white body, content-sized ──
+  atStopSheetC: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#ffffff', borderTopLeftRadius: 26, borderTopRightRadius: 26, overflow: 'hidden' },
+  atStopHeaderC: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: C_INK, paddingHorizontal: Spacing.lg, paddingTop: 18, paddingBottom: 16 },
+  stopModeBadgeC: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', marginBottom: 6 },
+  stopModeDotC: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: C_RED },
+  stopModeLabelC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.2, color: '#F3C6C2', textTransform: 'uppercase' },
+  atStopNameC: { fontSize: 18, fontFamily: 'Inter_700Bold', color: '#ffffff' },
+  timerBlockC: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.1)' },
+  timerTextC: { fontSize: 15, fontFamily: 'Inter_700Bold', letterSpacing: 1.5 },
 
-  // Progress dots
-  progressDots: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginBottom: Spacing.lg },
-  dot: { height: 8, width: 14, borderRadius: 4 },
-
-  // Next stop card
-  nextStopCard: { borderRadius: 18, borderWidth: 1, padding: 14, marginBottom: 10, backgroundColor: 'rgba(255,255,255,0.06)' },
-  nextStopCardHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
-  stopIndexBadge: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  stopIndexText: { fontSize: Typography.size.sm },
-  nextStopLabel: { fontSize: 11, marginBottom: 2 },
-  nextStopName: { fontSize: Typography.size.md },
-  distanceBadge: { paddingHorizontal: 10, paddingVertical: Spacing.xs, borderRadius: 10, alignItems: 'center' },
-  distanceText: { fontSize: Typography.size.sm },
-  etaText: { fontSize: 11, marginTop: 1 },
-  passengerCountRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.07)' },
-  passengerCountText: { fontSize: 13 },
-
-  // Mark arrived button
-  arrivedBtn: { borderRadius: Radius.lg, overflow: 'hidden', marginBottom: 10 },
-  arrivedBtnGrad: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
-  arrivedBtnText: { fontSize: 15, color: '#fff' },
-
-  // Finish button (en-route last stop)
-  finishBtn: { height: 44, borderRadius: 14, borderWidth: 1.5, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
-  finishBtnText: { fontSize: Typography.size.sm },
-
-  // At stop header
-  atStopHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.lg, paddingTop: 18, paddingBottom: 14 },
-  stopModeBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', backgroundColor: '#ef444418', paddingHorizontal: Spacing.sm, paddingVertical: 3, borderRadius: Radius.sm, marginBottom: 6, borderWidth: 1, borderColor: '#ef444440' },
-  stopModeDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#ef4444' },
-  stopModeLabel: { fontSize: 10, letterSpacing: 1.2, color: '#ef4444' },
-  atStopName: { fontSize: Typography.size.lg },
-  timerBlock: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: Radius.md, borderWidth: 1 },
-  timerText: { fontSize: Typography.size.lg, letterSpacing: 2 },
-
-  // Timeout banner
-  timeoutBanner: {
+  // Timeout banner (light, inside white body)
+  timeoutBannerC: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
-    marginHorizontal: Spacing.lg, marginTop: Spacing.sm, marginBottom: 0,
-    backgroundColor: '#f59e0b12', borderColor: '#f59e0b44', borderWidth: 1,
-    borderRadius: Radius.md, padding: 10,
+    backgroundColor: '#FCEBD1', borderColor: '#F3D9A8', borderWidth: 1,
+    borderRadius: 14, padding: 10, marginTop: Spacing.sm,
   },
-  timeoutText: { fontSize: 13, color: '#d97706', lineHeight: 18 },
+  timeoutTextC: { flex: 1, fontSize: 13, fontFamily: 'Inter_400Regular', color: '#d97706', lineHeight: 18 },
 
   // Passenger list
-  passengerList: { paddingHorizontal: Spacing.lg, paddingTop: 10, paddingBottom: Spacing.lg },
-  emptyPassengers: { paddingVertical: Spacing.xxl, alignItems: 'center', gap: 10 },
-  emptyPassengersText: { fontSize: Typography.size.sm, textAlign: 'center' },
-  passengerRow: {
+  passengerListC: { paddingHorizontal: Spacing.lg, paddingTop: 14, paddingBottom: Spacing.lg },
+  passengerListCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 0.8, color: C_CAP, textTransform: 'uppercase', marginBottom: 10 },
+  emptyPassengersC: { paddingVertical: Spacing.xxl, alignItems: 'center', gap: 10 },
+  emptyPassengersTextC: { fontSize: Typography.size.sm, textAlign: 'center', fontFamily: 'Inter_400Regular', color: C_CAP },
+  passengerRowC: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
-    padding: Spacing.md, borderRadius: Radius.lg, borderWidth: 1,
+    padding: 11, borderRadius: 16, backgroundColor: '#F6F7F8',
     marginBottom: Spacing.sm,
   },
-  passengerAvatar: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  passengerInitial: { fontSize: Typography.size.md },
-  passengerName: { fontSize: Typography.size.sm, marginBottom: 2 },
-  passengerPhone: { fontSize: Typography.size.xs },
-  statusBtns: { flexDirection: 'row', gap: Spacing.sm },
-  statusBtn: { width: 44, height: 44, borderRadius: 13, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  passengerAvatarC: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEF0F1' },
+  passengerInitialC: { fontSize: Typography.size.md, fontFamily: 'Inter_700Bold' },
+  passengerNameC: { fontSize: Typography.size.sm, fontFamily: 'Inter_700Bold', color: C_INK, marginBottom: 2 },
+  passengerPhoneC: { fontSize: Typography.size.xs, fontFamily: 'Inter_400Regular', color: C_CAP },
+  statusBtnsC: { flexDirection: 'row', gap: Spacing.sm },
+  statusBtnC: { width: 34, height: 34, borderRadius: 17, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
 
   // Share Trip button
   shareTripBtn: {
@@ -1221,11 +1180,10 @@ const styles = StyleSheet.create({
     fontSize: Typography.size.xs, color: '#fff', fontFamily: 'Inter_700Bold', letterSpacing: 0.5,
   },
 
-  // Primary action button
-  paymentCashBadge: { alignSelf: 'flex-start', marginTop: Spacing.xs, backgroundColor: '#fef3c7', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: '#fcd34d' },
-  paymentPaidBadge: { alignSelf: 'flex-start', marginTop: Spacing.xs, backgroundColor: '#dcfce7', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: '#86efac' },
-  paymentBadgeText: { fontSize: 11 },
-  primaryBtn: { borderRadius: Radius.lg, overflow: 'hidden' },
-  primaryBtnGrad: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
-  primaryBtnText: { fontSize: 15, color: '#fff' },
+  // Payment badges + primary action button (at-stop sheet)
+  paymentCashBadgeC: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: Spacing.xs, backgroundColor: '#FCEBD1', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  paymentPaidBadgeC: { alignSelf: 'flex-start', marginTop: Spacing.xs, backgroundColor: '#DDF4EB', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  paymentBadgeTextC: { fontSize: 11, fontFamily: 'Inter_700Bold' },
+  primaryBtnC: { height: 52, borderRadius: 16, backgroundColor: C_INK, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
+  primaryBtnTextC: { fontSize: 15, fontFamily: 'Inter_700Bold', color: '#ffffff' },
 });
