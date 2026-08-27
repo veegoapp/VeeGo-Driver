@@ -1,9 +1,7 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { ChevronRight, TrendingDown, TrendingUp } from 'lucide-react-native';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronRight } from 'lucide-react-native';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Animated,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,16 +10,19 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
-import { GlassView } from '@/components/GlassView';
-import { useColors } from '@/hooks/useColors';
 import { AppLoader } from '@/components/ui/AppLoader';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints, type RideHistoryItem } from '@/lib/api';
-import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
-import { Radius } from '@/constants/radius';
-import { Shadows } from '@/constants/shadows';
 import { TAB_BAR_HEIGHT_BASE } from '@/constants/tabBar';
+
+const C_BG = '#EEF0F2';
+const C_SURF = '#FFFFFF';
+const C_INK = '#14151A';
+const C_CAP = '#9AA0A6';
+const C_CAP_ON_DARK = '#8A9096';
+const C_MINT = '#3DDC97';
+const C_TRACK = '#F0F2F3';
 
 type EarningsSummary = {
   driverId: string;
@@ -128,13 +129,10 @@ async function fetchRidesInRange(start: Date, end: Date): Promise<RideHistoryIte
 }
 
 export default function EarningsScreen() {
-  const colors = useColors();
   const insets = useSafeAreaInsets();
   const { t, isRTL } = useI18n();
   const topPad = insets.top;
   const tabBarHeight = TAB_BAR_HEIGHT_BASE + insets.bottom;
-
-  const R = isRTL ? 'row-reverse' as const : 'row' as const;
   const TA = isRTL ? 'right' as const : 'left' as const;
 
   const [period, setPeriod] = useState<PeriodKey>('this_week');
@@ -174,7 +172,7 @@ export default function EarningsScreen() {
   // those come from a different backend source (the wallet ledger, which
   // omits cash-ride earnings since the driver already holds that cash) and a
   // different date-range implementation (device-local vs server Cairo-local).
-  const { grossTotal, driverTotal, companyTotal, driverPct, companyPct } = useMemo(() => {
+  const { grossTotal, driverTotal, driverPct, companyPct } = useMemo(() => {
     const driver = toNum(summary?.summary?.driverShare);
     const company = toNum(summary?.summary?.companyShare);
     const gross = driver + company;
@@ -187,8 +185,6 @@ export default function EarningsScreen() {
     };
   }, [summary]);
 
-  const heroAnim = useRef(new Animated.Value(0)).current;
-
   const isLoading = summaryLoading;
   const isError = summaryError;
 
@@ -196,10 +192,6 @@ export default function EarningsScreen() {
   useEffect(() => {
     if (summaryError) console.error('[Earnings:screen] summaryError → rendering "Failed to load earnings. Please try again."', { summaryError });
   }, [summaryError]);
-
-  useEffect(() => {
-    Animated.spring(heroAnim, { toValue: 1, useNativeDriver: true, stiffness: 200, damping: 20 }).start();
-  }, [period]);
 
   const handleTripPress = (ride: RideHistoryItem) => {
     router.push({
@@ -210,7 +202,7 @@ export default function EarningsScreen() {
 
   if (isLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' }]}>
+      <View style={[styles.container, { backgroundColor: C_BG, alignItems: 'center', justifyContent: 'center' }]}>
         <AppLoader />
       </View>
     );
@@ -218,184 +210,132 @@ export default function EarningsScreen() {
 
   if (isError) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center', gap: 16 }]}>
-        <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: Typography.size.sm }}>{t.earnings_load_fail}</Text>
-        <Pressable onPress={() => refetchSummary()} style={{ paddingHorizontal: 24, paddingVertical: 10, borderRadius: 20, backgroundColor: colors.secondary }}>
-          <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: Typography.size.sm }}>{t.retry_label}</Text>
+      <View style={[styles.container, { backgroundColor: C_BG, alignItems: 'center', justifyContent: 'center', gap: 16 }]}>
+        <Text style={{ color: C_CAP, fontFamily: 'Inter_400Regular', fontSize: 13 }}>{t.earnings_load_fail}</Text>
+        <Pressable onPress={() => refetchSummary()} style={{ paddingHorizontal: 24, paddingVertical: 10, borderRadius: 20, backgroundColor: C_INK }}>
+          <Text style={{ color: '#fff', fontFamily: 'Inter_700Bold', fontSize: 13 }}>{t.retry_label}</Text>
         </Pressable>
       </View>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: C_BG }]}>
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingTop: topPad + 8, paddingBottom: tabBarHeight + 24, paddingHorizontal: 20 }}
+        contentContainerStyle={{ paddingBottom: tabBarHeight + 24 }}
         showsVerticalScrollIndicator={false}
       >
-        <View style={[styles.header, { flexDirection: R }]}>
-          <View>
-            <Text style={[styles.sectionLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.earnings}</Text>
-            <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{PERIOD_LABELS[period]}</Text>
-          </View>
-        </View>
+        {/* Dark hero — period switch, total, driver/company split, all embedded */}
+        <View style={[styles.hero, { paddingTop: topPad + 14 }]}>
+          <Text style={[styles.heroCap, { textAlign: TA, fontFamily: 'Inter_700Bold' }]}>{t.earnings}</Text>
 
-        {/* Period filter chips */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: Spacing.lg }} contentContainerStyle={{ gap: Spacing.sm, paddingRight: Spacing.xs }}>
-          {PERIOD_KEYS.map(key => (
-            <Pressable key={key} onPress={() => setPeriod(key)}>
-              {key === period ? (
-                <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[styles.periodChip, { elevation: 6, shadowColor: '#2d2d42', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.35, shadowRadius: 8 }]}>
-                  <Text style={[styles.periodChipText, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>{PERIOD_LABELS[key]}</Text>
-                </LinearGradient>
-              ) : (
-                <GlassView style={styles.periodChip} borderRadius={20}>
-                  <Text style={[styles.periodChipText, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>{PERIOD_LABELS[key]}</Text>
-                </GlassView>
-              )}
-            </Pressable>
-          ))}
-        </ScrollView>
-
-        {/* Hero — now strictly reflects the selected period (was pinned to a
-            separate 4-week query before, so it never matched the tabs).
-            Reads driverTotal (financial_snapshots-derived, via the useMemo
-            below), NOT summary.summary.totalEarnings — that field sums
-            driver_wallet_ledger credits only, which deliberately excludes
-            cash-ride earnings (the driver already holds that cash), so it
-            under-reports (often to 0.00) for anyone who takes cash rides.
-            driverTotal is the same source the split card below already uses,
-            so the two numbers on this screen no longer disagree. */}
-        <Animated.View style={[styles.heroCard, { opacity: heroAnim, transform: [{ translateY: heroAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
-          <LinearGradient colors={['#2d2d42', '#55c49a']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroGrad}>
-            <View style={styles.heroBlobTop} />
-            <View style={styles.heroContent}>
-              <Text style={[styles.heroLabel, { color: colors.primaryForeground + 'CC', fontFamily: 'Inter_700Bold', textAlign: TA }]}>{PERIOD_HERO_LABELS[period]}</Text>
-              <View style={[styles.heroAmountRow, { flexDirection: R }]}>
-                <Text style={[styles.heroAmount, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>
-                  {driverTotal.toFixed(2)}
+          {/* Period segmented control */}
+          <View style={styles.segment}>
+            {PERIOD_KEYS.map(key => (
+              <Pressable key={key} onPress={() => setPeriod(key)} style={[styles.segmentItem, key === period && styles.segmentItemActive]}>
+                <Text style={[styles.segmentText, key === period && styles.segmentTextActive, { fontFamily: 'Inter_800ExtraBold' }]} numberOfLines={1}>
+                  {PERIOD_LABELS[key]}
                 </Text>
-                <Text style={[styles.heroCurrency, { color: colors.primaryForeground + 'CC', fontFamily: 'Inter_700Bold' }]}>{t.egp}</Text>
-              </View>
-            </View>
-          </LinearGradient>
-        </Animated.View>
-
-        {/* Driver vs company split — derived from real fare/driverEarnings on
-            the rides loaded for this period, not an assumed fixed rate. */}
-        <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.earnings_share_vs_company}</Text>
-        <GlassView style={styles.summaryCard} borderRadius={20}>
-          <View style={styles.summaryInner}>
-            <View style={[styles.splitBarTrack, { backgroundColor: colors.secondary }]}>
-              <View style={[styles.splitBarFill, { width: `${grossTotal > 0 ? driverPct : 50}%`, backgroundColor: '#55c49a' }]} />
-            </View>
-            <SplitRow
-              icon={<TrendingUp size={16} color="#16A34A" strokeWidth={2} />}
-              iconBg="#F0FDF4"
-              label={t.your_share_label}
-              amount={`${driverTotal.toFixed(2)} ${t.egp}`}
-              pct={grossTotal > 0 ? `${driverPct.toFixed(0)}%` : '—'}
-              colors={colors}
-              isRTL={isRTL}
-            />
-            <SplitRow
-              icon={<TrendingDown size={16} color="#EA580C" strokeWidth={2} />}
-              iconBg="#FFF7ED"
-              label={t.company_share_label}
-              amount={`${companyTotal.toFixed(2)} ${t.egp}`}
-              pct={grossTotal > 0 ? `${companyPct.toFixed(0)}%` : '—'}
-              colors={colors}
-              isRTL={isRTL}
-            />
-          </View>
-        </GlassView>
-
-        {/* Trips — simple per-ride cards for the selected period; tap opens
-            the full detail screen (route, payment type, driver/company split). */}
-        <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.trips}</Text>
-        {ridesLoading ? (
-          <View style={{ paddingVertical: Spacing.lg, alignItems: 'center' }}>
-            <AppLoader />
-          </View>
-        ) : rides.length === 0 ? (
-          <GlassView style={[styles.summaryCard, { padding: Spacing.lg, alignItems: 'center' }]} borderRadius={20}>
-            <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: Typography.size.sm }}>{t.no_trips_period}</Text>
-          </GlassView>
-        ) : (
-          <View style={{ gap: Spacing.sm }}>
-            {rides.map(ride => (
-              <Pressable key={ride.id} onPress={() => handleTripPress(ride)}>
-                <GlassView style={[styles.tripCard, { flexDirection: R }]} borderRadius={16}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.tripDate, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold', textAlign: TA }]}>
-                      {new Date(ride.completedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                    </Text>
-                    <Text style={[styles.tripAddress, { color: colors.foreground, fontFamily: 'Inter_600SemiBold', textAlign: TA }]} numberOfLines={1}>
-                      {ride.pickupAddress ?? '—'}
-                    </Text>
-                  </View>
-                  <Text style={[styles.tripFare, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-                    {toNum(ride.fare).toFixed(2)} {t.egp}
-                  </Text>
-                  <ChevronRight size={16} color={colors.mutedForeground} strokeWidth={2} style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined} />
-                </GlassView>
               </Pressable>
             ))}
           </View>
-        )}
 
+          <Text style={[styles.heroAmountCap, { textAlign: TA, fontFamily: 'Inter_700Bold' }]}>{PERIOD_HERO_LABELS[period]}</Text>
+          <View style={[styles.heroAmountRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+            <Text style={[styles.heroAmount, { fontFamily: 'Inter_800ExtraBold' }]}>{driverTotal.toFixed(0)}</Text>
+            <Text style={[styles.heroCurrency, { fontFamily: 'Inter_700Bold' }]}>{t.egp}</Text>
+          </View>
+
+          <View style={styles.splitTrack}>
+            <View style={[styles.splitFill, { width: `${grossTotal > 0 ? driverPct : 50}%` as any }]} />
+          </View>
+
+          <View style={styles.heroStatsRow}>
+            <View style={styles.heroStatCell}>
+              <Text style={[styles.heroStatValue, { color: C_MINT, fontFamily: 'Inter_800ExtraBold' }]}>
+                {grossTotal > 0 ? `${driverPct.toFixed(0)}%` : '—'}
+              </Text>
+              <Text style={[styles.heroStatCap, { fontFamily: 'Inter_700Bold' }]}>{t.your_share_label}</Text>
+            </View>
+            <View style={styles.heroDivider} />
+            <View style={styles.heroStatCell}>
+              <Text style={[styles.heroStatValue, { fontFamily: 'Inter_800ExtraBold' }]}>
+                {grossTotal > 0 ? `${companyPct.toFixed(0)}%` : '—'}
+              </Text>
+              <Text style={[styles.heroStatCap, { fontFamily: 'Inter_700Bold' }]}>{t.company_share_label}</Text>
+            </View>
+            <View style={styles.heroDivider} />
+            <View style={styles.heroStatCell}>
+              <Text style={[styles.heroStatValue, { fontFamily: 'Inter_800ExtraBold' }]}>{rides.length}</Text>
+              <Text style={[styles.heroStatCap, { fontFamily: 'Inter_700Bold' }]}>{t.trips}</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* White body — trip ledger for the selected period */}
+        <View style={{ paddingHorizontal: Spacing.lg }}>
+          <Text style={[styles.sectionTitle, { color: C_INK, fontFamily: 'Inter_800ExtraBold', textAlign: TA, marginTop: Spacing.xl }]}>{t.trips}</Text>
+          {ridesLoading ? (
+            <View style={{ paddingVertical: Spacing.lg, alignItems: 'center' }}>
+              <AppLoader />
+            </View>
+          ) : rides.length === 0 ? (
+            <View style={[styles.emptyCard, { alignItems: 'center' }]}>
+              <Text style={{ color: C_CAP, fontFamily: 'Inter_400Regular', fontSize: 13 }}>{t.no_trips_period}</Text>
+            </View>
+          ) : (
+            <View style={{ gap: 10 }}>
+              {rides.map(ride => (
+                <Pressable key={ride.id} onPress={() => handleTripPress(ride)}>
+                  <View style={[styles.tripCard, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.tripDate, { color: C_CAP, fontFamily: 'Inter_600SemiBold', textAlign: TA }]}>
+                        {new Date(ride.completedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      </Text>
+                      <Text style={[styles.tripAddress, { color: C_INK, fontFamily: 'Inter_700Bold', textAlign: TA }]} numberOfLines={1}>
+                        {ride.pickupAddress ?? '—'}
+                      </Text>
+                    </View>
+                    <Text style={[styles.tripFare, { color: C_INK, fontFamily: 'Inter_800ExtraBold' }]}>
+                      {toNum(ride.fare).toFixed(2)} {t.egp}
+                    </Text>
+                    <ChevronRight size={16} color={C_CAP} strokeWidth={2} style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined} />
+                  </View>
+                </Pressable>
+              ))}
+            </View>
+          )}
+        </View>
       </ScrollView>
-    </View>
-  );
-}
-
-function SplitRow({ icon, iconBg, label, amount, pct, colors, isRTL }: {
-  icon: React.ReactNode; iconBg: string; label: string; amount: string; pct: string;
-  colors: ReturnType<typeof useColors>; isRTL: boolean;
-}) {
-  const R = isRTL ? 'row-reverse' as const : 'row' as const;
-  const TA = isRTL ? 'right' as const : 'left' as const;
-  return (
-    <View style={[styles.earningsRow, { flexDirection: R }]}>
-      <View style={[styles.rowIcon, { backgroundColor: iconBg }]}>{icon}</View>
-      <Text style={[styles.rowLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', flex: 1, textAlign: TA }]}>{label}</Text>
-      <Text style={[styles.splitPct, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>{pct}</Text>
-      <Text style={[styles.rowValue, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{amount}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { alignItems: 'center', justifyContent: 'space-between' },
-  sectionLabel: { fontSize: 10, letterSpacing: 2, textTransform: 'uppercase' },
-  pageTitle: { fontSize: 24, marginTop: 2 },
-  cashOutBtn: { alignItems: 'center', gap: 6, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm },
-  cashOutText: { fontSize: Typography.size.xs },
-  heroCard: { marginTop: 20, borderRadius: Radius.xl, overflow: 'hidden', elevation: Shadows.large.elevation, shadowColor: '#2d2d42', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 16 },
-  heroGrad: { padding: 20, position: 'relative', overflow: 'hidden' },
-  heroBlobTop: { position: 'absolute', top: -32, right: -32, width: 128, height: 128, borderRadius: 64, backgroundColor: 'rgba(255,255,255,0.15)' },
-  heroContent: {},
-  heroLabel: { fontSize: 11, letterSpacing: 2, textTransform: 'uppercase' },
-  heroAmountRow: { alignItems: 'flex-end', gap: Spacing.sm, marginTop: Spacing.xs },
-  heroAmount: { fontSize: 48, lineHeight: 52 },
-  heroCurrency: { fontSize: 20, marginBottom: Spacing.xs },
-  sectionTitle: { fontSize: Typography.size.xs, letterSpacing: 2, textTransform: 'uppercase', marginTop: Spacing.xl, marginBottom: Spacing.md },
-  summaryCard: {},
-  summaryInner: { padding: Spacing.lg, gap: Spacing.md },
-  earningsRow: { alignItems: 'center', gap: Spacing.md },
-  rowIcon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  rowLabel: { fontSize: Typography.size.sm },
-  rowValue: { fontSize: Typography.size.sm },
-  splitPct: { fontSize: 12, marginRight: Spacing.xs },
-  splitBarTrack: { height: 8, borderRadius: 4, overflow: 'hidden' },
-  splitBarFill: { height: '100%', borderRadius: 4 },
-  divider: { height: 1, marginVertical: Spacing.xs },
-  periodChip: { paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm, borderRadius: 20 },
-  periodChipText: { fontSize: Typography.size.xs },
-  tripCard: { padding: Spacing.md, alignItems: 'center', gap: Spacing.sm },
+  hero: { backgroundColor: C_INK, paddingHorizontal: 22, paddingBottom: 22, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 },
+  heroCap: { fontSize: 10, letterSpacing: 1.6, textTransform: 'uppercase', color: C_CAP_ON_DARK },
+  segment: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,.08)', borderRadius: 14, padding: 4, marginTop: 12 },
+  segmentItem: { flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: 10 },
+  segmentItemActive: { backgroundColor: '#fff' },
+  segmentText: { fontSize: 10.5, color: C_CAP_ON_DARK },
+  segmentTextActive: { color: C_INK },
+  heroAmountCap: { fontSize: 10, letterSpacing: 1.6, textTransform: 'uppercase', color: C_CAP_ON_DARK, marginTop: 20 },
+  heroAmountRow: { alignItems: 'flex-end', gap: 8, marginTop: 2 },
+  heroAmount: { fontSize: 44, lineHeight: 48, color: '#fff' },
+  heroCurrency: { fontSize: 18, color: C_CAP_ON_DARK, marginBottom: 4 },
+  splitTrack: { height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,.12)', overflow: 'hidden', marginTop: 16 },
+  splitFill: { height: '100%', borderRadius: 3, backgroundColor: C_MINT },
+  heroStatsRow: { flexDirection: 'row', marginTop: 16 },
+  heroStatCell: { flex: 1, alignItems: 'center' },
+  heroStatValue: { fontSize: 16, color: '#fff' },
+  heroStatCap: { fontSize: 9, letterSpacing: 1, textTransform: 'uppercase', color: C_CAP_ON_DARK, marginTop: 2 },
+  heroDivider: { width: 1, backgroundColor: 'rgba(255,255,255,.12)' },
+  sectionTitle: { fontSize: 15, marginBottom: Spacing.md },
+  emptyCard: { padding: Spacing.lg, borderRadius: 20, backgroundColor: C_SURF },
+  tripCard: { padding: Spacing.md, alignItems: 'center', gap: Spacing.sm, backgroundColor: C_SURF, borderRadius: 16 },
   tripDate: { fontSize: 11 },
-  tripAddress: { fontSize: Typography.size.sm, marginTop: 2 },
-  tripFare: { fontSize: Typography.size.sm },
+  tripAddress: { fontSize: 13.5, marginTop: 2 },
+  tripFare: { fontSize: 13.5 },
 });
