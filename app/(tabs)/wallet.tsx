@@ -1,11 +1,9 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { ArrowDownLeft, ArrowUpRight } from 'lucide-react-native';
-import React, { useRef, useEffect, useState, useMemo } from 'react';
-import { ActivityIndicator, Animated, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
-import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { AppLoader } from '@/components/ui/AppLoader';
 import { useI18n } from '@/lib/i18nContext';
@@ -14,11 +12,18 @@ import {
   payoutStatusBadge, normalizeWalletBalance, extractList,
   normalizeSettledTransactions, type PayoutHistoryItem, type RawSettledTransaction,
 } from '@/lib/walletHelpers';
-import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
-import { Radius } from '@/constants/radius';
-import { Shadows } from '@/constants/shadows';
 import { TAB_BAR_HEIGHT_BASE } from '@/constants/tabBar';
+
+const C_BG = '#EEF0F2';
+const C_SURF = '#FFFFFF';
+const C_INK = '#14151A';
+const C_CAP = '#9AA0A6';
+const C_CAP_ON_DARK = '#8A9096';
+const C_TEAL = '#0E9F8E';
+const C_MINT = '#3DDC97';
+const C_AMBER = '#F5A623';
+const C_HAIR = '#EEF0F1';
 
 export default function WalletScreen() {
   const colors = useColors();
@@ -26,8 +31,6 @@ export default function WalletScreen() {
   const { t, isRTL } = useI18n();
   const topPad = insets.top;
   const tabBarHeight = TAB_BAR_HEIGHT_BASE + insets.bottom;
-
-  const R = isRTL ? 'row-reverse' as const : 'row' as const;
   const TA = isRTL ? 'right' as const : 'left' as const;
 
   const { data: balanceRaw, isLoading: balanceLoading, isError: balanceError, refetch: refetchBalance } = useQuery({
@@ -61,17 +64,9 @@ export default function WalletScreen() {
     setRefreshing(false);
   };
 
-  const heroAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (!balanceLoading) {
-      Animated.spring(heroAnim, { toValue: 1, useNativeDriver: true, stiffness: 200, damping: 20 }).start();
-    }
-  }, [balanceLoading]);
-
   if (isLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' }]}>
+      <View style={[styles.container, { backgroundColor: C_BG, alignItems: 'center', justifyContent: 'center' }]}>
         <AppLoader />
       </View>
     );
@@ -79,139 +74,130 @@ export default function WalletScreen() {
 
   if (isError) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center', gap: 16 }]}>
-        <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: Typography.size.sm }}>{t.wallet_load_fail}</Text>
-        <Pressable onPress={() => { refetchBalance(); refetchTx(); }} style={{ paddingHorizontal: 24, paddingVertical: 10, borderRadius: 20, backgroundColor: colors.secondary }}>
-          <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: Typography.size.sm }}>{t.retry_label}</Text>
+      <View style={[styles.container, { backgroundColor: C_BG, alignItems: 'center', justifyContent: 'center', gap: 16 }]}>
+        <Text style={{ color: C_CAP, fontFamily: 'Inter_400Regular', fontSize: 13 }}>{t.wallet_load_fail}</Text>
+        <Pressable onPress={() => { refetchBalance(); refetchTx(); }} style={{ paddingHorizontal: 24, paddingVertical: 10, borderRadius: 20, backgroundColor: C_INK }}>
+          <Text style={{ color: '#fff', fontFamily: 'Inter_700Bold', fontSize: 13 }}>{t.retry_label}</Text>
         </Pressable>
       </View>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: C_BG }]}>
       <ScrollView
-        contentContainerStyle={{ paddingTop: topPad + 8, paddingBottom: tabBarHeight + 24, paddingHorizontal: 20 }}
+        contentContainerStyle={{ paddingBottom: tabBarHeight + 24 }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
       >
-        <Text style={[styles.sectionLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.wallet}</Text>
-        <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.your_balance}</Text>
+        {/* Dark hero — balance, paid/pending stats, cash-out & deposit all embedded */}
+        <View style={[styles.hero, { paddingTop: topPad + 14 }]}>
+          <Text style={[styles.heroCap, { textAlign: TA, fontFamily: 'Inter_700Bold' }]}>{t.available}</Text>
+          <View style={[styles.balanceRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+            <Text style={[styles.balanceAmount, { fontFamily: 'Inter_800ExtraBold' }]}>{balanceData.balance.toFixed(0)}</Text>
+            <Text style={[styles.balanceCurrency, { fontFamily: 'Inter_700Bold' }]}>{t.egp}</Text>
+          </View>
 
-        {/* Hero balance card — same gradient identity as the Earnings hero */}
-        <Animated.View style={[{ marginTop: 20, opacity: heroAnim, transform: [{ translateY: heroAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
-          <LinearGradient colors={colors.gradientEarnings} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.balanceCard}>
-            <View style={styles.balanceBlob} />
-            <Text style={[styles.availableLabel, { color: colors.primaryForeground + 'CC', fontFamily: 'Inter_700Bold', textAlign: TA }]}>{t.available}</Text>
-            <View style={[styles.balanceRow, { flexDirection: R }]}>
-              <Text style={[styles.balanceAmount, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>{balanceData.balance.toFixed(2)}</Text>
-              <Text style={[styles.balanceCurrency, { color: colors.primaryForeground + 'CC', fontFamily: 'Inter_700Bold' }]}>{t.egp}</Text>
+          <View style={styles.heroStatsRow}>
+            <View style={styles.heroStatCell}>
+              <Text style={[styles.heroStatValue, { color: C_MINT, fontFamily: 'Inter_800ExtraBold' }]}>{balanceData.totalPaid.toFixed(0)}</Text>
+              <Text style={[styles.heroStatCap, { fontFamily: 'Inter_700Bold' }]}>{t.status_paid_out}</Text>
             </View>
-
-            {/* Balance status — paid out vs still pending, from the same balance response */}
-            <View style={[styles.balanceStatusRow, { flexDirection: R }]}>
-              <Text style={[styles.balanceStatusText, { color: colors.primaryForeground + 'CC', fontFamily: 'Inter_600SemiBold' }]}>
-                {t.status_paid_out}: {balanceData.totalPaid.toFixed(2)} {t.egp}
-              </Text>
-              <View style={[styles.balanceStatusDot, { backgroundColor: colors.primaryForeground + '66' }]} />
-              <Text style={[styles.balanceStatusText, { color: colors.primaryForeground + 'CC', fontFamily: 'Inter_600SemiBold' }]}>
-                {t.status_pending}: {balanceData.totalPending.toFixed(2)} {t.egp}
-              </Text>
+            <View style={styles.heroDivider} />
+            <View style={styles.heroStatCell}>
+              <Text style={[styles.heroStatValue, { fontFamily: 'Inter_800ExtraBold' }]}>{balanceData.totalPending.toFixed(0)}</Text>
+              <Text style={[styles.heroStatCap, { fontFamily: 'Inter_700Bold' }]}>{t.status_pending}</Text>
             </View>
+          </View>
 
-            <View style={[styles.actionRow, { flexDirection: R }]}>
-              <Pressable onPress={() => router.push('/wallet-withdraw')} style={({ pressed }) => [styles.primaryAction, { opacity: pressed ? 0.9 : 1 }]}>
-                <View style={[styles.actionGrad, { flexDirection: R, backgroundColor: colors.background }]}>
-                  <ArrowDownLeft size={16} color={colors.foreground} strokeWidth={2} />
-                  <Text style={[styles.actionText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.cash_out}</Text>
-                </View>
-              </Pressable>
-              <Pressable onPress={() => router.push('/wallet-deposit')} style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.8 : 1 }]}>
-                <View style={[styles.secondaryAction, { flexDirection: R, backgroundColor: colors.primaryForeground + '1F', borderColor: colors.primaryForeground + '33' }]}>
-                  <ArrowUpRight size={16} color={colors.primaryForeground} strokeWidth={2} />
-                  <Text style={[styles.actionText, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>{t.deposit_label}</Text>
-                </View>
-              </Pressable>
+          <View style={[styles.actionRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+            <Pressable onPress={() => router.push('/wallet-withdraw')} style={({ pressed }) => [styles.primaryAction, { opacity: pressed ? 0.9 : 1 }]}>
+              <ArrowDownLeft size={16} color={C_INK} strokeWidth={2} />
+              <Text style={[styles.primaryActionText, { fontFamily: 'Inter_800ExtraBold' }]}>{t.cash_out}</Text>
+            </Pressable>
+            <Pressable onPress={() => router.push('/wallet-deposit')} style={({ pressed }) => [styles.secondaryAction, { opacity: pressed ? 0.8 : 1 }]}>
+              <ArrowUpRight size={16} color="#fff" strokeWidth={2} />
+              <Text style={[styles.secondaryActionText, { fontFamily: 'Inter_800ExtraBold' }]}>{t.deposit_label}</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        {/* White body */}
+        <View style={{ paddingHorizontal: Spacing.lg }}>
+          <Text style={[styles.sectionTitle, { color: C_INK, fontFamily: 'Inter_800ExtraBold', textAlign: TA, marginTop: Spacing.xl }]}>{t.payout_history_label}</Text>
+          {historyLoading ? (
+            <View style={[styles.emptyCard, { alignItems: 'center' }]}>
+              <ActivityIndicator color={C_INK} />
             </View>
-          </LinearGradient>
-        </Animated.View>
-
-        <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', marginTop: Spacing.xl, marginBottom: Spacing.md, textAlign: TA }]}>{t.payout_history_label}</Text>
-        {historyLoading ? (
-          <GlassView borderRadius={16} style={{ padding: Spacing.xl, alignItems: 'center' }}>
-            <ActivityIndicator color={colors.primary} />
-          </GlassView>
-        ) : historyError ? (
-          <GlassView borderRadius={16} style={{ padding: Spacing.xl, alignItems: 'center' }}>
-            <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13 }}>{t.payout_history_load_err}</Text>
-          </GlassView>
-        ) : payoutHistory.length === 0 ? (
-          <GlassView borderRadius={16} style={{ padding: Spacing.xl, alignItems: 'center' }}>
-            <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13 }}>{t.payout_history_empty}</Text>
-          </GlassView>
-        ) : (
-          <GlassView borderRadius={16}>
-            {payoutHistory.map((item, i) => {
-              const badge = payoutStatusBadge(item.status, colors, t);
-              return (
-                <View key={item.id} style={[styles.txItem, { flexDirection: R }, i > 0 && { borderTopWidth: 1, borderTopColor: colors.divider }]}>
-                  <View style={[styles.txIcon, { backgroundColor: colors.secondary }]}>
-                    <ArrowUpRight size={16} color={colors.mutedForeground} strokeWidth={2} />
-                  </View>
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={[styles.txTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]} numberOfLines={1}>
-                      {item.accountName ?? item.method}{item.maskedAccountNumber ? ` — ${item.maskedAccountNumber}` : ''}
-                    </Text>
-                    <Text style={[styles.txSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]} numberOfLines={1}>
-                      {new Date(item.createdAt).toLocaleDateString(isRTL ? 'ar-EG' : 'en-EG')}
-                    </Text>
-                  </View>
-                  <View style={{ alignItems: isRTL ? 'flex-start' : 'flex-end', gap: Spacing.xs }}>
-                    <Text style={[styles.txAmount, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-                      {item.amount.toFixed(2)} {t.egp}
-                    </Text>
-                    <View style={[styles.statusPill, { backgroundColor: badge.color + '1A' }]}>
-                      <Text style={[styles.statusPillText, { color: badge.color, fontFamily: 'Inter_700Bold' }]}>{badge.label}</Text>
+          ) : historyError ? (
+            <View style={[styles.emptyCard, { alignItems: 'center' }]}>
+              <Text style={{ color: C_CAP, fontFamily: 'Inter_400Regular', fontSize: 13 }}>{t.payout_history_load_err}</Text>
+            </View>
+          ) : payoutHistory.length === 0 ? (
+            <View style={[styles.emptyCard, { alignItems: 'center' }]}>
+              <Text style={{ color: C_CAP, fontFamily: 'Inter_400Regular', fontSize: 13 }}>{t.payout_history_empty}</Text>
+            </View>
+          ) : (
+            <View style={styles.listCard}>
+              {payoutHistory.map((item, i) => {
+                const badge = payoutStatusBadge(item.status, colors, t);
+                return (
+                  <View key={item.id} style={[styles.txItem, { flexDirection: isRTL ? 'row-reverse' : 'row' }, i > 0 && styles.txItemBorder]}>
+                    <View style={styles.txIcon}>
+                      <ArrowUpRight size={15} color={C_INK} strokeWidth={2} />
+                    </View>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={[styles.txTitle, { color: C_INK, fontFamily: 'Inter_700Bold', textAlign: TA }]} numberOfLines={1}>
+                        {item.accountName ?? item.method}{item.maskedAccountNumber ? ` — ${item.maskedAccountNumber}` : ''}
+                      </Text>
+                      <Text style={[styles.txSub, { color: C_CAP, fontFamily: 'Inter_400Regular', textAlign: TA }]} numberOfLines={1}>
+                        {new Date(item.createdAt).toLocaleDateString(isRTL ? 'ar-EG' : 'en-EG')}
+                      </Text>
+                    </View>
+                    <View style={{ alignItems: isRTL ? 'flex-start' : 'flex-end', gap: 4 }}>
+                      <Text style={[styles.txAmount, { color: C_INK, fontFamily: 'Inter_800ExtraBold' }]}>
+                        {item.amount.toFixed(2)} {t.egp}
+                      </Text>
+                      <Text style={[styles.statusText, { color: badge.color, fontFamily: 'Inter_800ExtraBold' }]}>{badge.label}</Text>
                     </View>
                   </View>
-                </View>
-              );
-            })}
-          </GlassView>
-        )}
+                );
+              })}
+            </View>
+          )}
 
-        <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', marginTop: Spacing.xl, marginBottom: Spacing.md, textAlign: TA }]}>{t.transactions_label}</Text>
-        {txs.length === 0 ? (
-          <GlassView borderRadius={16} style={{ padding: Spacing.xl, alignItems: 'center' }}>
-            <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 13 }}>{t.no_transactions_yet}</Text>
-          </GlassView>
-        ) : (
-          <GlassView borderRadius={16}>
-            {txs.map((tx, i) => {
-              // Debits (payouts/commission) use warning (amber), not destructive
-              // (red) — they're routine outflows, not error states.
-              const txColor = tx.isCredit ? colors.success : colors.warning;
-              return (
-                <View key={tx.id} style={[styles.txItem, { flexDirection: R }, i > 0 && { borderTopWidth: 1, borderTopColor: colors.divider }]}>
-                  <View style={[styles.txIcon, { backgroundColor: txColor + '1A' }]}>
-                    {tx.isCredit
-                      ? <ArrowDownLeft size={16} color={txColor} strokeWidth={2} />
-                      : <ArrowUpRight size={16} color={txColor} strokeWidth={2} />
-                    }
+          <Text style={[styles.sectionTitle, { color: C_INK, fontFamily: 'Inter_800ExtraBold', textAlign: TA, marginTop: Spacing.xl }]}>{t.transactions_label}</Text>
+          {txs.length === 0 ? (
+            <View style={[styles.emptyCard, { alignItems: 'center' }]}>
+              <Text style={{ color: C_CAP, fontFamily: 'Inter_400Regular', fontSize: 13 }}>{t.no_transactions_yet}</Text>
+            </View>
+          ) : (
+            <View style={styles.listCard}>
+              {txs.map((tx, i) => {
+                const txColor = tx.isCredit ? C_TEAL : C_AMBER;
+                const txBg = tx.isCredit ? '#DDF4EB' : '#FFF1DC';
+                return (
+                  <View key={tx.id} style={[styles.txItem, { flexDirection: isRTL ? 'row-reverse' : 'row' }, i > 0 && styles.txItemBorder]}>
+                    <View style={[styles.txIcon, { backgroundColor: txBg }]}>
+                      {tx.isCredit
+                        ? <ArrowDownLeft size={15} color={txColor} strokeWidth={2} />
+                        : <ArrowUpRight size={15} color={txColor} strokeWidth={2} />
+                      }
+                    </View>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={[styles.txTitle, { color: C_INK, fontFamily: 'Inter_700Bold', textAlign: TA }]} numberOfLines={1}>{tx.title}</Text>
+                      <Text style={[styles.txSub, { color: C_CAP, fontFamily: 'Inter_400Regular', textAlign: TA }]} numberOfLines={1}>{tx.subtitle}</Text>
+                    </View>
+                    <Text style={[styles.txAmount, { color: txColor, fontFamily: 'Inter_800ExtraBold' }]}>
+                      {tx.isCredit ? '+' : '−'}{tx.amount.toFixed(2)} {t.egp}
+                    </Text>
                   </View>
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={[styles.txTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]} numberOfLines={1}>{tx.title}</Text>
-                    <Text style={[styles.txSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]} numberOfLines={1}>{tx.subtitle}</Text>
-                  </View>
-                  <Text style={[styles.txAmount, { color: txColor, fontFamily: 'Inter_700Bold' }]}>
-                    {tx.isCredit ? '+' : '−'}{tx.amount.toFixed(2)} {t.egp}
-                  </Text>
-                </View>
-              );
-            })}
-          </GlassView>
-        )}
+                );
+              })}
+            </View>
+          )}
+        </View>
       </ScrollView>
     </View>
   );
@@ -219,28 +205,29 @@ export default function WalletScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  sectionLabel: { fontSize: 10, letterSpacing: 2, textTransform: 'uppercase' },
-  pageTitle: { fontSize: 24, marginTop: 2 },
-  balanceCard: { borderRadius: Radius.xl, padding: 20, overflow: 'hidden', elevation: Shadows.large.elevation, shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 20 },
-  balanceBlob: { position: 'absolute', top: -24, right: -24, width: 128, height: 128, borderRadius: 64, backgroundColor: 'rgba(255,255,255,0.12)' },
-  availableLabel: { fontSize: 10, letterSpacing: 2, textTransform: 'uppercase' },
-  balanceRow: { alignItems: 'flex-end', gap: Spacing.sm, marginTop: Spacing.xs },
-  balanceAmount: { fontSize: 48, lineHeight: 52 },
-  balanceCurrency: { fontSize: 20, marginBottom: Spacing.xs },
-  balanceStatusRow: { alignItems: 'center', gap: Spacing.sm, marginTop: Spacing.sm },
-  balanceStatusText: { fontSize: 11 },
-  balanceStatusDot: { width: 3, height: 3, borderRadius: 1.5 },
-  actionRow: { gap: Spacing.sm, marginTop: 20 },
-  primaryAction: { flex: 1, height: 48, borderRadius: Radius.lg, overflow: 'hidden' },
-  actionGrad: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
-  secondaryAction: { height: 48, borderRadius: Radius.lg, borderWidth: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
-  actionText: { fontSize: Typography.size.sm },
-  sectionTitle: { fontSize: Typography.size.xs, letterSpacing: 2, textTransform: 'uppercase' },
-  statusPill: { paddingHorizontal: Spacing.sm, paddingVertical: 3, borderRadius: 999 },
-  statusPillText: { fontSize: 10, letterSpacing: 0.5, textTransform: 'uppercase' },
+  hero: { backgroundColor: C_INK, paddingHorizontal: 22, paddingBottom: 22, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 },
+  heroCap: { fontSize: 10, letterSpacing: 1.6, textTransform: 'uppercase', color: C_CAP_ON_DARK },
+  balanceRow: { alignItems: 'flex-end', gap: 8, marginTop: 2 },
+  balanceAmount: { fontSize: 44, lineHeight: 48, color: '#fff' },
+  balanceCurrency: { fontSize: 18, color: C_CAP_ON_DARK, marginBottom: 4 },
+  heroStatsRow: { flexDirection: 'row', marginTop: 18 },
+  heroStatCell: { flex: 1, alignItems: 'center' },
+  heroStatValue: { fontSize: 15, color: '#fff' },
+  heroStatCap: { fontSize: 9, letterSpacing: 1, textTransform: 'uppercase', color: C_CAP_ON_DARK, marginTop: 2 },
+  heroDivider: { width: 1, backgroundColor: 'rgba(255,255,255,.12)' },
+  actionRow: { gap: 10, marginTop: 20 },
+  primaryAction: { flex: 1, height: 48, borderRadius: 14, backgroundColor: '#fff', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  primaryActionText: { fontSize: 13.5, color: C_INK },
+  secondaryAction: { flex: 1, height: 48, borderRadius: 14, backgroundColor: 'rgba(255,255,255,.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,.16)', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  secondaryActionText: { fontSize: 13.5, color: '#fff' },
+  sectionTitle: { fontSize: 15, marginBottom: Spacing.md },
+  emptyCard: { padding: Spacing.xl, borderRadius: 16, backgroundColor: C_SURF },
+  listCard: { backgroundColor: C_SURF, borderRadius: 16, overflow: 'hidden' },
   txItem: { alignItems: 'center', gap: Spacing.md, padding: Spacing.lg },
-  txIcon: { width: 40, height: 40, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
-  txTitle: { fontSize: Typography.size.sm },
-  txSub: { fontSize: Typography.size.xs, marginTop: 2 },
-  txAmount: { fontSize: Typography.size.sm },
+  txItemBorder: { borderTopWidth: 1, borderTopColor: C_HAIR },
+  txIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: C_HAIR },
+  txTitle: { fontSize: 13.5 },
+  txSub: { fontSize: 11.5, marginTop: 2 },
+  txAmount: { fontSize: 13.5 },
+  statusText: { fontSize: 10, letterSpacing: 0.5, textTransform: 'uppercase' },
 });
