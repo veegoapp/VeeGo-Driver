@@ -318,6 +318,8 @@ export const ar: Translations = {
   accept_trip: 'قبول الرحلة',
   youre_online: 'متصل · جاهز للرحلات',
   youre_offline: 'غير متصل',
+  receiving_assignments: 'تستقبل رحلات الباص',
+  not_receiving_assignments: 'لا تستقبل رحلات جديدة',
   this_week: 'هذا الأسبوع',
   this_month: 'هذا الشهر',
   cash_out: 'سحب نقدي',

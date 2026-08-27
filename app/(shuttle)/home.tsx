@@ -1,5 +1,4 @@
 import { showAlert } from '@/lib/alert';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { AlertTriangle, ArrowRight, Bell, Calendar, ChevronRight, Clock, GitBranch, Navigation, RefreshCw, Users, Wifi, WifiOff, X } from 'lucide-react-native';
 import { useLocationBroadcast } from '@/hooks/useLocationBroadcast';
@@ -7,10 +6,8 @@ import { setActiveShuttleTripId } from '@/lib/backgroundLocationTask';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Animated,
   Easing,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -19,7 +16,6 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
-import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
@@ -30,14 +26,23 @@ import { useSocket } from '@/lib/socketContext';
 import { useServiceControl } from '@/lib/serviceControlContext';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
 import { computeDeadlineMinutes, type CheckinRequiredPayload } from '@/lib/checkinDeadline';
-import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
-import { Radius } from '@/constants/radius';
-import { Shadows } from '@/constants/shadows';
 import { TAB_BAR_HEIGHT_BASE } from '@/constants/tabBar';
 import { UpcomingTripCard } from '@/components/UpcomingTripCard';
-import { StatItem } from '@/components/StatItem';
 import { useActiveSession } from '@/lib/activeSessionContext';
+
+const C_BG = '#EEF0F2';
+const C_SURF = '#FFFFFF';
+const C_INK = '#14151A';
+const C_INK_SOFT = '#6B7178';
+const C_CAP = '#9AA0A6';
+const C_CAP_ON_DARK = '#8A9096';
+const C_TEAL = '#0E9F8E';
+const C_MINT = '#3DDC97';
+const C_AMBER = '#F5A623';
+const C_RED = '#D92D20';
+const C_TRACK = '#F0F2F3';
+const C_TILE = '#F6F7F8';
 
 export default function ShuttleHomeScreen() {
   const colors = useColors();
@@ -56,8 +61,6 @@ export default function ShuttleHomeScreen() {
   // DRIVER_CHECKIN_REQUIRED event and the checkin-status poll fire for the same prompt.
   const checkinPromptedRef = useRef(false);
 
-  const pulseScale = useRef(new Animated.Value(0.8)).current;
-  const pulseOpacity = useRef(new Animated.Value(0.8)).current;
   const cardAnim = useRef(new Animated.Value(0)).current;
 
   const { socket, connected: socketConnected } = useSocket();
@@ -262,24 +265,6 @@ export default function ShuttleHomeScreen() {
     Animated.spring(cardAnim, { toValue: 1, stiffness: 200, damping: 20, useNativeDriver: true }).start();
   }, []);
 
-  useEffect(() => {
-    if (!online) return;
-    const pulse = Animated.loop(
-      Animated.sequence([
-        Animated.parallel([
-          Animated.timing(pulseScale, { toValue: 2.2, duration: 2000, easing: Easing.out(Easing.ease), useNativeDriver: true }),
-          Animated.timing(pulseOpacity, { toValue: 0, duration: 2000, easing: Easing.out(Easing.ease), useNativeDriver: true }),
-        ]),
-        Animated.parallel([
-          Animated.timing(pulseScale, { toValue: 0.8, duration: 0, useNativeDriver: true }),
-          Animated.timing(pulseOpacity, { toValue: 0.8, duration: 0, useNativeDriver: true }),
-        ]),
-      ])
-    );
-    pulse.start();
-    return () => pulse.stop();
-  }, [online]);
-
   // Fix 2: handle navigation to active trip — block if check-in is still pending
   const handleNavigateToActiveTrip = () => {
     if (shuttleCheckinRequired) {
@@ -327,512 +312,476 @@ export default function ShuttleHomeScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: C_BG }]}>
       <ScrollView
-        contentContainerStyle={{ paddingTop: topPad + 8, paddingBottom: tabBarHeight + 24, paddingHorizontal: Spacing.lg }}
+        contentContainerStyle={{ paddingBottom: tabBarHeight + 24 }}
         showsVerticalScrollIndicator={false}
         style={{ flex: 1 }}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <View>
-            <Text style={[styles.greeting, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>
-              {t.good_morning},
-            </Text>
-            <Text style={[styles.driverName, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
-              {(driverData?.name ?? '—').split(' ')[0]}
-            </Text>
-          </View>
-          <View style={styles.headerRight}>
-            <Pressable style={styles.iconBtn} onPress={() => router.push('/messages')}>
-              <GlassView style={styles.iconBtnGlass} borderRadius={20}>
-                <Bell size={18} color={colors.foreground} strokeWidth={2} />
+        {/* Dark hero — greeting + online toggle + stats, one persistent panel */}
+        <View style={[styles.hero, { paddingTop: topPad + 14 }]}>
+          <View style={styles.heroTop}>
+            <View>
+              <Text style={[styles.greeting, { color: C_CAP_ON_DARK, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
+                {t.good_morning},
+              </Text>
+              <Text style={[styles.driverName, { fontFamily: 'Inter_800ExtraBold', textAlign: TA }]}>
+                {(driverData?.name ?? '—').split(' ')[0]}
+              </Text>
+            </View>
+            <View style={styles.headerRight}>
+              <Pressable style={styles.iconBtn} onPress={() => router.push('/messages')}>
+                <Bell size={16} color="#fff" strokeWidth={2} />
                 {unreadCount > 0 && (
-                  <View style={[styles.notifDot, { backgroundColor: colors.destructive }]}>
+                  <View style={[styles.notifDot, { backgroundColor: C_RED }]}>
                     <Text style={styles.notifDotText}>{unreadCount > 9 ? '9+' : String(unreadCount)}</Text>
                   </View>
                 )}
-              </GlassView>
-            </Pressable>
-            <GlassView style={[styles.serviceChip, { borderColor: '#1e1e2833' }]} borderRadius={20}>
-              <View style={[styles.serviceChipDot, { backgroundColor: '#1e1e28' }]} />
-              <Text style={[styles.serviceChipText, { color: '#1e1e28', fontFamily: 'Inter_700Bold' }]}>{t.shuttle.toUpperCase()}</Text>
-            </GlassView>
+              </Pressable>
+              <View style={styles.serviceChip}>
+                <View style={[styles.serviceChipDot, { backgroundColor: C_MINT }]} />
+                <Text style={[styles.serviceChipText, { fontFamily: 'Inter_800ExtraBold' }]}>{t.shuttle.toUpperCase()}</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Online toggle — visible and functional in both online/offline states */}
+          <Pressable
+            onPress={toggleOnline}
+            disabled={onlineLoading}
+            style={({ pressed }) => [styles.togglePill, { opacity: pressed ? 0.9 : 1 }]}
+          >
+            <View style={[styles.toggleIconWrap, { backgroundColor: online ? C_MINT : 'rgba(255,255,255,.12)' }]}>
+              {onlineLoading ? (
+                <ActivityIndicator size="small" color={online ? C_INK : '#fff'} />
+              ) : online ? (
+                <Wifi size={17} color={C_INK} strokeWidth={2.2} />
+              ) : (
+                <WifiOff size={17} color="#fff" strokeWidth={2.2} />
+              )}
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.toggleTitle, { fontFamily: 'Inter_800ExtraBold', textAlign: TA }]}>
+                {online ? t.youre_online.split('·')[0].trim() : t.youre_offline}
+              </Text>
+              <Text style={[styles.toggleSub, { color: C_CAP_ON_DARK, fontFamily: 'Inter_600SemiBold', textAlign: TA }]}>
+                {online ? t.receiving_assignments : t.not_receiving_assignments}
+              </Text>
+            </View>
+            <View style={[styles.switchTrack, { backgroundColor: online ? C_MINT : 'rgba(255,255,255,.14)' }]}>
+              <View style={[styles.switchThumb, {
+                backgroundColor: online ? C_INK : '#fff',
+                alignSelf: online ? 'flex-end' : 'flex-start',
+              }]} />
+            </View>
+          </Pressable>
+
+          {/* Stats embedded directly in the hero */}
+          <View style={styles.heroStatsRow}>
+            <View style={styles.heroStatCell}>
+              <Text style={[styles.heroStatValue, { fontFamily: 'Inter_800ExtraBold' }]}>{completedCount}</Text>
+              <Text style={[styles.heroStatCap, { fontFamily: 'Inter_700Bold' }]}>{t.trips_stat}</Text>
+            </View>
+            <View style={styles.heroDivider} />
+            <View style={styles.heroStatCell}>
+              <Text style={[styles.heroStatValue, { fontFamily: 'Inter_800ExtraBold' }]}>{routes.length}</Text>
+              <Text style={[styles.heroStatCap, { fontFamily: 'Inter_700Bold' }]}>{t.routes}</Text>
+            </View>
+            <View style={styles.heroDivider} />
+            <View style={styles.heroStatCell}>
+              <Text style={[styles.heroStatValue, { color: C_MINT, fontFamily: 'Inter_800ExtraBold' }]}>
+                {todayEarnings} {isRTL ? currency.symbolAr : currency.symbol}
+              </Text>
+              <Text style={[styles.heroStatCap, { fontFamily: 'Inter_700Bold' }]}>{t.net_earnings}</Text>
+            </View>
+            <View style={styles.heroDivider} />
+            <View style={styles.heroStatCell}>
+              <Text style={[styles.heroStatValue, { fontFamily: 'Inter_800ExtraBold' }]}>
+                {allLines.filter(l => l.status === 'in-progress').length}
+              </Text>
+              <Text style={[styles.heroStatCap, { fontFamily: 'Inter_700Bold' }]}>{t.active}</Text>
+            </View>
           </View>
         </View>
 
-        {/* Online toggle row — shown only when driver is online */}
-        {online && (
-          <View style={styles.onlineRow}>
-            <View style={styles.pulseWrap}>
-              <Animated.View style={[styles.pulseRing, {
-                backgroundColor: '#1e1e2840',
-                transform: [{ scale: pulseScale }],
-                opacity: pulseOpacity,
-              }]} />
-              <Pressable
-                onPress={toggleOnline}
-                disabled={onlineLoading}
-                style={({ pressed }) => [styles.onlineBtn, { transform: [{ scale: pressed ? 0.95 : 1 }] }]}
-              >
-                <LinearGradient colors={['#2d2d42', '#1e1e28']} style={styles.onlineBtnGrad}>
-                  <Wifi size={20} color="#fff" strokeWidth={2} />
-                </LinearGradient>
-              </Pressable>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.onlineStatus, { color: '#2d2d42', fontFamily: 'Inter_700Bold', textAlign: TA }]}>
-                {`${t.online_status} — ${t.shuttle_service}`}
-              </Text>
-              <Text style={[styles.onlineSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>
-                {t.live}
-              </Text>
-            </View>
-          </View>
-        )}
-
-        {/* Fix 2: check-in pending banner */}
-        {!!shuttleCheckinRequired && (
-          <Pressable
-            onPress={() =>
-              router.push({
-                pathname: '/selfie',
-                params: {
-                  tripId: shuttleCheckinRequired.tripId,
-                  deadlineMinutes: String(shuttleCheckinRequired.deadlineMinutes),
-                },
-              })
-            }
-            style={[styles.cancelBanner, { backgroundColor: '#FFF7ED', borderColor: '#FED7AA' }]}
-          >
-            <AlertTriangle size={16} color="#D97706" strokeWidth={2} />
-            <Text style={[styles.cancelBannerText, { color: '#92400E', fontFamily: 'Inter_600SemiBold', flex: 1 }]}>
-              {t.checkin_required_banner}
-            </Text>
-          </Pressable>
-        )}
-
-        {/* Auto-cancelled trip banner */}
-        {!!tripCancelledBanner && (
-          <View style={[styles.cancelBanner, { backgroundColor: '#FEF2F2', borderColor: '#FCA5A5' }]}>
-            <AlertTriangle size={16} color="#DC2626" strokeWidth={2} />
-            <Text style={[styles.cancelBannerText, { color: '#DC2626', fontFamily: 'Inter_600SemiBold', flex: 1 }]}>
-              {tripCancelledBanner}
-            </Text>
-            <Pressable onPress={dismissTripCancelledBanner} hitSlop={8}>
-              <X size={16} color="#DC2626" strokeWidth={2} />
-            </Pressable>
-          </View>
-        )}
-
-        {/* Booking cancelled / reassigned banner (SHUTTLE_BOOKING_CANCELLED vs SHUTTLE_BOOKING_REASSIGNED) */}
-        {!!bookingStatusBanner && (
-          bookingStatusBanner.type === 'cancelled' ? (
-            <View style={[styles.cancelBanner, { backgroundColor: '#FEF2F2', borderColor: '#FCA5A5' }]}>
-              <AlertTriangle size={16} color="#DC2626" strokeWidth={2} />
-              <Text style={[styles.cancelBannerText, { color: '#DC2626', fontFamily: 'Inter_600SemiBold', flex: 1 }]}>
-                {bookingStatusBanner.message}
-              </Text>
-              <Pressable onPress={dismissBookingStatusBanner} hitSlop={8}>
-                <X size={16} color="#DC2626" strokeWidth={2} />
-              </Pressable>
-            </View>
-          ) : (
-            <View style={[styles.cancelBanner, { backgroundColor: '#EFF6FF', borderColor: '#93C5FD' }]}>
-              <RefreshCw size={16} color="#2563EB" strokeWidth={2} />
-              <Text style={[styles.cancelBannerText, { color: '#1D4ED8', fontFamily: 'Inter_600SemiBold', flex: 1 }]}>
-                {bookingStatusBanner.message}
-              </Text>
-              <Pressable onPress={dismissBookingStatusBanner} hitSlop={8}>
-                <X size={16} color="#2563EB" strokeWidth={2} />
-              </Pressable>
-            </View>
-          )
-        )}
-
-        {/* Renewal banner */}
-        {renewalBooking && renewalCountdown.length > 0 && (
-          <GlassView style={[styles.renewalCard, { borderColor: '#F59E0B55', borderWidth: 1 }]} borderRadius={16}>
-            <View style={[styles.renewalIconWrap, { backgroundColor: '#F59E0B20' }]}>
-              <AlertTriangle size={18} color="#D97706" strokeWidth={2} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.renewalTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-                {t.renew_weekly_slot}
-              </Text>
-              <Text style={[styles.renewalRoute, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]} numberOfLines={1}>
-                {renewalBooking.routeName} · {renewalBooking.departureTime}
-              </Text>
-              <Text style={[styles.renewalCountdown, { color: '#D97706', fontFamily: 'Inter_700Bold' }]}>
-                ⏱ {renewalCountdown} {t.remaining}
-              </Text>
-            </View>
-            <Pressable
-              onPress={() => renewalMutation.mutate(renewalBooking.id)}
-              disabled={renewalMutation.isPending}
-              style={[styles.renewalBtn, { backgroundColor: '#F59E0B' }]}
-            >
-              {renewalMutation.isPending ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <RefreshCw size={14} color="#fff" strokeWidth={2} />
-              )}
-            </Pressable>
-          </GlassView>
-        )}
-
-        {/* Stats row */}
-        <GlassView strong style={styles.statsRow} borderRadius={20}>
-          <StatItem label={t.trips_stat} value={String(completedCount)} colors={colors} />
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <StatItem label={t.routes} value={String(routes.length)} colors={colors} />
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <StatItem label={t.net_earnings} value={`${todayEarnings} ${isRTL ? currency.symbolAr : currency.symbol}`} highlight colors={colors} />
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <StatItem label={t.active} value={String(allLines.filter(l => l.status === 'in-progress').length)} colors={colors} />
-        </GlassView>
-
-        {/* Active trip card — shown regardless of the online toggle: this is
-            the only entry point back into the active-trip screen, and going
-            offline mid-trip must not hide it. */}
-        {activeLine && (
-          <Animated.View style={[{ marginTop: Spacing.lg, opacity: cardAnim, transform: [{ translateY: cardAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
-            <GlassView strong style={[styles.activeCard, { borderColor: '#1e1e2833' }]} borderRadius={24}>
-              <View style={styles.activeCardHeader}>
-                <View style={styles.livePill}>
-                  <View style={[styles.liveDot, { backgroundColor: '#1e1e28' }]} />
-                  <Text style={[styles.liveText, { color: '#1e1e28', fontFamily: 'Inter_700Bold' }]}>{t.live}</Text>
-                </View>
-                <Text style={[styles.lineNumber, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>
-                  {activeLine.lineNumber}
-                </Text>
-              </View>
-              <Text style={[styles.activeLineName, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-                {activeLine.name}
-              </Text>
-              <Text style={[styles.activeLineRoute, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-                {activeLine.from} → {activeLine.to}
-              </Text>
-              <View style={styles.seatRow}>
-                {activeLine.vehicleType !== 'Unknown' && (
-                  <View style={[styles.vehicleBadge, { backgroundColor: '#1e1e2815', borderColor: '#1e1e2830' }]}>
-                    <Text style={[styles.vehicleBadgeText, { color: '#2d2d42', fontFamily: 'Inter_700Bold' }]}>
-                      {activeLine.vehicleType}
-                    </Text>
-                  </View>
-                )}
-                <View style={[styles.seatBadge, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
-                  <Users size={12} color={colors.mutedForeground} strokeWidth={2} />
-                  <Text style={[styles.seatBadgeText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-                    {activeLine.bookedSeats} {t.home_of} {activeLine.totalSeats}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.progressWrap}>
-                <View style={[styles.progressTrack, { backgroundColor: colors.secondary }]}>
-                  <LinearGradient
-                    colors={['#2d2d42', '#1e1e28']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={[styles.progressFill, { width: `${Math.round(progress * 100)}%` as any }]}
-                  />
-                </View>
-                <Text style={[styles.progressPct, { color: '#2d2d42', fontFamily: 'Inter_700Bold' }]}>
-                  {Math.round(progress * 100)}%
-                </Text>
-              </View>
-
-              <View style={styles.stopRow}>
-                <View style={styles.stopBox}>
-                  <View style={[styles.stopDotCurrent, { backgroundColor: colors.accent }]} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.stopBoxLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>{t.active.toUpperCase()}</Text>
-                    <Text style={[styles.stopBoxName, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]} numberOfLines={1}>{currentStop?.name ?? '—'}</Text>
-                    <Text style={[styles.stopBoxMeta, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{currentStop ? `${currentStop.boarded}/${currentStop.expected} ${t.home_boarded}` : '—'}</Text>
-                  </View>
-                </View>
-                <View style={[styles.stopArrow, { backgroundColor: colors.secondary }]}>
-                  <ArrowRight size={14} color={colors.mutedForeground} strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
-                </View>
-                <View style={styles.stopBox}>
-                  <View style={[styles.stopDotNext, { borderColor: '#1e1e28' }]} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.stopBoxLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>{t.next_departure.toUpperCase()}</Text>
-                    <Text style={[styles.stopBoxName, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]} numberOfLines={1}>{nextStop?.name ?? '—'}</Text>
-                    <Text style={[styles.stopBoxMeta, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{nextStop ? `${t.home_eta} ${nextStop.eta}` : '—'}</Text>
-                  </View>
-                </View>
-              </View>
-
-              <View style={styles.dotsRow}>
-                {stops.map((stop, i) => (
-                  <View key={stop.id} style={styles.dotItem}>
-                    <View style={[styles.dot, {
-                      backgroundColor: i < currentStopIndex ? '#1e1e28' : i === currentStopIndex ? colors.accent : colors.secondary,
-                    }]} />
-                    {i < stops.length - 1 && (
-                      <View style={[styles.dotLine, { backgroundColor: i < currentStopIndex ? '#1e1e2866' : colors.border }]} />
-                    )}
-                  </View>
-                ))}
-              </View>
-
-              {/* Fix 2: use handleNavigateToActiveTrip to block if checkin pending */}
-              <Pressable onPress={handleNavigateToActiveTrip} style={styles.continueBtn}>
-                <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.continueBtnGrad}>
-                  <Navigation size={16} color="#fff" strokeWidth={2} />
-                  <Text style={[styles.continueBtnText, { fontFamily: 'Inter_700Bold' }]}>{t.full_route}</Text>
-                </LinearGradient>
-              </Pressable>
-            </GlassView>
-          </Animated.View>
-        )}
-
-        {/* Incoming Referral Banner — shown when a colleague has sent a trip-referral request */}
-        {incomingReferralsCount > 0 && (() => {
-          const first = pendingReferrals[0];
-          return (
+        {/* White body */}
+        <View style={{ paddingHorizontal: Spacing.lg }}>
+          {/* Fix 2: check-in pending banner */}
+          {!!shuttleCheckinRequired && (
             <Pressable
               onPress={() =>
                 router.push({
-                  pathname: '/shuttle/referral-incoming' as any,
+                  pathname: '/selfie',
                   params: {
-                    referralId: first.referralId,
-                    tripId: first.tripId ?? '',
-                    bookingId: first.bookingId ?? '',
-                    routeName: first.routeName,
-                    routeNameAr: first.routeNameAr ?? '',
-                    departureTime: first.departureTime,
-                    fromStation: first.fromStation,
-                    toStation: first.toStation,
-                    fromStationAr: first.fromStationAr ?? '',
-                    toStationAr: first.toStationAr ?? '',
-                    passengerCount: first.passengerCount ?? '',
-                    totalSeats: first.totalSeats ?? '',
-                    lineNumber: first.lineNumber ?? '',
-                    vehicleType: first.vehicleType ?? '',
-                    // weekStart is only sent for the older weekly-handoff path;
-                    // a single-trip referral shows its own departure date instead.
-                    weekStart: first.weekStart ?? first.departureTime ?? '',
+                    tripId: shuttleCheckinRequired.tripId,
+                    deadlineMinutes: String(shuttleCheckinRequired.deadlineMinutes),
                   },
                 })
               }
-              style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1, marginTop: Spacing.md }]}
+              style={[styles.banner, { backgroundColor: '#FFF7ED', borderColor: '#FED7AA' }]}
             >
-              <GlassView style={[styles.referralBanner, { backgroundColor: '#FFF7ED', borderColor: '#FED7AA' }]} borderRadius={16}>
-                <View style={[styles.referralBannerPulse, { backgroundColor: '#F97316' }]} />
-                <View style={{ flex: 1 }}>
-                  <Text style={[{ fontSize: Typography.size.sm, color: '#92400E', fontFamily: 'Inter_700Bold', textAlign: TA }]}>
-                    {incomingReferralsCount === 1 ? t.referral_incoming_title : `${incomingReferralsCount} ${t.referral_incoming_title}`}
-                  </Text>
-                  <Text style={[{ fontSize: Typography.size.xs, color: '#B45309', fontFamily: 'Inter_400Regular', marginTop: 2, textAlign: TA }]}>
-                    {t.referral_incoming_sub}
-                  </Text>
-                </View>
-                <View style={[styles.referralBannerBadge, { backgroundColor: '#F97316' }]}>
-                  <Text style={[styles.referralBannerBadgeText, { fontFamily: 'Inter_700Bold' }]}>
-                    {incomingReferralsCount > 9 ? '9+' : String(incomingReferralsCount)}
-                  </Text>
-                </View>
-                <ChevronRight size={16} color="#92400E" strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
-              </GlassView>
-            </Pressable>
-          );
-        })()}
-
-        {/* Upcoming Trips section */}
-        <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA, marginTop: Spacing.xl }]}>
-          {t.upcoming_trips}
-        </Text>
-
-        {shuttleError ? (
-          <Pressable onPress={() => refetch()}>
-            <GlassView style={[styles.upcomingEmpty, { borderColor: '#ef4444' }]} borderRadius={16}>
-              <Calendar size={20} color="#ef4444" strokeWidth={2} />
-              <Text style={[styles.upcomingEmptyText, { color: '#ef4444', fontFamily: 'Inter_400Regular' }]}>
-                {t.trips_load_failed}
+              <AlertTriangle size={16} color={C_AMBER} strokeWidth={2} />
+              <Text style={[styles.bannerText, { color: '#92400E', fontFamily: 'Inter_600SemiBold', flex: 1 }]}>
+                {t.checkin_required_banner}
               </Text>
-            </GlassView>
-          </Pressable>
-        ) : upcomingLines.length === 0 ? (
-          <GlassView style={[styles.upcomingEmpty, { borderColor: colors.border }]} borderRadius={16}>
-            <Calendar size={20} color={colors.mutedForeground} strokeWidth={2} />
-            <Text style={[styles.upcomingEmptyText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-              {t.no_upcoming_trips}
-            </Text>
-          </GlassView>
-        ) : (
-          <View style={{ gap: 10 }}>
-            {upcomingLines.map(line => {
-              // The weekly booking this trip belongs to — still needed to open
-              // /shuttle/trip-details for the Start Trip flow (still scoped to
-              // the booking's "next representative trip"). tripId is passed
-              // separately so Cancel acts on this exact trip, not the week.
-              const booking = myBookings.find(b =>
-                String(b.routeId) === String(line.routeId) &&
-                (!b.direction || !line.direction || b.direction === line.direction)
-              );
-              return (
-                <UpcomingTripCard
-                  key={line.id}
-                  line={line}
-                  colors={colors}
-                  isRTL={isRTL}
-                  onPress={() => {
-                    // A trip picked up via referral or admin single-trip
-                    // assignment has no matching weekly booking — fall back
-                    // to the line's own fields instead of no-op'ing.
-                    router.push({
-                      pathname: '/shuttle/trip-details' as any,
-                      params: {
-                        bookingId: booking ? String(booking.id) : '',
-                        tripId: line.tripId ?? '',
-                        routeId: String(booking?.routeId ?? line.routeId),
-                        // Pass full booking snapshot so trip-details can render
-                        // even when ShuttleProvider is not in scope for that route group.
-                        routeName: booking?.routeName ?? line.name,
-                        routeNameAr: booking?.routeNameAr ?? '',
-                        departureTime: booking?.departureTime ?? line.departure,
-                        weekStart: booking?.weekStart ?? '',
-                        weekEnd: booking?.weekEnd ?? '',
-                        status: booking?.status ?? '',
-                        direction: booking?.direction ?? line.direction ?? '',
-                      },
-                    });
-                  }}
-                />
-              );
-            })}
-          </View>
-        )}
+            </Pressable>
+          )}
 
-        {/* No active booking — only shown when there are no upcoming or active trips */}
-        {upcomingLines.length === 0 && !activeLine && (
-          <GlassView style={[styles.noLineCard, { marginTop: Spacing.lg }]} borderRadius={20}>
-            <GitBranch size={32} color={colors.mutedForeground} strokeWidth={2} />
-            <Text style={[styles.noLineTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.no_booking}</Text>
-            <Text style={[styles.noLineSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-              {t.trips_here}
-            </Text>
-            <Pressable onPress={() => router.push('/(shuttle)/lines')} style={styles.goToLinesBtn}>
-              <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.goToLinesBtnGrad}>
-                <Text style={[styles.goToLinesBtnText, { fontFamily: 'Inter_700Bold' }]}>{t.browse_routes}</Text>
+          {/* Auto-cancelled trip banner */}
+          {!!tripCancelledBanner && (
+            <View style={[styles.banner, { backgroundColor: '#FEF2F2', borderColor: '#FCA5A5' }]}>
+              <AlertTriangle size={16} color={C_RED} strokeWidth={2} />
+              <Text style={[styles.bannerText, { color: '#B91C1C', fontFamily: 'Inter_600SemiBold', flex: 1 }]}>
+                {tripCancelledBanner}
+              </Text>
+              <Pressable onPress={dismissTripCancelledBanner} hitSlop={8}>
+                <X size={16} color={C_RED} strokeWidth={2} />
+              </Pressable>
+            </View>
+          )}
+
+          {/* Booking cancelled / reassigned banner (SHUTTLE_BOOKING_CANCELLED vs SHUTTLE_BOOKING_REASSIGNED) */}
+          {!!bookingStatusBanner && (
+            bookingStatusBanner.type === 'cancelled' ? (
+              <View style={[styles.banner, { backgroundColor: '#FEF2F2', borderColor: '#FCA5A5' }]}>
+                <AlertTriangle size={16} color={C_RED} strokeWidth={2} />
+                <Text style={[styles.bannerText, { color: '#B91C1C', fontFamily: 'Inter_600SemiBold', flex: 1 }]}>
+                  {bookingStatusBanner.message}
+                </Text>
+                <Pressable onPress={dismissBookingStatusBanner} hitSlop={8}>
+                  <X size={16} color={C_RED} strokeWidth={2} />
+                </Pressable>
+              </View>
+            ) : (
+              <View style={[styles.banner, { backgroundColor: '#EFF6FF', borderColor: '#93C5FD' }]}>
+                <RefreshCw size={16} color="#2563EB" strokeWidth={2} />
+                <Text style={[styles.bannerText, { color: '#1D4ED8', fontFamily: 'Inter_600SemiBold', flex: 1 }]}>
+                  {bookingStatusBanner.message}
+                </Text>
+                <Pressable onPress={dismissBookingStatusBanner} hitSlop={8}>
+                  <X size={16} color="#2563EB" strokeWidth={2} />
+                </Pressable>
+              </View>
+            )
+          )}
+
+          {/* Renewal banner */}
+          {renewalBooking && renewalCountdown.length > 0 && (
+            <View style={[styles.renewalCard, { borderColor: '#F5A62355' }]}>
+              <View style={[styles.renewalIconWrap, { backgroundColor: '#F5A62320' }]}>
+                <AlertTriangle size={18} color={C_AMBER} strokeWidth={2} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.renewalTitle, { color: C_INK, fontFamily: 'Inter_700Bold' }]}>
+                  {t.renew_weekly_slot}
+                </Text>
+                <Text style={[styles.renewalRoute, { color: C_CAP, fontFamily: 'Inter_400Regular' }]} numberOfLines={1}>
+                  {renewalBooking.routeName} · {renewalBooking.departureTime}
+                </Text>
+                <Text style={[styles.renewalCountdown, { color: C_AMBER, fontFamily: 'Inter_700Bold' }]}>
+                  ⏱ {renewalCountdown} {t.remaining}
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => renewalMutation.mutate(renewalBooking.id)}
+                disabled={renewalMutation.isPending}
+                style={[styles.renewalBtn, { backgroundColor: C_AMBER }]}
+              >
+                {renewalMutation.isPending ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <RefreshCw size={14} color="#fff" strokeWidth={2} />
+                )}
+              </Pressable>
+            </View>
+          )}
+
+          {/* Active trip card — shown regardless of the online toggle: this is
+              the only entry point back into the active-trip screen, and going
+              offline mid-trip must not hide it. */}
+          {activeLine && (
+            <Animated.View style={[{ marginTop: Spacing.lg, opacity: cardAnim, transform: [{ translateY: cardAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
+              <View style={styles.activeCard}>
+                <View style={styles.activeCardHeader}>
+                  <View style={styles.livePill}>
+                    <View style={[styles.liveDot, { backgroundColor: C_TEAL }]} />
+                    <Text style={[styles.liveText, { color: C_TEAL, fontFamily: 'Inter_800ExtraBold' }]}>{t.live}</Text>
+                  </View>
+                  <Text style={[styles.lineNumber, { color: C_CAP, fontFamily: 'Inter_700Bold' }]}>
+                    {activeLine.lineNumber}
+                  </Text>
+                </View>
+                <Text style={[styles.activeLineName, { color: C_INK, fontFamily: 'Inter_800ExtraBold' }]}>
+                  {activeLine.name}
+                </Text>
+                <Text style={[styles.activeLineRoute, { color: C_CAP, fontFamily: 'Inter_600SemiBold' }]}>
+                  {activeLine.from} → {activeLine.to}
+                </Text>
+
+                {(activeLine.vehicleType !== 'Unknown' || activeLine.totalSeats > 0) && (
+                  <View style={styles.seatRow}>
+                    {activeLine.vehicleType !== 'Unknown' && (
+                      <View style={styles.vehicleBadge}>
+                        <Text style={[styles.vehicleBadgeText, { fontFamily: 'Inter_700Bold' }]}>
+                          {activeLine.vehicleType}
+                        </Text>
+                      </View>
+                    )}
+                    {activeLine.totalSeats > 0 && (
+                      <View style={styles.seatBadge}>
+                        <Users size={11} color={C_CAP} strokeWidth={2} />
+                        <Text style={[styles.seatBadgeText, { color: C_INK, fontFamily: 'Inter_700Bold' }]}>
+                          {activeLine.bookedSeats} {t.home_of} {activeLine.totalSeats}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                )}
+
+                <View style={styles.progressWrap}>
+                  <View style={styles.progressTrack}>
+                    <View style={[styles.progressFill, { width: `${Math.round(progress * 100)}%` as any }]} />
+                  </View>
+                  <Text style={[styles.progressPct, { color: C_INK, fontFamily: 'Inter_800ExtraBold' }]}>
+                    {Math.round(progress * 100)}%
+                  </Text>
+                </View>
+
+                <View style={styles.stopRow}>
+                  <View style={styles.stopTile}>
+                    <Text style={[styles.stopTileCap, { fontFamily: 'Inter_700Bold' }]}>{t.active.toUpperCase()}</Text>
+                    <Text style={[styles.stopTileName, { color: C_INK, fontFamily: 'Inter_800ExtraBold' }]} numberOfLines={1}>
+                      {currentStop?.name ?? '—'}
+                    </Text>
+                    <Text style={[styles.stopTileMeta, { color: C_CAP, fontFamily: 'Inter_600SemiBold' }]}>
+                      {currentStop ? `${currentStop.boarded}/${currentStop.expected} ${t.home_boarded}` : '—'}
+                    </Text>
+                  </View>
+                  <View style={styles.stopTile}>
+                    <Text style={[styles.stopTileCap, { fontFamily: 'Inter_700Bold' }]}>{t.next_departure.toUpperCase()}</Text>
+                    <Text style={[styles.stopTileName, { color: C_INK, fontFamily: 'Inter_800ExtraBold' }]} numberOfLines={1}>
+                      {nextStop?.name ?? '—'}
+                    </Text>
+                    <Text style={[styles.stopTileMeta, { color: C_CAP, fontFamily: 'Inter_600SemiBold' }]}>
+                      {nextStop ? `${t.home_eta} ${nextStop.eta}` : '—'}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Fix 2: use handleNavigateToActiveTrip to block if checkin pending */}
+                <Pressable onPress={handleNavigateToActiveTrip} style={styles.continueBtn}>
+                  <Navigation size={16} color="#fff" strokeWidth={2} />
+                  <Text style={[styles.continueBtnText, { fontFamily: 'Inter_800ExtraBold' }]}>{t.full_route}</Text>
+                </Pressable>
+              </View>
+            </Animated.View>
+          )}
+
+          {/* Incoming Referral Banner — shown when a colleague has sent a trip-referral request */}
+          {incomingReferralsCount > 0 && (() => {
+            const first = pendingReferrals[0];
+            return (
+              <Pressable
+                onPress={() =>
+                  router.push({
+                    pathname: '/shuttle/referral-incoming' as any,
+                    params: {
+                      referralId: first.referralId,
+                      tripId: first.tripId ?? '',
+                      bookingId: first.bookingId ?? '',
+                      routeName: first.routeName,
+                      routeNameAr: first.routeNameAr ?? '',
+                      departureTime: first.departureTime,
+                      fromStation: first.fromStation,
+                      toStation: first.toStation,
+                      fromStationAr: first.fromStationAr ?? '',
+                      toStationAr: first.toStationAr ?? '',
+                      passengerCount: first.passengerCount ?? '',
+                      totalSeats: first.totalSeats ?? '',
+                      lineNumber: first.lineNumber ?? '',
+                      vehicleType: first.vehicleType ?? '',
+                      // weekStart is only sent for the older weekly-handoff path;
+                      // a single-trip referral shows its own departure date instead.
+                      weekStart: first.weekStart ?? first.departureTime ?? '',
+                    },
+                  })
+                }
+                style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1, marginTop: Spacing.md }]}
+              >
+                <View style={[styles.referralBanner, { backgroundColor: '#FFF7ED', borderColor: '#FED7AA' }]}>
+                  <View style={[styles.referralBannerPulse, { backgroundColor: '#F97316' }]} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={[{ fontSize: 13, color: '#92400E', fontFamily: 'Inter_700Bold', textAlign: TA }]}>
+                      {incomingReferralsCount === 1 ? t.referral_incoming_title : `${incomingReferralsCount} ${t.referral_incoming_title}`}
+                    </Text>
+                    <Text style={[{ fontSize: 11, color: '#B45309', fontFamily: 'Inter_400Regular', marginTop: 2, textAlign: TA }]}>
+                      {t.referral_incoming_sub}
+                    </Text>
+                  </View>
+                  <View style={[styles.referralBannerBadge, { backgroundColor: '#F97316' }]}>
+                    <Text style={[styles.referralBannerBadgeText, { fontFamily: 'Inter_700Bold' }]}>
+                      {incomingReferralsCount > 9 ? '9+' : String(incomingReferralsCount)}
+                    </Text>
+                  </View>
+                  <ChevronRight size={16} color="#92400E" strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
+                </View>
+              </Pressable>
+            );
+          })()}
+
+          {/* Upcoming Trips section */}
+          <Text style={[styles.sectionTitle, { color: C_INK, fontFamily: 'Inter_800ExtraBold', textAlign: TA, marginTop: Spacing.xl }]}>
+            {t.upcoming_trips}
+          </Text>
+
+          {shuttleError ? (
+            <Pressable onPress={() => refetch()}>
+              <View style={[styles.upcomingEmpty, { borderColor: '#ef4444' }]}>
+                <Calendar size={20} color="#ef4444" strokeWidth={2} />
+                <Text style={[styles.upcomingEmptyText, { color: '#ef4444', fontFamily: 'Inter_400Regular' }]}>
+                  {t.trips_load_failed}
+                </Text>
+              </View>
+            </Pressable>
+          ) : upcomingLines.length === 0 ? (
+            <View style={[styles.upcomingEmpty, { borderColor: '#E5E7EA' }]}>
+              <Calendar size={20} color={C_CAP} strokeWidth={2} />
+              <Text style={[styles.upcomingEmptyText, { color: C_CAP, fontFamily: 'Inter_400Regular' }]}>
+                {t.no_upcoming_trips}
+              </Text>
+            </View>
+          ) : (
+            <View style={{ gap: 10 }}>
+              {upcomingLines.map(line => {
+                // The weekly booking this trip belongs to — still needed to open
+                // /shuttle/trip-details for the Start Trip flow (still scoped to
+                // the booking's "next representative trip"). tripId is passed
+                // separately so Cancel acts on this exact trip, not the week.
+                const booking = myBookings.find(b =>
+                  String(b.routeId) === String(line.routeId) &&
+                  (!b.direction || !line.direction || b.direction === line.direction)
+                );
+                return (
+                  <UpcomingTripCard
+                    key={line.id}
+                    line={line}
+                    colors={colors}
+                    isRTL={isRTL}
+                    onPress={() => {
+                      // A trip picked up via referral or admin single-trip
+                      // assignment has no matching weekly booking — fall back
+                      // to the line's own fields instead of no-op'ing.
+                      router.push({
+                        pathname: '/shuttle/trip-details' as any,
+                        params: {
+                          bookingId: booking ? String(booking.id) : '',
+                          tripId: line.tripId ?? '',
+                          routeId: String(booking?.routeId ?? line.routeId),
+                          // Pass full booking snapshot so trip-details can render
+                          // even when ShuttleProvider is not in scope for that route group.
+                          routeName: booking?.routeName ?? line.name,
+                          routeNameAr: booking?.routeNameAr ?? '',
+                          departureTime: booking?.departureTime ?? line.departure,
+                          weekStart: booking?.weekStart ?? '',
+                          weekEnd: booking?.weekEnd ?? '',
+                          status: booking?.status ?? '',
+                          direction: booking?.direction ?? line.direction ?? '',
+                        },
+                      });
+                    }}
+                  />
+                );
+              })}
+            </View>
+          )}
+
+          {/* No active booking — only shown when there are no upcoming or active trips */}
+          {upcomingLines.length === 0 && !activeLine && (
+            <View style={[styles.noLineCard, { marginTop: Spacing.lg }]}>
+              <GitBranch size={32} color={C_CAP} strokeWidth={2} />
+              <Text style={[styles.noLineTitle, { color: C_INK, fontFamily: 'Inter_800ExtraBold' }]}>{t.no_booking}</Text>
+              <Text style={[styles.noLineSub, { color: C_CAP, fontFamily: 'Inter_400Regular' }]}>
+                {t.trips_here}
+              </Text>
+              <Pressable onPress={() => router.push('/(shuttle)/lines')} style={styles.goToLinesBtn}>
+                <Text style={[styles.goToLinesBtnText, { fontFamily: 'Inter_800ExtraBold' }]}>{t.browse_routes}</Text>
                 <ArrowRight size={16} color="#fff" strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
-              </LinearGradient>
-            </Pressable>
-          </GlassView>
-        )}
+              </Pressable>
+            </View>
+          )}
 
-      </ScrollView>
-
-      {/* Floating offline button — centered above tab bar, shown only when offline */}
-      {!online && (
-        <View style={[styles.floatingOfflineWrap, { bottom: tabBarHeight + 20 }]} pointerEvents="box-none">
-          <View style={styles.floatingPulseWrap}>
-            <Pressable
-              onPress={toggleOnline}
-              disabled={onlineLoading}
-              style={({ pressed }) => [styles.floatingOfflineBtn, { backgroundColor: colors.secondary, borderColor: colors.border, transform: [{ scale: pressed ? 0.95 : 1 }] }]}
-            >
-              {onlineLoading ? (
-                <ActivityIndicator color={colors.mutedForeground} />
-              ) : (
-                <WifiOff size={28} color={colors.mutedForeground} strokeWidth={2} />
-              )}
-            </Pressable>
-          </View>
-          <Text style={[styles.floatingOfflineLabel, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>
-            {t.youre_offline}
-          </Text>
-          <Text style={[styles.floatingOfflineSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-            {t.go}
-          </Text>
         </View>
-      )}
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingTop: Spacing.sm },
-  greeting: { fontSize: Typography.size.xs },
-  driverName: { fontSize: Typography.size.xl, marginTop: 2 },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  iconBtn: {},
-  iconBtnGlass: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', position: 'relative' },
-  notifDot: { position: 'absolute', top: 2, right: 2, minWidth: 14, height: 14, borderRadius: 7, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 2 },
+  hero: { backgroundColor: C_INK, paddingHorizontal: 22, paddingBottom: 22, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 },
+  heroTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
+  greeting: { fontSize: 11, letterSpacing: 1 },
+  driverName: { fontSize: 22, color: '#fff', marginTop: 2 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  iconBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,.1)', alignItems: 'center', justifyContent: 'center', position: 'relative' },
+  notifDot: { position: 'absolute', top: -2, right: -2, minWidth: 14, height: 14, borderRadius: 7, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 2 },
   notifDotText: { fontSize: 7, color: '#fff', fontFamily: 'Inter_700Bold' },
-  serviceChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: Spacing.md, paddingVertical: 6, borderWidth: 1 },
+  serviceChip: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(255,255,255,.1)', borderRadius: 99, paddingHorizontal: 12, paddingVertical: 6 },
   serviceChipDot: { width: 6, height: 6, borderRadius: 3 },
-  serviceChipText: { fontSize: 10, letterSpacing: 1.5 },
-  onlineRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, marginTop: 20 },
-  pulseWrap: { width: 56, height: 56, alignItems: 'center', justifyContent: 'center' },
-  pulseRing: { position: 'absolute', width: 56, height: 56, borderRadius: 28 },
-  onlineBtn: { width: 56, height: 56, borderRadius: 28, overflow: 'hidden', elevation: Shadows.large.elevation, shadowColor: '#1e1e28', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.35, shadowRadius: 16 },
-  onlineBtnGrad: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  onlineBtnOff: { flex: 1, alignItems: 'center', justifyContent: 'center', borderWidth: 2 },
-  onlineStatus: { fontSize: Typography.size.sm },
-  onlineSub: { fontSize: Typography.size.xs, marginTop: 2 },
-  cancelBanner: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, padding: Spacing.md, borderRadius: Radius.md, borderWidth: 1, marginTop: Spacing.md },
-  cancelBannerText: { fontSize: 13 },
-  renewalCard: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, padding: 14, marginTop: Spacing.lg },
+  serviceChipText: { fontSize: 9, color: '#fff', letterSpacing: 1 },
+  togglePill: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,.08)', borderRadius: 18, padding: 14, marginTop: 18 },
+  toggleIconWrap: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  toggleTitle: { fontSize: 13.5, color: '#fff' },
+  toggleSub: { fontSize: 11, marginTop: 1 },
+  switchTrack: { width: 44, height: 26, borderRadius: 13, padding: 3 },
+  switchThumb: { width: 20, height: 20, borderRadius: 10 },
+  heroStatsRow: { flexDirection: 'row', marginTop: 18 },
+  heroStatCell: { flex: 1, alignItems: 'center' },
+  heroStatValue: { fontSize: 17, color: '#fff' },
+  heroStatCap: { fontSize: 10, letterSpacing: 1, textTransform: 'uppercase', color: C_CAP_ON_DARK, marginTop: 2 },
+  heroDivider: { width: 1, backgroundColor: 'rgba(255,255,255,.12)' },
+  banner: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, padding: Spacing.md, borderRadius: 14, borderWidth: 1, marginTop: Spacing.md },
+  bannerText: { fontSize: 13 },
+  renewalCard: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, padding: 14, marginTop: Spacing.lg, backgroundColor: C_SURF, borderRadius: 16, borderWidth: 1 },
   renewalIconWrap: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   renewalTitle: { fontSize: 13 },
   renewalRoute: { fontSize: 11, marginTop: 2 },
   renewalCountdown: { fontSize: 11, marginTop: 3 },
   renewalBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  statsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: Spacing.md, marginTop: Spacing.lg },
-  divider: { width: 1, height: 28 },
-  sectionTitle: { fontSize: Typography.size.md },
-  activeCard: { padding: 20 },
-  activeCardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.md },
-  livePill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: Spacing.xs, backgroundColor: '#1e1e2815', borderRadius: 99, borderWidth: 1, borderColor: '#1e1e2830' },
+  sectionTitle: { fontSize: 15 },
+  activeCard: { backgroundColor: C_SURF, borderRadius: 22, padding: 20 },
+  activeCardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  livePill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 5, backgroundColor: '#DDF4EB', borderRadius: 99 },
   liveDot: { width: 6, height: 6, borderRadius: 3 },
-  liveText: { fontSize: 10, letterSpacing: 2 },
-  lineNumber: { fontSize: Typography.size.xs },
-  activeLineName: { fontSize: Typography.size.lg },
-  activeLineRoute: { fontSize: 13, marginTop: Spacing.xs },
+  liveText: { fontSize: 10, letterSpacing: 1 },
+  lineNumber: { fontSize: 12 },
+  activeLineName: { fontSize: 17, marginTop: 12 },
+  activeLineRoute: { fontSize: 13, marginTop: 2 },
   seatRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.md, flexWrap: 'wrap' },
-  vehicleBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: Spacing.xs, borderRadius: Radius.sm, borderWidth: 1 },
-  vehicleBadgeText: { fontSize: 11, letterSpacing: 0.5 },
-  seatBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: Spacing.xs, borderRadius: Radius.sm, borderWidth: 1 },
-  seatBadgeText: { fontSize: Typography.size.xs },
-  progressWrap: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: Spacing.lg },
-  progressTrack: { flex: 1, height: 6, borderRadius: 3, overflow: 'hidden' },
-  progressFill: { height: '100%', borderRadius: 3 },
-  progressPct: { fontSize: 13, minWidth: 32, textAlign: 'right' },
-  stopRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm, marginTop: Spacing.lg },
-  stopBox: { flex: 1, flexDirection: 'row', gap: Spacing.sm },
-  stopDotCurrent: { width: 10, height: 10, borderRadius: 5, marginTop: Spacing.xs },
-  stopDotNext: { width: 10, height: 10, borderRadius: 5, marginTop: Spacing.xs, borderWidth: 2, backgroundColor: 'transparent' },
-  stopBoxLabel: { fontSize: 9, letterSpacing: 1 },
-  stopBoxName: { fontSize: 13, marginTop: 2 },
-  stopBoxMeta: { fontSize: 11, marginTop: 2 },
-  stopArrow: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
-  dotsRow: { flexDirection: 'row', alignItems: 'center', marginTop: Spacing.lg, flexWrap: 'wrap' },
-  dotItem: { flexDirection: 'row', alignItems: 'center' },
-  dot: { width: 8, height: 8, borderRadius: 4 },
-  dotLine: { width: 16, height: 2, marginHorizontal: 2 },
-  continueBtn: { marginTop: Spacing.lg, borderRadius: 14, overflow: 'hidden' },
-  continueBtnGrad: { height: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
-  continueBtnText: { color: '#fff', fontSize: Typography.size.sm },
-  upcomingEmpty: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: Spacing.lg, borderWidth: 1, marginTop: Spacing.sm },
+  vehicleBadge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, backgroundColor: '#EEF0F1' },
+  vehicleBadgeText: { fontSize: 11, letterSpacing: 0.5, color: C_INK },
+  seatBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, backgroundColor: '#EEF0F1' },
+  seatBadgeText: { fontSize: 11 },
+  progressWrap: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 16 },
+  progressTrack: { flex: 1, height: 6, borderRadius: 3, overflow: 'hidden', backgroundColor: C_TRACK },
+  progressFill: { height: '100%', borderRadius: 3, backgroundColor: C_INK },
+  progressPct: { fontSize: 13 },
+  stopRow: { flexDirection: 'row', gap: 10, marginTop: 16 },
+  stopTile: { flex: 1, backgroundColor: C_TILE, borderRadius: 14, padding: 12 },
+  stopTileCap: { fontSize: 10, letterSpacing: 1, textTransform: 'uppercase', color: C_CAP },
+  stopTileName: { fontSize: 13.5, marginTop: 3 },
+  stopTileMeta: { fontSize: 11, marginTop: 2 },
+  continueBtn: { marginTop: 16, height: 50, borderRadius: 15, backgroundColor: C_INK, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  continueBtnText: { color: '#fff', fontSize: 14 },
+  upcomingEmpty: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: Spacing.lg, borderWidth: 1, borderRadius: 16, marginTop: Spacing.sm, backgroundColor: C_SURF },
   upcomingEmptyText: { fontSize: 13 },
-  referralBanner: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, borderWidth: 1.5 },
+  referralBanner: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, borderWidth: 1.5, borderRadius: 16 },
   referralBannerPulse: { width: 8, height: 8, borderRadius: 4 },
-  referralBannerBadge: { minWidth: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xs },
+  referralBannerBadge: { minWidth: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
   referralBannerBadgeText: { fontSize: 11, color: '#fff' },
-  floatingOfflineWrap: { position: 'absolute', left: 0, right: 0, alignItems: 'center', gap: 6, paddingBottom: Spacing.sm },
-  floatingPulseWrap: { alignItems: 'center', justifyContent: 'center' },
-  floatingOfflineBtn: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center', borderWidth: 2, elevation: Shadows.large.elevation, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.12, shadowRadius: 12 },
-  floatingOfflineLabel: { fontSize: Typography.size.sm },
-  floatingOfflineSub: { fontSize: Typography.size.xs },
-  noLineCard: { alignItems: 'center', padding: 28, gap: 10 },
-  noLineTitle: { fontSize: Typography.size.md, marginTop: Spacing.xs },
+  noLineCard: { alignItems: 'center', padding: 28, gap: 10, backgroundColor: C_SURF, borderRadius: 20 },
+  noLineTitle: { fontSize: 15, marginTop: 4 },
   noLineSub: { fontSize: 13, textAlign: 'center', lineHeight: 20 },
-  goToLinesBtn: { marginTop: Spacing.sm, borderRadius: 14, overflow: 'hidden', width: '100%' },
-  goToLinesBtnGrad: { height: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
-  goToLinesBtnText: { color: '#fff', fontSize: Typography.size.sm },
+  goToLinesBtn: { marginTop: Spacing.sm, borderRadius: 14, height: 48, width: '100%', backgroundColor: C_INK, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
+  goToLinesBtnText: { color: '#fff', fontSize: 14 },
 });

@@ -316,6 +316,8 @@ export const en = {
   accept_trip: 'Accept trip',
   youre_online: "You're online · looking for trips",
   youre_offline: "You're offline",
+  receiving_assignments: 'Receiving shuttle assignments',
+  not_receiving_assignments: 'Not receiving new assignments',
   this_week: 'This week',
   this_month: 'This month',
   cash_out: 'Cash out',
