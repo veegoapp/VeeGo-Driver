@@ -55,6 +55,7 @@ const C_TEAL = '#0E9F8E';
 const C_MINT = '#3DDC97';
 const C_STARC = '#F5A623';
 const C_CAP_ON_DARK = '#8A9096';
+const C_RED = '#D92D20';
 
 type Phase = 'to_pickup' | 'arrived' | 'in_trip' | 'completed';
 type PhaseCopy = { label: string; cta: string; next: Phase };
@@ -1080,150 +1081,156 @@ export default function RideScreen() {
             },
           ]}
         >
-          <GlassView strong style={styles.sheetCard} borderRadius={24}>
-            <Pressable
-              onPress={toggleSheet}
-              hitSlop={16}
-              accessibilityRole="button"
-              accessibilityLabel={sheetCollapsed ? t.expand_trip_card_label : t.collapse_trip_card_label}
-            >
-              <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
-            </Pressable>
-
-            <View style={styles.riderRow}>
-              {passengerAvatar && !riderAvatarFailed ? (
-                <Image
-                  source={{ uri: passengerAvatar }}
-                  style={styles.riderAvatar}
-                  resizeMode="cover"
-                  onError={() => setRiderAvatarFailed(true)}
-                />
-              ) : (
-                <View style={[styles.riderAvatar, { justifyContent: 'center', alignItems: 'center', backgroundColor: colors.secondary }]}>
-                  <Text style={{ color: colors.mutedForeground, fontSize: 16, fontFamily: 'Inter_700Bold' }}>{passengerInitials}</Text>
-                </View>
-              )}
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={[styles.riderName, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]} numberOfLines={1}>{passengerName ?? '—'}</Text>
-                <View style={styles.riderMeta}>
-                  <Star size={12} color={colors.accent} fill={colors.accent} strokeWidth={2} />
-                  <Text style={[styles.riderMetaText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-                    {'—'} · {paymentMethod ?? '—'} · {parseFloat(String(displayFare ?? 0)).toFixed(2)} {t.egp}
-                  </Text>
-                </View>
+          <View style={styles.splitCard}>
+            <View style={styles.leftPanelC}>
+              <Pressable
+                onPress={toggleSheet}
+                hitSlop={16}
+                accessibilityRole="button"
+                accessibilityLabel={sheetCollapsed ? t.expand_trip_card_label : t.collapse_trip_card_label}
+              >
+                <View style={styles.sheetHandleC} />
+              </Pressable>
+              <View style={styles.statusRowC}>
+                <View style={styles.statusDotC} />
+                <Text style={styles.leftLabelC} numberOfLines={2}>{p.label}</Text>
               </View>
-              <Pressable
-                style={[styles.actionBtn, { backgroundColor: colors.primary + '26' }]}
-                onPress={() => router.push({ pathname: '/ride/chat', params: { rideId: rideId ?? '' } } as any)}
-                accessibilityLabel={t.message_rider_title}
-              >
-                <MessageCircle size={20} color={colors.primary} strokeWidth={2} />
-              </Pressable>
-              <Pressable
-                style={[styles.actionBtn, { backgroundColor: colors.primary + '26' }]}
-                onPress={() => {
-                  const phone = passengerPhone;
-                  if (phone) Linking.openURL(`tel:${phone}`).catch(() => {});
-                }}
-                accessibilityLabel={t.call_rider_label}
-              >
-                <Phone size={20} color={colors.primary} strokeWidth={2} />
-              </Pressable>
+              <View style={{ flex: 1 }} />
+              <Text style={styles.leftCapC}>{t.fare_label}</Text>
+              <Text style={styles.leftFareValC} numberOfLines={1}>{fareAmount.toFixed(2)} {t.egp}</Text>
             </View>
 
-            {/* Waiting charge ticker — visible only in 'arrived' phase */}
-            {phase === 'arrived' && waitingCharge != null && (
-              <Animated.View
-                style={[
-                  styles.waitingTicker,
-                  {
-                    backgroundColor: waitingCharge.capped ? colors.secondary : '#D5B23D18',
-                    borderColor: waitingCharge.capped ? colors.border : '#D5B23D55',
-                    opacity: waitingCharge.capped ? 1 : pulseAnim,
-                  },
-                ]}
-              >
-                <Clock size={13} color={waitingCharge.capped ? colors.mutedForeground : '#D5B23D'} strokeWidth={2.5} />
-                <Text style={[styles.waitingTickerText, { color: waitingCharge.capped ? colors.mutedForeground : '#D5B23D', fontFamily: 'Inter_700Bold' }]}>
-                  {`Waiting fee: +${waitingCharge.amount.toFixed(2)} ${t.egp} · ${waitingCharge.minutes} min`}
-                </Text>
-                {waitingCharge.capped && (
-                  <View style={styles.cappedBadge}>
-                    <Text style={[styles.cappedText, { fontFamily: 'Inter_700Bold' }]}>{t.capped_badge}</Text>
+            <View style={styles.rightPanelC}>
+              <View style={styles.riderRowC}>
+                {passengerAvatar && !riderAvatarFailed ? (
+                  <Image
+                    source={{ uri: passengerAvatar }}
+                    style={styles.riderAvatarC}
+                    resizeMode="cover"
+                    onError={() => setRiderAvatarFailed(true)}
+                  />
+                ) : (
+                  <View style={[styles.riderAvatarC, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#F0F2F3' }]}>
+                    <Text style={{ color: C_INK, fontSize: 14, fontFamily: 'Inter_700Bold' }}>{passengerInitials}</Text>
                   </View>
                 )}
-              </Animated.View>
-            )}
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={styles.riderNameC} numberOfLines={1}>{passengerName ?? '—'}</Text>
+                  <Text style={styles.riderMetaC} numberOfLines={1}>
+                    {paymentMethod ?? '—'} · {fareAmount.toFixed(2)} {t.egp}
+                  </Text>
+                </View>
+                <Pressable
+                  style={styles.actionBtnC}
+                  onPress={() => router.push({ pathname: '/ride/chat', params: { rideId: rideId ?? '' } } as any)}
+                  accessibilityLabel={t.message_rider_title}
+                >
+                  <MessageCircle size={16} color={C_INK} strokeWidth={1.8} />
+                </Pressable>
+                <Pressable
+                  style={styles.actionBtnC}
+                  onPress={() => {
+                    const phone = passengerPhone;
+                    if (phone) Linking.openURL(`tel:${phone}`).catch(() => {});
+                  }}
+                  accessibilityLabel={t.call_rider_label}
+                >
+                  <Phone size={16} color={C_INK} strokeWidth={1.8} />
+                </Pressable>
+              </View>
 
-            <Text style={[styles.phaseLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold' }]}>{p.label}</Text>
+              {/* Waiting charge ticker — visible only in 'arrived' phase */}
+              {phase === 'arrived' && waitingCharge != null && (
+                <Animated.View
+                  style={[
+                    styles.waitingTickerC,
+                    {
+                      backgroundColor: waitingCharge.capped ? '#F0F2F3' : '#D5B23D18',
+                      borderColor: waitingCharge.capped ? C_HAIR : '#D5B23D55',
+                      opacity: waitingCharge.capped ? 1 : pulseAnim,
+                    },
+                  ]}
+                >
+                  <Clock size={13} color={waitingCharge.capped ? C_INK_SOFT : '#D5B23D'} strokeWidth={2.5} />
+                  <Text style={[styles.waitingTickerTextC, { color: waitingCharge.capped ? C_INK_SOFT : '#D5B23D' }]}>
+                    {`Waiting fee: +${waitingCharge.amount.toFixed(2)} ${t.egp} · ${waitingCharge.minutes} min`}
+                  </Text>
+                  {waitingCharge.capped && (
+                    <View style={styles.cappedBadgeC}>
+                      <Text style={styles.cappedTextC}>{t.capped_badge}</Text>
+                    </View>
+                  )}
+                </Animated.View>
+              )}
 
-            <Pressable onPress={handleNext} disabled={busy} style={styles.ctaBtn}>
-              <LinearGradient colors={['#2d2d42', '#1e1e28']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[styles.ctaBtnGrad, { opacity: busy ? 0.7 : 1 }]}>
-                <ChevronUp size={20} color={colors.primaryForeground} strokeWidth={2} />
-                <Text style={[styles.ctaBtnText, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>{p.cta}</Text>
+              <Pressable onPress={handleNext} disabled={busy} style={[styles.ctaBtnC, { opacity: busy ? 0.7 : 1 }]}>
+                <ChevronUp size={16} color="#ffffff" strokeWidth={2.5} />
+                <Text style={styles.ctaBtnTextC}>{p.cta}</Text>
                 {phase === 'in_trip' && (
-                  <Text style={[styles.ctaBtnFare, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>
+                  <Text style={styles.ctaBtnTextC}>
                     · {fareAmount.toFixed(2)} {t.egp}
                   </Text>
                 )}
-              </LinearGradient>
-            </Pressable>
-
-            {phase === 'in_trip' && paymentMethod === 'cash' && (
-              <Pressable
-                onPress={handleOpenAmountSheet}
-                disabled={busy}
-                style={[styles.otherAmountBtn, { backgroundColor: colors.secondary, borderColor: colors.border, opacity: busy ? 0.6 : 1 }]}
-                accessibilityLabel={t.other_amount_btn}
-              >
-                <Text style={[styles.otherAmountBtnText, { color: colors.foreground, fontFamily: 'Inter_600SemiBold' }]}>{t.other_amount_btn}</Text>
               </Pressable>
-            )}
 
-            {(phase === 'to_pickup' || phase === 'arrived') && (
-              <Pressable
-                onPress={handleCancelRide}
-                disabled={cancelling}
-                style={[styles.cancelRideBtn, { opacity: cancelling ? 0.6 : 1 }]}
-                accessibilityLabel={t.cancel_ride}
-              >
-                {cancelling ? (
-                  <ActivityIndicator size="small" color={colors.destructive} />
-                ) : (
-                  <Text style={[styles.cancelRideBtnText, { color: colors.destructive, fontFamily: 'Inter_600SemiBold' }]}>{t.cancel_ride}</Text>
-                )}
-              </Pressable>
-            )}
+              {phase === 'in_trip' && paymentMethod === 'cash' && (
+                <Pressable
+                  onPress={handleOpenAmountSheet}
+                  disabled={busy}
+                  style={[styles.otherAmountBtnC, { opacity: busy ? 0.6 : 1 }]}
+                  accessibilityLabel={t.other_amount_btn}
+                >
+                  <Text style={styles.otherAmountBtnTextC}>{t.other_amount_btn}</Text>
+                </Pressable>
+              )}
 
-            <View style={styles.bottomRow}>
-              <View style={styles.safetyRow}>
-                <Shield size={14} color={colors.mutedForeground} strokeWidth={2} />
-                <Text style={[styles.safetyText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>{t.safety_toolkit_trip}</Text>
-              </View>
-              <View style={styles.bottomActions}>
+              {(phase === 'to_pickup' || phase === 'arrived') && (
                 <Pressable
-                  onPress={handleShareTrip}
-                  disabled={shareBusy}
-                  style={[styles.shareBtn, { backgroundColor: colors.secondary, opacity: shareBusy ? 0.6 : 1 }]}
-                  accessibilityLabel={t.share_trip_label}
+                  onPress={handleCancelRide}
+                  disabled={cancelling}
+                  style={[styles.cancelRideBtnC, { opacity: cancelling ? 0.6 : 1 }]}
+                  accessibilityLabel={t.cancel_ride}
                 >
-                  <Share2 size={14} color={colors.foreground} strokeWidth={2} />
-                  <Text style={[styles.shareBtnText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-                    {shareLink ? t.trip_share_revoke_btn : t.trip_share_btn}
-                  </Text>
+                  {cancelling ? (
+                    <ActivityIndicator size="small" color={C_RED} />
+                  ) : (
+                    <Text style={styles.cancelRideBtnTextC}>{t.cancel_ride}</Text>
+                  )}
                 </Pressable>
-                <Pressable
-                  onPress={handleSOS}
-                  disabled={sosBusy}
-                  style={[styles.sosBtn, { opacity: sosBusy ? 0.6 : 1 }]}
-                  accessibilityLabel={t.send_sos_label}
-                >
-                  <AlertTriangle size={14} color={colors.destructiveForeground} strokeWidth={2} />
-                  <Text style={[styles.sosBtnText, { color: colors.destructiveForeground, fontFamily: 'Inter_700Bold' }]}>{t.sos_label}</Text>
-                </Pressable>
+              )}
+
+              <View style={styles.hairC} />
+
+              <View style={styles.bottomRowC}>
+                <View style={styles.safetyRowC}>
+                  <Shield size={13} color={C_INK_SOFT} strokeWidth={2} />
+                  <Text style={styles.safetyTextC} numberOfLines={1}>{t.safety_toolkit_trip}</Text>
+                </View>
+                <View style={styles.bottomActionsC}>
+                  <Pressable
+                    onPress={handleShareTrip}
+                    disabled={shareBusy}
+                    style={[styles.shareBtnC, { opacity: shareBusy ? 0.6 : 1 }]}
+                    accessibilityLabel={t.share_trip_label}
+                  >
+                    <Share2 size={13} color={C_INK} strokeWidth={2} />
+                    <Text style={styles.shareBtnTextC}>
+                      {shareLink ? t.trip_share_revoke_btn : t.trip_share_btn}
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={handleSOS}
+                    disabled={sosBusy}
+                    style={[styles.sosBtnC, { opacity: sosBusy ? 0.6 : 1 }]}
+                    accessibilityLabel={t.send_sos_label}
+                  >
+                    <AlertTriangle size={13} color={C_RED} strokeWidth={2} />
+                    <Text style={styles.sosBtnTextC}>{t.sos_label}</Text>
+                  </Pressable>
+                </View>
               </View>
             </View>
-          </GlassView>
+          </View>
         </Animated.View>
       )}
 
@@ -1389,31 +1396,7 @@ const styles = StyleSheet.create({
   doneBtnGrad: { height: 56, alignItems: 'center', justifyContent: 'center' },
   doneBtnText: { fontSize: Typography.size.md },
   sheet: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: Spacing.md, paddingBottom: Spacing.md, zIndex: 30 },
-  sheetCard: { padding: 20 },
   sheetHandle: { width: 48, height: 6, borderRadius: 3, alignSelf: 'center', marginBottom: Spacing.lg },
-  riderRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
-  riderAvatar: { width: 48, height: 48, borderRadius: Radius.xl, backgroundColor: '#e5e5ea' },
-  riderName: { fontSize: Typography.size.md },
-  riderMeta: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginTop: 2 },
-  riderMetaText: { fontSize: Typography.size.xs },
-  actionBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  waitingTicker: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    marginTop: 14, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
-    borderRadius: Radius.md, borderWidth: 1,
-  },
-  waitingTickerText: { fontSize: 13, flex: 1 },
-  cappedBadge: { backgroundColor: '#ef444422', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
-  cappedText: { fontSize: 9, color: '#ef4444', letterSpacing: 0.8 },
-  phaseLabel: { fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase', marginTop: Spacing.lg },
-  ctaBtn: { marginTop: Spacing.md, borderRadius: Radius.lg, overflow: 'hidden', elevation: Shadows.large.elevation, shadowColor: '#2d2d42', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 12 },
-  ctaBtnGrad: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
-  ctaBtnText: { fontSize: Typography.size.md },
-  ctaBtnFare: { fontSize: Typography.size.md },
-  otherAmountBtn: { marginTop: Spacing.sm, height: 44, borderRadius: Radius.md, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
-  otherAmountBtnText: { fontSize: Typography.size.sm },
-  cancelRideBtn: { alignItems: 'center', justifyContent: 'center', paddingVertical: 10, marginTop: Spacing.xs },
-  cancelRideBtnText: { fontSize: Typography.size.sm },
   modalBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' },
   modalCard: { padding: 20, paddingBottom: 32 },
   modalTitle: { fontSize: Typography.size.md, textAlign: 'center', marginBottom: Spacing.md },
@@ -1432,12 +1415,6 @@ const styles = StyleSheet.create({
   summaryLabel: { fontSize: Typography.size.sm },
   summaryValue: { fontSize: Typography.size.md },
   summaryValueHighlight: { fontSize: Typography.size.lg },
-  viewDetailsBtn: { marginTop: Spacing.xs, paddingVertical: 6, paddingHorizontal: 10 },
-  viewDetailsBtnText: { fontSize: Typography.size.sm, textDecorationLine: 'underline' },
-  bottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: Spacing.md },
-  safetyRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  safetyText: { fontSize: Typography.size.xs },
-  bottomActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   floatingNavBtn: {
     position: 'absolute',
     right: 16,
@@ -1456,11 +1433,42 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
   },
-  shareBtn: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, paddingHorizontal: Spacing.md, paddingVertical: 6, borderRadius: 10 },
-  shareBtnText: { fontSize: Typography.size.xs },
-  sosBtn: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, backgroundColor: '#ef4444', paddingHorizontal: Spacing.md, paddingVertical: 6, borderRadius: 10 },
-  sosBtnText: { fontSize: Typography.size.xs },
   commentInput: { borderWidth: 1, borderRadius: Radius.md, paddingHorizontal: 14, paddingVertical: 10, fontSize: Typography.size.sm, fontFamily: 'Inter_400Regular', marginTop: Spacing.md, minHeight: 60, textAlignVertical: 'top' },
+
+  /* ── "C" active-ride split card (to_pickup / arrived / in_trip) ── */
+  splitCard: { borderRadius: 24, overflow: 'hidden', flexDirection: 'row', elevation: Shadows.large.elevation, shadowColor: '#000', shadowOffset: { width: 0, height: -6 }, shadowOpacity: 0.16, shadowRadius: 20 },
+  leftPanelC: { width: 104, flexShrink: 0, backgroundColor: '#14151A', paddingHorizontal: 12, paddingVertical: 16 },
+  sheetHandleC: { width: 32, height: 5, borderRadius: 2.5, backgroundColor: 'rgba(255,255,255,0.22)', marginBottom: 14 },
+  statusRowC: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  statusDotC: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: C_MINT },
+  leftLabelC: { flex: 1, fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 0.6, color: 'rgba(255,255,255,0.92)', textTransform: 'uppercase' },
+  leftCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 0.6, color: C_CAP, textTransform: 'uppercase' },
+  leftFareValC: { fontSize: 14, fontFamily: 'Inter_700Bold', color: '#ffffff', marginTop: 1 },
+  rightPanelC: { flex: 1, backgroundColor: '#ffffff', padding: 16, paddingBottom: 14 },
+  riderRowC: { flexDirection: 'row', alignItems: 'center', gap: 11 },
+  riderAvatarC: { width: 44, height: 44, borderRadius: 22 },
+  riderNameC: { fontSize: 13.5, fontFamily: 'Inter_700Bold', color: C_INK },
+  riderMetaC: { fontSize: 11, fontFamily: 'Inter_600SemiBold', color: C_CAP, marginTop: 1 },
+  actionBtnC: { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(20,21,26,0.08)', alignItems: 'center', justifyContent: 'center' },
+  waitingTickerC: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, borderWidth: 1 },
+  waitingTickerTextC: { fontSize: 12, fontFamily: 'Inter_700Bold', flex: 1 },
+  cappedBadgeC: { backgroundColor: '#ef444422', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+  cappedTextC: { fontSize: 9, fontFamily: 'Inter_700Bold', color: '#ef4444', letterSpacing: 0.6 },
+  ctaBtnC: { marginTop: 14, height: 48, borderRadius: 24, backgroundColor: '#14151A', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  ctaBtnTextC: { fontSize: 13.5, fontFamily: 'Inter_700Bold', color: '#ffffff' },
+  otherAmountBtnC: { marginTop: 10, height: 42, borderRadius: 14, borderWidth: 1.5, borderColor: '#E2E5E8', alignItems: 'center', justifyContent: 'center' },
+  otherAmountBtnTextC: { fontSize: 12.5, fontFamily: 'Inter_700Bold', color: C_INK },
+  cancelRideBtnC: { alignItems: 'center', justifyContent: 'center', paddingVertical: 8, marginTop: 8 },
+  cancelRideBtnTextC: { fontSize: 12.5, fontFamily: 'Inter_700Bold', color: C_RED },
+  hairC: { height: 1, backgroundColor: C_HAIR, marginTop: 4, marginBottom: 10 },
+  bottomRowC: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  safetyRowC: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0, marginRight: 8 },
+  safetyTextC: { fontSize: 11, fontFamily: 'Inter_600SemiBold', color: C_INK_SOFT, flexShrink: 1 },
+  bottomActionsC: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  shareBtnC: { flexDirection: 'row', alignItems: 'center', gap: 5, height: 30, paddingHorizontal: 12, borderRadius: 15, backgroundColor: '#F0F2F3' },
+  shareBtnTextC: { fontSize: 11, fontFamily: 'Inter_700Bold', color: C_INK },
+  sosBtnC: { flexDirection: 'row', alignItems: 'center', gap: 5, height: 30, paddingHorizontal: 12, borderRadius: 15, borderWidth: 1.5, borderColor: '#F3C6C2' },
+  sosBtnTextC: { fontSize: 11, fontFamily: 'Inter_700Bold', color: C_RED },
 
   /* ── "C" post-trip fare page + rating card — dark panel/band + white body ── */
   completedOverlayC: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: C_BG, zIndex: 1000 },
