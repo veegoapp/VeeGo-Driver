@@ -396,7 +396,7 @@ export default function RegisterVehicleScreen() {
 
           {/* Seat capacity chip — shuttle models only */}
           {showSeatCapacity && (
-            <View style={[s.infoChip, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+            <View style={[s.infoChip, { flexDirection: 'row' }]}>
               <Info size={14} color="#3D52D5" />
               <Text style={s.infoChipText}>{t.reg_seat_capacity.replace('{n}', String(selectedModel!.seatCapacity))}</Text>
             </View>
@@ -506,7 +506,7 @@ export default function RegisterVehicleScreen() {
                     style={({ pressed }) => [s.sheetItem, selected && s.sheetItemSelected, pressed && { opacity: 0.7 }]}
                     onPress={() => handlePickerSelect(item)}
                   >
-                    <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: Spacing.sm, flex: 1 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, flex: 1 }}>
                       {item.hexCode !== undefined && (
                         <View style={[s.colorSwatch, { backgroundColor: item.hexCode ?? '#ccc' }]} />
                       )}
@@ -553,7 +553,7 @@ function DropdownField({
   isRTL: boolean;
 }) {
   const TA = isRTL ? 'right' as const : 'left' as const;
-  const R = isRTL ? 'row-reverse' as const : 'row' as const;
+  const R = 'row' as const;
 
   return (
     <View style={s.fieldWrap}>

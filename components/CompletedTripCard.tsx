@@ -21,7 +21,7 @@ export function CompletedTripCard({
 }) {
   const { t, isRTL } = useI18n();
   const TA = isRTL ? 'right' as const : 'left' as const;
-  const R = isRTL ? 'row-reverse' as const : 'row' as const;
+  const R = 'row' as const;
   const netEarnings = formatCurrency(trip.earnings, t.egp);
   // trip.status carries the real backend status — a cancelled/no-show trip
   // used to render hardcoded green "Completed" with an earnings figure

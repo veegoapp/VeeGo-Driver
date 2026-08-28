@@ -40,7 +40,7 @@ export default function HistoryDetailScreen() {
   const insets = useSafeAreaInsets();
   const topPad = insets.top;
   const { t, isRTL, language } = useI18n();
-  const R = isRTL ? 'row-reverse' as const : 'row' as const;
+  const R = 'row' as const;
   const TA = isRTL ? 'right' as const : 'left' as const;
   const locale = language === 'ar' ? 'ar-EG' : 'en-GB';
 
@@ -118,7 +118,7 @@ export default function HistoryDetailScreen() {
               {t.history_earned}
             </Text>
             {earned != null ? (
-              <View style={[{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'baseline', gap: Spacing.xs }]}>
+              <View style={[{ flexDirection: 'row', alignItems: 'baseline', gap: Spacing.xs }]}>
                 <Text style={[styles.statValue, { color: '#16a34a', fontFamily: 'Inter_700Bold' }]}>
                   +{earned.toLocaleString('ar-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </Text>

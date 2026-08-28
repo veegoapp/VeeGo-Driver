@@ -171,7 +171,7 @@ function buildHtml(
 <div style="max-width:800px;margin:0 auto;padding:40px 30px">
 
   <!-- Header -->
-  <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #1e1e28;padding-bottom:20px;margin-bottom:24px;flex-direction:${isRTL ? 'row-reverse' : 'row'}">
+  <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #1e1e28;padding-bottom:20px;margin-bottom:24px;flex-direction:${'row'}">
     <div>
       <div style="font-size:22px;font-weight:800;color:#1e1e28;letter-spacing:-0.5px">VeeGo Driver</div>
       <div style="font-size:12px;color:#888;margin-top:2px">${strings.export_earnings_report}</div>
@@ -183,7 +183,7 @@ function buildHtml(
   </div>
 
   <!-- Summary cards -->
-  <div style="display:flex;gap:16px;margin-bottom:28px;flex-direction:${isRTL ? 'row-reverse' : 'row'}">
+  <div style="display:flex;gap:16px;margin-bottom:28px;flex-direction:${'row'}">
     <div style="flex:1;background:#1e1e28;border-radius:12px;padding:18px 20px">
       <div style="font-size:11px;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px">${strings.export_total_earned}</div>
       <div style="font-size:26px;font-weight:800;color:#4ade80">${totalEarned.toFixed(2)}</div>
@@ -240,7 +240,7 @@ export default function HistoryExportScreen() {
   const insets = useSafeAreaInsets();
   const topPad = insets.top;
   const { t, isRTL, language } = useI18n();
-  const R = isRTL ? 'row-reverse' as const : 'row' as const;
+  const R = 'row' as const;
   const TA = isRTL ? 'right' as const : 'left' as const;
 
   const [selectedPreset, setSelectedPreset] = useState<Preset>('month');

@@ -80,7 +80,7 @@ export default function ShuttleProfileScreen() {
   const { isDarkMode, setIsDarkMode } = useService();
 
   const TA = isRTL ? 'right' as const : 'left' as const;
-  const R = isRTL ? 'row-reverse' as const : 'row' as const;
+  const R = 'row' as const;
 
   const [copied, setCopied] = useState(false);
   const [showAvatarModal, setShowAvatarModal] = useState(false);

@@ -37,7 +37,7 @@ export default function RideHistoryTabScreen() {
   const tabBarHeight = TAB_BAR_HEIGHT_BASE + insets.bottom;
 
   const TA = isRTL ? 'right' as const : 'left' as const;
-  const R  = isRTL ? 'row-reverse' as const : 'row' as const;
+  const R  = 'row' as const;
 
   const [filter, setFilter] = useState<FilterKey>('all');
   const [page, setPage] = useState(1);

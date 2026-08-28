@@ -81,7 +81,7 @@ export function ServiceBlockedScreen({ status, serviceName }: Props) {
         <Text style={s.message}>{message}</Text>
 
         {status.displayMode === 'maintenance' && status.eta && (
-          <View style={[s.etaRow, isRTL && { flexDirection: 'row-reverse' }]}>
+          <View style={s.etaRow}>
             <Clock size={14} color="rgba(255,255,255,0.6)" />
             <Text style={s.eta}>{t.service_blocked_back_online.replace('{eta}', status.eta)}</Text>
           </View>
@@ -95,7 +95,7 @@ export function ServiceBlockedScreen({ status, serviceName }: Props) {
         </Text>
 
         <Pressable
-          style={({ pressed }) => [s.backBtn, isRTL && { flexDirection: 'row-reverse' }, pressed && { opacity: 0.75 }]}
+          style={({ pressed }) => [s.backBtn, pressed && { opacity: 0.75 }]}
           onPress={() => router.replace('/login')}
         >
           {isRTL ? <ArrowRight size={16} color="#1e1e28" /> : <ArrowLeft size={16} color="#1e1e28" />}

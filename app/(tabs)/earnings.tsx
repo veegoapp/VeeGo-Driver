@@ -243,7 +243,7 @@ export default function EarningsScreen() {
           </View>
 
           <Text style={[styles.heroAmountCap, { textAlign: TA, fontFamily: 'Inter_700Bold' }]}>{PERIOD_HERO_LABELS[period]}</Text>
-          <View style={[styles.heroAmountRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+          <View style={[styles.heroAmountRow, { flexDirection: 'row' }]}>
             <Text style={[styles.heroAmount, { fontFamily: 'Inter_800ExtraBold' }]}>{driverTotal.toFixed(0)}</Text>
             <Text style={[styles.heroCurrency, { fontFamily: 'Inter_700Bold' }]}>{t.egp}</Text>
           </View>
@@ -289,7 +289,7 @@ export default function EarningsScreen() {
             <View style={{ gap: 10 }}>
               {rides.map(ride => (
                 <Pressable key={ride.id} onPress={() => handleTripPress(ride)}>
-                  <View style={[styles.tripCard, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                  <View style={[styles.tripCard, { flexDirection: 'row' }]}>
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.tripDate, { color: C_CAP, fontFamily: 'Inter_600SemiBold', textAlign: TA }]}>
                         {new Date(ride.completedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}

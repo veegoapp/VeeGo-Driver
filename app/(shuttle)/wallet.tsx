@@ -48,7 +48,7 @@ export default function ShuttleWalletScreen() {
   const topPad = insets.top;
   const tabBarHeight = TAB_BAR_HEIGHT_BASE + insets.bottom;
   const { t, isRTL, language } = useI18n();
-  const R = isRTL ? 'row-reverse' as const : 'row' as const;
+  const R = 'row' as const;
   const TA = isRTL ? 'right' as const : 'left' as const;
   const { socket } = useSocket();
 
@@ -377,7 +377,7 @@ function SummaryRow({ label, value, positive, highlight, last, colors, isRTL }: 
   label: string; value: string; positive?: boolean; highlight?: boolean; last?: boolean;
   colors: ReturnType<typeof useColors>; isRTL: boolean;
 }) {
-  const R = isRTL ? 'row-reverse' as const : 'row' as const;
+  const R = 'row' as const;
   const TA = isRTL ? 'right' as const : 'left' as const;
   return (
     <View style={[styles.summaryRow, { flexDirection: R }, !last && { borderBottomWidth: 1, borderBottomColor: colors.divider }]}>

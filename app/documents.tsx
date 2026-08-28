@@ -57,7 +57,7 @@ export default function DocumentsScreen() {
   const queryClient = useQueryClient();
 
   const TA = isRTL ? 'right' as const : 'left' as const;
-  const R = isRTL ? 'row-reverse' as const : 'row' as const;
+  const R = 'row' as const;
 
   // ── uploading state per doc type ─────────────────────────────────────────
   const [uploading, setUploading] = useState<Record<string, boolean>>({});

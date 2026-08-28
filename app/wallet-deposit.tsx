@@ -43,7 +43,7 @@ export default function WalletDepositScreen() {
   const topPad = insets.top;
   const { t, isRTL } = useI18n();
   const TA = isRTL ? 'right' as const : 'left' as const;
-  const R = isRTL ? 'row-reverse' as const : 'row' as const;
+  const R = 'row' as const;
   const queryClient = useQueryClient();
 
   const { data: methodsRaw, isLoading: methodsLoading } = useQuery({

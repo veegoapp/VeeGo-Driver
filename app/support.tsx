@@ -36,7 +36,7 @@ export default function SupportScreen() {
   const insets = useSafeAreaInsets();
   const { t, isRTL } = useI18n();
   const topPad = insets.top;
-  const R  = isRTL ? 'row-reverse' as const : 'row' as const;
+  const R  = 'row' as const;
   const TA = isRTL ? 'right' as const      : 'left' as const;
 
   // ── FAQ accordion ──────────────────────────────────────────────

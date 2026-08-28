@@ -56,7 +56,7 @@ export default function LoginScreen() {
   const { credential: credentialParam } = useLocalSearchParams<{ credential?: string }>();
   const initialCredential = credentialParam ? decodeURIComponent(credentialParam) : undefined;
 
-  const R = isRTL ? 'row-reverse' as const : 'row' as const;
+  const R = 'row' as const;
   const { setLanguage, language } = useI18n();
 
   const handleSignInSuccess = async (
@@ -154,7 +154,7 @@ function SignInForm({ isRTL, onSuccess, onOtpRequired, initialCredential }: {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const R = isRTL ? 'row-reverse' as const : 'row' as const;
+  const R = 'row' as const;
   const TA = isRTL ? 'right' as const : 'left' as const;
 
   const handle = async () => {
@@ -258,7 +258,7 @@ function SignUpForm({ isRTL, onOtpRequired }: { isRTL: boolean; onOtpRequired: (
   const [termsChecked, setTermsChecked] = useState(false);
   const [termsModalVisible, setTermsModalVisible] = useState(false);
 
-  const R = isRTL ? 'row-reverse' as const : 'row' as const;
+  const R = 'row' as const;
   const TA = isRTL ? 'right' as const : 'left' as const;
 
   useEffect(() => {

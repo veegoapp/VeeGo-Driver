@@ -94,7 +94,7 @@ export default function WalletScreen() {
         {/* Dark hero — balance, paid/pending stats, cash-out & deposit all embedded */}
         <View style={[styles.hero, { paddingTop: topPad + 14 }]}>
           <Text style={[styles.heroCap, { textAlign: TA, fontFamily: 'Inter_700Bold' }]}>{t.available}</Text>
-          <View style={[styles.balanceRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+          <View style={[styles.balanceRow, { flexDirection: 'row' }]}>
             <Text style={[styles.balanceAmount, { fontFamily: 'Inter_800ExtraBold' }]}>{balanceData.balance.toFixed(0)}</Text>
             <Text style={[styles.balanceCurrency, { fontFamily: 'Inter_700Bold' }]}>{t.egp}</Text>
           </View>
@@ -111,7 +111,7 @@ export default function WalletScreen() {
             </View>
           </View>
 
-          <View style={[styles.actionRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+          <View style={[styles.actionRow, { flexDirection: 'row' }]}>
             <Pressable onPress={() => router.push('/wallet-withdraw')} style={({ pressed }) => [styles.primaryAction, { opacity: pressed ? 0.9 : 1 }]}>
               <ArrowDownLeft size={16} color={C_INK} strokeWidth={2} />
               <Text style={[styles.primaryActionText, { fontFamily: 'Inter_800ExtraBold' }]}>{t.cash_out}</Text>
@@ -143,7 +143,7 @@ export default function WalletScreen() {
               {payoutHistory.map((item, i) => {
                 const badge = payoutStatusBadge(item.status, colors, t);
                 return (
-                  <View key={item.id} style={[styles.txItem, { flexDirection: isRTL ? 'row-reverse' : 'row' }, i > 0 && styles.txItemBorder]}>
+                  <View key={item.id} style={[styles.txItem, { flexDirection: 'row' }, i > 0 && styles.txItemBorder]}>
                     <View style={styles.txIcon}>
                       <ArrowUpRight size={15} color={C_INK} strokeWidth={2} />
                     </View>
@@ -178,7 +178,7 @@ export default function WalletScreen() {
                 const txColor = tx.isCredit ? C_TEAL : C_AMBER;
                 const txBg = tx.isCredit ? '#DDF4EB' : '#FFF1DC';
                 return (
-                  <View key={tx.id} style={[styles.txItem, { flexDirection: isRTL ? 'row-reverse' : 'row' }, i > 0 && styles.txItemBorder]}>
+                  <View key={tx.id} style={[styles.txItem, { flexDirection: 'row' }, i > 0 && styles.txItemBorder]}>
                     <View style={[styles.txIcon, { backgroundColor: txBg }]}>
                       {tx.isCredit
                         ? <ArrowDownLeft size={15} color={txColor} strokeWidth={2} />

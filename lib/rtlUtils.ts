@@ -1,24 +1,25 @@
+import { I18nManager } from 'react-native';
 import type { Language } from './i18nContext';
 import { useI18n } from './i18nContext';
 
-// ── RTL layout strategy ───────────────────────────────────────────────────────
-// This app does NOT use React Native's native RTL engine (I18nManager.forceRTL).
-// It used to: every screen was ALSO hand-written with its own manual RTL
-// styling (flexDirection: isRTL ? 'row-reverse' : 'row', textAlign, icon
-// flips via rtlIconStyle below, etc.) — the intended single source of truth.
-// With native forceRTL active on top of that, a plain 'row' under native RTL
-// already renders right-to-left, so manually setting 'row-reverse' on top of
-// it flipped a SECOND time and landed back in left-to-right visual order —
-// silently undoing the manual RTL work on every row-based layout app-wide
-// (tab order, icon/text pairs, button rows, etc.), while text alignment
-// still looked fine since that doesn't double-flip the same way. That
-// mismatch — text reads RTL but rows/controls sit LTR — is what made pages
-// look "not RTL" despite an isRTL check on nearly every row in the app.
-// Turning native RTL off and trusting the existing manual system as the only
-// mechanism fixes every one of those rows at once, app-wide, without having
-// to touch each screen individually.
-export function applyRTLEngine(_lang: Language): void {
-  // Intentionally a no-op — kept so existing call sites don't need to change.
+// ── Apply I18nManager RTL engine state ────────────────────────────────────────
+// Must be called any time the language preference changes.
+// The OS layout engine caches the RTL flag at process start, so a full app
+// restart is required for the change to take effect across all native views.
+//
+// This IS the app's real RTL mechanism — plain `flexDirection: 'row'` mirrors
+// to right-to-left automatically once this is active. Do NOT also hand-flip
+// row layouts with `isRTL ? 'row-reverse' : 'row'` on top of this — that
+// double-reverses and lands back in left-to-right order (see the fix that
+// removed those redundant ternaries app-wide). Manual isRTL handling is still
+// correct and necessary for things native RTL does NOT auto-mirror: text
+// alignment (`textAlign: 'left'/'right'` are physical, not logical),
+// directional icons (see rtlIconStyle below), and any `left`/`right` (as
+// opposed to `start`/`end`) absolute positioning or margin/padding.
+export function applyRTLEngine(lang: Language): void {
+  const isArabic = lang === 'ar';
+  I18nManager.allowRTL(isArabic);
+  I18nManager.forceRTL(isArabic);
 }
 
 // ── Automatic app restart ─────────────────────────────────────────────────────

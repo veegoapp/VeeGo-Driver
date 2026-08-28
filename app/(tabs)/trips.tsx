@@ -64,7 +64,7 @@ export default function TripsScreen() {
   const [cancelReason, setCancelReason] = useState('');
   const [cancelBusy, setCancelBusy] = useState(false);
 
-  const R = isRTL ? 'row-reverse' as const : 'row' as const;
+  const R = 'row' as const;
   const TA = isRTL ? 'right' as const : 'left' as const;
 
   const filterLabels: Record<FilterKey, string> = {
@@ -365,7 +365,7 @@ function TripActionBar({ trip, colors, isRTL, onAccept, onReject, onStart, onCom
   onCancel: () => void;
 }) {
   const { t } = useI18n();
-  const R = isRTL ? 'row-reverse' as const : 'row' as const;
+  const R = 'row' as const;
   const [busy, setBusy] = useState(false);
 
   const wrap = (fn: () => void | Promise<void>) => async () => {

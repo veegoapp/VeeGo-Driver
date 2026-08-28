@@ -105,7 +105,7 @@ export default function SafetyScreen() {
         </Pressable>
 
         {/* Title */}
-        <View style={[styles.titleRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+        <View style={[styles.titleRow, { flexDirection: 'row' }]}>
           <LinearGradient colors={['#2d2d42', '#1e1e28']} style={styles.titleIcon}>
             <Shield size={24} color="#fff" strokeWidth={2} />
           </LinearGradient>
@@ -122,7 +122,7 @@ export default function SafetyScreen() {
         {/* Saved contact display card */}
         {savedContact?.phone ? (
           <GlassView style={[styles.savedCard, { marginTop: 28 }]} borderRadius={20}>
-            <View style={[styles.savedHeader, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+            <View style={[styles.savedHeader, { flexDirection: 'row' }]}>
               <View style={[styles.savedAvatar, { backgroundColor: colors.primary + '22' }]}>
                 <User size={22} color={colors.primary} strokeWidth={2} />
               </View>
@@ -136,7 +136,7 @@ export default function SafetyScreen() {
               </View>
             </View>
 
-            <View style={[styles.savedActions, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+            <View style={[styles.savedActions, { flexDirection: 'row' }]}>
               <Pressable
                 onPress={() => Linking.openURL(`tel:${savedContact.phone.replace(/\D/g, '')}`)}
                 style={[styles.savedActionBtn, { backgroundColor: colors.primary + '15', borderColor: colors.primary + '40' }]}
