@@ -8,7 +8,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { RideMap } from '@/components/RideMap';
 import { GlassView } from '@/components/GlassView';
-import { ServiceBlockedScreen } from '@/components/ServiceBlockedScreen';
 import { useColors } from '@/hooks/useColors';
 import { useServiceGuard } from '@/hooks/useServiceGuard';
 import { useService } from '@/lib/serviceContext';
@@ -28,12 +27,6 @@ import { Radius } from '@/constants/radius';
 import { Shadows } from '@/constants/shadows';
 import { useSplitColors, type SplitColors } from '@/lib/splitTheme';
 import { SosSheet } from '@/components/SosSheet';
-
-const SERVICE_NAMES: Record<string, string> = {
-  CAR: 'Car Rides',
-  SCOOTER: 'Scooter',
-  DELIVERY: 'Delivery',
-};
 
 // Fixed brand treatment for the post-trip fare/payment UI (completed overlay's
 // rating card + fare-breakdown sheet) — solid charcoal fills and gold fare
@@ -98,10 +91,15 @@ export default function RideScreen() {
   const insets = useSafeAreaInsets();
   const topPad = insets.top;
   const [phase, setPhase] = useState<Phase>('to_pickup');
-  // Suppress useServiceGuard's forced /login redirect while a ride is still
-  // in progress — a service becoming blocked mid-trip must not strand the
-  // driver away from an active ride; the redirect resumes once completed.
-  const { isBlocked, status: serviceStatus } = useServiceGuard(undefined, phase !== 'completed');
+  // Suppress useServiceGuard's forced /login redirect for the entire life
+  // of this screen (accept through completion + rating) — never just
+  // `phase !== 'completed'`. That used to re-enable enforcement the
+  // instant the ride finished, which could swap the trip-completed
+  // fare/rating screen for ServiceBlockedScreen (see the removed
+  // blockedForScreen render branch below) before the driver ever saw
+  // what they earned. Enforcement resumes correctly on the next screen —
+  // Home's tab layout runs its own useServiceGuard().
+  useServiceGuard(undefined, true);
   const { rideId } = useLocalSearchParams<{ rideId: string }>();
   const { socket } = useSocket();
   const queryClient = useQueryClient();
@@ -167,9 +165,6 @@ export default function RideScreen() {
   // card from vanishing and the false "Trip cancelled" alert from appearing.
   const completedRef = useRef(false);
 
-  // A non-completed ride takes priority over a blocked service — only treat
-  // the screen as blocked once the ride itself has reached 'completed'.
-  const blockedForScreen = isBlocked && phase === 'completed';
 
   const waitingCharge = useWaitingCharge(undefined, rideId);
 
@@ -450,9 +445,24 @@ export default function RideScreen() {
   const p = PHASE_COPY[phase];
 
   // ── ActiveSession fields ────────────────────────────────────────────────────
-  // All ride display data is sourced exclusively from ActiveSession.
-  const passengerName  = rideSession?.passenger?.name;
-  const passengerPhone = rideSession?.passenger?.phone;
+  // All ride display data is sourced exclusively from ActiveSession — except
+  // the passenger's name/phone/avatar, which must survive past completion:
+  // ActiveSession nulls out (session:snapshot { data: null }) the instant the
+  // ride completes (same reason completionResult exists for the fare), so
+  // reading rideSession?.passenger directly here made the Rate screen show
+  // "?" / "Rate —" for every completed ride, not just an intermittent race.
+  // This latches the last non-null passenger seen and keeps returning it
+  // once the session goes null.
+  const lastPassengerRef = useRef<{ name?: string; phone?: string; avatar?: string | null }>({});
+  if (rideSession?.passenger) {
+    lastPassengerRef.current = {
+      name: rideSession.passenger.name,
+      phone: rideSession.passenger.phone,
+      avatar: rideSession.passenger.avatar ?? null,
+    };
+  }
+  const passengerName  = rideSession?.passenger?.name ?? lastPassengerRef.current.name;
+  const passengerPhone = rideSession?.passenger?.phone ?? lastPassengerRef.current.phone;
   const pickupAddress  = rideSession?.pickup.address;
   const pickupLat      = rideSession?.pickup.latitude;
   const pickupLng      = rideSession?.pickup.longitude;
@@ -463,7 +473,7 @@ export default function RideScreen() {
   const displayFare    = rideSession?.finalPrice ?? rideSession?.estimatedPrice;
   // vehicleType: available for future use; not yet rendered in this screen.
   const vehicleType    = rideSession?.vehicleType;
-  const passengerAvatar = rideSession?.passenger?.avatar ?? null;
+  const passengerAvatar = rideSession?.passenger?.avatar ?? lastPassengerRef.current.avatar ?? null;
   useEffect(() => { setRiderAvatarFailed(false); }, [passengerAvatar]);
   const passengerInitials = passengerName
     ? passengerName.trim().split(/\s+/).map((w: string) => w[0]?.toUpperCase() ?? '').slice(0, 2).join('')
@@ -814,19 +824,6 @@ export default function RideScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [phase, pickupLat, pickupLng],
   );
-
-  // Short-circuit render for a blocked service ONLY here — after every hook
-  // above has run unconditionally. Bailing out earlier (before hooks like
-  // the completedAnim/checkScale effects, handleNavigate, mapPickup,
-  // mapDropoff, arrivedFocusTarget) called a different number of hooks
-  // between renders whenever isBlocked flipped true in the same render that
-  // phase reached 'completed' — a hard "Rendered fewer hooks than expected"
-  // React crash on exactly the trip-completion/rating screen. A non-completed
-  // ride still keeps the driver in the ride flow regardless of service-block
-  // state; normal blocking resumes once the ride completes.
-  if (blockedForScreen) {
-    return <ServiceBlockedScreen status={serviceStatus} serviceName={SERVICE_NAMES[serviceType] ?? serviceType} />;
-  }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
