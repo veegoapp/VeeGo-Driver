@@ -40,7 +40,7 @@ export function TermsModal({ visible, contentEn, contentAr, showAcceptButton, ac
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <View style={[styles.root, { backgroundColor: colors.background, paddingTop: Platform.OS === 'ios' ? insets.top : 16 }]}>
         {/* Header */}
-        <View style={[styles.header, { borderBottomColor: colors.border, flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+        <View style={[styles.header, { borderBottomColor: colors.border, flexDirection: 'row' }]}>
           <Text style={[styles.title, { color: colors.foreground, textAlign: TA }]}>{t.terms_title}</Text>
           <Pressable onPress={onClose} style={[styles.closeBtn, { backgroundColor: colors.secondary }]}>
             <X size={18} color={colors.foreground} strokeWidth={2} />

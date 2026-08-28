@@ -26,7 +26,7 @@ export function UpcomingTripCard({
   // Matches the locale convention already used in history.tsx/history-detail.tsx.
   const dateLocale = language === 'ar' ? 'ar-EG' : 'en-GB';
   const TA = isRTL ? 'right' as const : 'left' as const;
-  const R = isRTL ? 'row-reverse' as const : 'row' as const;
+  const R = 'row' as const;
   // Only a confirmed thresholdMet === true counts as "Active" — when the
   // field is simply absent from the response, that used to fall through to
   // the green "Active" badge on a trip that hasn't actually met its minimum

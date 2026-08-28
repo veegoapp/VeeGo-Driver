@@ -16,7 +16,7 @@ type BannerState = 'hidden' | 'offline' | 'reconnected';
 export function ServerStatusBanner() {
   const insets = useSafeAreaInsets();
   const topPad = insets.top;
-  const { t, isRTL } = useI18n();
+  const { t } = useI18n();
 
   const [banner, setBanner] = useState<BannerState>('hidden');
   const wasOfflineRef = useRef(false);
@@ -80,7 +80,7 @@ export function ServerStatusBanner() {
       ]}
       pointerEvents="none"
     >
-      <View style={[styles.inner, isRTL && { flexDirection: 'row-reverse' }]}>
+      <View style={styles.inner}>
         {isOffline
           ? <WifiOff size={14} color="#fff" strokeWidth={2.5} />
           : <Wifi     size={14} color="#fff" strokeWidth={2.5} />

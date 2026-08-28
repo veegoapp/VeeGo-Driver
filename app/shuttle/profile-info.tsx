@@ -45,7 +45,7 @@ export default function ShuttleProfileInfoScreen() {
   const topPad = insets.top;
 
   const TA = isRTL ? 'right' as const : 'left' as const;
-  const R = isRTL ? 'row-reverse' as const : 'row' as const;
+  const R = 'row' as const;
 
   const { data: driver, isLoading } = useQuery<DriverMe>({
     queryKey: ['driver'],

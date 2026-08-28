@@ -118,7 +118,7 @@ export default function TripCompleteScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.capC}>{t.wallet_balance_label}</Text>
-              <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'baseline', gap: 4, marginTop: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 4, marginTop: 1 }}>
                 <Text style={styles.walletAmountC}>
                   {balance != null ? balance.toLocaleString('ar-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
                 </Text>
@@ -133,7 +133,7 @@ export default function TripCompleteScreen() {
               <Text style={[styles.capC, { marginTop: 22, marginBottom: 8, textAlign: TA }]}>تفاصيل المدفوعات</Text>
               <View style={styles.breakdownCardC}>
                 <View style={styles.breakdownRowC}>
-                  <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 8 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <Banknote size={15} color="#d97706" strokeWidth={2} />
                     <Text style={styles.breakdownLabelC}>كاش محصّل</Text>
                   </View>
@@ -151,7 +151,7 @@ export default function TripCompleteScreen() {
                   <>
                     <View style={styles.hairC} />
                     <View style={styles.breakdownRowC}>
-                      <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 8 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                         <CreditCard size={15} color="#2563eb" strokeWidth={2} />
                         <Text style={styles.breakdownLabelC}>كارت / بطاقة</Text>
                       </View>
@@ -166,7 +166,7 @@ export default function TripCompleteScreen() {
                   <>
                     <View style={styles.hairC} />
                     <View style={styles.breakdownRowC}>
-                      <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 8 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                         <Smartphone size={15} color={C_TEAL} strokeWidth={2} />
                         <Text style={styles.breakdownLabelC}>محفظة / أونلاين</Text>
                       </View>

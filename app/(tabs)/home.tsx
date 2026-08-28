@@ -175,7 +175,7 @@ export default function HomeScreen() {
   const [unreadCount, setUnreadCount] = useState(0);
   const { socket } = useSocket();
 
-  const R = isRTL ? 'row-reverse' as const : 'row' as const;
+  const R = 'row' as const;
   const TA = isRTL ? 'right' as const : 'left' as const;
 
   const { data: driverRaw, isLoading: driverLoading, isError: driverError, refetch: refetchDriver } = useQuery({

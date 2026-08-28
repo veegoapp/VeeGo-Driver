@@ -101,7 +101,7 @@ export default function TripHistoryScreen() {
   const insets = useSafeAreaInsets();
   const topPad = insets.top;
   const { t, isRTL, language } = useI18n();
-  const R = isRTL ? 'row-reverse' as const : 'row' as const;
+  const R = 'row' as const;
   const TA = isRTL ? 'right' as const : 'left' as const;
   const locale = language === 'ar' ? 'ar-EG' : 'en-GB';
 
@@ -204,7 +204,7 @@ export default function TripHistoryScreen() {
                       <Text style={[styles.summaryLabel, { fontFamily: 'Inter_700Bold', textAlign: TA }]}>
                         {displayTotal} {t.history_subtitle}
                       </Text>
-                      <View style={[{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'baseline', gap: 6, marginTop: 2 }]}>
+                      <View style={[{ flexDirection: 'row', alignItems: 'baseline', gap: 6, marginTop: 2 }]}>
                         <Text style={[styles.summaryAmount, { fontFamily: 'Inter_700Bold' }]}>
                           {totalEarned.toLocaleString('ar-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </Text>
@@ -326,7 +326,7 @@ const TripCard = React.memo(function TripCard({
 }) {
   const slideAnim = useRef(new Animated.Value(24)).current;
   const fadeAnim  = useRef(new Animated.Value(0)).current;
-  const R = isRTL ? 'row-reverse' as const : 'row' as const;
+  const R = 'row' as const;
   const TA = isRTL ? 'right' as const : 'left' as const;
 
   useEffect(() => {

@@ -1,7 +1,8 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setApiLanguage } from '../api';
-import { applyRTLEngine } from '../rtlUtils';
+import { applyRTLEngine, triggerAppRestart } from '../rtlUtils';
 import { en } from './translations';
 import type { Language, Translations } from './translations';
 import { LANG_STORAGE_KEY, makeSafeTranslations } from './utils';
@@ -59,15 +60,29 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
 
     setIsSwitchingLanguage(true);
 
+    // IMPORTANT: AsyncStorage.setItem MUST be awaited before applyRTLEngine is
+    // called. On Android, I18nManager.forceRTL() inside applyRTLEngine triggers
+    // an immediate OS-level activity restart. If the write happens after that
+    // call, the process is killed before the write commits, the next cold-start
+    // reads null from AsyncStorage, language stays null, and index.tsx redirects
+    // back to /language-select — making it appear as if the selection was never
+    // saved. Writing first guarantees the value is durable before any restart.
     (async () => {
       await AsyncStorage.setItem(LANG_STORAGE_KEY, lang).catch(() => {});
 
       applyRTLEngine(lang);
       setApiLanguage(lang);
-      // No app restart needed — layout direction is driven entirely by this
-      // app's own isRTL checks (not React Native's native RTL engine, see
-      // rtlUtils.ts), so re-rendering with the new language is sufficient.
       setLanguageState(lang);
+
+      // On Android, forceRTL() above already triggers an OS-level activity
+      // restart on its own (see app/language-select.tsx's androidRtlRestart
+      // handling) — calling triggerAppRestart() again here would race with
+      // that. iOS/web have no such automatic restart, so this is the only
+      // place the reload actually happens for them — without it, forceRTL()
+      // flips the native flag but the mounted layout never re-mirrors.
+      if (Platform.OS !== 'android') {
+        triggerAppRestart();
+      }
 
       if (switchTimerRef.current) clearTimeout(switchTimerRef.current);
       switchTimerRef.current = setTimeout(() => setIsSwitchingLanguage(false), 1400);
