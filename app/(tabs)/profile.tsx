@@ -21,6 +21,7 @@ import { LanguageSwitchOverlay } from '@/components/LanguageSwitchOverlay';
 import { LANGUAGES } from '@/constants/languages';
 import { useAuth } from '@/lib/authContext';
 import { endpoints } from '@/lib/api';
+import type { DriverProfileEnriched } from '@/lib/api/types';
 import { TermsModal } from '@/components/TermsModal';
 import { TAB_BAR_HEIGHT_BASE } from '@/constants/tabBar';
 import { Typography } from '@/constants/typography';
@@ -31,18 +32,11 @@ import { Shadows } from '@/constants/shadows';
 const TERMS_VERSION_KEY = 'driver_terms_accepted_version';
 import type { TermsData } from '@/lib/types';
 
-type DriverProfile = {
-  id: string;
-  name: string;
-  rating: number;
-  avatar: string;
-  trips: number;
-  acceptanceRate: number;
-  cancelRate: number;
-  level: string;
-  referralCode?: string;
-  vehicle?: { make: string; model: string; plate: string; year?: number | string | null; color?: string | null };
-};
+// level isn't a real backend concept (no driver tier/level is tracked
+// anywhere) — kept optional here so its lone reference below can stay a
+// harmless '—' fallback instead of a runtime crash on a field that's
+// never actually sent.
+type DriverProfile = DriverProfileEnriched & { level?: string };
 
 export default function ProfileScreen() {
   const colors = useColors();
@@ -101,9 +95,13 @@ export default function ProfileScreen() {
   // (driver.avatar or the profile_photo document) fails to load — e.g. a
   // broken/private storage link — instead of leaving an empty circle.
   const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
+  // Enriched endpoint — /driver/me is a thin passthrough of the drivers table
+  // row only (no vehicle, trip count, referral code, or accept/cancel rate),
+  // which is why those all showed as "—" here before: this screen was asking
+  // an endpoint that never had that data in the first place.
   const { data: driverRaw, isLoading, refetch: refetchDriver } = useQuery<DriverProfile>({
-    queryKey: ['driver'],
-    queryFn: endpoints.driver.me as () => Promise<DriverProfile>,
+    queryKey: ['driver-profile'],
+    queryFn: endpoints.driver.profile as () => Promise<DriverProfile>,
   });
 
   const handleRefresh = async () => {
@@ -203,7 +201,7 @@ export default function ProfileScreen() {
 
         <GlassView style={styles.menuGroup} borderRadius={20}>
           <MenuItem icon="user" label={t.profile_info_label} onPress={() => router.push('/personal-info')} colors={colors} isRTL={isRTL} />
-          <MenuItem icon="star" label={t.ratings_reviews} sub={driver?.trips ? `${driver.trips} reviews` : '—'} onPress={() => router.push('/ratings')} colors={colors} isRTL={isRTL} />
+          <MenuItem icon="star" label={t.ratings_reviews} sub={driver?.trips ? t.reviews_count_label.replace('{count}', String(driver.trips)) : '—'} onPress={() => router.push('/ratings')} colors={colors} isRTL={isRTL} />
           <MenuItem
             icon="truck"
             label={t.vehicle_label}

@@ -1396,4 +1396,13 @@ export const ar: Translations = {
   no_filter_rides_found: 'لا توجد رحلات {filter}.',
   reconnecting_server: 'جارٍ إعادة الاتصال بالخادم…',
   screen_not_found: 'هذه الشاشة غير موجودة.',
+  earn_period_today: 'اليوم',
+  earn_period_this_week: 'هذا الأسبوع',
+  earn_period_last_week: 'الأسبوع الماضي',
+  earn_period_this_month: 'هذا الشهر',
+  earn_total_today: 'إجمالي اليوم',
+  earn_total_this_week: 'إجمالي هذا الأسبوع',
+  earn_total_last_week: 'إجمالي الأسبوع الماضي',
+  earn_total_this_month: 'إجمالي هذا الشهر',
+  reviews_count_label: '{count} تقييم',
 };

@@ -1395,6 +1395,15 @@ export const en = {
   no_filter_rides_found: 'No {filter} rides found.',
   reconnecting_server: 'Reconnecting to server…',
   screen_not_found: 'This screen doesn\'t exist.',
+  earn_period_today: 'Today',
+  earn_period_this_week: 'This Week',
+  earn_period_last_week: 'Last Week',
+  earn_period_this_month: 'This Month',
+  earn_total_today: 'TOTAL TODAY',
+  earn_total_this_week: 'TOTAL THIS WEEK',
+  earn_total_last_week: 'TOTAL LAST WEEK',
+  earn_total_this_month: 'TOTAL THIS MONTH',
+  reviews_count_label: '{count} reviews',
 };
 
 export type Translations = typeof en;

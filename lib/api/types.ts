@@ -79,6 +79,8 @@ export interface DriverProfileEnriched {
   referralCode: string;
   vehicle: { make: string; model: string; plate: string; year?: number | string | null; color?: string | null; colorAr?: string | null } | null;
   documentStatus: 'accepted' | 'pending' | 'rejected' | null;
+  acceptanceRate: number | null;
+  cancelRate: number | null;
   bonusTargets: Array<{
     id: string;
     title: string;

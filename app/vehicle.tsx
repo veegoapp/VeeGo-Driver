@@ -93,6 +93,8 @@ export default function VehicleScreen() {
   })();
 
   const displayColor = isRTL && colorAr ? colorAr : (color ?? null);
+  const vehicleTypeLabels: Record<string, string> = { car: t.car, scooter: t.scooter, delivery: t.delivery, shuttle: t.shuttle };
+  const displayVehicleType = vehicleType ? (vehicleTypeLabels[vehicleType] ?? vehicleType) : null;
 
   const rows: { label: string; value: string | null }[] = [
     { label: t.vehicle_brand, value: make },
@@ -100,7 +102,7 @@ export default function VehicleScreen() {
     { label: t.vehicle_year, value: year ? String(year) : null },
     { label: t.vehicle_color, value: displayColor },
     { label: t.vehicle_plate, value: plate },
-    ...(vehicleType ? [{ label: t.vehicle_label, value: vehicleType }] : []),
+    ...(displayVehicleType ? [{ label: t.vehicle_label, value: displayVehicleType }] : []),
   ];
 
   const hasNoData = !isLoading && !make && !model && !plate;
