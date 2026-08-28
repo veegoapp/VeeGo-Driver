@@ -17,14 +17,10 @@ import { useShuttle, findLineForRoute } from '@/lib/shuttleContext';
 import { endpoints } from '@/lib/api';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
+import { useSplitColors, type SplitColors } from '@/lib/splitTheme';
 
 // "C" split-panel palette — matches the ride/shuttle screens.
-const C_BG = '#EEF0F2';
-const C_INK = '#14151A';
-const C_CAP = '#9AA0A6';
-const C_HAIR = '#EEF0F1';
 const C_MINT = '#3DDC97';
-const C_TEAL = '#0E9F8E';
 const C_RED = '#D92D20';
 
 type Params = {
@@ -56,6 +52,8 @@ export default function TripDetailsScreen() {
   const insets = useSafeAreaInsets();
   const topPad = insets.top;
   const { t, isRTL } = useI18n();
+  const S = useSplitColors();
+  const styles = useMemo(() => makeStyles(S), [S]);
   const TA = isRTL ? 'right' as const : 'left' as const;
   const R = 'row' as const;
 
@@ -204,7 +202,7 @@ export default function TripDetailsScreen() {
           </View>
         </View>
         <View style={styles.emptyState}>
-          <ActivityIndicator size="small" color={C_INK} />
+          <ActivityIndicator size="small" color={S.ink} />
         </View>
       </View>
     );
@@ -223,7 +221,7 @@ export default function TripDetailsScreen() {
           </View>
         </View>
         <View style={styles.emptyState}>
-          <Text style={{ color: C_CAP, fontFamily: 'Inter_400Regular', fontSize: Typography.size.sm }}>
+          <Text style={{ color: S.cap, fontFamily: 'Inter_400Regular', fontSize: Typography.size.sm }}>
             {t.trip_not_found}
           </Text>
         </View>
@@ -284,7 +282,7 @@ export default function TripDetailsScreen() {
             <View style={styles.routeDotStartC} />
             <View style={styles.routeDashC} />
             <View style={styles.routeVehicleIconC}>
-              <MapPin size={13} color={C_INK} strokeWidth={2.4} />
+              <MapPin size={13} color={S.ink} strokeWidth={2.4} />
             </View>
             <View style={styles.routeDashC} />
             <View style={styles.routeDotEndC} />
@@ -323,7 +321,7 @@ export default function TripDetailsScreen() {
         {/* Stat strip: Passengers / Vehicle / Line, one card with dividers */}
         <View style={[styles.statStripC, { flexDirection: R }]}>
           <View style={styles.statCellC}>
-            <Users size={16} color={C_CAP} strokeWidth={2} />
+            <Users size={16} color={S.cap} strokeWidth={2} />
             <Text style={styles.statValC}>{bookedSeats} / {totalSeats}</Text>
             <Text style={styles.statLabelC}>{t.passengers_label_count}</Text>
           </View>
@@ -335,7 +333,7 @@ export default function TripDetailsScreen() {
           </View>
           <View style={styles.statDividerC} />
           <View style={styles.statCellC}>
-            <Calendar size={16} color={C_CAP} strokeWidth={2} />
+            <Calendar size={16} color={S.cap} strokeWidth={2} />
             <Text style={styles.statValC}>{lineNumber}</Text>
             <Text style={styles.statLabelC}>Line</Text>
           </View>
@@ -346,7 +344,7 @@ export default function TripDetailsScreen() {
         <Text style={[styles.sectionTitleC, { textAlign: TA, marginTop: 26 }]}>{t.route_timeline}</Text>
 
         {stationsLoading ? (
-          <ActivityIndicator size="small" color={C_INK} style={{ marginTop: Spacing.lg }} />
+          <ActivityIndicator size="small" color={S.ink} style={{ marginTop: Spacing.lg }} />
         ) : stations.length > 0 ? (
           <View style={styles.timelineCardC}>
             <View style={[styles.timelineRailC, isRTL ? { right: 33 } : { left: 33 }]} />
@@ -362,10 +360,10 @@ export default function TripDetailsScreen() {
                 >
                   <View style={[
                     styles.timelineDotC,
-                    idx === 0 ? { backgroundColor: C_INK } : isLast ? { backgroundColor: C_MINT } : { backgroundColor: '#F0F2F3', borderWidth: 1.5, borderColor: '#D3D6DA' },
+                    idx === 0 ? { backgroundColor: S.ink } : isLast ? { backgroundColor: C_MINT } : { backgroundColor: '#F0F2F3', borderWidth: 1.5, borderColor: '#D3D6DA' },
                   ]} />
                   <View style={{ flex: 1 }}>
-                    <Text style={[styles.timelineCapC, { textAlign: TA }, isLast && { color: C_TEAL }]}>
+                    <Text style={[styles.timelineCapC, { textAlign: TA }, isLast && { color: S.teal }]}>
                       {idx === 0 ? t.from : isLast ? t.to : ''}
                     </Text>
                     <Text style={[styles.timelineNameC, { textAlign: TA }]} numberOfLines={1}>{st.name}</Text>
@@ -376,7 +374,7 @@ export default function TripDetailsScreen() {
           </View>
         ) : (
           <View style={styles.emptyTimelineC}>
-            <MapPin size={24} color={C_CAP} strokeWidth={2} />
+            <MapPin size={24} color={S.cap} strokeWidth={2} />
             <Text style={styles.emptyTimelineTextC}>{from} → {to}</Text>
           </View>
         )}
@@ -480,19 +478,20 @@ export default function TripDetailsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: C_BG },
+function makeStyles(S: SplitColors) {
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: S.bg },
 
   // Dark hero: back button + route diagram + countdown
   backBtnC: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.1)' },
   emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  heroC: { backgroundColor: C_INK, paddingHorizontal: Spacing.lg, paddingBottom: 22, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 },
+  heroC: { backgroundColor: S.ink, paddingHorizontal: Spacing.lg, paddingBottom: 22, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 },
   heroCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.2, color: '#8A9096', textTransform: 'uppercase' },
   routeNameC: { fontSize: 20, lineHeight: 26, fontFamily: 'Inter_700Bold', color: '#ffffff', marginTop: 22 },
   routeStopC: { fontSize: 14, fontFamily: 'Inter_700Bold', color: '#ffffff', marginTop: 3 },
   routeLineWrapC: { flex: 1.4, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 4 },
   routeDotStartC: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: C_MINT },
-  routeDotEndC: { width: 7, height: 7, borderRadius: 2, backgroundColor: C_INK, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.5)' },
+  routeDotEndC: { width: 7, height: 7, borderRadius: 2, backgroundColor: S.ink, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.5)' },
   routeDashC: { flex: 1, height: 2, backgroundColor: 'rgba(255,255,255,0.28)' },
   routeVehicleIconC: { width: 26, height: 26, borderRadius: 8, backgroundColor: C_MINT, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   countdownValC: { fontSize: 36, lineHeight: 38, fontFamily: 'Inter_700Bold', color: C_MINT },
@@ -522,32 +521,32 @@ const styles = StyleSheet.create({
   cancelledTextC: { fontSize: 13, color: C_RED, fontFamily: 'Inter_700Bold', flex: 1 },
 
   // White body: merged stat strip + redrawn timeline
-  statStripC: { backgroundColor: '#ffffff', borderRadius: 18, paddingVertical: 16 },
+  statStripC: { backgroundColor: S.card, borderRadius: 18, paddingVertical: 16 },
   statCellC: { flex: 1, alignItems: 'center', gap: 4 },
-  statDividerC: { width: 1, backgroundColor: C_HAIR },
-  statValC: { fontSize: 14, fontFamily: 'Inter_700Bold', color: C_INK },
-  statLabelC: { fontSize: 10, fontFamily: 'Inter_700Bold', color: C_CAP, textTransform: 'uppercase', letterSpacing: 0.6 },
-  sectionTitleC: { fontSize: Typography.size.md, fontFamily: 'Inter_700Bold', color: C_INK },
-  timelineCardC: { backgroundColor: '#ffffff', borderRadius: 18, marginTop: 10, padding: 18, position: 'relative' },
-  timelineRailC: { position: 'absolute', top: 30, bottom: 30, width: 2, backgroundColor: C_HAIR },
+  statDividerC: { width: 1, backgroundColor: S.hair },
+  statValC: { fontSize: 14, fontFamily: 'Inter_700Bold', color: S.ink },
+  statLabelC: { fontSize: 10, fontFamily: 'Inter_700Bold', color: S.cap, textTransform: 'uppercase', letterSpacing: 0.6 },
+  sectionTitleC: { fontSize: Typography.size.md, fontFamily: 'Inter_700Bold', color: S.ink },
+  timelineCardC: { backgroundColor: S.card, borderRadius: 18, marginTop: 10, padding: 18, position: 'relative' },
+  timelineRailC: { position: 'absolute', top: 30, bottom: 30, width: 2, backgroundColor: S.hair },
   timelineDotC: { width: 16, height: 16, borderRadius: 8, flexShrink: 0, zIndex: 1 },
-  timelineCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', color: C_CAP, textTransform: 'uppercase', letterSpacing: 0.6, minHeight: 13 },
-  timelineNameC: { fontSize: 14, fontFamily: 'Inter_700Bold', color: C_INK, marginTop: 2 },
-  emptyTimelineC: { marginTop: Spacing.md, padding: Spacing.xl, alignItems: 'center', gap: 10, backgroundColor: '#ffffff', borderRadius: 16 },
-  emptyTimelineTextC: { fontSize: 13, fontFamily: 'Inter_400Regular', color: C_CAP, textAlign: 'center' },
+  timelineCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', color: S.cap, textTransform: 'uppercase', letterSpacing: 0.6, minHeight: 13 },
+  timelineNameC: { fontSize: 14, fontFamily: 'Inter_700Bold', color: S.ink, marginTop: 2 },
+  emptyTimelineC: { marginTop: Spacing.md, padding: Spacing.xl, alignItems: 'center', gap: 10, backgroundColor: S.card, borderRadius: 16 },
+  emptyTimelineTextC: { fontSize: 13, fontFamily: 'Inter_400Regular', color: S.cap, textAlign: 'center' },
 
   // Bottom action bar — Start Trip primary, Cancel demoted to a text link
   bottomBarC: {
     paddingHorizontal: Spacing.lg,
     paddingTop: 14,
-    backgroundColor: C_BG,
+    backgroundColor: S.bg,
   },
   startBtnC: {
     height: 56,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 16,
-    backgroundColor: C_INK,
+    backgroundColor: S.ink,
   },
   startBtnTextC: { color: '#ffffff', fontSize: 15, fontFamily: 'Inter_700Bold' },
   startBtnDisabledC: {
@@ -558,8 +557,9 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#D3D6DA',
   },
-  startBtnDisabledTextC: { fontSize: 15, fontFamily: 'Inter_700Bold', color: C_CAP },
-  startBtnHintC: { fontSize: 11, fontFamily: 'Inter_400Regular', color: C_CAP, marginTop: 2, textAlign: 'center' },
+  startBtnDisabledTextC: { fontSize: 15, fontFamily: 'Inter_700Bold', color: S.cap },
+  startBtnHintC: { fontSize: 11, fontFamily: 'Inter_400Regular', color: S.cap, marginTop: 2, textAlign: 'center' },
   cancelLinkC: { alignItems: 'center', justifyContent: 'center', paddingVertical: 12 },
   cancelLinkTextC: { fontSize: 13, fontFamily: 'Inter_700Bold', color: C_RED },
-});
+  });
+}

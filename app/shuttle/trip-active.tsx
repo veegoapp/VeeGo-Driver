@@ -31,6 +31,7 @@ import { endpoints, type ShuttleCompleteResponse, type StationEtaResponse } from
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
+import { useSplitColors, type SplitColors } from '@/lib/splitTheme';
 
 // ── Navigation constants ──────────────────────────────────────────────────────
 /**
@@ -47,12 +48,6 @@ const SHUTTLE_TRIP_CONFIG = {
 const { height: SCREEN_H } = Dimensions.get('window');
 
 // "C" split-panel palette — matches the ride screens' design language.
-const C_INK = '#14151A';
-const C_INK_SOFT = '#6B7178';
-const C_CAP = '#9AA0A6';
-const C_CAP_ON_DARK = '#8A9096';
-const C_HAIR = '#EEF0F1';
-const C_TEAL = '#0E9F8E';
 const C_MINT = '#3DDC97';
 const C_AMBER = '#F5A623';
 const C_RED = '#D92D20';
@@ -84,6 +79,8 @@ export default function ShuttleTripActiveScreen() {
   const insets = useSafeAreaInsets();
   const topPad = insets.top;
   const { t, isRTL } = useI18n();
+  const S = useSplitColors();
+  const styles = useMemo(() => makeStyles(S), [S]);
   const { socket } = useSocket();
   const navigation = useNavigation();
   const shuttleCtx = useShuttle();
@@ -588,9 +585,9 @@ export default function ShuttleTripActiveScreen() {
           key={i}
           style={[
             styles.dot,
-            i < currentStopIndex && { backgroundColor: C_TEAL },
-            i === currentStopIndex && { backgroundColor: C_INK, width: 24 },
-            i > currentStopIndex && { backgroundColor: C_HAIR },
+            i < currentStopIndex && { backgroundColor: S.teal },
+            i === currentStopIndex && { backgroundColor: S.ink, width: 24 },
+            i > currentStopIndex && { backgroundColor: S.hair },
           ]}
         />
       ))}
@@ -823,7 +820,7 @@ export default function ShuttleTripActiveScreen() {
               )}
 
               <View style={styles.passengerCountRowC}>
-                <Users size={13} color={C_CAP} strokeWidth={2} />
+                <Users size={13} color={S.cap} strokeWidth={2} />
                 <Text style={styles.passengerCountTextC}>
                   {t.passengers_at_stop_msg
                     .replace('{count}', String(passengers.length))
@@ -857,7 +854,7 @@ export default function ShuttleTripActiveScreen() {
               {/* Finish route if last stop */}
               {isLastStop && (
                 <Pressable onPress={handleFinishRoute} style={styles.finishBtnC}>
-                  <Check size={16} color={C_TEAL} strokeWidth={2} />
+                  <Check size={16} color={S.teal} strokeWidth={2} />
                   <Text style={styles.finishBtnTextC}>{t.finish_route}</Text>
                 </Pressable>
               )}
@@ -898,6 +895,8 @@ const AtStopSheet = React.memo(function AtStopSheet({
   passengers, passengerStatuses, onUpdatePassengerStatus, isLastStop, isNextLoading,
   failedStationActions, lastStopProcessingRef, onFinishRoute, onNextStop,
 }: AtStopSheetProps) {
+  const S = useSplitColors();
+  const styles = useMemo(() => makeStyles(S), [S]);
   return (
     <View style={[styles.atStopSheetC, { maxHeight: SCREEN_H * 0.68 }]}>
       {/* Dark header: stop name + STOP MODE badge + timer */}
@@ -935,7 +934,7 @@ const AtStopSheet = React.memo(function AtStopSheet({
 
         {passengers.length === 0 ? (
           <View style={styles.emptyPassengersC}>
-            <Users size={26} color={C_CAP} strokeWidth={1.5} />
+            <Users size={26} color={S.cap} strokeWidth={1.5} />
             <Text style={styles.emptyPassengersTextC}>{t.no_passengers_at_stop}</Text>
           </View>
         ) : (
@@ -949,7 +948,7 @@ const AtStopSheet = React.memo(function AtStopSheet({
                   <Image source={{ uri: p.avatar }} style={styles.passengerAvatarImgC} />
                 ) : (
                   <View style={[styles.passengerAvatarC, isBoarded && { backgroundColor: '#DDF4EB' }, isNoShow && { backgroundColor: '#F9DEDA' }]}>
-                    <Text style={[styles.passengerInitialC, { color: isBoarded ? C_TEAL : isNoShow ? C_RED : C_INK }]}>
+                    <Text style={[styles.passengerInitialC, { color: isBoarded ? S.teal : isNoShow ? C_RED : S.ink }]}>
                       {(p.name || '?')[0].toUpperCase()}
                     </Text>
                   </View>
@@ -959,7 +958,7 @@ const AtStopSheet = React.memo(function AtStopSheet({
                   <Text style={styles.passengerPhoneC}>{p.phone}</Text>
                   {p.destinationStationName ? (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
-                      <MapPin size={11} color={C_CAP} strokeWidth={2} />
+                      <MapPin size={11} color={S.cap} strokeWidth={2} />
                       <Text style={styles.passengerPhoneC} numberOfLines={1}>
                         {t.drop_off_at}: {p.destinationStationName}
                       </Text>
@@ -974,16 +973,16 @@ const AtStopSheet = React.memo(function AtStopSheet({
                     </View>
                   ) : p.paymentMethod === 'card' || p.paymentMethod === 'online' ? (
                     <View style={styles.paymentPaidBadgeC}>
-                      <Text style={[styles.paymentBadgeTextC, { color: C_TEAL }]}>{t.paid_badge}</Text>
+                      <Text style={[styles.paymentBadgeTextC, { color: S.teal }]}>{t.paid_badge}</Text>
                     </View>
                   ) : null}
                 </View>
                 <View style={styles.statusBtnsC}>
                   <Pressable
                     onPress={() => onUpdatePassengerStatus(p.id, isBoarded ? 'not_arrived' : 'boarded')}
-                    style={[styles.statusBtnC, isBoarded ? { backgroundColor: C_TEAL, borderColor: C_TEAL } : { borderColor: '#B9E4DB' }]}
+                    style={[styles.statusBtnC, isBoarded ? { backgroundColor: S.teal, borderColor: S.teal } : { borderColor: '#B9E4DB' }]}
                   >
-                    <Check size={16} color={isBoarded ? '#ffffff' : C_TEAL} strokeWidth={2.5} />
+                    <Check size={16} color={isBoarded ? '#ffffff' : S.teal} strokeWidth={2.5} />
                   </Pressable>
                   <Pressable
                     onPress={() => onUpdatePassengerStatus(p.id, isNoShow ? 'not_arrived' : 'no_show')}
@@ -1048,7 +1047,8 @@ const AtStopSheet = React.memo(function AtStopSheet({
   );
 });
 
-const styles = StyleSheet.create({
+function makeStyles(S: SplitColors) {
+  return StyleSheet.create({
   container: { flex: 1, overflow: 'hidden' },
 
   // GPS permission block
@@ -1108,30 +1108,30 @@ const styles = StyleSheet.create({
   // ── "C" en-route / approaching split card ──────────────────────────────
   enRouteWrapC: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: Spacing.md, paddingTop: 10 },
   splitCardC: { borderRadius: 24, overflow: 'hidden', flexDirection: 'row', elevation: 8, shadowColor: '#000', shadowOffset: { width: 0, height: -6 }, shadowOpacity: 0.16, shadowRadius: 20 },
-  leftPanelC: { width: 104, flexShrink: 0, backgroundColor: C_INK, paddingHorizontal: 12, paddingVertical: 16 },
+  leftPanelC: { width: 104, flexShrink: 0, backgroundColor: S.ink, paddingHorizontal: 12, paddingVertical: 16 },
   statusRowC: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   statusDotC: { width: 7, height: 7, borderRadius: 3.5 },
   leftLabelC: { flex: 1, fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 0.6, color: 'rgba(255,255,255,0.92)', textTransform: 'uppercase' },
-  leftCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 0.6, color: C_CAP, textTransform: 'uppercase' },
+  leftCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 0.6, color: S.cap, textTransform: 'uppercase' },
   leftEtaValC: { fontSize: 18, fontFamily: 'Inter_700Bold', color: C_MINT, marginTop: 1 },
-  rightPanelC: { flex: 1, backgroundColor: '#ffffff', padding: 16 },
+  rightPanelC: { flex: 1, backgroundColor: S.card, padding: 16 },
   progressDots: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginBottom: Spacing.md },
   dot: { height: 6, width: 14, borderRadius: 3 },
   stopRowC: { flexDirection: 'row', alignItems: 'center', gap: 11 },
   stopIndexBadgeC: { width: 32, height: 32, borderRadius: 10, backgroundColor: '#F0F2F3', alignItems: 'center', justifyContent: 'center' },
-  stopIndexTextC: { fontSize: 13, fontFamily: 'Inter_700Bold', color: C_INK },
-  stopCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 0.5, color: C_CAP, textTransform: 'uppercase' },
-  stopNameC: { fontSize: 14.5, fontFamily: 'Inter_700Bold', color: C_INK, marginTop: 1 },
+  stopIndexTextC: { fontSize: 13, fontFamily: 'Inter_700Bold', color: S.ink },
+  stopCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 0.5, color: S.cap, textTransform: 'uppercase' },
+  stopNameC: { fontSize: 14.5, fontFamily: 'Inter_700Bold', color: S.ink, marginTop: 1 },
   passengerCountRowC: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12 },
-  passengerCountTextC: { fontSize: 11.5, fontFamily: 'Inter_600SemiBold', color: C_CAP },
-  arrivedBtnC: { marginTop: 14, height: 48, borderRadius: 24, backgroundColor: C_INK, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  passengerCountTextC: { fontSize: 11.5, fontFamily: 'Inter_600SemiBold', color: S.cap },
+  arrivedBtnC: { marginTop: 14, height: 48, borderRadius: 24, backgroundColor: S.ink, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   arrivedBtnTextC: { fontSize: 13.5, fontFamily: 'Inter_700Bold', color: '#ffffff' },
   finishBtnC: { marginTop: 10, height: 44, borderRadius: 14, borderWidth: 1.5, borderColor: '#B9E4DB', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  finishBtnTextC: { fontSize: 13, fontFamily: 'Inter_700Bold', color: C_TEAL },
+  finishBtnTextC: { fontSize: 13, fontFamily: 'Inter_700Bold', color: S.teal },
 
   // ── "C" at-stop sheet — dark header band + white body, content-sized ──
-  atStopSheetC: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#ffffff', borderTopLeftRadius: 26, borderTopRightRadius: 26, overflow: 'hidden' },
-  atStopHeaderC: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: C_INK, paddingHorizontal: Spacing.lg, paddingTop: 18, paddingBottom: 16 },
+  atStopSheetC: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: S.card, borderTopLeftRadius: 26, borderTopRightRadius: 26, overflow: 'hidden' },
+  atStopHeaderC: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: S.ink, paddingHorizontal: Spacing.lg, paddingTop: 18, paddingBottom: 16 },
   stopModeBadgeC: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', marginBottom: 6 },
   stopModeDotC: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: C_RED },
   stopModeLabelC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.2, color: '#F3C6C2', textTransform: 'uppercase' },
@@ -1149,9 +1149,9 @@ const styles = StyleSheet.create({
 
   // Passenger list
   passengerListC: { paddingHorizontal: Spacing.lg, paddingTop: 14, paddingBottom: Spacing.lg },
-  passengerListCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 0.8, color: C_CAP, textTransform: 'uppercase', marginBottom: 10 },
+  passengerListCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 0.8, color: S.cap, textTransform: 'uppercase', marginBottom: 10 },
   emptyPassengersC: { paddingVertical: Spacing.xxl, alignItems: 'center', gap: 10 },
-  emptyPassengersTextC: { fontSize: Typography.size.sm, textAlign: 'center', fontFamily: 'Inter_400Regular', color: C_CAP },
+  emptyPassengersTextC: { fontSize: Typography.size.sm, textAlign: 'center', fontFamily: 'Inter_400Regular', color: S.cap },
   passengerRowC: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
     padding: 11, borderRadius: 16, backgroundColor: '#F6F7F8',
@@ -1160,8 +1160,8 @@ const styles = StyleSheet.create({
   passengerAvatarC: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEF0F1' },
   passengerAvatarImgC: { width: 40, height: 40, borderRadius: 20 },
   passengerInitialC: { fontSize: Typography.size.md, fontFamily: 'Inter_700Bold' },
-  passengerNameC: { fontSize: Typography.size.sm, fontFamily: 'Inter_700Bold', color: C_INK, marginBottom: 2 },
-  passengerPhoneC: { fontSize: Typography.size.xs, fontFamily: 'Inter_400Regular', color: C_CAP },
+  passengerNameC: { fontSize: Typography.size.sm, fontFamily: 'Inter_700Bold', color: S.ink, marginBottom: 2 },
+  passengerPhoneC: { fontSize: Typography.size.xs, fontFamily: 'Inter_400Regular', color: S.cap },
   statusBtnsC: { flexDirection: 'row', gap: Spacing.sm },
   statusBtnC: { width: 34, height: 34, borderRadius: 17, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
 
@@ -1189,6 +1189,7 @@ const styles = StyleSheet.create({
   paymentCashBadgeC: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: Spacing.xs, backgroundColor: '#FCEBD1', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
   paymentPaidBadgeC: { alignSelf: 'flex-start', marginTop: Spacing.xs, backgroundColor: '#DDF4EB', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
   paymentBadgeTextC: { fontSize: 11, fontFamily: 'Inter_700Bold' },
-  primaryBtnC: { height: 52, borderRadius: 16, backgroundColor: C_INK, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
+  primaryBtnC: { height: 52, borderRadius: 16, backgroundColor: S.ink, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
   primaryBtnTextC: { fontSize: 15, fontFamily: 'Inter_700Bold', color: '#ffffff' },
-});
+  });
+}

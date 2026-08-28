@@ -1,7 +1,7 @@
 import { showAlert } from '@/lib/alert';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ChevronLeft, Star } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -17,13 +17,9 @@ import { useI18n } from '@/lib/i18nContext';
 import { endpoints, ApiError } from '@/lib/api';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
+import { useSplitColors, type SplitColors } from '@/lib/splitTheme';
 
 // "C" split-panel palette — matches the ride/shuttle screens.
-const C_BG = '#EEF0F2';
-const C_INK = '#14151A';
-const C_CAP = '#9AA0A6';
-const C_CAP_ON_DARK = '#8A9096';
-const C_TEAL = '#0E9F8E';
 const C_STARC = '#F5A623';
 
 type Passenger = {
@@ -43,6 +39,8 @@ type BackendPassenger = {
 
 export default function RatePassengersScreen() {
   const { t } = useI18n();
+  const S = useSplitColors();
+  const s = useMemo(() => makeStyles(S), [S]);
   const insets = useSafeAreaInsets();
   const topPad = insets.top;
   const botPad = insets.bottom;
@@ -219,39 +217,41 @@ export default function RatePassengersScreen() {
   );
 }
 
-const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: C_BG },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.md, backgroundColor: C_BG },
+function makeStyles(S: SplitColors) {
+  return StyleSheet.create({
+  root: { flex: 1, backgroundColor: S.bg },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.md, backgroundColor: S.bg },
 
   // Dark header band
-  headerC: { backgroundColor: C_INK, paddingHorizontal: Spacing.lg, paddingBottom: 22, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
+  headerC: { backgroundColor: S.ink, paddingHorizontal: Spacing.lg, paddingBottom: 22, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
   backBtnC: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.1)', marginBottom: 14 },
-  headerCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.4, color: C_CAP_ON_DARK, textTransform: 'uppercase' },
+  headerCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.4, color: S.capOnDark, textTransform: 'uppercase' },
   pageTitleC: { fontSize: 22, fontFamily: 'Inter_700Bold', color: '#ffffff', marginTop: 6 },
   pageSubC: { fontSize: Typography.size.sm, fontFamily: 'Inter_600SemiBold', color: '#B7BBC2', marginTop: 3 },
 
   // Passenger cards
-  cardC: { backgroundColor: '#ffffff', borderRadius: 18, padding: Spacing.lg, gap: 14 },
+  cardC: { backgroundColor: S.card, borderRadius: 18, padding: Spacing.lg, gap: 14 },
   cardRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   avatarC: { width: 44, height: 44, borderRadius: 22 },
   avatarFallbackC: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#F0F2F3', alignItems: 'center', justifyContent: 'center' },
-  passengerNameC: { fontSize: 14, fontFamily: 'Inter_700Bold', color: C_INK },
-  ratedTextC: { color: C_TEAL, fontSize: Typography.size.xs, fontFamily: 'Inter_600SemiBold', marginTop: 2 },
+  passengerNameC: { fontSize: 14, fontFamily: 'Inter_700Bold', color: S.ink },
+  ratedTextC: { color: S.teal, fontSize: Typography.size.xs, fontFamily: 'Inter_600SemiBold', marginTop: 2 },
   starsRow: { flexDirection: 'row', gap: Spacing.sm, justifyContent: 'center' },
-  emptyTextC: { color: C_CAP, fontFamily: 'Inter_400Regular', fontSize: Typography.size.sm, textAlign: 'center' },
+  emptyTextC: { color: S.cap, fontFamily: 'Inter_400Regular', fontSize: Typography.size.sm, textAlign: 'center' },
 
   // Done state
   doneCircleC: { width: 64, height: 64, borderRadius: 32, backgroundColor: C_STARC, alignItems: 'center', justifyContent: 'center' },
-  doneTitleC: { fontSize: 18, fontFamily: 'Inter_700Bold', color: C_INK, textAlign: 'center', marginTop: Spacing.sm },
+  doneTitleC: { fontSize: 18, fontFamily: 'Inter_700Bold', color: S.ink, textAlign: 'center', marginTop: Spacing.sm },
 
   // Bottom CTA
   bottomAction: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: Spacing.lg, paddingTop: Spacing.sm },
   submitBtnC: {
     height: 54,
     borderRadius: 15,
-    backgroundColor: C_INK,
+    backgroundColor: S.ink,
     alignItems: 'center',
     justifyContent: 'center',
   },
   submitBtnTextC: { color: '#ffffff', fontSize: 15, fontFamily: 'Inter_700Bold' },
-});
+  });
+}

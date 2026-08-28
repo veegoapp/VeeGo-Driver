@@ -26,6 +26,7 @@ import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
 import { Shadows } from '@/constants/shadows';
+import { useSplitColors, type SplitColors } from '@/lib/splitTheme';
 
 const SERVICE_NAMES: Record<string, string> = {
   CAR: 'Car Rides',
@@ -45,16 +46,8 @@ const CARD_BORDER = 'rgba(255,255,255,0.08)';
 
 // "C" light palette for the redesigned post-trip fare page + rating card, and
 // the "D" change-confirm card — matching the approved passenger-app designs.
-const C_BG = '#EEF0F2';
-const C_SURF = '#FFFFFF';
-const C_INK = '#14151A';
-const C_INK_SOFT = '#6B7178';
-const C_CAP = '#9AA0A6';
-const C_HAIR = '#EEF0F1';
-const C_TEAL = '#0E9F8E';
 const C_MINT = '#3DDC97';
 const C_STARC = '#F5A623';
-const C_CAP_ON_DARK = '#8A9096';
 const C_RED = '#D92D20';
 
 type Phase = 'to_pickup' | 'arrived' | 'in_trip' | 'completed';
@@ -80,6 +73,8 @@ const KEYPAD_ROWS = [
 export default function RideScreen() {
   const colors = useColors();
   const { t } = useI18n();
+  const S = useSplitColors();
+  const styles = useMemo(() => makeStyles(S), [S]);
   const { serviceType } = useService();
   // DELIVERY carries a package, not a person — the to_pickup/arrived copy
   // ("heading to the rider" / "pick up rider") is wrong for that case, so it
@@ -1034,7 +1029,7 @@ export default function RideScreen() {
                     <TextInput
                       style={styles.commentInputC}
                       placeholder={t.rating_comment_placeholder}
-                      placeholderTextColor={C_CAP}
+                      placeholderTextColor={S.cap}
                       value={ratingComment}
                       onChangeText={setRatingComment}
                       maxLength={500}
@@ -1119,7 +1114,7 @@ export default function RideScreen() {
                   />
                 ) : (
                   <View style={[styles.riderAvatarC, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#F0F2F3' }]}>
-                    <Text style={{ color: C_INK, fontSize: 14, fontFamily: 'Inter_700Bold' }}>{passengerInitials}</Text>
+                    <Text style={{ color: S.ink, fontSize: 14, fontFamily: 'Inter_700Bold' }}>{passengerInitials}</Text>
                   </View>
                 )}
                 <View style={{ flex: 1, minWidth: 0 }}>
@@ -1133,7 +1128,7 @@ export default function RideScreen() {
                   onPress={() => router.push({ pathname: '/ride/chat', params: { rideId: rideId ?? '' } } as any)}
                   accessibilityLabel={t.message_rider_title}
                 >
-                  <MessageCircle size={16} color={C_INK} strokeWidth={1.8} />
+                  <MessageCircle size={16} color={S.ink} strokeWidth={1.8} />
                 </Pressable>
                 <Pressable
                   style={styles.actionBtnC}
@@ -1143,7 +1138,7 @@ export default function RideScreen() {
                   }}
                   accessibilityLabel={t.call_rider_label}
                 >
-                  <Phone size={16} color={C_INK} strokeWidth={1.8} />
+                  <Phone size={16} color={S.ink} strokeWidth={1.8} />
                 </Pressable>
               </View>
 
@@ -1154,13 +1149,13 @@ export default function RideScreen() {
                     styles.waitingTickerC,
                     {
                       backgroundColor: waitingCharge.capped ? '#F0F2F3' : '#D5B23D18',
-                      borderColor: waitingCharge.capped ? C_HAIR : '#D5B23D55',
+                      borderColor: waitingCharge.capped ? S.hair : '#D5B23D55',
                       opacity: waitingCharge.capped ? 1 : pulseAnim,
                     },
                   ]}
                 >
-                  <Clock size={13} color={waitingCharge.capped ? C_INK_SOFT : '#D5B23D'} strokeWidth={2.5} />
-                  <Text style={[styles.waitingTickerTextC, { color: waitingCharge.capped ? C_INK_SOFT : '#D5B23D' }]}>
+                  <Clock size={13} color={waitingCharge.capped ? S.inkSoft : '#D5B23D'} strokeWidth={2.5} />
+                  <Text style={[styles.waitingTickerTextC, { color: waitingCharge.capped ? S.inkSoft : '#D5B23D' }]}>
                     {`Waiting fee: +${waitingCharge.amount.toFixed(2)} ${t.egp} · ${waitingCharge.minutes} min`}
                   </Text>
                   {waitingCharge.capped && (
@@ -1195,7 +1190,7 @@ export default function RideScreen() {
 
               <View style={styles.bottomRowC}>
                 <View style={styles.safetyRowC}>
-                  <Shield size={13} color={C_INK_SOFT} strokeWidth={2} />
+                  <Shield size={13} color={S.inkSoft} strokeWidth={2} />
                   <Text style={styles.safetyTextC} numberOfLines={1}>{t.safety_toolkit_trip}</Text>
                 </View>
                 <View style={styles.bottomActionsC}>
@@ -1205,7 +1200,7 @@ export default function RideScreen() {
                     style={[styles.shareBtnC, { opacity: shareBusy ? 0.6 : 1 }]}
                     accessibilityLabel={t.share_trip_label}
                   >
-                    <Share2 size={13} color={C_INK} strokeWidth={2} />
+                    <Share2 size={13} color={S.ink} strokeWidth={2} />
                     <Text style={styles.shareBtnTextC}>
                       {shareLink ? t.trip_share_revoke_btn : t.trip_share_btn}
                     </Text>
@@ -1246,7 +1241,7 @@ export default function RideScreen() {
                       style={styles.keypadKeyC}
                     >
                       {key === 'back' ? (
-                        <Delete size={20} color={C_INK} strokeWidth={1.8} />
+                        <Delete size={20} color={S.ink} strokeWidth={1.8} />
                       ) : (
                         <Text style={styles.keypadKeyTextC}>{key}</Text>
                       )}
@@ -1362,7 +1357,8 @@ export default function RideScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(S: SplitColors) {
+  return StyleSheet.create({
   container: { flex: 1 },
   overlay: { flex: 1 },
   topNav: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.sm },
@@ -1426,13 +1422,13 @@ const styles = StyleSheet.create({
   statusRowC: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   statusDotC: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: C_MINT },
   leftLabelC: { flex: 1, fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 0.6, color: 'rgba(255,255,255,0.92)', textTransform: 'uppercase' },
-  leftCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 0.6, color: C_CAP, textTransform: 'uppercase' },
+  leftCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 0.6, color: S.cap, textTransform: 'uppercase' },
   leftFareValC: { fontSize: 14, fontFamily: 'Inter_700Bold', color: '#ffffff', marginTop: 1 },
-  rightPanelC: { flex: 1, backgroundColor: '#ffffff', padding: 16, paddingBottom: 14 },
+  rightPanelC: { flex: 1, backgroundColor: S.card, padding: 16, paddingBottom: 14 },
   riderRowC: { flexDirection: 'row', alignItems: 'center', gap: 11 },
   riderAvatarC: { width: 44, height: 44, borderRadius: 22 },
-  riderNameC: { fontSize: 13.5, fontFamily: 'Inter_700Bold', color: C_INK },
-  riderMetaC: { fontSize: 11, fontFamily: 'Inter_600SemiBold', color: C_CAP, marginTop: 1 },
+  riderNameC: { fontSize: 13.5, fontFamily: 'Inter_700Bold', color: S.ink },
+  riderMetaC: { fontSize: 11, fontFamily: 'Inter_600SemiBold', color: S.cap, marginTop: 1 },
   actionBtnC: { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(20,21,26,0.08)', alignItems: 'center', justifyContent: 'center' },
   waitingTickerC: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, borderWidth: 1 },
   waitingTickerTextC: { fontSize: 12, fontFamily: 'Inter_700Bold', flex: 1 },
@@ -1441,79 +1437,80 @@ const styles = StyleSheet.create({
   ctaBtnC: { marginTop: 14, height: 48, borderRadius: 24, backgroundColor: '#14151A', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   ctaBtnTextC: { fontSize: 13.5, fontFamily: 'Inter_700Bold', color: '#ffffff' },
   otherAmountBtnC: { marginTop: 10, height: 42, borderRadius: 14, borderWidth: 1.5, borderColor: '#E2E5E8', alignItems: 'center', justifyContent: 'center' },
-  otherAmountBtnTextC: { fontSize: 12.5, fontFamily: 'Inter_700Bold', color: C_INK },
+  otherAmountBtnTextC: { fontSize: 12.5, fontFamily: 'Inter_700Bold', color: S.ink },
   cancelRideBtnC: { alignItems: 'center', justifyContent: 'center', paddingVertical: 8, marginTop: 8 },
   cancelRideBtnTextC: { fontSize: 12.5, fontFamily: 'Inter_700Bold', color: C_RED },
-  hairC: { height: 1, backgroundColor: C_HAIR, marginTop: 4, marginBottom: 10 },
+  hairC: { height: 1, backgroundColor: S.hair, marginTop: 4, marginBottom: 10 },
   bottomRowC: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   safetyRowC: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0, marginRight: 8 },
-  safetyTextC: { fontSize: 11, fontFamily: 'Inter_600SemiBold', color: C_INK_SOFT, flexShrink: 1 },
+  safetyTextC: { fontSize: 11, fontFamily: 'Inter_600SemiBold', color: S.inkSoft, flexShrink: 1 },
   bottomActionsC: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   shareBtnC: { flexDirection: 'row', alignItems: 'center', gap: 5, height: 30, paddingHorizontal: 12, borderRadius: 15, backgroundColor: '#F0F2F3' },
-  shareBtnTextC: { fontSize: 11, fontFamily: 'Inter_700Bold', color: C_INK },
+  shareBtnTextC: { fontSize: 11, fontFamily: 'Inter_700Bold', color: S.ink },
   sosBtnC: { flexDirection: 'row', alignItems: 'center', gap: 5, height: 30, paddingHorizontal: 12, borderRadius: 15, borderWidth: 1.5, borderColor: '#F3C6C2' },
   sosBtnTextC: { fontSize: 11, fontFamily: 'Inter_700Bold', color: C_RED },
 
   /* ── "C" post-trip fare page + rating card — dark panel/band + white body ── */
-  completedOverlayC: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: C_BG, zIndex: 1000 },
+  completedOverlayC: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: S.bg, zIndex: 1000 },
   heroC: { backgroundColor: '#14151A', paddingHorizontal: 26, paddingBottom: 22, alignItems: 'center', borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
-  checkCircleC: { width: 60, height: 60, borderRadius: 30, backgroundColor: C_TEAL, alignItems: 'center', justifyContent: 'center', alignSelf: 'center' },
+  checkCircleC: { width: 60, height: 60, borderRadius: 30, backgroundColor: S.teal, alignItems: 'center', justifyContent: 'center', alignSelf: 'center' },
   pageTitleC: { fontSize: 22, fontFamily: 'Inter_700Bold', color: '#ffffff', textAlign: 'center', marginTop: 16 },
-  heroCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.4, color: C_CAP_ON_DARK, textAlign: 'center', marginTop: 22, textTransform: 'uppercase' },
+  heroCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.4, color: S.capOnDark, textAlign: 'center', marginTop: 22, textTransform: 'uppercase' },
   heroRowC: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', gap: 8, marginTop: 6 },
-  heroAmountC: { fontSize: 48, fontFamily: 'Inter_700Bold', color: C_TEAL, lineHeight: 50 },
-  heroCurC: { fontSize: 18, fontFamily: 'Inter_700Bold', color: C_TEAL },
+  heroAmountC: { fontSize: 48, fontFamily: 'Inter_700Bold', color: S.teal, lineHeight: 50 },
+  heroCurC: { fontSize: 18, fontFamily: 'Inter_700Bold', color: S.teal },
   heroNoteC: { fontSize: 13, fontFamily: 'Inter_600SemiBold', color: '#B7BBC2', textAlign: 'center', marginTop: 8 },
   viewDetailsBtnC: { alignSelf: 'center', marginTop: 6, paddingVertical: 4, paddingHorizontal: 8 },
-  viewDetailsTxtC: { fontSize: 13, fontFamily: 'Inter_700Bold', color: C_TEAL, textDecorationLine: 'underline' },
-  bodyNoteC: { fontSize: 13, fontFamily: 'Inter_600SemiBold', color: C_INK_SOFT, textAlign: 'center', marginTop: 4 },
-  footerC: { paddingHorizontal: 26, paddingTop: 12, backgroundColor: C_BG },
+  viewDetailsTxtC: { fontSize: 13, fontFamily: 'Inter_700Bold', color: S.teal, textDecorationLine: 'underline' },
+  bodyNoteC: { fontSize: 13, fontFamily: 'Inter_600SemiBold', color: S.inkSoft, textAlign: 'center', marginTop: 4 },
+  footerC: { paddingHorizontal: 26, paddingTop: 12, backgroundColor: S.bg },
   primaryBtnC: { height: 54, borderRadius: 15, backgroundColor: '#14151A', alignItems: 'center', justifyContent: 'center' },
   primaryBtnTxtC: { color: '#ffffff', fontSize: 15, fontFamily: 'Inter_700Bold', letterSpacing: 0.3 },
   ratingWrapC: { flex: 1, justifyContent: 'flex-end' },
   ratingCardC: { borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: 'hidden' },
   ratingHeaderC: { backgroundColor: '#14151A', flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 24, paddingVertical: 24 },
   ratingAvatarC: { width: 52, height: 52, borderRadius: 26 },
-  ratingCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.4, color: C_CAP_ON_DARK, textTransform: 'uppercase' },
+  ratingCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.4, color: S.capOnDark, textTransform: 'uppercase' },
   ratingTitleC: { fontSize: 18, fontFamily: 'Inter_700Bold', color: '#ffffff', marginTop: 4 },
-  ratingBodyC: { backgroundColor: C_SURF, padding: 24 },
+  ratingBodyC: { backgroundColor: S.card, padding: 24 },
   starsRowC: { flexDirection: 'row', justifyContent: 'center', gap: 14 },
-  commentInputC: { alignSelf: 'stretch', borderWidth: 1, borderColor: C_HAIR, borderRadius: 14, backgroundColor: '#F6F7F8', paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, fontFamily: 'Inter_400Regular', marginTop: 22, minHeight: 60, textAlignVertical: 'top', color: C_INK },
+  commentInputC: { alignSelf: 'stretch', borderWidth: 1, borderColor: S.hair, borderRadius: 14, backgroundColor: '#F6F7F8', paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, fontFamily: 'Inter_400Regular', marginTop: 22, minHeight: 60, textAlignVertical: 'top', color: S.ink },
   skipBtnC: { alignSelf: 'center', marginTop: 14, paddingVertical: 6 },
-  skipTxtC: { fontSize: 13, fontFamily: 'Inter_700Bold', color: C_CAP },
+  skipTxtC: { fontSize: 13, fontFamily: 'Inter_700Bold', color: S.cap },
 
   /* ── "D" change-confirm card ── */
-  changeCardC: { width: '100%', borderRadius: 24, overflow: 'hidden', backgroundColor: C_SURF },
+  changeCardC: { width: '100%', borderRadius: 24, overflow: 'hidden', backgroundColor: S.card },
   changeHeroC: { backgroundColor: '#14151A', paddingVertical: 22, alignItems: 'center' },
-  changeCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.4, color: C_CAP, textTransform: 'uppercase' },
+  changeCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.4, color: S.cap, textTransform: 'uppercase' },
   changeHeroRow: { flexDirection: 'row', alignItems: 'baseline', gap: 7, marginTop: 8 },
   changeHeroAmt: { fontSize: 44, fontFamily: 'Inter_700Bold', color: C_MINT, lineHeight: 46 },
   changeHeroCur: { fontSize: 16, fontFamily: 'Inter_700Bold', color: '#8A9096' },
   changeBodyC: { padding: 20 },
   cRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 13 },
-  cLabel: { fontSize: 14, fontFamily: 'Inter_600SemiBold', color: C_INK_SOFT },
-  cVal: { fontSize: 16, fontFamily: 'Inter_700Bold', color: C_INK },
-  cHair: { height: 1, backgroundColor: C_HAIR },
+  cLabel: { fontSize: 14, fontFamily: 'Inter_600SemiBold', color: S.inkSoft },
+  cVal: { fontSize: 16, fontFamily: 'Inter_700Bold', color: S.ink },
+  cHair: { height: 1, backgroundColor: S.hair },
   cActionsRow: { flexDirection: 'row', gap: 12, marginTop: 18 },
   cCancelBtn: { flex: 1, height: 50, borderRadius: 14, borderWidth: 1, borderColor: '#D3D6DA', alignItems: 'center', justifyContent: 'center' },
-  cCancelTxt: { fontSize: 14, fontFamily: 'Inter_700Bold', color: C_INK_SOFT },
+  cCancelTxt: { fontSize: 14, fontFamily: 'Inter_700Bold', color: S.inkSoft },
   cConfirmBtn: { flex: 1.4, height: 50, borderRadius: 14, backgroundColor: '#14151A', alignItems: 'center', justifyContent: 'center' },
   cConfirmTxt: { fontSize: 15, fontFamily: 'Inter_700Bold', color: '#ffffff' },
 
   /* ── "C" Add Remainder keypad ── */
   modalBackdropC: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(20,21,26,0.4)' },
-  keypadCardC: { backgroundColor: C_SURF, borderTopLeftRadius: 26, borderTopRightRadius: 26, paddingHorizontal: 22, paddingTop: 14, paddingBottom: 30 },
+  keypadCardC: { backgroundColor: S.card, borderTopLeftRadius: 26, borderTopRightRadius: 26, paddingHorizontal: 22, paddingTop: 14, paddingBottom: 30 },
   sheetHandleDarkC: { width: 40, height: 5, borderRadius: 2.5, backgroundColor: 'rgba(0,0,0,0.14)', alignSelf: 'center', marginBottom: 18 },
-  keypadCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.2, color: C_CAP, textAlign: 'center', textTransform: 'uppercase' },
-  keypadAmountC: { fontSize: 38, fontFamily: 'Inter_700Bold', color: C_INK, textAlign: 'center', marginTop: 8, letterSpacing: -0.5 },
-  keypadAmountCurC: { fontSize: 18, fontFamily: 'Inter_700Bold', color: C_CAP },
+  keypadCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.2, color: S.cap, textAlign: 'center', textTransform: 'uppercase' },
+  keypadAmountC: { fontSize: 38, fontFamily: 'Inter_700Bold', color: S.ink, textAlign: 'center', marginTop: 8, letterSpacing: -0.5 },
+  keypadAmountCurC: { fontSize: 18, fontFamily: 'Inter_700Bold', color: S.cap },
   keypadGridC: { marginTop: 22, gap: 10 },
   keypadRowC: { flexDirection: 'row', gap: 10 },
   keypadKeyC: { flex: 1, height: 56, borderRadius: 16, backgroundColor: '#F0F2F3', alignItems: 'center', justifyContent: 'center' },
-  keypadKeyTextC: { fontSize: 20, fontFamily: 'Inter_700Bold', color: C_INK },
+  keypadKeyTextC: { fontSize: 20, fontFamily: 'Inter_700Bold', color: S.ink },
   keypadActionsRowC: { flexDirection: 'row', gap: 12, marginTop: 20 },
   keypadCancelBtnC: { flex: 1, height: 50, borderRadius: 14, borderWidth: 1.5, borderColor: '#E2E5E8', alignItems: 'center', justifyContent: 'center' },
-  keypadCancelTxtC: { fontSize: 14, fontFamily: 'Inter_700Bold', color: C_INK_SOFT },
+  keypadCancelTxtC: { fontSize: 14, fontFamily: 'Inter_700Bold', color: S.inkSoft },
   keypadOkBtnC: { flex: 1.4, height: 50, borderRadius: 14, backgroundColor: '#14151A', alignItems: 'center', justifyContent: 'center' },
   keypadOkTxtC: { fontSize: 15, fontFamily: 'Inter_700Bold', color: '#ffffff' },
-});
+  });
+}

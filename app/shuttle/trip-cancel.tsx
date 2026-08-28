@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { ChevronLeft, RefreshCw, X, AlertCircle } from 'lucide-react-native';
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -14,11 +14,9 @@ import { useI18n } from '@/lib/i18nContext';
 import { endpoints } from '@/lib/api';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
+import { useSplitColors, type SplitColors } from '@/lib/splitTheme';
 
 // "C" split-panel palette — matches the ride/shuttle screens.
-const C_BG = '#EEF0F2';
-const C_INK = '#14151A';
-const C_CAP = '#9AA0A6';
 
 type Params = {
   // The specific trip being cancelled or referred — both paths act on this
@@ -34,6 +32,8 @@ export default function TripCancelScreen() {
   const insets = useSafeAreaInsets();
   const topPad = insets.top;
   const { t, isRTL } = useI18n();
+  const S = useSplitColors();
+  const styles = useMemo(() => makeStyles(S), [S]);
   const TA = isRTL ? 'right' as const : 'left' as const;
   const R = 'row' as const;
 
@@ -124,7 +124,7 @@ export default function TripCancelScreen() {
           >
             <View style={[styles.optionCardC, { flexDirection: R }]}>
               <View style={styles.optionIconC}>
-                <RefreshCw size={22} color={C_INK} strokeWidth={2} />
+                <RefreshCw size={22} color={S.ink} strokeWidth={2} />
               </View>
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: R, alignItems: 'center', gap: 8 }}>
@@ -162,10 +162,11 @@ export default function TripCancelScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: C_BG },
+function makeStyles(S: SplitColors) {
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: S.bg },
   heroC: {
-    backgroundColor: C_INK,
+    backgroundColor: S.ink,
     paddingHorizontal: Spacing.lg,
     paddingBottom: 22,
     borderBottomLeftRadius: 32,
@@ -187,12 +188,12 @@ const styles = StyleSheet.create({
   heroReadoutSubC: { fontSize: 12, fontFamily: 'Inter_600SemiBold', color: '#B7BBC2', marginTop: 2 },
   heroReadoutValC: { fontSize: 22, fontFamily: 'Inter_700Bold' },
   heroReadoutTextC: { fontSize: 13, fontFamily: 'Inter_700Bold', color: '#F3C6C2' },
-  choiceTitleC: { fontSize: Typography.size.lg, fontFamily: 'Inter_700Bold', color: C_INK },
+  choiceTitleC: { fontSize: Typography.size.lg, fontFamily: 'Inter_700Bold', color: S.ink },
   optionCardC: {
     alignItems: 'center',
     gap: 14,
     padding: 18,
-    backgroundColor: '#ffffff',
+    backgroundColor: S.card,
     borderRadius: 20,
   },
   optionIconC: {
@@ -203,8 +204,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#F0F2F3',
   },
-  optionTitleC: { fontSize: Typography.size.md, fontFamily: 'Inter_700Bold', color: C_INK },
-  optionSubC: { fontSize: 13, fontFamily: 'Inter_400Regular', color: C_CAP, marginTop: 5, lineHeight: 18 },
+  optionTitleC: { fontSize: Typography.size.md, fontFamily: 'Inter_700Bold', color: S.ink },
+  optionSubC: { fontSize: 13, fontFamily: 'Inter_400Regular', color: S.cap, marginTop: 5, lineHeight: 18 },
   recommendedTagC: { backgroundColor: '#DDF4EB', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 },
   recommendedTagTextC: { fontSize: 10, fontFamily: 'Inter_700Bold', color: '#0E9F8E' },
-});
+  });
+}

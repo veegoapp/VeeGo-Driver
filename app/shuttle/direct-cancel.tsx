@@ -1,7 +1,7 @@
 import { showAlert } from '@/lib/alert';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ChevronLeft, AlertTriangle, Check, CircleAlert } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -17,11 +17,9 @@ import { endpoints, ApiError } from '@/lib/api';
 import { useShuttle } from '@/lib/shuttleContext';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
+import { useSplitColors, type SplitColors } from '@/lib/splitTheme';
 
 // "C" split-panel palette — matches the ride/shuttle screens.
-const C_BG = '#EEF0F2';
-const C_INK = '#14151A';
-const C_CAP = '#9AA0A6';
 
 type Params = {
   tripId: string;
@@ -34,6 +32,8 @@ export default function DirectCancelScreen() {
   const insets = useSafeAreaInsets();
   const topPad = insets.top;
   const { t, isRTL } = useI18n();
+  const S = useSplitColors();
+  const styles = useMemo(() => makeStyles(S), [S]);
   const TA = isRTL ? 'right' as const : 'left' as const;
   const R = 'row' as const;
   const queryClient = useQueryClient();
@@ -205,17 +205,17 @@ export default function DirectCancelScreen() {
               style={({ pressed }) => [
                 styles.reasonChipC,
                 { flexDirection: R },
-                isSelected && { borderColor: C_INK },
+                isSelected && { borderColor: S.ink },
                 { backgroundColor: pressed ? '#F6F7F8' : '#ffffff' },
               ]}
             >
               <View style={styles.reasonIconC}>
-                <CircleAlert size={18} color={isSelected ? C_INK : C_CAP} strokeWidth={2} />
+                <CircleAlert size={18} color={isSelected ? S.ink : S.cap} strokeWidth={2} />
               </View>
               <Text style={[styles.reasonTextC, { fontFamily: isSelected ? 'Inter_700Bold' : 'Inter_400Regular', textAlign: TA, flex: 1 }]}>
                 {label}
               </Text>
-              <View style={[styles.reasonCheckC, isSelected ? { backgroundColor: C_INK } : { borderWidth: 2, borderColor: '#D3D6DA' }]}>
+              <View style={[styles.reasonCheckC, isSelected ? { backgroundColor: S.ink } : { borderWidth: 2, borderColor: '#D3D6DA' }]}>
                 {isSelected && <Check size={12} color="#ffffff" strokeWidth={3} />}
               </View>
             </Pressable>
@@ -239,7 +239,7 @@ export default function DirectCancelScreen() {
           {cancelMutation.isPending ? (
             <ActivityIndicator size="small" color="#fff" />
           ) : (
-            <Text style={[styles.confirmBtnTextC, { color: selectedReason ? '#ffffff' : C_CAP }]}>
+            <Text style={[styles.confirmBtnTextC, { color: selectedReason ? '#ffffff' : S.cap }]}>
               {t.confirm_cancel_btn}
             </Text>
           )}
@@ -249,10 +249,11 @@ export default function DirectCancelScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: C_BG },
+function makeStyles(S: SplitColors) {
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: S.bg },
   heroC: {
-    backgroundColor: C_INK,
+    backgroundColor: S.ink,
     paddingHorizontal: Spacing.lg,
     paddingBottom: 22,
     borderBottomLeftRadius: 32,
@@ -272,25 +273,25 @@ const styles = StyleSheet.create({
   heroReadoutCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.2, color: '#8A9096', textTransform: 'uppercase' },
   heroReadoutValC: { fontSize: 20, fontFamily: 'Inter_700Bold', color: '#ffffff' },
   heroReadoutTextC: { fontSize: 13, fontFamily: 'Inter_700Bold', color: '#F3C6C2' },
-  sectionTitleC: { fontSize: Typography.size.md, fontFamily: 'Inter_700Bold', color: C_INK },
-  sectionSubC: { fontSize: 13, fontFamily: 'Inter_400Regular', color: C_CAP },
+  sectionTitleC: { fontSize: Typography.size.md, fontFamily: 'Inter_700Bold', color: S.ink },
+  sectionSubC: { fontSize: 13, fontFamily: 'Inter_400Regular', color: S.cap },
   reasonChipC: {
     alignItems: 'center',
     gap: 12,
     padding: 16,
     marginBottom: 10,
-    backgroundColor: '#ffffff',
+    backgroundColor: S.card,
     borderRadius: 16,
     borderWidth: 1.5,
     borderColor: 'transparent',
   },
   reasonIconC: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#F0F2F3', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   reasonCheckC: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
-  reasonTextC: { fontSize: Typography.size.sm, color: C_INK },
+  reasonTextC: { fontSize: Typography.size.sm, color: S.ink },
   bottomBarC: {
     paddingHorizontal: Spacing.lg,
     paddingTop: 14,
-    backgroundColor: C_BG,
+    backgroundColor: S.bg,
   },
   confirmBtnC: {
     height: 54,
@@ -301,8 +302,8 @@ const styles = StyleSheet.create({
   confirmBtnTextC: { fontSize: 15, fontFamily: 'Inter_700Bold' },
   successWrap: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xxl, gap: Spacing.lg },
   successIconC: { width: 96, height: 96, borderRadius: 48, alignItems: 'center', justifyContent: 'center' },
-  successTitleC: { fontSize: 20, fontFamily: 'Inter_700Bold', color: C_INK, textAlign: 'center' },
-  successBodyC: { fontSize: Typography.size.sm, fontFamily: 'Inter_400Regular', color: C_CAP, textAlign: 'center', lineHeight: 22 },
+  successTitleC: { fontSize: 20, fontFamily: 'Inter_700Bold', color: S.ink, textAlign: 'center' },
+  successBodyC: { fontSize: Typography.size.sm, fontFamily: 'Inter_400Regular', color: S.cap, textAlign: 'center', lineHeight: 22 },
   penaltyBadgeC: {
     alignItems: 'center',
     paddingHorizontal: 28,
@@ -310,6 +311,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
   },
-  doneBtnC: { marginTop: Spacing.sm, height: 50, paddingHorizontal: 36, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: C_INK },
+  doneBtnC: { marginTop: Spacing.sm, height: 50, paddingHorizontal: 36, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: S.ink },
   doneBtnTextC: { color: '#ffffff', fontSize: Typography.size.sm, fontFamily: 'Inter_700Bold' },
-});
+  });
+}

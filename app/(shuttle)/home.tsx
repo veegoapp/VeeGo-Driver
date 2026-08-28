@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { AlertTriangle, ArrowRight, Bell, Calendar, ChevronRight, Clock, GitBranch, Navigation, RefreshCw, Users, Wifi, WifiOff, X } from 'lucide-react-native';
 import { useLocationBroadcast } from '@/hooks/useLocationBroadcast';
 import { setActiveShuttleTripId } from '@/lib/backgroundLocationTask';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -30,14 +30,8 @@ import { Spacing } from '@/constants/spacing';
 import { TAB_BAR_HEIGHT_BASE } from '@/constants/tabBar';
 import { UpcomingTripCard } from '@/components/UpcomingTripCard';
 import { useActiveSession } from '@/lib/activeSessionContext';
+import { useSplitColors, type SplitColors } from '@/lib/splitTheme';
 
-const C_BG = '#EEF0F2';
-const C_SURF = '#FFFFFF';
-const C_INK = '#14151A';
-const C_INK_SOFT = '#6B7178';
-const C_CAP = '#9AA0A6';
-const C_CAP_ON_DARK = '#8A9096';
-const C_TEAL = '#0E9F8E';
 const C_MINT = '#3DDC97';
 const C_AMBER = '#F5A623';
 const C_RED = '#D92D20';
@@ -50,6 +44,8 @@ export default function ShuttleHomeScreen() {
   const topPad = insets.top;
   const tabBarHeight = TAB_BAR_HEIGHT_BASE + insets.bottom;
   const { t, isRTL } = useI18n();
+  const S = useSplitColors();
+  const styles = useMemo(() => makeStyles(S), [S]);
   const TA = isRTL ? 'right' as const : 'left' as const;
   const [online, setOnline] = useState(false);
   const [onlineLoading, setOnlineLoading] = useState(false);
@@ -312,7 +308,7 @@ export default function ShuttleHomeScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: C_BG }]}>
+    <View style={[styles.container, { backgroundColor: S.bg }]}>
       <ScrollView
         contentContainerStyle={{ paddingBottom: tabBarHeight + 24 }}
         showsVerticalScrollIndicator={false}
@@ -322,7 +318,7 @@ export default function ShuttleHomeScreen() {
         <View style={[styles.hero, { paddingTop: topPad + 14 }]}>
           <View style={styles.heroTop}>
             <View>
-              <Text style={[styles.greeting, { color: C_CAP_ON_DARK, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
+              <Text style={[styles.greeting, { color: S.capOnDark, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
                 {t.good_morning},
               </Text>
               <Text style={[styles.driverName, { fontFamily: 'Inter_800ExtraBold', textAlign: TA }]}>
@@ -353,9 +349,9 @@ export default function ShuttleHomeScreen() {
           >
             <View style={[styles.toggleIconWrap, { backgroundColor: online ? C_MINT : 'rgba(255,255,255,.12)' }]}>
               {onlineLoading ? (
-                <ActivityIndicator size="small" color={online ? C_INK : '#fff'} />
+                <ActivityIndicator size="small" color={online ? S.ink : '#fff'} />
               ) : online ? (
-                <Wifi size={17} color={C_INK} strokeWidth={2.2} />
+                <Wifi size={17} color={S.ink} strokeWidth={2.2} />
               ) : (
                 <WifiOff size={17} color="#fff" strokeWidth={2.2} />
               )}
@@ -364,13 +360,13 @@ export default function ShuttleHomeScreen() {
               <Text style={[styles.toggleTitle, { fontFamily: 'Inter_800ExtraBold', textAlign: TA }]}>
                 {online ? t.youre_online.split('·')[0].trim() : t.youre_offline}
               </Text>
-              <Text style={[styles.toggleSub, { color: C_CAP_ON_DARK, fontFamily: 'Inter_600SemiBold', textAlign: TA }]}>
+              <Text style={[styles.toggleSub, { color: S.capOnDark, fontFamily: 'Inter_600SemiBold', textAlign: TA }]}>
                 {online ? t.receiving_assignments : t.not_receiving_assignments}
               </Text>
             </View>
             <View style={[styles.switchTrack, { backgroundColor: online ? C_MINT : 'rgba(255,255,255,.14)' }]}>
               <View style={[styles.switchThumb, {
-                backgroundColor: online ? C_INK : '#fff',
+                backgroundColor: online ? S.ink : '#fff',
                 alignSelf: online ? 'flex-end' : 'flex-start',
               }]} />
             </View>
@@ -472,10 +468,10 @@ export default function ShuttleHomeScreen() {
                 <AlertTriangle size={18} color={C_AMBER} strokeWidth={2} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.renewalTitle, { color: C_INK, fontFamily: 'Inter_700Bold' }]}>
+                <Text style={[styles.renewalTitle, { color: S.ink, fontFamily: 'Inter_700Bold' }]}>
                   {t.renew_weekly_slot}
                 </Text>
-                <Text style={[styles.renewalRoute, { color: C_CAP, fontFamily: 'Inter_400Regular' }]} numberOfLines={1}>
+                <Text style={[styles.renewalRoute, { color: S.cap, fontFamily: 'Inter_400Regular' }]} numberOfLines={1}>
                   {renewalBooking.routeName} · {renewalBooking.departureTime}
                 </Text>
                 <Text style={[styles.renewalCountdown, { color: C_AMBER, fontFamily: 'Inter_700Bold' }]}>
@@ -504,17 +500,17 @@ export default function ShuttleHomeScreen() {
               <View style={styles.activeCard}>
                 <View style={styles.activeCardHeader}>
                   <View style={styles.livePill}>
-                    <View style={[styles.liveDot, { backgroundColor: C_TEAL }]} />
-                    <Text style={[styles.liveText, { color: C_TEAL, fontFamily: 'Inter_800ExtraBold' }]}>{t.live}</Text>
+                    <View style={[styles.liveDot, { backgroundColor: S.teal }]} />
+                    <Text style={[styles.liveText, { color: S.teal, fontFamily: 'Inter_800ExtraBold' }]}>{t.live}</Text>
                   </View>
-                  <Text style={[styles.lineNumber, { color: C_CAP, fontFamily: 'Inter_700Bold' }]}>
+                  <Text style={[styles.lineNumber, { color: S.cap, fontFamily: 'Inter_700Bold' }]}>
                     {activeLine.lineNumber}
                   </Text>
                 </View>
-                <Text style={[styles.activeLineName, { color: C_INK, fontFamily: 'Inter_800ExtraBold' }]}>
+                <Text style={[styles.activeLineName, { color: S.ink, fontFamily: 'Inter_800ExtraBold' }]}>
                   {activeLine.name}
                 </Text>
-                <Text style={[styles.activeLineRoute, { color: C_CAP, fontFamily: 'Inter_600SemiBold' }]}>
+                <Text style={[styles.activeLineRoute, { color: S.cap, fontFamily: 'Inter_600SemiBold' }]}>
                   {activeLine.from} → {activeLine.to}
                 </Text>
 
@@ -529,8 +525,8 @@ export default function ShuttleHomeScreen() {
                     )}
                     {activeLine.totalSeats > 0 && (
                       <View style={styles.seatBadge}>
-                        <Users size={11} color={C_CAP} strokeWidth={2} />
-                        <Text style={[styles.seatBadgeText, { color: C_INK, fontFamily: 'Inter_700Bold' }]}>
+                        <Users size={11} color={S.cap} strokeWidth={2} />
+                        <Text style={[styles.seatBadgeText, { color: S.ink, fontFamily: 'Inter_700Bold' }]}>
                           {activeLine.bookedSeats} {t.home_of} {activeLine.totalSeats}
                         </Text>
                       </View>
@@ -542,7 +538,7 @@ export default function ShuttleHomeScreen() {
                   <View style={styles.progressTrack}>
                     <View style={[styles.progressFill, { width: `${Math.round(progress * 100)}%` as any }]} />
                   </View>
-                  <Text style={[styles.progressPct, { color: C_INK, fontFamily: 'Inter_800ExtraBold' }]}>
+                  <Text style={[styles.progressPct, { color: S.ink, fontFamily: 'Inter_800ExtraBold' }]}>
                     {Math.round(progress * 100)}%
                   </Text>
                 </View>
@@ -550,19 +546,19 @@ export default function ShuttleHomeScreen() {
                 <View style={styles.stopRow}>
                   <View style={styles.stopTile}>
                     <Text style={[styles.stopTileCap, { fontFamily: 'Inter_700Bold' }]}>{t.active.toUpperCase()}</Text>
-                    <Text style={[styles.stopTileName, { color: C_INK, fontFamily: 'Inter_800ExtraBold' }]} numberOfLines={1}>
+                    <Text style={[styles.stopTileName, { color: S.ink, fontFamily: 'Inter_800ExtraBold' }]} numberOfLines={1}>
                       {currentStop?.name ?? '—'}
                     </Text>
-                    <Text style={[styles.stopTileMeta, { color: C_CAP, fontFamily: 'Inter_600SemiBold' }]}>
+                    <Text style={[styles.stopTileMeta, { color: S.cap, fontFamily: 'Inter_600SemiBold' }]}>
                       {currentStop ? `${currentStop.boarded}/${currentStop.expected} ${t.home_boarded}` : '—'}
                     </Text>
                   </View>
                   <View style={styles.stopTile}>
                     <Text style={[styles.stopTileCap, { fontFamily: 'Inter_700Bold' }]}>{t.next_departure.toUpperCase()}</Text>
-                    <Text style={[styles.stopTileName, { color: C_INK, fontFamily: 'Inter_800ExtraBold' }]} numberOfLines={1}>
+                    <Text style={[styles.stopTileName, { color: S.ink, fontFamily: 'Inter_800ExtraBold' }]} numberOfLines={1}>
                       {nextStop?.name ?? '—'}
                     </Text>
-                    <Text style={[styles.stopTileMeta, { color: C_CAP, fontFamily: 'Inter_600SemiBold' }]}>
+                    <Text style={[styles.stopTileMeta, { color: S.cap, fontFamily: 'Inter_600SemiBold' }]}>
                       {nextStop?.eta ? `${t.home_eta} ${nextStop.eta}` : '—'}
                     </Text>
                   </View>
@@ -630,7 +626,7 @@ export default function ShuttleHomeScreen() {
           })()}
 
           {/* Upcoming Trips section */}
-          <Text style={[styles.sectionTitle, { color: C_INK, fontFamily: 'Inter_800ExtraBold', textAlign: TA, marginTop: Spacing.xl }]}>
+          <Text style={[styles.sectionTitle, { color: S.ink, fontFamily: 'Inter_800ExtraBold', textAlign: TA, marginTop: Spacing.xl }]}>
             {t.upcoming_trips}
           </Text>
 
@@ -645,8 +641,8 @@ export default function ShuttleHomeScreen() {
             </Pressable>
           ) : upcomingLines.length === 0 ? (
             <View style={[styles.upcomingEmpty, { borderColor: '#E5E7EA' }]}>
-              <Calendar size={20} color={C_CAP} strokeWidth={2} />
-              <Text style={[styles.upcomingEmptyText, { color: C_CAP, fontFamily: 'Inter_400Regular' }]}>
+              <Calendar size={20} color={S.cap} strokeWidth={2} />
+              <Text style={[styles.upcomingEmptyText, { color: S.cap, fontFamily: 'Inter_400Regular' }]}>
                 {t.no_upcoming_trips}
               </Text>
             </View>
@@ -698,9 +694,9 @@ export default function ShuttleHomeScreen() {
           {/* No active booking — only shown when there are no upcoming or active trips */}
           {upcomingLines.length === 0 && !activeLine && (
             <View style={[styles.noLineCard, { marginTop: Spacing.lg }]}>
-              <GitBranch size={32} color={C_CAP} strokeWidth={2} />
-              <Text style={[styles.noLineTitle, { color: C_INK, fontFamily: 'Inter_800ExtraBold' }]}>{t.no_booking}</Text>
-              <Text style={[styles.noLineSub, { color: C_CAP, fontFamily: 'Inter_400Regular' }]}>
+              <GitBranch size={32} color={S.cap} strokeWidth={2} />
+              <Text style={[styles.noLineTitle, { color: S.ink, fontFamily: 'Inter_800ExtraBold' }]}>{t.no_booking}</Text>
+              <Text style={[styles.noLineSub, { color: S.cap, fontFamily: 'Inter_400Regular' }]}>
                 {t.trips_here}
               </Text>
               <Pressable onPress={() => router.push('/(shuttle)/lines')} style={styles.goToLinesBtn}>
@@ -716,9 +712,10 @@ export default function ShuttleHomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(S: SplitColors) {
+  return StyleSheet.create({
   container: { flex: 1 },
-  hero: { backgroundColor: C_INK, paddingHorizontal: 22, paddingBottom: 22, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 },
+  hero: { backgroundColor: S.ink, paddingHorizontal: 22, paddingBottom: 22, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 },
   heroTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   greeting: { fontSize: 11, letterSpacing: 1 },
   driverName: { fontSize: 22, color: '#fff', marginTop: 2 },
@@ -738,18 +735,18 @@ const styles = StyleSheet.create({
   heroStatsRow: { flexDirection: 'row', marginTop: 18 },
   heroStatCell: { flex: 1, alignItems: 'center' },
   heroStatValue: { fontSize: 17, color: '#fff' },
-  heroStatCap: { fontSize: 10, letterSpacing: 1, textTransform: 'uppercase', color: C_CAP_ON_DARK, marginTop: 2 },
+  heroStatCap: { fontSize: 10, letterSpacing: 1, textTransform: 'uppercase', color: S.capOnDark, marginTop: 2 },
   heroDivider: { width: 1, backgroundColor: 'rgba(255,255,255,.12)' },
   banner: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, padding: Spacing.md, borderRadius: 14, borderWidth: 1, marginTop: Spacing.md },
   bannerText: { fontSize: 13 },
-  renewalCard: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, padding: 14, marginTop: Spacing.lg, backgroundColor: C_SURF, borderRadius: 16, borderWidth: 1 },
+  renewalCard: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, padding: 14, marginTop: Spacing.lg, backgroundColor: S.card, borderRadius: 16, borderWidth: 1 },
   renewalIconWrap: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   renewalTitle: { fontSize: 13 },
   renewalRoute: { fontSize: 11, marginTop: 2 },
   renewalCountdown: { fontSize: 11, marginTop: 3 },
   renewalBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   sectionTitle: { fontSize: 15 },
-  activeCard: { backgroundColor: C_SURF, borderRadius: 22, padding: 20 },
+  activeCard: { backgroundColor: S.card, borderRadius: 22, padding: 20 },
   activeCardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   livePill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 5, backgroundColor: '#DDF4EB', borderRadius: 99 },
   liveDot: { width: 6, height: 6, borderRadius: 3 },
@@ -759,29 +756,30 @@ const styles = StyleSheet.create({
   activeLineRoute: { fontSize: 13, marginTop: 2 },
   seatRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.md, flexWrap: 'wrap' },
   vehicleBadge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, backgroundColor: '#EEF0F1' },
-  vehicleBadgeText: { fontSize: 11, letterSpacing: 0.5, color: C_INK },
+  vehicleBadgeText: { fontSize: 11, letterSpacing: 0.5, color: S.ink },
   seatBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, backgroundColor: '#EEF0F1' },
   seatBadgeText: { fontSize: 11 },
   progressWrap: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 16 },
   progressTrack: { flex: 1, height: 6, borderRadius: 3, overflow: 'hidden', backgroundColor: C_TRACK },
-  progressFill: { height: '100%', borderRadius: 3, backgroundColor: C_INK },
+  progressFill: { height: '100%', borderRadius: 3, backgroundColor: S.ink },
   progressPct: { fontSize: 13 },
   stopRow: { flexDirection: 'row', gap: 10, marginTop: 16 },
   stopTile: { flex: 1, backgroundColor: C_TILE, borderRadius: 14, padding: 12 },
-  stopTileCap: { fontSize: 10, letterSpacing: 1, textTransform: 'uppercase', color: C_CAP },
+  stopTileCap: { fontSize: 10, letterSpacing: 1, textTransform: 'uppercase', color: S.cap },
   stopTileName: { fontSize: 13.5, marginTop: 3 },
   stopTileMeta: { fontSize: 11, marginTop: 2 },
-  continueBtn: { marginTop: 16, height: 50, borderRadius: 15, backgroundColor: C_INK, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  continueBtn: { marginTop: 16, height: 50, borderRadius: 15, backgroundColor: S.ink, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   continueBtnText: { color: '#fff', fontSize: 14 },
-  upcomingEmpty: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: Spacing.lg, borderWidth: 1, borderRadius: 16, marginTop: Spacing.sm, backgroundColor: C_SURF },
+  upcomingEmpty: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: Spacing.lg, borderWidth: 1, borderRadius: 16, marginTop: Spacing.sm, backgroundColor: S.card },
   upcomingEmptyText: { fontSize: 13 },
   referralBanner: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, borderWidth: 1.5, borderRadius: 16 },
   referralBannerPulse: { width: 8, height: 8, borderRadius: 4 },
   referralBannerBadge: { minWidth: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
   referralBannerBadgeText: { fontSize: 11, color: '#fff' },
-  noLineCard: { alignItems: 'center', padding: 28, gap: 10, backgroundColor: C_SURF, borderRadius: 20 },
+  noLineCard: { alignItems: 'center', padding: 28, gap: 10, backgroundColor: S.card, borderRadius: 20 },
   noLineTitle: { fontSize: 15, marginTop: 4 },
   noLineSub: { fontSize: 13, textAlign: 'center', lineHeight: 20 },
-  goToLinesBtn: { marginTop: Spacing.sm, borderRadius: 14, height: 48, width: '100%', backgroundColor: C_INK, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
+  goToLinesBtn: { marginTop: Spacing.sm, borderRadius: 14, height: 48, width: '100%', backgroundColor: S.ink, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
   goToLinesBtnText: { color: '#fff', fontSize: 14 },
-});
+  });
+}

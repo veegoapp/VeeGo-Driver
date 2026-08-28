@@ -14,21 +14,17 @@ import {
 } from '@/lib/walletHelpers';
 import { Spacing } from '@/constants/spacing';
 import { TAB_BAR_HEIGHT_BASE } from '@/constants/tabBar';
+import { useSplitColors, type SplitColors } from '@/lib/splitTheme';
 
-const C_BG = '#EEF0F2';
-const C_SURF = '#FFFFFF';
-const C_INK = '#14151A';
-const C_CAP = '#9AA0A6';
-const C_CAP_ON_DARK = '#8A9096';
-const C_TEAL = '#0E9F8E';
 const C_MINT = '#3DDC97';
 const C_AMBER = '#F5A623';
-const C_HAIR = '#EEF0F1';
 
 export default function WalletScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { t, isRTL } = useI18n();
+  const S = useSplitColors();
+  const styles = useMemo(() => makeStyles(S), [S]);
   const topPad = insets.top;
   const tabBarHeight = TAB_BAR_HEIGHT_BASE + insets.bottom;
   const TA = isRTL ? 'right' as const : 'left' as const;
@@ -66,7 +62,7 @@ export default function WalletScreen() {
 
   if (isLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: C_BG, alignItems: 'center', justifyContent: 'center' }]}>
+      <View style={[styles.container, { backgroundColor: S.bg, alignItems: 'center', justifyContent: 'center' }]}>
         <AppLoader />
       </View>
     );
@@ -74,9 +70,9 @@ export default function WalletScreen() {
 
   if (isError) {
     return (
-      <View style={[styles.container, { backgroundColor: C_BG, alignItems: 'center', justifyContent: 'center', gap: 16 }]}>
-        <Text style={{ color: C_CAP, fontFamily: 'Inter_400Regular', fontSize: 13 }}>{t.wallet_load_fail}</Text>
-        <Pressable onPress={() => { refetchBalance(); refetchTx(); }} style={{ paddingHorizontal: 24, paddingVertical: 10, borderRadius: 20, backgroundColor: C_INK }}>
+      <View style={[styles.container, { backgroundColor: S.bg, alignItems: 'center', justifyContent: 'center', gap: 16 }]}>
+        <Text style={{ color: S.cap, fontFamily: 'Inter_400Regular', fontSize: 13 }}>{t.wallet_load_fail}</Text>
+        <Pressable onPress={() => { refetchBalance(); refetchTx(); }} style={{ paddingHorizontal: 24, paddingVertical: 10, borderRadius: 20, backgroundColor: S.ink }}>
           <Text style={{ color: '#fff', fontFamily: 'Inter_700Bold', fontSize: 13 }}>{t.retry_label}</Text>
         </Pressable>
       </View>
@@ -84,7 +80,7 @@ export default function WalletScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: C_BG }]}>
+    <View style={[styles.container, { backgroundColor: S.bg }]}>
       <ScrollView
         contentContainerStyle={{ paddingBottom: tabBarHeight + 24 }}
         showsVerticalScrollIndicator={false}
@@ -113,7 +109,7 @@ export default function WalletScreen() {
 
           <View style={[styles.actionRow, { flexDirection: 'row' }]}>
             <Pressable onPress={() => router.push('/wallet-withdraw')} style={({ pressed }) => [styles.primaryAction, { opacity: pressed ? 0.9 : 1 }]}>
-              <ArrowDownLeft size={16} color={C_INK} strokeWidth={2} />
+              <ArrowDownLeft size={16} color={S.ink} strokeWidth={2} />
               <Text style={[styles.primaryActionText, { fontFamily: 'Inter_800ExtraBold' }]}>{t.cash_out}</Text>
             </Pressable>
             <Pressable onPress={() => router.push('/wallet-deposit')} style={({ pressed }) => [styles.secondaryAction, { opacity: pressed ? 0.8 : 1 }]}>
@@ -125,18 +121,18 @@ export default function WalletScreen() {
 
         {/* White body */}
         <View style={{ paddingHorizontal: Spacing.lg }}>
-          <Text style={[styles.sectionTitle, { color: C_INK, fontFamily: 'Inter_800ExtraBold', textAlign: TA, marginTop: Spacing.xl }]}>{t.payout_history_label}</Text>
+          <Text style={[styles.sectionTitle, { color: S.ink, fontFamily: 'Inter_800ExtraBold', textAlign: TA, marginTop: Spacing.xl }]}>{t.payout_history_label}</Text>
           {historyLoading ? (
             <View style={[styles.emptyCard, { alignItems: 'center' }]}>
-              <ActivityIndicator color={C_INK} />
+              <ActivityIndicator color={S.ink} />
             </View>
           ) : historyError ? (
             <View style={[styles.emptyCard, { alignItems: 'center' }]}>
-              <Text style={{ color: C_CAP, fontFamily: 'Inter_400Regular', fontSize: 13 }}>{t.payout_history_load_err}</Text>
+              <Text style={{ color: S.cap, fontFamily: 'Inter_400Regular', fontSize: 13 }}>{t.payout_history_load_err}</Text>
             </View>
           ) : payoutHistory.length === 0 ? (
             <View style={[styles.emptyCard, { alignItems: 'center' }]}>
-              <Text style={{ color: C_CAP, fontFamily: 'Inter_400Regular', fontSize: 13 }}>{t.payout_history_empty}</Text>
+              <Text style={{ color: S.cap, fontFamily: 'Inter_400Regular', fontSize: 13 }}>{t.payout_history_empty}</Text>
             </View>
           ) : (
             <View style={styles.listCard}>
@@ -145,18 +141,18 @@ export default function WalletScreen() {
                 return (
                   <View key={item.id} style={[styles.txItem, { flexDirection: 'row' }, i > 0 && styles.txItemBorder]}>
                     <View style={styles.txIcon}>
-                      <ArrowUpRight size={15} color={C_INK} strokeWidth={2} />
+                      <ArrowUpRight size={15} color={S.ink} strokeWidth={2} />
                     </View>
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text style={[styles.txTitle, { color: C_INK, fontFamily: 'Inter_700Bold', textAlign: TA }]} numberOfLines={1}>
+                      <Text style={[styles.txTitle, { color: S.ink, fontFamily: 'Inter_700Bold', textAlign: TA }]} numberOfLines={1}>
                         {item.accountName ?? item.method}{item.maskedAccountNumber ? ` — ${item.maskedAccountNumber}` : ''}
                       </Text>
-                      <Text style={[styles.txSub, { color: C_CAP, fontFamily: 'Inter_400Regular', textAlign: TA }]} numberOfLines={1}>
+                      <Text style={[styles.txSub, { color: S.cap, fontFamily: 'Inter_400Regular', textAlign: TA }]} numberOfLines={1}>
                         {new Date(item.createdAt).toLocaleDateString(isRTL ? 'ar-EG' : 'en-EG')}
                       </Text>
                     </View>
                     <View style={{ alignItems: isRTL ? 'flex-start' : 'flex-end', gap: 4 }}>
-                      <Text style={[styles.txAmount, { color: C_INK, fontFamily: 'Inter_800ExtraBold' }]}>
+                      <Text style={[styles.txAmount, { color: S.ink, fontFamily: 'Inter_800ExtraBold' }]}>
                         {item.amount.toFixed(2)} {t.egp}
                       </Text>
                       <Text style={[styles.statusText, { color: badge.color, fontFamily: 'Inter_800ExtraBold' }]}>{badge.label}</Text>
@@ -167,15 +163,15 @@ export default function WalletScreen() {
             </View>
           )}
 
-          <Text style={[styles.sectionTitle, { color: C_INK, fontFamily: 'Inter_800ExtraBold', textAlign: TA, marginTop: Spacing.xl }]}>{t.transactions_label}</Text>
+          <Text style={[styles.sectionTitle, { color: S.ink, fontFamily: 'Inter_800ExtraBold', textAlign: TA, marginTop: Spacing.xl }]}>{t.transactions_label}</Text>
           {txs.length === 0 ? (
             <View style={[styles.emptyCard, { alignItems: 'center' }]}>
-              <Text style={{ color: C_CAP, fontFamily: 'Inter_400Regular', fontSize: 13 }}>{t.no_transactions_yet}</Text>
+              <Text style={{ color: S.cap, fontFamily: 'Inter_400Regular', fontSize: 13 }}>{t.no_transactions_yet}</Text>
             </View>
           ) : (
             <View style={styles.listCard}>
               {txs.map((tx, i) => {
-                const txColor = tx.isCredit ? C_TEAL : C_AMBER;
+                const txColor = tx.isCredit ? S.teal : C_AMBER;
                 const txBg = tx.isCredit ? '#DDF4EB' : '#FFF1DC';
                 return (
                   <View key={tx.id} style={[styles.txItem, { flexDirection: 'row' }, i > 0 && styles.txItemBorder]}>
@@ -186,8 +182,8 @@ export default function WalletScreen() {
                       }
                     </View>
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text style={[styles.txTitle, { color: C_INK, fontFamily: 'Inter_700Bold', textAlign: TA }]} numberOfLines={1}>{tx.title}</Text>
-                      <Text style={[styles.txSub, { color: C_CAP, fontFamily: 'Inter_400Regular', textAlign: TA }]} numberOfLines={1}>{tx.subtitle}</Text>
+                      <Text style={[styles.txTitle, { color: S.ink, fontFamily: 'Inter_700Bold', textAlign: TA }]} numberOfLines={1}>{tx.title}</Text>
+                      <Text style={[styles.txSub, { color: S.cap, fontFamily: 'Inter_400Regular', textAlign: TA }]} numberOfLines={1}>{tx.subtitle}</Text>
                     </View>
                     <Text style={[styles.txAmount, { color: txColor, fontFamily: 'Inter_800ExtraBold' }]}>
                       {tx.isCredit ? '+' : '−'}{tx.amount.toFixed(2)} {t.egp}
@@ -203,31 +199,33 @@ export default function WalletScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(S: SplitColors) {
+  return StyleSheet.create({
   container: { flex: 1 },
-  hero: { backgroundColor: C_INK, paddingHorizontal: 22, paddingBottom: 22, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 },
-  heroCap: { fontSize: 10, letterSpacing: 1.6, textTransform: 'uppercase', color: C_CAP_ON_DARK },
+  hero: { backgroundColor: S.ink, paddingHorizontal: 22, paddingBottom: 22, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 },
+  heroCap: { fontSize: 10, letterSpacing: 1.6, textTransform: 'uppercase', color: S.capOnDark },
   balanceRow: { alignItems: 'flex-end', gap: 8, marginTop: 2 },
   balanceAmount: { fontSize: 44, lineHeight: 48, color: '#fff' },
-  balanceCurrency: { fontSize: 18, color: C_CAP_ON_DARK, marginBottom: 4 },
+  balanceCurrency: { fontSize: 18, color: S.capOnDark, marginBottom: 4 },
   heroStatsRow: { flexDirection: 'row', marginTop: 18 },
   heroStatCell: { flex: 1, alignItems: 'center' },
   heroStatValue: { fontSize: 15, color: '#fff' },
-  heroStatCap: { fontSize: 9, letterSpacing: 1, textTransform: 'uppercase', color: C_CAP_ON_DARK, marginTop: 2 },
+  heroStatCap: { fontSize: 9, letterSpacing: 1, textTransform: 'uppercase', color: S.capOnDark, marginTop: 2 },
   heroDivider: { width: 1, backgroundColor: 'rgba(255,255,255,.12)' },
   actionRow: { gap: 10, marginTop: 20 },
-  primaryAction: { flex: 1, height: 48, borderRadius: 14, backgroundColor: '#fff', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  primaryActionText: { fontSize: 13.5, color: C_INK },
+  primaryAction: { flex: 1, height: 48, borderRadius: 14, backgroundColor: S.card, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  primaryActionText: { fontSize: 13.5, color: S.ink },
   secondaryAction: { flex: 1, height: 48, borderRadius: 14, backgroundColor: 'rgba(255,255,255,.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,.16)', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   secondaryActionText: { fontSize: 13.5, color: '#fff' },
   sectionTitle: { fontSize: 15, marginBottom: Spacing.md },
-  emptyCard: { padding: Spacing.xl, borderRadius: 16, backgroundColor: C_SURF },
-  listCard: { backgroundColor: C_SURF, borderRadius: 16, overflow: 'hidden' },
+  emptyCard: { padding: Spacing.xl, borderRadius: 16, backgroundColor: S.card },
+  listCard: { backgroundColor: S.card, borderRadius: 16, overflow: 'hidden' },
   txItem: { alignItems: 'center', gap: Spacing.md, padding: Spacing.lg },
-  txItemBorder: { borderTopWidth: 1, borderTopColor: C_HAIR },
-  txIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: C_HAIR },
+  txItemBorder: { borderTopWidth: 1, borderTopColor: S.hair },
+  txIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: S.hair },
   txTitle: { fontSize: 13.5 },
   txSub: { fontSize: 11.5, marginTop: 2 },
   txAmount: { fontSize: 13.5 },
   statusText: { fontSize: 10, letterSpacing: 0.5, textTransform: 'uppercase' },
-});
+  });
+}
