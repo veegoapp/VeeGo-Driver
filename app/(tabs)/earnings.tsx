@@ -40,18 +40,6 @@ type EarningsSummary = {
 };
 type PeriodKey = 'today' | 'this_week' | 'last_week' | 'current_month';
 const PERIOD_KEYS: PeriodKey[] = ['today', 'this_week', 'last_week', 'current_month'];
-const PERIOD_LABELS: Record<PeriodKey, string> = {
-  today: 'Today',
-  this_week: 'This Week',
-  last_week: 'Last Week',
-  current_month: 'This Month',
-};
-const PERIOD_HERO_LABELS: Record<PeriodKey, string> = {
-  today: 'TOTAL TODAY',
-  this_week: 'TOTAL THIS WEEK',
-  last_week: 'TOTAL LAST WEEK',
-  current_month: 'TOTAL THIS MONTH',
-};
 
 // NaN-safe: a malformed/missing numeric field (bad fare string, absent
 // driverEarnings) falls back to 0 instead of poisoning downstream sums.
@@ -135,7 +123,20 @@ export default function EarningsScreen() {
   const tabBarHeight = TAB_BAR_HEIGHT_BASE + insets.bottom;
   const TA = isRTL ? 'right' as const : 'left' as const;
 
-  const [period, setPeriod] = useState<PeriodKey>('this_week');
+  const [period, setPeriod] = useState<PeriodKey>('today');
+
+  const PERIOD_LABELS: Record<PeriodKey, string> = {
+    today: t.earn_period_today,
+    this_week: t.earn_period_this_week,
+    last_week: t.earn_period_last_week,
+    current_month: t.earn_period_this_month,
+  };
+  const PERIOD_HERO_LABELS: Record<PeriodKey, string> = {
+    today: t.earn_total_today,
+    this_week: t.earn_total_this_week,
+    last_week: t.earn_total_last_week,
+    current_month: t.earn_total_this_month,
+  };
 
   const { data: summaryRaw, isLoading: summaryLoading, isError: summaryError, refetch: refetchSummary } = useQuery({
     queryKey: ['earnings-summary', period],
