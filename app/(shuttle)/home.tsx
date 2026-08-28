@@ -1,6 +1,6 @@
 import { showAlert } from '@/lib/alert';
 import { router } from 'expo-router';
-import { AlertTriangle, ArrowRight, Bell, Calendar, ChevronRight, Clock, GitBranch, Navigation, RefreshCw, Users, Wifi, WifiOff, X } from 'lucide-react-native';
+import { AlertTriangle, ArrowRight, Bell, Calendar, ChevronRight, Clock, Route, Navigation, RefreshCw, Users, Wifi, WifiOff, X } from 'lucide-react-native';
 import { useLocationBroadcast } from '@/hooks/useLocationBroadcast';
 import { setActiveShuttleTripId } from '@/lib/backgroundLocationTask';
 import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
@@ -694,7 +694,7 @@ export default function ShuttleHomeScreen() {
           {/* No active booking — only shown when there are no upcoming or active trips */}
           {upcomingLines.length === 0 && !activeLine && (
             <View style={[styles.noLineCard, { marginTop: Spacing.lg }]}>
-              <GitBranch size={32} color={S.cap} strokeWidth={2} />
+              <Route size={32} color={S.cap} strokeWidth={2} />
               <Text style={[styles.noLineTitle, { color: S.ink, fontFamily: 'Inter_800ExtraBold' }]}>{t.no_booking}</Text>
               <Text style={[styles.noLineSub, { color: S.cap, fontFamily: 'Inter_400Regular' }]}>
                 {t.trips_here}
