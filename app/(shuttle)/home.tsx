@@ -371,37 +371,38 @@ export default function ShuttleHomeScreen() {
               }]} />
             </View>
           </Pressable>
-
-          {/* Stats embedded directly in the hero */}
-          <View style={styles.heroStatsRow}>
-            <View style={styles.heroStatCell}>
-              <Text style={[styles.heroStatValue, { fontFamily: 'Inter_800ExtraBold' }]}>{completedCount}</Text>
-              <Text style={[styles.heroStatCap, { fontFamily: 'Inter_700Bold' }]}>{t.trips_stat}</Text>
-            </View>
-            <View style={styles.heroDivider} />
-            <View style={styles.heroStatCell}>
-              <Text style={[styles.heroStatValue, { fontFamily: 'Inter_800ExtraBold' }]}>{routes.length}</Text>
-              <Text style={[styles.heroStatCap, { fontFamily: 'Inter_700Bold' }]}>{t.routes}</Text>
-            </View>
-            <View style={styles.heroDivider} />
-            <View style={styles.heroStatCell}>
-              <Text style={[styles.heroStatValue, { color: C_MINT, fontFamily: 'Inter_800ExtraBold' }]}>
-                {todayEarnings} {isRTL ? currency.symbolAr : currency.symbol}
-              </Text>
-              <Text style={[styles.heroStatCap, { fontFamily: 'Inter_700Bold' }]}>{t.net_earnings}</Text>
-            </View>
-            <View style={styles.heroDivider} />
-            <View style={styles.heroStatCell}>
-              <Text style={[styles.heroStatValue, { fontFamily: 'Inter_800ExtraBold' }]}>
-                {allLines.filter(l => l.status === 'in-progress').length}
-              </Text>
-              <Text style={[styles.heroStatCap, { fontFamily: 'Inter_700Bold' }]}>{t.active}</Text>
-            </View>
-          </View>
         </View>
 
         {/* White body */}
         <View style={{ paddingHorizontal: Spacing.lg }}>
+          {/* Stats strip — no longer part of the dark hero, so it stays a
+              plain card and doesn't get boxed in with the online toggle. */}
+          <View style={styles.statsCard}>
+            <View style={styles.heroStatCell}>
+              <Text style={[styles.statValue, { fontFamily: 'Inter_800ExtraBold' }]}>{completedCount}</Text>
+              <Text style={[styles.statCap, { fontFamily: 'Inter_700Bold' }]}>{t.trips_stat}</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.heroStatCell}>
+              <Text style={[styles.statValue, { fontFamily: 'Inter_800ExtraBold' }]}>{routes.length}</Text>
+              <Text style={[styles.statCap, { fontFamily: 'Inter_700Bold' }]}>{t.routes}</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.heroStatCell}>
+              <Text style={[styles.statValue, { color: S.teal, fontFamily: 'Inter_800ExtraBold' }]}>
+                {todayEarnings} {isRTL ? currency.symbolAr : currency.symbol}
+              </Text>
+              <Text style={[styles.statCap, { fontFamily: 'Inter_700Bold' }]}>{t.net_earnings}</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.heroStatCell}>
+              <Text style={[styles.statValue, { fontFamily: 'Inter_800ExtraBold' }]}>
+                {allLines.filter(l => l.status === 'in-progress').length}
+              </Text>
+              <Text style={[styles.statCap, { fontFamily: 'Inter_700Bold' }]}>{t.active}</Text>
+            </View>
+          </View>
+
           {/* Fix 2: check-in pending banner */}
           {!!shuttleCheckinRequired && (
             <Pressable
@@ -732,11 +733,11 @@ function makeStyles(S: SplitColors) {
   toggleSub: { fontSize: 11, marginTop: 1 },
   switchTrack: { width: 44, height: 26, borderRadius: 13, padding: 3 },
   switchThumb: { width: 20, height: 20, borderRadius: 10 },
-  heroStatsRow: { flexDirection: 'row', marginTop: 18 },
+  statsCard: { flexDirection: 'row', marginTop: Spacing.lg, backgroundColor: S.card, borderRadius: 18, paddingVertical: Spacing.lg, paddingHorizontal: Spacing.sm },
   heroStatCell: { flex: 1, alignItems: 'center' },
-  heroStatValue: { fontSize: 17, color: '#fff' },
-  heroStatCap: { fontSize: 10, letterSpacing: 1, textTransform: 'uppercase', color: S.capOnDark, marginTop: 2 },
-  heroDivider: { width: 1, backgroundColor: 'rgba(255,255,255,.12)' },
+  statValue: { fontSize: 17, color: S.ink },
+  statCap: { fontSize: 10, letterSpacing: 1, textTransform: 'uppercase', color: S.cap, marginTop: 2 },
+  statDivider: { width: 1, backgroundColor: S.hair },
   banner: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, padding: Spacing.md, borderRadius: 14, borderWidth: 1, marginTop: Spacing.md },
   bannerText: { fontSize: 13 },
   renewalCard: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, padding: 14, marginTop: Spacing.lg, backgroundColor: S.card, borderRadius: 16, borderWidth: 1 },
