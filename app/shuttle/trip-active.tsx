@@ -469,6 +469,27 @@ export default function ShuttleTripActiveScreen() {
   }, []);
 
   // ── SOS / Safety button ────────────────────────────────────────────────────
+  // Every SOS action — whichever the driver picks — reports to the backend
+  // (records the event, alerts the admin room) independently of whether the
+  // WhatsApp/tel action itself succeeds. Previously "Call 122" recorded
+  // nothing at all, and the WhatsApp path silently swallowed backend
+  // failures with no report ever reaching admin.
+  const reportSos = useCallback(async (action: 'call_police' | 'share_trip') => {
+    if (!tripId) return;
+    const loc = effectivePos;
+    const lat = isFinite(loc?.latitude ?? NaN) ? loc!.latitude : 0;
+    const lng = isFinite(loc?.longitude ?? NaN) ? loc!.longitude : 0;
+    const notes = `Trip #${tripId} | Stop ${currentStopIndex + 1}/${totalStops}`;
+    try {
+      await endpoints.trips.sosAlert(tripId, { latitude: lat, longitude: lng, notes, action });
+    } catch (err: unknown) {
+      if (__DEV__) {
+        const code = (err as { status?: number })?.status;
+        console.warn(`[SOS] backend alert failed (HTTP ${code ?? 'unknown'})`, err);
+      }
+    }
+  }, [effectivePos, tripId, currentStopIndex, totalStops]);
+
   const handleSOS = useCallback(async () => {
     const raw = await AsyncStorage.getItem('veego_emergency_contact');
     const ec = raw ? (() => { try { return JSON.parse(raw); } catch { return null; } })() : null;
@@ -480,12 +501,16 @@ export default function ShuttleTripActiveScreen() {
         { text: t.cancel, style: 'cancel' },
         {
           text: t.sos_call_122,
-          onPress: () => Linking.openURL('tel:122').catch(() => {}),
+          onPress: () => {
+            reportSos('call_police');
+            Linking.openURL('tel:122').catch(() => {});
+          },
         },
         {
           text: t.sos_whatsapp_alert,
           style: 'destructive',
           onPress: async () => {
+            reportSos('share_trip');
             if (!ec?.phone) {
               showAlert(t.sos_confirm_title, t.sos_no_contact_set);
               return;
@@ -501,21 +526,6 @@ export default function ShuttleTripActiveScreen() {
               ].join('\n\n');
               const phoneClean = ec.phone.replace(/\D/g, '');
               await Linking.openURL(`whatsapp://send?phone=${phoneClean}&text=${encodeURIComponent(lines)}`);
-              if (tripId) {
-                const lat = isFinite(loc?.latitude ?? NaN) ? loc!.latitude : 0;
-                const lng = isFinite(loc?.longitude ?? NaN) ? loc!.longitude : 0;
-                const notes = `Trip #${tripId} | Stop ${currentStopIndex + 1}/${totalStops}`;
-                try {
-                  await endpoints.trips.sosAlert(tripId, { latitude: lat, longitude: lng, notes });
-                } catch (err: unknown) {
-                  // SOS delivered via WhatsApp; backend failure is non-blocking.
-                  // 400 = invalid payload, 404 = trip not found, 500 = server error.
-                  if (__DEV__) {
-                    const code = (err as { status?: number })?.status;
-                    console.warn(`[SOS] backend alert failed (HTTP ${code ?? 'unknown'})`, err);
-                  }
-                }
-              }
             } catch {
               showAlert(t.sos_confirm_title, t.whatsapp_emergency_no_contact);
             }
@@ -523,7 +533,7 @@ export default function ShuttleTripActiveScreen() {
         },
       ]
     );
-  }, [effectivePos, passengers, activeLine, tripId, currentStop, currentStopIndex, stops.length, t]);
+  }, [reportSos, effectivePos, tripId, currentStopIndex, stops.length, t]);
 
   // ── Share Trip ───────────────────────────────────────────────────────────────
   const copyShareLink = useCallback(async (url: string) => {

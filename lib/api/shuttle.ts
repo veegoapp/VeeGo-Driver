@@ -178,8 +178,8 @@ export const tripsEndpoints = {
   stations: (tripId: string) => api.get(`/driver/trips/${tripId}/stations`),
   stationsEta: (tripId: string) => api.get<StationEtaResponse>(`/driver/trips/${tripId}/stations/eta`),
   // POST /driver/shuttle/trips/:tripId/sos
-  // Body: { latitude, longitude, notes? }  Response 201: { sosId, message }
-  sosAlert: (tripId: string, data: { latitude: number; longitude: number; notes?: string }) =>
+  // Body: { latitude, longitude, notes?, action? }  Response 201: { sosId, message }
+  sosAlert: (tripId: string, data: { latitude: number; longitude: number; notes?: string; action?: 'call_police' | 'call_ambulance' | 'share_trip' | 'manual' }) =>
     api.post<{ sosId: number; message: string }>(`/driver/shuttle/trips/${tripId}/sos`, data),
   stationArrived: (tripId: string, stationId: string) =>
     api.patch(`/driver/trips/${tripId}/stations/${stationId}/arrived`),
