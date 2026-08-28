@@ -166,7 +166,7 @@ function makeStyles(S: SplitColors) {
   return StyleSheet.create({
   container: { flex: 1, backgroundColor: S.bg },
   heroC: {
-    backgroundColor: S.ink,
+    backgroundColor: S.panel,
     paddingHorizontal: Spacing.lg,
     paddingBottom: 22,
     borderBottomLeftRadius: 32,
@@ -202,7 +202,7 @@ function makeStyles(S: SplitColors) {
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F0F2F3',
+    backgroundColor: S.surfaceMuted,
   },
   optionTitleC: { fontSize: Typography.size.md, fontFamily: 'Inter_700Bold', color: S.ink },
   optionSubC: { fontSize: 13, fontFamily: 'Inter_400Regular', color: S.cap, marginTop: 5, lineHeight: 18 },

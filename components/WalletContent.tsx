@@ -177,7 +177,7 @@ export function WalletContent() {
     return (
       <View style={[styles.container, { backgroundColor: S.bg, alignItems: 'center', justifyContent: 'center', gap: 16 }]}>
         <Text style={{ color: S.cap, fontFamily: 'Inter_400Regular', fontSize: 13 }}>{t.wallet_load_fail}</Text>
-        <Pressable onPress={() => { refetchBalance(); refetchTx(); }} style={{ paddingHorizontal: 24, paddingVertical: 10, borderRadius: 20, backgroundColor: S.ink }}>
+        <Pressable onPress={() => { refetchBalance(); refetchTx(); }} style={{ paddingHorizontal: 24, paddingVertical: 10, borderRadius: 20, backgroundColor: S.panel }}>
           <Text style={{ color: '#fff', fontFamily: 'Inter_700Bold', fontSize: 13 }}>{t.retry_label}</Text>
         </Pressable>
       </View>
@@ -214,7 +214,7 @@ export function WalletContent() {
 
           <View style={[styles.actionRow, { flexDirection: 'row' }]}>
             <Pressable onPress={() => router.push('/wallet-withdraw')} style={({ pressed }) => [styles.primaryAction, { opacity: pressed ? 0.9 : 1 }]}>
-              <ArrowDownLeft size={16} color={S.ink} strokeWidth={2} />
+              <ArrowDownLeft size={16} color="#14151A" strokeWidth={2} />
               <Text style={[styles.primaryActionText, { fontFamily: 'Inter_800ExtraBold' }]}>{t.cash_out}</Text>
             </Pressable>
             <Pressable onPress={() => router.push('/wallet-deposit')} style={({ pressed }) => [styles.secondaryAction, { opacity: pressed ? 0.8 : 1 }]}>
@@ -376,7 +376,7 @@ const styles2 = StyleSheet.create({
 function makeStyles(S: SplitColors) {
   return StyleSheet.create({
   container: { flex: 1 },
-  hero: { backgroundColor: S.ink, paddingHorizontal: 22, paddingBottom: 22, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 },
+  hero: { backgroundColor: S.panel, paddingHorizontal: 22, paddingBottom: 22, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 },
   heroCap: { fontSize: 10, letterSpacing: 1.6, textTransform: 'uppercase', color: S.capOnDark },
   balanceRow: { alignItems: 'flex-end', gap: 8, marginTop: 2 },
   balanceAmount: { fontSize: 44, lineHeight: 48, color: '#fff' },
@@ -387,8 +387,11 @@ function makeStyles(S: SplitColors) {
   heroStatCap: { fontSize: 9, letterSpacing: 1, textTransform: 'uppercase', color: S.capOnDark, marginTop: 2 },
   heroDivider: { width: 1, backgroundColor: 'rgba(255,255,255,.12)' },
   actionRow: { gap: 10, marginTop: 20 },
-  primaryAction: { flex: 1, height: 48, borderRadius: 14, backgroundColor: S.card, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  primaryActionText: { fontSize: 13.5, color: S.ink },
+  // Fixed (not theme-adaptive): this pill sits on the always-dark hero above,
+  // same as the hero itself — S.card/S.ink would flip to a near-black pill on
+  // dark mode and disappear against the panel.
+  primaryAction: { flex: 1, height: 48, borderRadius: 14, backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  primaryActionText: { fontSize: 13.5, color: '#14151A' },
   secondaryAction: { flex: 1, height: 48, borderRadius: 14, backgroundColor: 'rgba(255,255,255,.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,.16)', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   secondaryActionText: { fontSize: 13.5, color: '#fff' },
   sectionTitle: { fontSize: 15, marginBottom: Spacing.md },

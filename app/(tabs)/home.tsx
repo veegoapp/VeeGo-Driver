@@ -1311,7 +1311,7 @@ function makeStyles(S: SplitColors) {
 
   /* ── "C" trip-request split card ── */
   requestSplitCard: { borderRadius: 24, overflow: 'hidden', flexDirection: 'row', elevation: Shadows.large.elevation, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.22, shadowRadius: 24 },
-  requestLeftPanelC: { width: 96, flexShrink: 0, backgroundColor: S.ink, paddingHorizontal: 12, paddingVertical: 18, alignItems: 'center' },
+  requestLeftPanelC: { width: 96, flexShrink: 0, backgroundColor: S.panel, paddingHorizontal: 12, paddingVertical: 18, alignItems: 'center' },
   requestLeftCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.1, color: S.cap, textTransform: 'uppercase' },
   countdownRingC: { width: 56, height: 56, borderRadius: 28, borderWidth: 3, borderColor: C_RED, alignItems: 'center', justifyContent: 'center' },
   countdownTextC: { fontSize: 19, fontFamily: 'Inter_700Bold', color: '#ffffff' },
@@ -1321,7 +1321,7 @@ function makeStyles(S: SplitColors) {
   fareCurrencyC: { fontSize: 13, fontFamily: 'Inter_700Bold', color: S.cap },
   fareDetailsC: { fontSize: 11.5, fontFamily: 'Inter_600SemiBold', color: S.cap, marginTop: 1 },
   riderInfoC: { alignItems: 'center', gap: 8 },
-  riderAvatarC: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#F0F2F3' },
+  riderAvatarC: { width: 38, height: 38, borderRadius: 19, backgroundColor: S.surfaceMuted },
   riderAvatarFallbackC: { alignItems: 'center', justifyContent: 'center' },
   riderAvatarFallbackTextC: { fontSize: 12, fontFamily: 'Inter_700Bold', color: S.ink },
   riderNameC: { fontSize: 12.5, fontFamily: 'Inter_700Bold', color: S.ink },
@@ -1339,7 +1339,7 @@ function makeStyles(S: SplitColors) {
   requestActionsC: { gap: 10, marginTop: 16 },
   declineBtnC: { flex: 1, height: 48, borderRadius: 24, borderWidth: 1.5, borderColor: '#E2E5E8', alignItems: 'center', justifyContent: 'center' },
   declineBtnTextC: { fontSize: 13, fontFamily: 'Inter_700Bold', color: S.ink },
-  acceptBtnC: { flex: 1.4, height: 48, borderRadius: 24, backgroundColor: S.ink, alignItems: 'center', justifyContent: 'center', gap: 6 },
+  acceptBtnC: { flex: 1.4, height: 48, borderRadius: 24, backgroundColor: S.panel, alignItems: 'center', justifyContent: 'center', gap: 6 },
   acceptBtnTextC: { fontSize: 13, fontFamily: 'Inter_700Bold', color: '#ffffff' },
   timerBarC: { height: 3, width: '100%', borderRadius: 1.5, marginTop: Spacing.sm, backgroundColor: C_RED, transformOrigin: '0% 50%' },
   // Active Promotions card

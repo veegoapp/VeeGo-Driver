@@ -129,7 +129,7 @@ export function UpcomingTripCard({
 function makeStyles(S: SplitColors) {
   return StyleSheet.create({
     card: { flexDirection: 'row', backgroundColor: S.card, borderRadius: Radius.lg + 2, overflow: 'hidden' },
-    rail: { width: 128, flexShrink: 0, backgroundColor: S.ink, padding: 14 },
+    rail: { width: 128, flexShrink: 0, backgroundColor: S.panel, padding: 14 },
     statusRow: { alignItems: 'center', gap: 5 },
     statusDot: { width: 5, height: 5, borderRadius: 3 },
     statusLabel: { fontSize: 9, letterSpacing: 0.5 },

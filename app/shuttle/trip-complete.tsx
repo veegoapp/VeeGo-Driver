@@ -220,7 +220,7 @@ function makeStyles(S: SplitColors) {
   inner: { paddingBottom: Spacing.xl },
 
   // ── Dark hero band ──────────────────────────────────────────────────
-  heroC: { backgroundColor: S.ink, alignItems: 'center', paddingHorizontal: 28, paddingTop: 36, paddingBottom: 26, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
+  heroC: { backgroundColor: S.panel, alignItems: 'center', paddingHorizontal: 28, paddingTop: 36, paddingBottom: 26, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
   checkCircleC: { width: 60, height: 60, borderRadius: 30, backgroundColor: S.teal, alignItems: 'center', justifyContent: 'center' },
   titleC: { fontSize: 22, fontFamily: 'Inter_700Bold', color: '#ffffff', textAlign: 'center', marginTop: 16 },
   subtitleC: { fontSize: Typography.size.sm, fontFamily: 'Inter_400Regular', color: '#B7BBC2', textAlign: 'center', marginTop: 4 },
@@ -265,7 +265,7 @@ function makeStyles(S: SplitColors) {
     justifyContent: 'center',
     gap: 10,
     borderRadius: 15,
-    backgroundColor: S.ink,
+    backgroundColor: S.panel,
   },
   ctaBtnTextC: { color: '#ffffff', fontSize: 15, fontFamily: 'Inter_700Bold' },
   });

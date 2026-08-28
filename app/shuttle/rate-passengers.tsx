@@ -223,7 +223,7 @@ function makeStyles(S: SplitColors) {
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.md, backgroundColor: S.bg },
 
   // Dark header band
-  headerC: { backgroundColor: S.ink, paddingHorizontal: Spacing.lg, paddingBottom: 22, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
+  headerC: { backgroundColor: S.panel, paddingHorizontal: Spacing.lg, paddingBottom: 22, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
   backBtnC: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.1)', marginBottom: 14 },
   headerCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.4, color: S.capOnDark, textTransform: 'uppercase' },
   pageTitleC: { fontSize: 22, fontFamily: 'Inter_700Bold', color: '#ffffff', marginTop: 6 },
@@ -248,7 +248,7 @@ function makeStyles(S: SplitColors) {
   submitBtnC: {
     height: 54,
     borderRadius: 15,
-    backgroundColor: S.ink,
+    backgroundColor: S.panel,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -211,7 +211,7 @@ export default function EarningsScreen() {
     return (
       <View style={[styles.container, { backgroundColor: S.bg, alignItems: 'center', justifyContent: 'center', gap: 16 }]}>
         <Text style={{ color: S.cap, fontFamily: 'Inter_400Regular', fontSize: 13 }}>{t.earnings_load_fail}</Text>
-        <Pressable onPress={() => refetchSummary()} style={{ paddingHorizontal: 24, paddingVertical: 10, borderRadius: 20, backgroundColor: S.ink }}>
+        <Pressable onPress={() => refetchSummary()} style={{ paddingHorizontal: 24, paddingVertical: 10, borderRadius: 20, backgroundColor: S.panel }}>
           <Text style={{ color: '#fff', fontFamily: 'Inter_700Bold', fontSize: 13 }}>{t.retry_label}</Text>
         </Pressable>
       </View>
@@ -314,13 +314,16 @@ export default function EarningsScreen() {
 function makeStyles(S: SplitColors) {
   return StyleSheet.create({
   container: { flex: 1 },
-  hero: { backgroundColor: S.ink, paddingHorizontal: 22, paddingBottom: 22, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 },
+  hero: { backgroundColor: S.panel, paddingHorizontal: 22, paddingBottom: 22, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 },
   heroCap: { fontSize: 10, letterSpacing: 1.6, textTransform: 'uppercase', color: S.capOnDark },
   segment: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,.08)', borderRadius: 14, padding: 4, marginTop: 12 },
   segmentItem: { flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: 10 },
-  segmentItemActive: { backgroundColor: S.card },
+  // Fixed (not theme-adaptive): this pill sits on the always-dark hero above,
+  // same as the hero itself — S.card/S.ink would flip to a near-black pill on
+  // dark mode and disappear against the panel.
+  segmentItemActive: { backgroundColor: '#FFFFFF' },
   segmentText: { fontSize: 10.5, color: S.capOnDark },
-  segmentTextActive: { color: S.ink },
+  segmentTextActive: { color: '#14151A' },
   heroAmountCap: { fontSize: 10, letterSpacing: 1.6, textTransform: 'uppercase', color: S.capOnDark, marginTop: 20 },
   heroAmountRow: { alignItems: 'flex-end', gap: 8, marginTop: 2 },
   heroAmount: { fontSize: 44, lineHeight: 48, color: '#fff' },

@@ -1029,7 +1029,7 @@ export default function RideScreen() {
                     onError={() => setRiderAvatarFailed(true)}
                   />
                 ) : (
-                  <View style={[styles.riderAvatarC, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#F0F2F3' }]}>
+                  <View style={[styles.riderAvatarC, { justifyContent: 'center', alignItems: 'center', backgroundColor: S.surfaceMuted }]}>
                     <Text style={{ color: S.ink, fontSize: 14, fontFamily: 'Inter_700Bold' }}>{passengerInitials}</Text>
                   </View>
                 )}
@@ -1064,7 +1064,7 @@ export default function RideScreen() {
                   style={[
                     styles.waitingTickerC,
                     {
-                      backgroundColor: waitingCharge.capped ? '#F0F2F3' : '#D5B23D18',
+                      backgroundColor: waitingCharge.capped ? S.surfaceMuted : '#D5B23D18',
                       borderColor: waitingCharge.capped ? S.hair : '#D5B23D55',
                       opacity: waitingCharge.capped ? 1 : pulseAnim,
                     },
@@ -1364,7 +1364,7 @@ function makeStyles(S: SplitColors) {
   safetyRowC: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0, marginRight: 8 },
   safetyTextC: { fontSize: 11, fontFamily: 'Inter_600SemiBold', color: S.inkSoft, flexShrink: 1 },
   bottomActionsC: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  shareBtnC: { flexDirection: 'row', alignItems: 'center', gap: 5, height: 30, paddingHorizontal: 12, borderRadius: 15, backgroundColor: '#F0F2F3' },
+  shareBtnC: { flexDirection: 'row', alignItems: 'center', gap: 5, height: 30, paddingHorizontal: 12, borderRadius: 15, backgroundColor: S.surfaceMuted },
   shareBtnTextC: { fontSize: 11, fontFamily: 'Inter_700Bold', color: S.ink },
   sosBtnC: { flexDirection: 'row', alignItems: 'center', gap: 5, height: 30, paddingHorizontal: 12, borderRadius: 15, borderWidth: 1.5, borderColor: '#F3C6C2' },
   sosBtnTextC: { fontSize: 11, fontFamily: 'Inter_700Bold', color: C_RED },
@@ -1393,7 +1393,7 @@ function makeStyles(S: SplitColors) {
   ratingTitleC: { fontSize: 18, fontFamily: 'Inter_700Bold', color: '#ffffff', marginTop: 4 },
   ratingBodyC: { backgroundColor: S.card, padding: 24 },
   starsRowC: { flexDirection: 'row', justifyContent: 'center', gap: 14 },
-  commentInputC: { alignSelf: 'stretch', borderWidth: 1, borderColor: S.hair, borderRadius: 14, backgroundColor: '#F6F7F8', paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, fontFamily: 'Inter_400Regular', marginTop: 22, minHeight: 60, textAlignVertical: 'top', color: S.ink },
+  commentInputC: { alignSelf: 'stretch', borderWidth: 1, borderColor: S.hair, borderRadius: 14, backgroundColor: S.surfaceMuted, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, fontFamily: 'Inter_400Regular', marginTop: 22, minHeight: 60, textAlignVertical: 'top', color: S.ink },
   skipBtnC: { alignSelf: 'center', marginTop: 14, paddingVertical: 6 },
   skipTxtC: { fontSize: 13, fontFamily: 'Inter_700Bold', color: S.cap },
 
@@ -1424,7 +1424,7 @@ function makeStyles(S: SplitColors) {
   keypadAmountCurC: { fontSize: 18, fontFamily: 'Inter_700Bold', color: S.cap },
   keypadGridC: { marginTop: 22, gap: 10 },
   keypadRowC: { flexDirection: 'row', gap: 10 },
-  keypadKeyC: { flex: 1, height: 56, borderRadius: 16, backgroundColor: '#F0F2F3', alignItems: 'center', justifyContent: 'center' },
+  keypadKeyC: { flex: 1, height: 56, borderRadius: 16, backgroundColor: S.surfaceMuted, alignItems: 'center', justifyContent: 'center' },
   keypadKeyTextC: { fontSize: 20, fontFamily: 'Inter_700Bold', color: S.ink },
   keypadActionsRowC: { flexDirection: 'row', gap: 12, marginTop: 20 },
   keypadCancelBtnC: { flex: 1, height: 50, borderRadius: 14, borderWidth: 1.5, borderColor: '#E2E5E8', alignItems: 'center', justifyContent: 'center' },

@@ -206,7 +206,7 @@ export default function DirectCancelScreen() {
                 styles.reasonChipC,
                 { flexDirection: R },
                 isSelected && { borderColor: S.ink },
-                { backgroundColor: pressed ? '#F6F7F8' : '#ffffff' },
+                { backgroundColor: pressed ? S.surfaceMuted : S.card },
               ]}
             >
               <View style={styles.reasonIconC}>
@@ -215,7 +215,7 @@ export default function DirectCancelScreen() {
               <Text style={[styles.reasonTextC, { fontFamily: isSelected ? 'Inter_700Bold' : 'Inter_400Regular', textAlign: TA, flex: 1 }]}>
                 {label}
               </Text>
-              <View style={[styles.reasonCheckC, isSelected ? { backgroundColor: S.ink } : { borderWidth: 2, borderColor: '#D3D6DA' }]}>
+              <View style={[styles.reasonCheckC, isSelected ? { backgroundColor: S.panel } : { borderWidth: 2, borderColor: '#D3D6DA' }]}>
                 {isSelected && <Check size={12} color="#ffffff" strokeWidth={3} />}
               </View>
             </Pressable>
@@ -253,7 +253,7 @@ function makeStyles(S: SplitColors) {
   return StyleSheet.create({
   container: { flex: 1, backgroundColor: S.bg },
   heroC: {
-    backgroundColor: S.ink,
+    backgroundColor: S.panel,
     paddingHorizontal: Spacing.lg,
     paddingBottom: 22,
     borderBottomLeftRadius: 32,
@@ -285,7 +285,7 @@ function makeStyles(S: SplitColors) {
     borderWidth: 1.5,
     borderColor: 'transparent',
   },
-  reasonIconC: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#F0F2F3', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  reasonIconC: { width: 40, height: 40, borderRadius: 12, backgroundColor: S.surfaceMuted, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   reasonCheckC: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   reasonTextC: { fontSize: Typography.size.sm, color: S.ink },
   bottomBarC: {
@@ -311,7 +311,7 @@ function makeStyles(S: SplitColors) {
     borderRadius: 16,
     borderWidth: 1,
   },
-  doneBtnC: { marginTop: Spacing.sm, height: 50, paddingHorizontal: 36, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: S.ink },
+  doneBtnC: { marginTop: Spacing.sm, height: 50, paddingHorizontal: 36, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: S.panel },
   doneBtnTextC: { color: '#ffffff', fontSize: Typography.size.sm, fontFamily: 'Inter_700Bold' },
   });
 }
