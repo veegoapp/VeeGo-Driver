@@ -15,12 +15,8 @@ import { useI18n } from '@/lib/i18nContext';
 import { endpoints, type RideHistoryItem } from '@/lib/api';
 import { Spacing } from '@/constants/spacing';
 import { TAB_BAR_HEIGHT_BASE } from '@/constants/tabBar';
+import { useSplitColors, type SplitColors } from '@/lib/splitTheme';
 
-const C_BG = '#EEF0F2';
-const C_SURF = '#FFFFFF';
-const C_INK = '#14151A';
-const C_CAP = '#9AA0A6';
-const C_CAP_ON_DARK = '#8A9096';
 const C_MINT = '#3DDC97';
 const C_TRACK = '#F0F2F3';
 
@@ -119,6 +115,8 @@ async function fetchRidesInRange(start: Date, end: Date): Promise<RideHistoryIte
 export default function EarningsScreen() {
   const insets = useSafeAreaInsets();
   const { t, isRTL } = useI18n();
+  const S = useSplitColors();
+  const styles = useMemo(() => makeStyles(S), [S]);
   const topPad = insets.top;
   const tabBarHeight = TAB_BAR_HEIGHT_BASE + insets.bottom;
   const TA = isRTL ? 'right' as const : 'left' as const;
@@ -203,7 +201,7 @@ export default function EarningsScreen() {
 
   if (isLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: C_BG, alignItems: 'center', justifyContent: 'center' }]}>
+      <View style={[styles.container, { backgroundColor: S.bg, alignItems: 'center', justifyContent: 'center' }]}>
         <AppLoader />
       </View>
     );
@@ -211,9 +209,9 @@ export default function EarningsScreen() {
 
   if (isError) {
     return (
-      <View style={[styles.container, { backgroundColor: C_BG, alignItems: 'center', justifyContent: 'center', gap: 16 }]}>
-        <Text style={{ color: C_CAP, fontFamily: 'Inter_400Regular', fontSize: 13 }}>{t.earnings_load_fail}</Text>
-        <Pressable onPress={() => refetchSummary()} style={{ paddingHorizontal: 24, paddingVertical: 10, borderRadius: 20, backgroundColor: C_INK }}>
+      <View style={[styles.container, { backgroundColor: S.bg, alignItems: 'center', justifyContent: 'center', gap: 16 }]}>
+        <Text style={{ color: S.cap, fontFamily: 'Inter_400Regular', fontSize: 13 }}>{t.earnings_load_fail}</Text>
+        <Pressable onPress={() => refetchSummary()} style={{ paddingHorizontal: 24, paddingVertical: 10, borderRadius: 20, backgroundColor: S.ink }}>
           <Text style={{ color: '#fff', fontFamily: 'Inter_700Bold', fontSize: 13 }}>{t.retry_label}</Text>
         </Pressable>
       </View>
@@ -221,7 +219,7 @@ export default function EarningsScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: C_BG }]}>
+    <View style={[styles.container, { backgroundColor: S.bg }]}>
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingBottom: tabBarHeight + 24 }}
@@ -276,14 +274,14 @@ export default function EarningsScreen() {
 
         {/* White body — trip ledger for the selected period */}
         <View style={{ paddingHorizontal: Spacing.lg }}>
-          <Text style={[styles.sectionTitle, { color: C_INK, fontFamily: 'Inter_800ExtraBold', textAlign: TA, marginTop: Spacing.xl }]}>{t.trips}</Text>
+          <Text style={[styles.sectionTitle, { color: S.ink, fontFamily: 'Inter_800ExtraBold', textAlign: TA, marginTop: Spacing.xl }]}>{t.trips}</Text>
           {ridesLoading ? (
             <View style={{ paddingVertical: Spacing.lg, alignItems: 'center' }}>
               <AppLoader />
             </View>
           ) : rides.length === 0 ? (
             <View style={[styles.emptyCard, { alignItems: 'center' }]}>
-              <Text style={{ color: C_CAP, fontFamily: 'Inter_400Regular', fontSize: 13 }}>{t.no_trips_period}</Text>
+              <Text style={{ color: S.cap, fontFamily: 'Inter_400Regular', fontSize: 13 }}>{t.no_trips_period}</Text>
             </View>
           ) : (
             <View style={{ gap: 10 }}>
@@ -291,17 +289,17 @@ export default function EarningsScreen() {
                 <Pressable key={ride.id} onPress={() => handleTripPress(ride)}>
                   <View style={[styles.tripCard, { flexDirection: 'row' }]}>
                     <View style={{ flex: 1 }}>
-                      <Text style={[styles.tripDate, { color: C_CAP, fontFamily: 'Inter_600SemiBold', textAlign: TA }]}>
+                      <Text style={[styles.tripDate, { color: S.cap, fontFamily: 'Inter_600SemiBold', textAlign: TA }]}>
                         {new Date(ride.completedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                       </Text>
-                      <Text style={[styles.tripAddress, { color: C_INK, fontFamily: 'Inter_700Bold', textAlign: TA }]} numberOfLines={1}>
+                      <Text style={[styles.tripAddress, { color: S.ink, fontFamily: 'Inter_700Bold', textAlign: TA }]} numberOfLines={1}>
                         {ride.pickupAddress ?? '—'}
                       </Text>
                     </View>
-                    <Text style={[styles.tripFare, { color: C_INK, fontFamily: 'Inter_800ExtraBold' }]}>
+                    <Text style={[styles.tripFare, { color: S.ink, fontFamily: 'Inter_800ExtraBold' }]}>
                       {toNum(ride.fare).toFixed(2)} {t.egp}
                     </Text>
-                    <ChevronRight size={16} color={C_CAP} strokeWidth={2} style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined} />
+                    <ChevronRight size={16} color={S.cap} strokeWidth={2} style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined} />
                   </View>
                 </Pressable>
               ))}
@@ -313,30 +311,32 @@ export default function EarningsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(S: SplitColors) {
+  return StyleSheet.create({
   container: { flex: 1 },
-  hero: { backgroundColor: C_INK, paddingHorizontal: 22, paddingBottom: 22, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 },
-  heroCap: { fontSize: 10, letterSpacing: 1.6, textTransform: 'uppercase', color: C_CAP_ON_DARK },
+  hero: { backgroundColor: S.ink, paddingHorizontal: 22, paddingBottom: 22, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 },
+  heroCap: { fontSize: 10, letterSpacing: 1.6, textTransform: 'uppercase', color: S.capOnDark },
   segment: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,.08)', borderRadius: 14, padding: 4, marginTop: 12 },
   segmentItem: { flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: 10 },
-  segmentItemActive: { backgroundColor: '#fff' },
-  segmentText: { fontSize: 10.5, color: C_CAP_ON_DARK },
-  segmentTextActive: { color: C_INK },
-  heroAmountCap: { fontSize: 10, letterSpacing: 1.6, textTransform: 'uppercase', color: C_CAP_ON_DARK, marginTop: 20 },
+  segmentItemActive: { backgroundColor: S.card },
+  segmentText: { fontSize: 10.5, color: S.capOnDark },
+  segmentTextActive: { color: S.ink },
+  heroAmountCap: { fontSize: 10, letterSpacing: 1.6, textTransform: 'uppercase', color: S.capOnDark, marginTop: 20 },
   heroAmountRow: { alignItems: 'flex-end', gap: 8, marginTop: 2 },
   heroAmount: { fontSize: 44, lineHeight: 48, color: '#fff' },
-  heroCurrency: { fontSize: 18, color: C_CAP_ON_DARK, marginBottom: 4 },
+  heroCurrency: { fontSize: 18, color: S.capOnDark, marginBottom: 4 },
   splitTrack: { height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,.12)', overflow: 'hidden', marginTop: 16 },
   splitFill: { height: '100%', borderRadius: 3, backgroundColor: C_MINT },
   heroStatsRow: { flexDirection: 'row', marginTop: 16 },
   heroStatCell: { flex: 1, alignItems: 'center' },
   heroStatValue: { fontSize: 16, color: '#fff' },
-  heroStatCap: { fontSize: 9, letterSpacing: 1, textTransform: 'uppercase', color: C_CAP_ON_DARK, marginTop: 2 },
+  heroStatCap: { fontSize: 9, letterSpacing: 1, textTransform: 'uppercase', color: S.capOnDark, marginTop: 2 },
   heroDivider: { width: 1, backgroundColor: 'rgba(255,255,255,.12)' },
   sectionTitle: { fontSize: 15, marginBottom: Spacing.md },
-  emptyCard: { padding: Spacing.lg, borderRadius: 20, backgroundColor: C_SURF },
-  tripCard: { padding: Spacing.md, alignItems: 'center', gap: Spacing.sm, backgroundColor: C_SURF, borderRadius: 16 },
+  emptyCard: { padding: Spacing.lg, borderRadius: 20, backgroundColor: S.card },
+  tripCard: { padding: Spacing.md, alignItems: 'center', gap: Spacing.sm, backgroundColor: S.card, borderRadius: 16 },
   tripDate: { fontSize: 11 },
   tripAddress: { fontSize: 13.5, marginTop: 2 },
   tripFare: { fontSize: 13.5 },
-});
+  });
+}

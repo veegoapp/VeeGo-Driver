@@ -44,6 +44,7 @@ import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
 import { Shadows } from '@/constants/shadows';
 import { TAB_BAR_HEIGHT_BASE } from '@/constants/tabBar';
+import { useSplitColors, type SplitColors } from '@/lib/splitTheme';
 
 export const TAB_BAR_HEIGHT = 96;
 // Fallback only — used if a ride:offer payload omits expiresInSeconds.
@@ -52,10 +53,6 @@ const OFFER_TIMEOUT_MS = 12000;
 
 // "C" split-panel palette for the trip-request card — matches the approved
 // driver-app design (dark left panel + white right panel).
-const C_INK = '#14151A';
-const C_INK_SOFT = '#6B7178';
-const C_CAP = '#9AA0A6';
-const C_HAIR = '#EEF0F1';
 const C_MINT = '#3DDC97';
 const C_STARC = '#F5A623';
 const C_RED = '#D92D20';
@@ -105,6 +102,8 @@ export default function HomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { t, isRTL } = useI18n();
+  const S = useSplitColors();
+  const styles = useMemo(() => makeStyles(S), [S]);
   const recheckGPSPermission = useGPSPermissionRecheck();
   const [online, setOnline] = useState<boolean>(() => _persistedOnline ?? false);
   // Whether Home currently has navigation focus — used to gate the idle-online
@@ -1216,7 +1215,7 @@ export default function HomeScreen() {
                   accessibilityLabel={t.decline_ride_label}
                 >
                   {declining
-                    ? <ActivityIndicator size="small" color={C_INK} />
+                    ? <ActivityIndicator size="small" color={S.ink} />
                     : <Text style={styles.declineBtnTextC}>{t.decline}</Text>
                   }
                 </Pressable>
@@ -1247,19 +1246,27 @@ export default function HomeScreen() {
 
 function StatItem({ label, value, highlight, colors, isRTL }: { label: string; value: string; highlight?: boolean; colors: ReturnType<typeof useColors>; isRTL: boolean }) {
   return (
-    <View style={styles.statItem}>
-      <Text style={[styles.statLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: 'center' }]}>{label}</Text>
+    <View style={statItemStyles.statItem}>
+      <Text style={[statItemStyles.statLabel, { color: colors.mutedForeground, fontFamily: 'Inter_700Bold', textAlign: 'center' }]}>{label}</Text>
       {/* colors.primary is a dark-navy brand color meant for button
           backgrounds, not text — on the dark-mode glass card (also dark
           navy) it was rendering as nearly invisible dark-on-dark. accent
           (brand green) is the token already used elsewhere for "this number
           should pop" emphasis and reads clearly in both themes. */}
-      <Text style={[styles.statValue, { color: highlight ? colors.accent : colors.foreground, fontFamily: 'Inter_700Bold', textAlign: 'center' }]}>{value}</Text>
+      <Text style={[statItemStyles.statValue, { color: highlight ? colors.accent : colors.foreground, fontFamily: 'Inter_700Bold', textAlign: 'center' }]}>{value}</Text>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+// Standalone — layout-only, no theme-dependent colors (those come via props).
+const statItemStyles = StyleSheet.create({
+  statItem: { flex: 1, alignItems: 'center', paddingHorizontal: Spacing.sm },
+  statLabel: { fontSize: 10, letterSpacing: 1, textTransform: 'uppercase' },
+  statValue: { fontSize: Typography.size.md, marginTop: 2 },
+});
+
+function makeStyles(S: SplitColors) {
+  return StyleSheet.create({
   container: { flex: 1 },
   overlay: { flex: 1, position: 'relative' },
   header: { alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.lg, paddingTop: Spacing.sm },
@@ -1304,35 +1311,35 @@ const styles = StyleSheet.create({
 
   /* ── "C" trip-request split card ── */
   requestSplitCard: { borderRadius: 24, overflow: 'hidden', flexDirection: 'row', elevation: Shadows.large.elevation, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.22, shadowRadius: 24 },
-  requestLeftPanelC: { width: 96, flexShrink: 0, backgroundColor: C_INK, paddingHorizontal: 12, paddingVertical: 18, alignItems: 'center' },
-  requestLeftCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.1, color: C_CAP, textTransform: 'uppercase' },
+  requestLeftPanelC: { width: 96, flexShrink: 0, backgroundColor: S.ink, paddingHorizontal: 12, paddingVertical: 18, alignItems: 'center' },
+  requestLeftCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.1, color: S.cap, textTransform: 'uppercase' },
   countdownRingC: { width: 56, height: 56, borderRadius: 28, borderWidth: 3, borderColor: C_RED, alignItems: 'center', justifyContent: 'center' },
   countdownTextC: { fontSize: 19, fontFamily: 'Inter_700Bold', color: '#ffffff' },
-  requestRightPanelC: { flex: 1, backgroundColor: '#ffffff', padding: 18 },
+  requestRightPanelC: { flex: 1, backgroundColor: S.card, padding: 18 },
   requestFareRowC: { alignItems: 'flex-start', justifyContent: 'space-between' },
-  fareAmountC: { fontSize: 24, fontFamily: 'Inter_700Bold', color: C_INK, letterSpacing: -0.5 },
-  fareCurrencyC: { fontSize: 13, fontFamily: 'Inter_700Bold', color: C_CAP },
-  fareDetailsC: { fontSize: 11.5, fontFamily: 'Inter_600SemiBold', color: C_CAP, marginTop: 1 },
+  fareAmountC: { fontSize: 24, fontFamily: 'Inter_700Bold', color: S.ink, letterSpacing: -0.5 },
+  fareCurrencyC: { fontSize: 13, fontFamily: 'Inter_700Bold', color: S.cap },
+  fareDetailsC: { fontSize: 11.5, fontFamily: 'Inter_600SemiBold', color: S.cap, marginTop: 1 },
   riderInfoC: { alignItems: 'center', gap: 8 },
   riderAvatarC: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#F0F2F3' },
   riderAvatarFallbackC: { alignItems: 'center', justifyContent: 'center' },
-  riderAvatarFallbackTextC: { fontSize: 12, fontFamily: 'Inter_700Bold', color: C_INK },
-  riderNameC: { fontSize: 12.5, fontFamily: 'Inter_700Bold', color: C_INK },
+  riderAvatarFallbackTextC: { fontSize: 12, fontFamily: 'Inter_700Bold', color: S.ink },
+  riderNameC: { fontSize: 12.5, fontFamily: 'Inter_700Bold', color: S.ink },
   riderRatingRowC: { alignItems: 'center', gap: 3, marginTop: 2 },
-  riderRatingC: { fontSize: 11, fontFamily: 'Inter_700Bold', color: C_INK_SOFT },
-  hairRequestC: { height: 1, backgroundColor: C_HAIR, marginVertical: 14 },
+  riderRatingC: { fontSize: 11, fontFamily: 'Inter_700Bold', color: S.inkSoft },
+  hairRequestC: { height: 1, backgroundColor: S.hair, marginVertical: 14 },
   routeContainerC: { gap: 10 },
   routeDotsC: { alignItems: 'center', paddingTop: 3 },
-  routeDotTopC: { width: 8, height: 8, borderRadius: 4, backgroundColor: C_INK },
-  routeLineC: { width: 2, flex: 1, backgroundColor: C_HAIR, marginVertical: 2 },
+  routeDotTopC: { width: 8, height: 8, borderRadius: 4, backgroundColor: S.ink },
+  routeLineC: { width: 2, flex: 1, backgroundColor: S.hair, marginVertical: 2 },
   routeDotBottomC: { width: 8, height: 8, borderRadius: 4, backgroundColor: C_MINT },
   routeAddressesC: { flex: 1 },
-  routeLabelC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 0.6, color: C_CAP, textTransform: 'uppercase' },
-  routeAddressC: { fontSize: 12.5, fontFamily: 'Inter_700Bold', color: C_INK, marginTop: 2, marginBottom: 12 },
+  routeLabelC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 0.6, color: S.cap, textTransform: 'uppercase' },
+  routeAddressC: { fontSize: 12.5, fontFamily: 'Inter_700Bold', color: S.ink, marginTop: 2, marginBottom: 12 },
   requestActionsC: { gap: 10, marginTop: 16 },
   declineBtnC: { flex: 1, height: 48, borderRadius: 24, borderWidth: 1.5, borderColor: '#E2E5E8', alignItems: 'center', justifyContent: 'center' },
-  declineBtnTextC: { fontSize: 13, fontFamily: 'Inter_700Bold', color: C_INK },
-  acceptBtnC: { flex: 1.4, height: 48, borderRadius: 24, backgroundColor: C_INK, alignItems: 'center', justifyContent: 'center', gap: 6 },
+  declineBtnTextC: { fontSize: 13, fontFamily: 'Inter_700Bold', color: S.ink },
+  acceptBtnC: { flex: 1.4, height: 48, borderRadius: 24, backgroundColor: S.ink, alignItems: 'center', justifyContent: 'center', gap: 6 },
   acceptBtnTextC: { fontSize: 13, fontFamily: 'Inter_700Bold', color: '#ffffff' },
   timerBarC: { height: 3, width: '100%', borderRadius: 1.5, marginTop: Spacing.sm, backgroundColor: C_RED, transformOrigin: '0% 50%' },
   // Active Promotions card
@@ -1347,4 +1354,5 @@ const styles = StyleSheet.create({
   toastWrap: { position: 'absolute', left: 0, right: 0, zIndex: 100, paddingHorizontal: Spacing.lg },
   toastInner: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, borderRadius: Radius.md, paddingVertical: 10, paddingHorizontal: Spacing.lg, shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 5 },
   toastText: { color: '#fff', fontSize: 13, fontFamily: 'Inter_600SemiBold', flex: 1, lineHeight: 18 },
-});
+  });
+}

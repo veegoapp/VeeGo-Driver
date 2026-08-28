@@ -9,7 +9,7 @@
  */
 import { router, useLocalSearchParams } from 'expo-router';
 import { Banknote, Check, CreditCard, Home, Smartphone, Star, Wallet } from 'lucide-react-native';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import {
   Animated,
   Platform,
@@ -25,16 +25,10 @@ import { useShuttle } from '@/lib/shuttleContext';
 import { endpoints, type TripRevenueSummary } from '@/lib/api';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
+import { useSplitColors, type SplitColors } from '@/lib/splitTheme';
 
 // "C" split-panel palette — matches the ride/en-route screens.
-const C_INK = '#14151A';
-const C_INK_SOFT = '#6B7178';
-const C_CAP = '#9AA0A6';
-const C_CAP_ON_DARK = '#8A9096';
-const C_HAIR = '#EEF0F1';
-const C_TEAL = '#0E9F8E';
 const C_MINT = '#3DDC97';
-const C_BG = '#EEF0F2';
 
 type Params = {
   earnedAmount?: string;
@@ -46,6 +40,8 @@ export default function TripCompleteScreen() {
   const insets = useSafeAreaInsets();
   const topPad = insets.top;
   const { t, isRTL } = useI18n();
+  const S = useSplitColors();
+  const styles = useMemo(() => makeStyles(S), [S]);
   const TA = isRTL ? 'right' as const : 'left' as const;
 
   const { earnedAmount, walletBalance, tripId } = useLocalSearchParams<Params>();
@@ -167,17 +163,17 @@ export default function TripCompleteScreen() {
                     <View style={styles.hairC} />
                     <View style={styles.breakdownRowC}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <Smartphone size={15} color={C_TEAL} strokeWidth={2} />
+                        <Smartphone size={15} color={S.teal} strokeWidth={2} />
                         <Text style={styles.breakdownLabelC}>محفظة / أونلاين</Text>
                       </View>
-                      <Text style={[styles.breakdownValC, { color: C_TEAL }]}>
+                      <Text style={[styles.breakdownValC, { color: S.teal }]}>
                         {revenue.walletTotal.toLocaleString('ar-EG')} {t.egp}
                       </Text>
                     </View>
                   </>
                 )}
 
-                <View style={[styles.hairC, { height: 2, backgroundColor: C_INK }]} />
+                <View style={[styles.hairC, { height: 2, backgroundColor: S.ink }]} />
                 <View style={styles.breakdownRowC}>
                   <Text style={styles.totalLabelC}>إجمالي الرحلة</Text>
                   <Text style={styles.totalAmountC}>{revenue.totalExpected.toLocaleString('ar-EG')} {t.egp}</Text>
@@ -202,7 +198,7 @@ export default function TripCompleteScreen() {
             onPress={handleRatePassengers}
             style={({ pressed }) => [styles.rateBtnC, { opacity: pressed ? 0.88 : 1 }]}
           >
-            <Star size={18} color={C_INK} strokeWidth={2} />
+            <Star size={18} color={S.ink} strokeWidth={2} />
             <Text style={styles.rateBtnTextC}>{t.rate_passengers_btn}</Text>
           </Pressable>
         )}
@@ -218,35 +214,36 @@ export default function TripCompleteScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: C_BG },
+function makeStyles(S: SplitColors) {
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: S.bg },
   inner: { paddingBottom: Spacing.xl },
 
   // ── Dark hero band ──────────────────────────────────────────────────
-  heroC: { backgroundColor: C_INK, alignItems: 'center', paddingHorizontal: 28, paddingTop: 36, paddingBottom: 26, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
-  checkCircleC: { width: 60, height: 60, borderRadius: 30, backgroundColor: C_TEAL, alignItems: 'center', justifyContent: 'center' },
+  heroC: { backgroundColor: S.ink, alignItems: 'center', paddingHorizontal: 28, paddingTop: 36, paddingBottom: 26, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
+  checkCircleC: { width: 60, height: 60, borderRadius: 30, backgroundColor: S.teal, alignItems: 'center', justifyContent: 'center' },
   titleC: { fontSize: 22, fontFamily: 'Inter_700Bold', color: '#ffffff', textAlign: 'center', marginTop: 16 },
   subtitleC: { fontSize: Typography.size.sm, fontFamily: 'Inter_400Regular', color: '#B7BBC2', textAlign: 'center', marginTop: 4 },
-  heroCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.4, color: C_CAP_ON_DARK, textAlign: 'center', marginTop: 22, textTransform: 'uppercase' },
+  heroCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.4, color: S.capOnDark, textAlign: 'center', marginTop: 22, textTransform: 'uppercase' },
   heroRowC: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', gap: 8, marginTop: 6 },
   heroAmountC: { fontSize: 42, fontFamily: 'Inter_700Bold', color: C_MINT, lineHeight: 44 },
   heroCurC: { fontSize: 16, fontFamily: 'Inter_700Bold', color: C_MINT },
 
   // ── White body ──────────────────────────────────────────────────────
   bodyWrapC: { paddingHorizontal: 22, paddingTop: 20 },
-  capC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.2, color: C_CAP, textTransform: 'uppercase' },
+  capC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.2, color: S.cap, textTransform: 'uppercase' },
   iconWrapC: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  walletRowC: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#ffffff', borderRadius: 18, padding: 14 },
-  walletAmountC: { fontSize: 16, fontFamily: 'Inter_700Bold', color: C_INK },
-  walletCurC: { fontSize: 12, fontFamily: 'Inter_700Bold', color: C_CAP },
-  breakdownCardC: { backgroundColor: '#ffffff', borderRadius: 18, paddingHorizontal: 16, paddingVertical: 4 },
+  walletRowC: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: S.card, borderRadius: 18, padding: 14 },
+  walletAmountC: { fontSize: 16, fontFamily: 'Inter_700Bold', color: S.ink },
+  walletCurC: { fontSize: 12, fontFamily: 'Inter_700Bold', color: S.cap },
+  breakdownCardC: { backgroundColor: S.card, borderRadius: 18, paddingHorizontal: 16, paddingVertical: 4 },
   breakdownRowC: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 },
-  breakdownLabelC: { fontSize: 13.5, fontFamily: 'Inter_600SemiBold', color: C_INK_SOFT },
+  breakdownLabelC: { fontSize: 13.5, fontFamily: 'Inter_600SemiBold', color: S.inkSoft },
   breakdownValC: { fontSize: 15, fontFamily: 'Inter_700Bold' },
   shortfallTextC: { fontSize: 11, fontFamily: 'Inter_400Regular', color: '#ef4444', marginTop: -8, marginBottom: 8 },
-  hairC: { height: 1, backgroundColor: C_HAIR },
-  totalLabelC: { fontSize: 15, fontFamily: 'Inter_700Bold', color: C_INK },
-  totalAmountC: { fontSize: 17, fontFamily: 'Inter_700Bold', color: C_TEAL },
+  hairC: { height: 1, backgroundColor: S.hair },
+  totalLabelC: { fontSize: 15, fontFamily: 'Inter_700Bold', color: S.ink },
+  totalAmountC: { fontSize: 17, fontFamily: 'Inter_700Bold', color: S.teal },
 
   // ── Bottom CTA ──────────────────────────────────────────────────────
   bottomBarC: { paddingHorizontal: 22, paddingTop: Spacing.md, gap: 10 },
@@ -260,7 +257,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#D3D6DA',
   },
-  rateBtnTextC: { fontSize: 14, fontFamily: 'Inter_700Bold', color: C_INK },
+  rateBtnTextC: { fontSize: 14, fontFamily: 'Inter_700Bold', color: S.ink },
   ctaBtnC: {
     height: 54,
     flexDirection: 'row',
@@ -268,7 +265,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 10,
     borderRadius: 15,
-    backgroundColor: C_INK,
+    backgroundColor: S.ink,
   },
   ctaBtnTextC: { color: '#ffffff', fontSize: 15, fontFamily: 'Inter_700Bold' },
-});
+  });
+}
