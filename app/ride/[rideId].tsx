@@ -1,9 +1,9 @@
 import { showAlert } from '@/lib/alert';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
-import { AlertTriangle, Check, ChevronUp, Clock, Delete, Map, MessageCircle, Navigation, Phone, Share2, Shield, Star } from 'lucide-react-native';
+import { AlertTriangle, Check, ChevronUp, Clock, Delete, Map, MessageCircle, Navigation, Phone, Shield, Star } from 'lucide-react-native';
 import React, { useCallback, useRef, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Animated, Easing, Image, Linking, Modal, Platform, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Animated, Easing, Image, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { RideMap } from '@/components/RideMap';
@@ -27,6 +27,7 @@ import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
 import { Shadows } from '@/constants/shadows';
 import { useSplitColors, type SplitColors } from '@/lib/splitTheme';
+import { SosSheet } from '@/components/SosSheet';
 
 const SERVICE_NAMES: Record<string, string> = {
   CAR: 'Car Rides',
@@ -110,9 +111,7 @@ export default function RideScreen() {
   // Post-trip two-step: full-screen fare page → rating card (approved design).
   const [completedStep, setCompletedStep] = useState<'fare' | 'rating'>('fare');
   const [busy, setBusy] = useState(false);
-  const [sosBusy, setSosBusy] = useState(false);
-  const [shareBusy, setShareBusy] = useState(false);
-  const [shareLink, setShareLink] = useState<{ id: number; url: string } | null>(null);
+  const [safetyOpen, setSafetyOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   // "Other amount" change flow (cash rides only — see handleCompleteWithChange).
   const [amountSheetOpen, setAmountSheetOpen] = useState(false);
@@ -695,92 +694,12 @@ export default function RideScreen() {
     );
   };
 
-  const handleSOS = async () => {
-    if (sosBusy) return;
-    setSosBusy(true);
-    try {
-      let latitude = 0;
-      let longitude = 0;
-      try {
-        const Location = await import('expo-location');
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status === 'granted') {
-          const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-          latitude = pos.coords.latitude;
-          longitude = pos.coords.longitude;
-        }
-      } catch {
-        // location unavailable — backend will use last known position
-      }
-
-      if (socket?.connected) {
-        const numericRideId = rideId ? Number(rideId) : undefined;
-        socket.emit(SOCKET_EVENTS.DRIVER_SOS, {
-          ...(numericRideId != null && !isNaN(numericRideId) ? { rideId: numericRideId } : {}),
-          latitude,
-          longitude,
-        });
-      } else {
-        await endpoints.rides.sos(rideId ?? '', { latitude, longitude });
-      }
-      showAlert(t.sos_sent_title, t.sos_sent_msg);
-    } catch {
-      showAlert(t.sos_failed_title, t.sos_failed_msg);
-    } finally {
-      setSosBusy(false);
-    }
-  };
-
-  const copyShareLink = async (url: string) => {
-    const Clipboard = await import('expo-clipboard');
-    await Clipboard.setStringAsync(url);
-  };
-
-  const handleRevokeShareTrip = async () => {
-    if (!shareLink || shareBusy) return;
-    setShareBusy(true);
-    try {
-      await endpoints.tripShare.revoke(shareLink.id);
-      setShareLink(null);
-      showAlert(t.trip_share_revoked_title, t.trip_share_revoked_msg);
-    } catch {
-      showAlert(t.action_failed_title, t.trip_share_revoke_error);
-    } finally {
-      setShareBusy(false);
-    }
-  };
-
-  const handleShareTrip = async () => {
-    if (shareBusy) return;
-
-    if (shareLink) {
-      // A link is already active — offer to copy/share it again or stop
-      // sharing, instead of silently revoking on tap.
-      showAlert(t.trip_share_active_title, t.trip_share_active_msg, [
-        { text: t.trip_share_copy_btn, onPress: () => { copyShareLink(shareLink.url); } },
-        { text: t.trip_share_send_btn, onPress: () => { Share.share({ message: shareLink.url }).catch(() => {}); } },
-        { text: t.trip_share_revoke_btn, style: 'destructive', onPress: handleRevokeShareTrip },
-        { text: t.cancel, style: 'cancel' },
-      ]);
-      return;
-    }
-
-    setShareBusy(true);
-    try {
-      const numericRideId = rideId ? Number(rideId) : undefined;
-      if (numericRideId == null || isNaN(numericRideId)) return;
-      const result = await endpoints.tripShare.create({ rideId: numericRideId });
-      setShareLink({ id: result.id, url: result.url });
-      showAlert(t.trip_share_created_title, t.trip_share_created_msg, [
-        { text: t.trip_share_copy_btn, onPress: () => { copyShareLink(result.url); } },
-        { text: t.ok, style: 'default', onPress: () => { Share.share({ message: result.url }).catch(() => {}); } },
-      ]);
-    } catch {
-      showAlert(t.action_failed_title, t.trip_share_error);
-    } finally {
-      setShareBusy(false);
-    }
-  };
+  // SOS + Need Help both open the same sheet (3 actions: call 122, call 123,
+  // share location on WhatsApp) — mirrors the passenger app's SafetySheet,
+  // replacing the old direct-fire SOS and the separate persistent-link
+  // Share Trip button (that link generation is still used by the shuttle
+  // trip screen, just no longer surfaced here).
+  const handleOpenSafety = () => setSafetyOpen(true);
 
   const handleSubmitRating = async () => {
     if (rating === 0 || ratingSubmitting) return;
@@ -1195,21 +1114,17 @@ export default function RideScreen() {
                 </View>
                 <View style={styles.bottomActionsC}>
                   <Pressable
-                    onPress={handleShareTrip}
-                    disabled={shareBusy}
-                    style={[styles.shareBtnC, { opacity: shareBusy ? 0.6 : 1 }]}
-                    accessibilityLabel={t.share_trip_label}
+                    onPress={handleOpenSafety}
+                    style={styles.shareBtnC}
+                    accessibilityLabel={t.need_help}
                   >
-                    <Share2 size={13} color={S.ink} strokeWidth={2} />
-                    <Text style={styles.shareBtnTextC}>
-                      {shareLink ? t.trip_share_revoke_btn : t.trip_share_btn}
-                    </Text>
+                    <Shield size={13} color={S.ink} strokeWidth={2} />
+                    <Text style={styles.shareBtnTextC}>{t.need_help}</Text>
                   </Pressable>
                   <Pressable
-                    onPress={handleSOS}
-                    disabled={sosBusy}
-                    style={[styles.sosBtnC, { opacity: sosBusy ? 0.6 : 1 }]}
-                    accessibilityLabel={t.send_sos_label}
+                    onPress={handleOpenSafety}
+                    style={styles.sosBtnC}
+                    accessibilityLabel={t.sos_label}
                   >
                     <AlertTriangle size={13} color={C_RED} strokeWidth={2} />
                     <Text style={styles.sosBtnTextC}>{t.sos_label}</Text>
@@ -1353,6 +1268,13 @@ export default function RideScreen() {
           </View>
         </View>
       </Modal>
+
+      <SosSheet
+        visible={safetyOpen}
+        onClose={() => setSafetyOpen(false)}
+        mode="ride"
+        rideId={rideId}
+      />
     </View>
   );
 }

@@ -12,7 +12,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MapBackdrop } from '@/components/MapBackdrop';
 import { useNavigation } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useDriverLocation, haversineMeters } from '@/hooks/useDriverLocation';
@@ -32,6 +31,7 @@ import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
 import { useSplitColors, type SplitColors } from '@/lib/splitTheme';
+import { SosSheet } from '@/components/SosSheet';
 
 // ── Navigation constants ──────────────────────────────────────────────────────
 /**
@@ -469,71 +469,13 @@ export default function ShuttleTripActiveScreen() {
   }, []);
 
   // ── SOS / Safety button ────────────────────────────────────────────────────
-  // Every SOS action — whichever the driver picks — reports to the backend
-  // (records the event, alerts the admin room) independently of whether the
-  // WhatsApp/tel action itself succeeds. Previously "Call 122" recorded
-  // nothing at all, and the WhatsApp path silently swallowed backend
-  // failures with no report ever reaching admin.
-  const reportSos = useCallback(async (action: 'call_police' | 'share_trip') => {
-    if (!tripId) return;
-    const loc = effectivePos;
-    const lat = isFinite(loc?.latitude ?? NaN) ? loc!.latitude : 0;
-    const lng = isFinite(loc?.longitude ?? NaN) ? loc!.longitude : 0;
-    const notes = `Trip #${tripId} | Stop ${currentStopIndex + 1}/${totalStops}`;
-    try {
-      await endpoints.trips.sosAlert(tripId, { latitude: lat, longitude: lng, notes, action });
-    } catch (err: unknown) {
-      if (__DEV__) {
-        const code = (err as { status?: number })?.status;
-        console.warn(`[SOS] backend alert failed (HTTP ${code ?? 'unknown'})`, err);
-      }
-    }
-  }, [effectivePos, tripId, currentStopIndex, totalStops]);
-
-  const handleSOS = useCallback(async () => {
-    const raw = await AsyncStorage.getItem('veego_emergency_contact');
-    const ec = raw ? (() => { try { return JSON.parse(raw); } catch { return null; } })() : null;
-
-    showAlert(
-      t.sos_confirm_title,
-      t.sos_confirm_body,
-      [
-        { text: t.cancel, style: 'cancel' },
-        {
-          text: t.sos_call_122,
-          onPress: () => {
-            reportSos('call_police');
-            Linking.openURL('tel:122').catch(() => {});
-          },
-        },
-        {
-          text: t.sos_whatsapp_alert,
-          style: 'destructive',
-          onPress: async () => {
-            reportSos('share_trip');
-            if (!ec?.phone) {
-              showAlert(t.sos_confirm_title, t.sos_no_contact_set);
-              return;
-            }
-            try {
-              const loc = effectivePos;
-              const mapLink = loc ? `https://maps.google.com/?q=${loc.latitude},${loc.longitude}` : '';
-              // Passenger PII excluded — emergency responders must look up details server-side
-              const lines = [
-                '🚨 SOS ALERT 🚨',
-                `Trip #${tripId ?? '—'} | Stop ${currentStopIndex + 1}/${totalStops}`,
-                mapLink ? `📍 Location: ${mapLink}` : '📍 Location unavailable',
-              ].join('\n\n');
-              const phoneClean = ec.phone.replace(/\D/g, '');
-              await Linking.openURL(`whatsapp://send?phone=${phoneClean}&text=${encodeURIComponent(lines)}`);
-            } catch {
-              showAlert(t.sos_confirm_title, t.whatsapp_emergency_no_contact);
-            }
-          },
-        },
-      ]
-    );
-  }, [reportSos, effectivePos, tripId, currentStopIndex, stops.length, t]);
+  // Same SosSheet as the ride screen — 3 actions (call 122, call 123, share
+  // on WhatsApp), each always reporting to the backend before the local
+  // action. The WhatsApp message carries the route (from → to) and trip
+  // number instead of passenger data — a shuttle trip has several
+  // passengers, so there's no single "who" to name.
+  const [sosOpen, setSosOpen] = useState(false);
+  const handleSOS = useCallback(() => setSosOpen(true), []);
 
   // ── Share Trip ───────────────────────────────────────────────────────────────
   const copyShareLink = useCallback(async (url: string) => {
@@ -872,6 +814,16 @@ export default function ShuttleTripActiveScreen() {
           </View>
         </View>
       )}
+
+      <SosSheet
+        visible={sosOpen}
+        onClose={() => setSosOpen(false)}
+        mode="shuttle"
+        tripId={tripId}
+        routeFrom={activeLine?.from}
+        routeTo={activeLine?.to}
+        fallbackCoords={effectivePos}
+      />
     </View>
   );
 }
