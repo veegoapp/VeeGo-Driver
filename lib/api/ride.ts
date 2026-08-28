@@ -72,7 +72,7 @@ export const ridesEndpoints = {
     api.get<{ data: RideMessage[]; total: number }>(`/rides/${rideId}/messages`),
   sendMessage: (rideId: string, text: string) =>
     api.post<RideMessage>(`/rides/${rideId}/messages`, { text }),
-  sos: (rideId: string, data: { latitude: number; longitude: number; notes?: string }) =>
+  sos: (rideId: string, data: { latitude?: number; longitude?: number; notes?: string; action?: 'call_police' | 'call_ambulance' | 'share_trip' | 'manual' }) =>
     api.post(`/rides/${rideId}/sos`, data),
   history: (page = 1, limit = 20, status?: 'completed' | 'cancelled') => {
     const params = [`page=${page}`, `limit=${limit}`];
