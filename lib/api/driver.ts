@@ -162,6 +162,33 @@ export const driverEndpoints = {
   // Driver-invites-driver referral program — code + config + live stats.
   // Call as soon as the driver has a JWT (works mid-signup too).
   referralProgram: () => api.get<DriverReferralInfo>('/driver/referral-code'),
+
+  // ── InstaPay setup/status ────────────────────────────────────────────────
+  // The driver's own receiving link + ready-made QR image. Distinct from the
+  // ride-scoped InstaPay flow in ride.ts (confirming a specific trip's payment).
+  getInstapayStatus: () => api.get<{ data: InstapayStatus }>('/driver/instapay'),
+  // First-time setup only — 409 if already set up (use requestInstapayChange instead).
+  setupInstapay: (link: string) => api.post<{ ok: boolean }>('/driver/instapay/setup', { link }),
+  // 404 if no active setup yet; 409 if a request is already pending.
+  requestInstapayChange: (newLink: string) =>
+    api.post<{ ok: boolean }>('/driver/instapay/change-request', { newLink }),
+};
+
+// InstaPay setup/status — the driver's own receiving link + QR, distinct from
+// the ride-scoped InstaPay flow in ride.ts (which is about confirming a
+// specific trip's payment, not the driver's link).
+export type InstapayStatus = {
+  hasSetup: boolean;
+  isEnabled: boolean;
+  activeLink: string | null;
+  qrDataUrl: string | null;
+  pendingRequest: {
+    id: number;
+    oldLink: string | null;
+    newLink: string;
+    status: 'pending';
+    createdAt: string;
+  } | null;
 };
 
 export const pushTokensEndpoints = {

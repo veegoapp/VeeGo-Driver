@@ -1418,6 +1418,28 @@ export const en = {
   earn_total_last_week: 'TOTAL LAST WEEK',
   earn_total_this_month: 'TOTAL THIS MONTH',
   reviews_count_label: '{count} reviews',
+  // ── InstaPay settings screen ──────────────────────────────────────────────
+  instapay_settings_label: 'InstaPay Settings',
+  instapay_setup_title: 'Set up InstaPay',
+  instapay_setup_desc: 'Add your official InstaPay link so passengers can pay you directly.',
+  instapay_link_label: 'Your official InstaPay link',
+  instapay_link_placeholder: 'https://ipn.eg/S/yourname/instapay/...',
+  instapay_save_btn: 'Save',
+  instapay_setup_error: 'Failed to save your InstaPay link. Please try again.',
+  instapay_active_link_label: 'Active InstaPay link',
+  instapay_request_change_btn: 'Request change',
+  instapay_new_link_label: 'New InstaPay link',
+  instapay_submit_request_btn: 'Submit request',
+  instapay_change_request_error: 'Failed to submit your change request. Please try again.',
+  instapay_pending_banner_title: 'Change pending admin approval',
+  instapay_pending_requested_label: 'Requested link',
+  instapay_pending_requested_date: 'Requested on',
+  instapay_load_error: 'Failed to load your InstaPay settings.',
+  // ── InstaPay ride payment (trip screen) ───────────────────────────────────
+  instapay_awaiting_payment: 'Waiting for passenger to pay via InstaPay',
+  instapay_awaiting_confirmation: "Passenger says they've paid — verify in your banking app, then confirm below",
+  instapay_confirm_payment_btn: 'Confirm Payment Received',
+  instapay_payment_confirmed: 'Payment confirmed',
 };
 
 export type Translations = typeof en;

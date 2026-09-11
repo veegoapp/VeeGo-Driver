@@ -38,6 +38,10 @@ export type DriverRideSession = {
   /** 0 if no waiting charge is active. */
   waitingCharge: number;
   paymentMethod: string;
+  /** InstaPay payment lifecycle — present once the trip completes. Optional: older sessions/backends may omit it. */
+  paymentStatus?: 'not_required' | 'awaiting_payment' | 'awaiting_confirmation' | 'confirmed';
+  /** Only relevant when paymentMethod === 'instapay'; populated once the trip completes. */
+  instapay?: { link: string; qrDataUrl: string } | null;
   passenger: {
     id: number;
     name: string;

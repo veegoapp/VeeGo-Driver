@@ -83,6 +83,17 @@ export const ridesEndpoints = {
   },
   financialDetail: (rideId: string) =>
     api.get<RideFinancialDetail>(`/driver/rides/${rideId}/financial-detail`),
+  // Fallback fetch for the ride-scoped InstaPay payment (e.g. socket payload
+  // missed while the app was backgrounded) — mirrors the fields the socket/
+  // session snapshot otherwise carries on the ride object itself.
+  getInstapay: (rideId: string) =>
+    api.get<{ data: { link: string; qrDataUrl: string; paymentStatus: string } }>(
+      `/rides/${rideId}/instapay`
+    ),
+  // Driver confirms they personally verified receipt in their own banking
+  // app — only valid once paymentStatus === 'awaiting_confirmation'.
+  confirmInstapay: (rideId: string) =>
+    api.post<{ ok: boolean }>(`/rides/${rideId}/instapay/confirm`),
 };
 
 // Driver Trip Sharing: a driver-generated, temporary, revocable public

@@ -23,6 +23,7 @@ export type {
   StationEtaResponse,
 } from './types';
 export type { RideFinancialDetail } from './ride';
+export type { InstapayStatus } from './driver';
 
 // ── Endpoint group imports ────────────────────────────────────────────────────
 import { authEndpoints } from './auth';

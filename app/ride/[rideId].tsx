@@ -130,6 +130,11 @@ export default function RideScreen() {
     netCashPayable: number;
   } | null>(null);
   const [viewDetailsOpen, setViewDetailsOpen] = useState(false);
+  // InstaPay ride payment (instapay rides only) — kept in sync by the
+  // ActiveSession snapshot, the marked-paid socket event, and a mount-time
+  // GET fallback for when the socket payload was missed (e.g. app resumed).
+  const [instapayPaymentStatus, setInstapayPaymentStatus] = useState<string | undefined>(undefined);
+  const [instapayConfirming, setInstapayConfirming] = useState(false);
   // Reactive counterpart to hasExitedRef — lets location broadcasting stop
   // as soon as the ride is exiting, without waiting for unmount.
   const [isExiting, setIsExiting] = useState(false);
@@ -312,6 +317,14 @@ export default function RideScreen() {
       }
     };
 
+    // Passenger marked an InstaPay trip as paid — unlocks "Confirm Payment
+    // Received" below. Never regresses an already-confirmed state (e.g. a
+    // late/duplicate delivery after the driver already tapped confirm).
+    const handleInstapayMarkedPaid = (data: unknown) => {
+      if (!matchesThisRide(data)) return;
+      setInstapayPaymentStatus((prev) => (prev === 'confirmed' ? prev : 'awaiting_confirmation'));
+    };
+
     socket.on(SOCKET_EVENTS.RIDE_CANCELLED, handleCancelled);
     socket.on(SOCKET_EVENTS.RIDE_DRIVER_CANCELLED, handleDriverCancelled);
     socket.on(SOCKET_EVENTS.RIDE_TIMEOUT, handleTimeout);
@@ -321,6 +334,7 @@ export default function RideScreen() {
     socket.on(SOCKET_EVENTS.RIDE_DRIVER_ARRIVED, handleDriverArrived);
     socket.on(SOCKET_EVENTS.RIDE_STARTED, handleRideStarted);
     socket.on(SOCKET_EVENTS.RIDE_DEVIATION_WARNING, handleDeviationWarning);
+    socket.on(SOCKET_EVENTS.INSTAPAY_PAYMENT_MARKED_PAID, handleInstapayMarkedPaid);
 
     return () => {
       socket.off(SOCKET_EVENTS.RIDE_CANCELLED, handleCancelled);
@@ -332,8 +346,23 @@ export default function RideScreen() {
       socket.off(SOCKET_EVENTS.RIDE_DRIVER_ARRIVED, handleDriverArrived);
       socket.off(SOCKET_EVENTS.RIDE_STARTED, handleRideStarted);
       socket.off(SOCKET_EVENTS.RIDE_DEVIATION_WARNING, handleDeviationWarning);
+      socket.off(SOCKET_EVENTS.INSTAPAY_PAYMENT_MARKED_PAID, handleInstapayMarkedPaid);
     };
   }, [socket, rideId, queryClient]);
+
+  const handleConfirmInstapayPayment = async () => {
+    if (!rideId || instapayConfirming) return;
+    setInstapayConfirming(true);
+    try {
+      await endpoints.rides.confirmInstapay(rideId);
+      setInstapayPaymentStatus('confirmed');
+    } catch (err: unknown) {
+      const body = (err as { body?: { error?: string } })?.body;
+      showAlert(t.action_failed_title, body?.error ?? t.try_again_msg);
+    } finally {
+      setInstapayConfirming(false);
+    }
+  };
 
   // ActiveSession: primary source of truth for all ride display data.
   // Does not affect mutations, socket handlers, or cancellation logic.
@@ -478,6 +507,31 @@ export default function RideScreen() {
   const passengerInitials = passengerName
     ? passengerName.trim().split(/\s+/).map((w: string) => w[0]?.toUpperCase() ?? '').slice(0, 2).join('')
     : '?';
+
+  // Seed the local InstaPay status from whatever the ActiveSession snapshot
+  // carries (mirrors paymentMethod above), and never let it regress once
+  // confirmed.
+  useEffect(() => {
+    if (rideSession?.paymentStatus) {
+      setInstapayPaymentStatus((prev) => (prev === 'confirmed' ? prev : rideSession.paymentStatus));
+    }
+  }, [rideSession?.paymentStatus]);
+
+  // Fallback fetch: once the trip completes on an InstaPay ride, make sure we
+  // have a paymentStatus even if the ActiveSession snapshot didn't carry one
+  // (e.g. the app was backgrounded and the socket payload was missed).
+  useEffect(() => {
+    if (phase !== 'completed' || paymentMethod !== 'instapay' || !rideId) return;
+    let cancelled = false;
+    endpoints.rides.getInstapay(rideId).then((res) => {
+      if (cancelled) return;
+      setInstapayPaymentStatus((prev) => (prev === 'confirmed' ? prev : res.data.paymentStatus));
+    }).catch(() => {
+      // Silent — the socket event and ActiveSession snapshot remain the
+      // primary sources; this is best-effort resilience only.
+    });
+    return () => { cancelled = true; };
+  }, [phase, paymentMethod, rideId]);
   // Small label above the destination in the nav card. No time/distance (kept
   // off deliberately to avoid spending Google Directions on live ETA).
   const navLabel =
@@ -910,6 +964,41 @@ export default function RideScreen() {
                   >
                     <Text style={styles.otherAmountBtnTextC}>{t.other_amount_btn}</Text>
                   </Pressable>
+                )}
+
+                {paymentMethod === 'instapay' && (
+                  <View style={{ marginTop: 10 }}>
+                    {instapayPaymentStatus === 'confirmed' ? (
+                      <View style={styles.instapayConfirmedRowC}>
+                        <Check size={16} color={C_MINT} strokeWidth={2.5} />
+                        <Text style={[styles.instapayStatusTextC, { color: C_MINT }]}>
+                          {t.instapay_payment_confirmed}
+                        </Text>
+                      </View>
+                    ) : (
+                      <>
+                        <Text style={styles.instapayStatusTextC}>
+                          {instapayPaymentStatus === 'awaiting_confirmation'
+                            ? t.instapay_awaiting_confirmation
+                            : t.instapay_awaiting_payment}
+                        </Text>
+                        <Pressable
+                          onPress={handleConfirmInstapayPayment}
+                          disabled={instapayPaymentStatus !== 'awaiting_confirmation' || instapayConfirming}
+                          style={[
+                            styles.otherAmountBtnC,
+                            { marginTop: 10, opacity: instapayPaymentStatus !== 'awaiting_confirmation' || instapayConfirming ? 0.5 : 1 },
+                          ]}
+                          accessibilityLabel={t.instapay_confirm_payment_btn}
+                        >
+                          {instapayConfirming
+                            ? <ActivityIndicator color={S.ink} size="small" />
+                            : <Text style={styles.otherAmountBtnTextC}>{t.instapay_confirm_payment_btn}</Text>
+                          }
+                        </Pressable>
+                      </>
+                    )}
+                  </View>
                 )}
               </View>
             </View>
@@ -1382,6 +1471,8 @@ function makeStyles(S: SplitColors) {
   viewDetailsBtnC: { alignSelf: 'center', marginTop: 6, paddingVertical: 4, paddingHorizontal: 8 },
   viewDetailsTxtC: { fontSize: 13, fontFamily: 'Inter_700Bold', color: S.teal, textDecorationLine: 'underline' },
   bodyNoteC: { fontSize: 13, fontFamily: 'Inter_600SemiBold', color: S.inkSoft, textAlign: 'center', marginTop: 4 },
+  instapayStatusTextC: { fontSize: 12.5, fontFamily: 'Inter_600SemiBold', color: S.inkSoft, textAlign: 'center' },
+  instapayConfirmedRowC: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   footerC: { paddingHorizontal: 26, paddingTop: 12, backgroundColor: S.bg },
   primaryBtnC: { height: 54, borderRadius: 15, backgroundColor: '#14151A', alignItems: 'center', justifyContent: 'center' },
   primaryBtnTxtC: { color: '#ffffff', fontSize: 15, fontFamily: 'Inter_700Bold', letterSpacing: 0.3 },

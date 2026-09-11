@@ -113,6 +113,11 @@ export const SOCKET_EVENTS = {
   // Server → Driver + Passenger: in-trip chat message
   RIDE_MESSAGE_NEW:         "ride:message:new",
 
+  // Server → Driver: passenger marked an InstaPay trip as paid — unlocks the
+  // driver's "Confirm Payment Received" action. Wire value to confirm once
+  // the backend PR lands.
+  INSTAPAY_PAYMENT_MARKED_PAID: "ride:instapay:marked_paid",
+
   // Driver → Server: SOS alert
   DRIVER_SOS:               "driver:sos",
   // Server → Driver: SOS acknowledgement
