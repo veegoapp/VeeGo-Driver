@@ -75,6 +75,7 @@ type StationPassenger = {
   amount?: number;
   cashCollected?: boolean;
   amountCollected?: number;
+  instapayStatus?: 'awaiting_payment' | 'awaiting_confirmation' | 'confirmed' | null;
 };
 
 export type BackendStationWithPassengers = BackendStation & {

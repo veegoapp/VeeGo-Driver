@@ -350,11 +350,14 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
           paymentMethod,
           fareAmount: sp.fareAmount ?? sp.price ?? sp.amount ?? 0,
           destinationStationName: sp.alightingStationName ?? null,
-          // Not returned by GET /driver/trips/:id/stations — carried forward
-          // from whatever trip-active.tsx's per-row fallback fetch (or the
-          // marked-paid socket event / driver confirm action) last set, so a
-          // station-list refresh never wipes out a live InstaPay status.
-          instapayStatus: existing?.instapayStatus,
+          // GET /driver/trips/:id/stations now returns this directly — prefer
+          // it, but never let a refresh regress a status we already know is
+          // 'confirmed' locally (e.g. a race between this refetch and the
+          // driver's own confirm action or the marked-paid socket event).
+          instapayStatus:
+            existing?.instapayStatus === 'confirmed'
+              ? 'confirmed'
+              : (sp.instapayStatus ?? existing?.instapayStatus),
         };
       });
     });

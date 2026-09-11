@@ -186,9 +186,9 @@ export const tripsEndpoints = {
   stationCompleted: (tripId: string, stationId: string) =>
     api.patch(`/driver/trips/${tripId}/stations/${stationId}/completed`),
   // Per-booking InstaPay payment (shuttle bookings only). GET /driver/trips/:id/stations
-  // does not surface instapayStatus on each passenger row, so trip-active.tsx
-  // falls back to this per-row fetch for paymentMethod === 'instapay' passengers
-  // (e.g. on mount, or if the marked-paid socket event was missed).
+  // already includes each passenger row's instapayStatus; trip-active.tsx only
+  // falls back to this per-row fetch when that value is still missing (e.g. a
+  // stale cache) or to double-check after a missed marked-paid socket event.
   getBookingInstapay: (bookingId: number) =>
     api.get<{ data: { link: string; qrDataUrl: string; instapayStatus: string } }>(
       `/bookings/${bookingId}/instapay`
