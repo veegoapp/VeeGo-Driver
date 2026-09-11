@@ -43,6 +43,7 @@ type ShuttleContextType = {
   refetch: () => void;
   nextStop: () => void;
   togglePassenger: (id: string) => void;
+  updatePassengerInstapayStatus: (id: string, status: NonNullable<BoardingPassenger['instapayStatus']>) => void;
   // Auto-cancel notification
   tripCancelledBanner: string | null;
   dismissTripCancelledBanner: () => void;
@@ -77,6 +78,7 @@ export const ShuttleContext = createContext<ShuttleContextType>({
   refetch: () => {},
   nextStop: () => {},
   togglePassenger: () => {},
+  updatePassengerInstapayStatus: () => {},
   tripCancelledBanner: null,
   dismissTripCancelledBanner: () => {},
   startedTripId: null,
@@ -333,6 +335,7 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
           method === 'cash' ? 'cash' :
           method === 'card' || method === 'credit' || method === 'credit_card' ? 'card' :
           method === 'online' || method === 'wallet' || method === 'prepaid' ? 'online' :
+          method === 'instapay' ? 'instapay' :
           'unknown';
         return {
           id: String(sp.bookingId),
@@ -347,6 +350,11 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
           paymentMethod,
           fareAmount: sp.fareAmount ?? sp.price ?? sp.amount ?? 0,
           destinationStationName: sp.alightingStationName ?? null,
+          // Not returned by GET /driver/trips/:id/stations — carried forward
+          // from whatever trip-active.tsx's per-row fallback fetch (or the
+          // marked-paid socket event / driver confirm action) last set, so a
+          // station-list refresh never wipes out a live InstaPay status.
+          instapayStatus: existing?.instapayStatus,
         };
       });
     });
@@ -539,6 +547,25 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
+  // Used by trip-active.tsx to reflect an InstaPay status change for one
+  // passenger row — from its per-row GET /bookings/:id/instapay fallback
+  // fetch, the ride:instapay:marked_paid socket event, or its own confirm
+  // action — without waiting on the next station-list refetch. Never
+  // regresses an already-confirmed status (e.g. a late/duplicate
+  // marked-paid delivery after the driver already confirmed).
+  const updatePassengerInstapayStatus = (
+    id: string,
+    status: NonNullable<BoardingPassenger['instapayStatus']>,
+  ) => {
+    setPassengers(prev =>
+      prev.map(p =>
+        p.id === id
+          ? { ...p, instapayStatus: p.instapayStatus === 'confirmed' ? p.instapayStatus : status }
+          : p
+      )
+    );
+  };
+
   const dismissTripCancelledBanner = () => setTripCancelledBanner(null);
   const dismissSlotReleasedAlert = () => setSlotReleasedAlert(null);
   const dismissBookingStatusBanner = () => setBookingStatusBanner(null);
@@ -571,6 +598,7 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
         refetch,
         nextStop,
         togglePassenger,
+        updatePassengerInstapayStatus,
         tripCancelledBanner,
         dismissTripCancelledBanner,
         startedTripId,

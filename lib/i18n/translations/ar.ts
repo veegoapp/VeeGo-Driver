@@ -1441,4 +1441,9 @@ export const ar: Translations = {
   instapay_awaiting_confirmation: 'يقول الراكب إنه دفع - تحقق من تطبيق البنك الخاص بك ثم أكد أدناه',
   instapay_confirm_payment_btn: 'تأكيد استلام الدفع',
   instapay_payment_confirmed: 'تم تأكيد الدفع',
+  // ── InstaPay shuttle booking payment (per-passenger badge on the boarding sheet) ──
+  instapay_badge_awaiting_payment: 'إنستاباي: في انتظار الدفع',
+  instapay_badge_awaiting_confirmation: 'إنستاباي: في انتظار التأكيد',
+  instapay_badge_confirmed: 'إنستاباي: تم التأكيد',
+  instapay_confirm_btn_short: 'تأكيد',
 };

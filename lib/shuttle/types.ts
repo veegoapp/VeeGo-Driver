@@ -108,10 +108,19 @@ export type BoardingPassenger = {
   phone: string;
   ticket: string;
   checkedIn: boolean;
-  paymentMethod: 'cash' | 'card' | 'online' | 'unknown';
+  paymentMethod: 'cash' | 'card' | 'online' | 'instapay' | 'unknown';
   fareAmount: number;
   /** Name of the station this passenger is getting off at, when known. */
   destinationStationName: string | null;
+  /**
+   * InstaPay settlement status for this booking — only meaningful when
+   * paymentMethod === 'instapay'. GET /driver/trips/:id/stations does not
+   * surface this column today, so it is filled in lazily by a per-row
+   * GET /bookings/:id/instapay fetch (see trip-active.tsx) and kept live via
+   * the ride:instapay:marked_paid socket event / the driver's own confirm
+   * action. Undefined until that fetch resolves.
+   */
+  instapayStatus?: 'awaiting_payment' | 'awaiting_confirmation' | 'confirmed';
 };
 
 // ─── Slot-released alert payload ──────────────────────────────────────────────

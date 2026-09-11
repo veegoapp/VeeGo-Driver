@@ -2,11 +2,11 @@ import { showAlert } from '@/lib/alert';
 import { router, useLocalSearchParams } from 'expo-router';
 import { safeBack } from '@/lib/navUtils';
 import {
-  AlertTriangle, ArrowRight, Banknote, Check, ChevronLeft, Clock, MapPin, Share2, Users, X,
+  AlertTriangle, ArrowRight, Banknote, Check, ChevronLeft, Clock, MapPin, Share2, Users, Wallet, X,
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Alert, Dimensions, Image, Linking, Platform, Pressable, ScrollView,
+  ActivityIndicator, Alert, Dimensions, Image, Linking, Platform, Pressable, ScrollView,
   Share, StyleSheet, Text, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -86,6 +86,7 @@ export default function ShuttleTripActiveScreen() {
   const shuttleCtx = useShuttle();
   const {
     activeLine, stops, currentStopIndex, passengers, nextStop, stationCoords,
+    updatePassengerInstapayStatus,
   } = shuttleCtx;
 
   // ── ActiveSession (Phase 1 migration) ──────────────────────────────────────
@@ -319,6 +320,64 @@ export default function ShuttleTripActiveScreen() {
     socket.on(SOCKET_EVENTS.SHUTTLE_STATION_TIMEOUT, handler);
     return () => { socket.off(SOCKET_EVENTS.SHUTTLE_STATION_TIMEOUT, handler); };
   }, [socket, tripId, nextStop]);
+
+  // ── Socket: passenger marked an InstaPay booking as paid ───────────────────
+  // Same event as the ride flow (constants/socketEvents.ts), but the payload
+  // carries bookingId instead of rideId when emitted for a shuttle booking.
+  // Never regresses an already-confirmed row (e.g. a late/duplicate delivery
+  // after the driver already tapped confirm).
+  useEffect(() => {
+    if (!socket) return;
+    const handler = (data: { bookingId?: number | string }) => {
+      if (data?.bookingId == null) return;
+      updatePassengerInstapayStatus(String(data.bookingId), 'awaiting_confirmation');
+    };
+    socket.on(SOCKET_EVENTS.INSTAPAY_PAYMENT_MARKED_PAID, handler);
+    return () => { socket.off(SOCKET_EVENTS.INSTAPAY_PAYMENT_MARKED_PAID, handler); };
+  }, [socket, updatePassengerInstapayStatus]);
+
+  // ── InstaPay: per-row fallback fetch ───────────────────────────────────────
+  // GET /driver/trips/:id/stations doesn't surface instapayStatus per booking,
+  // so fetch it lazily for any currently-displayed instapay passenger whose
+  // status isn't known yet (e.g. on mount, or after paging to a new stop).
+  // Best-effort — the socket event and the driver's own confirm action remain
+  // the primary sources.
+  useEffect(() => {
+    const pending = passengers.filter(p => p.paymentMethod === 'instapay' && !p.instapayStatus);
+    if (!pending.length) return;
+    let cancelled = false;
+    pending.forEach(p => {
+      endpoints.trips.getBookingInstapay(Number(p.id)).then((res) => {
+        if (cancelled) return;
+        const status = res.data.instapayStatus;
+        if (status === 'awaiting_payment' || status === 'awaiting_confirmation' || status === 'confirmed') {
+          updatePassengerInstapayStatus(p.id, status);
+        }
+      }).catch(() => {
+        // Silent — will retry next time this effect re-runs (e.g. next stop).
+      });
+    });
+    return () => { cancelled = true; };
+  }, [passengers, updatePassengerInstapayStatus]);
+
+  // ── InstaPay: driver confirms receipt for one passenger row ────────────────
+  const [confirmingInstapayIds, setConfirmingInstapayIds] = useState<Set<string>>(new Set());
+  const handleConfirmPassengerInstapay = useCallback(async (bookingId: string) => {
+    if (confirmingInstapayIds.has(bookingId)) return;
+    setConfirmingInstapayIds(prev => new Set(prev).add(bookingId));
+    try {
+      await endpoints.trips.confirmBookingInstapay(Number(bookingId));
+      updatePassengerInstapayStatus(bookingId, 'confirmed');
+    } catch {
+      showAlert(t.error, t.station_action_error);
+    } finally {
+      setConfirmingInstapayIds(prev => {
+        const next = new Set(prev);
+        next.delete(bookingId);
+        return next;
+      });
+    }
+  }, [confirmingInstapayIds, updatePassengerInstapayStatus, t]);
 
   // ── Actions ────────────────────────────────────────────────────────────────
 
@@ -725,6 +784,8 @@ export default function ShuttleTripActiveScreen() {
           passengers={passengers}
           passengerStatuses={passengerStatuses}
           onUpdatePassengerStatus={updatePassengerStatus}
+          confirmingInstapayIds={confirmingInstapayIds}
+          onConfirmPassengerInstapay={handleConfirmPassengerInstapay}
           isLastStop={isLastStop}
           isNextLoading={isNextLoading}
           failedStationActions={failedStationActions}
@@ -844,6 +905,8 @@ type AtStopSheetProps = {
   passengers: BoardingPassenger[];
   passengerStatuses: Record<string, PassengerStatus>;
   onUpdatePassengerStatus: (passengerId: string, status: PassengerStatus) => void;
+  confirmingInstapayIds: Set<string>;
+  onConfirmPassengerInstapay: (bookingId: string) => void;
   isLastStop: boolean;
   isNextLoading: boolean;
   failedStationActions: { id: string; name: string; action: 'boarded' | 'no_show' }[];
@@ -854,7 +917,8 @@ type AtStopSheetProps = {
 
 const AtStopSheet = React.memo(function AtStopSheet({
   t, isRTL, insetsBottom, currentStop, stopTimer, stationTimeoutVisible, onDismissTimeout,
-  passengers, passengerStatuses, onUpdatePassengerStatus, isLastStop, isNextLoading,
+  passengers, passengerStatuses, onUpdatePassengerStatus,
+  confirmingInstapayIds, onConfirmPassengerInstapay, isLastStop, isNextLoading,
   failedStationActions, lastStopProcessingRef, onFinishRoute, onNextStop,
 }: AtStopSheetProps) {
   const S = useSplitColors();
@@ -937,9 +1001,51 @@ const AtStopSheet = React.memo(function AtStopSheet({
                     <View style={styles.paymentPaidBadgeC}>
                       <Text style={[styles.paymentBadgeTextC, { color: S.teal }]}>{t.paid_badge}</Text>
                     </View>
+                  ) : p.paymentMethod === 'instapay' ? (
+                    <View
+                      style={[
+                        styles.paymentInstapayBadgeC,
+                        p.instapayStatus === 'confirmed' && { backgroundColor: '#DDF4EB' },
+                      ]}
+                    >
+                      <Wallet
+                        size={11}
+                        color={p.instapayStatus === 'confirmed' ? S.teal : '#7C5CFC'}
+                        strokeWidth={2}
+                      />
+                      <Text
+                        style={[
+                          styles.paymentBadgeTextC,
+                          { color: p.instapayStatus === 'confirmed' ? S.teal : '#7C5CFC' },
+                        ]}
+                      >
+                        {p.instapayStatus === 'confirmed'
+                          ? t.instapay_badge_confirmed
+                          : p.instapayStatus === 'awaiting_confirmation'
+                          ? t.instapay_badge_awaiting_confirmation
+                          : t.instapay_badge_awaiting_payment}
+                      </Text>
+                    </View>
                   ) : null}
                 </View>
                 <View style={styles.statusBtnsC}>
+                  {p.paymentMethod === 'instapay' && p.instapayStatus === 'awaiting_confirmation' && (
+                    <Pressable
+                      onPress={() => onConfirmPassengerInstapay(p.id)}
+                      disabled={confirmingInstapayIds.has(p.id)}
+                      style={[
+                        styles.instapayConfirmBtnC,
+                        { opacity: confirmingInstapayIds.has(p.id) ? 0.6 : 1 },
+                      ]}
+                      accessibilityLabel={t.instapay_confirm_btn_short}
+                    >
+                      {confirmingInstapayIds.has(p.id) ? (
+                        <ActivityIndicator color="#7C5CFC" size="small" />
+                      ) : (
+                        <Text style={styles.instapayConfirmBtnTextC}>{t.instapay_confirm_btn_short}</Text>
+                      )}
+                    </Pressable>
+                  )}
                   <Pressable
                     onPress={() => onUpdatePassengerStatus(p.id, isBoarded ? 'not_arrived' : 'boarded')}
                     style={[styles.statusBtnC, isBoarded ? { backgroundColor: S.teal, borderColor: S.teal } : { borderColor: '#B9E4DB' }]}
@@ -1124,8 +1230,13 @@ function makeStyles(S: SplitColors) {
   passengerInitialC: { fontSize: Typography.size.md, fontFamily: 'Inter_700Bold' },
   passengerNameC: { fontSize: Typography.size.sm, fontFamily: 'Inter_700Bold', color: S.ink, marginBottom: 2 },
   passengerPhoneC: { fontSize: Typography.size.xs, fontFamily: 'Inter_400Regular', color: S.cap },
-  statusBtnsC: { flexDirection: 'row', gap: Spacing.sm },
+  statusBtnsC: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   statusBtnC: { width: 34, height: 34, borderRadius: 17, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  instapayConfirmBtnC: {
+    height: 34, borderRadius: 17, paddingHorizontal: 10, borderWidth: 1.5, borderColor: '#D7CCFB',
+    backgroundColor: '#F1ECFE', alignItems: 'center', justifyContent: 'center',
+  },
+  instapayConfirmBtnTextC: { fontSize: 12, fontFamily: 'Inter_700Bold', color: '#7C5CFC' },
 
   // Share Trip button
   shareTripBtn: {
@@ -1150,6 +1261,7 @@ function makeStyles(S: SplitColors) {
   // Payment badges + primary action button (at-stop sheet)
   paymentCashBadgeC: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: Spacing.xs, backgroundColor: '#FCEBD1', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
   paymentPaidBadgeC: { alignSelf: 'flex-start', marginTop: Spacing.xs, backgroundColor: '#DDF4EB', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  paymentInstapayBadgeC: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: Spacing.xs, backgroundColor: '#EDE7FE', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
   paymentBadgeTextC: { fontSize: 11, fontFamily: 'Inter_700Bold' },
   primaryBtnC: { height: 52, borderRadius: 16, backgroundColor: S.panel, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
   primaryBtnTextC: { fontSize: 15, fontFamily: 'Inter_700Bold', color: '#ffffff' },

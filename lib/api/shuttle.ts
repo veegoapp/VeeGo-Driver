@@ -185,6 +185,20 @@ export const tripsEndpoints = {
     api.patch(`/driver/trips/${tripId}/stations/${stationId}/arrived`),
   stationCompleted: (tripId: string, stationId: string) =>
     api.patch(`/driver/trips/${tripId}/stations/${stationId}/completed`),
+  // Per-booking InstaPay payment (shuttle bookings only). GET /driver/trips/:id/stations
+  // does not surface instapayStatus on each passenger row, so trip-active.tsx
+  // falls back to this per-row fetch for paymentMethod === 'instapay' passengers
+  // (e.g. on mount, or if the marked-paid socket event was missed).
+  getBookingInstapay: (bookingId: number) =>
+    api.get<{ data: { link: string; qrDataUrl: string; instapayStatus: string } }>(
+      `/bookings/${bookingId}/instapay`
+    ),
+  // Driver confirms they personally verified receipt of a passenger's
+  // InstaPay payment — only valid once instapayStatus === 'awaiting_confirmation'.
+  confirmBookingInstapay: (bookingId: number) =>
+    api.post<{ data: { bookingId: number; instapayStatus: string; paymentStatus: string } }>(
+      `/bookings/${bookingId}/instapay/confirm`
+    ),
 };
 
 export const financialAnalyticsEndpoints = {

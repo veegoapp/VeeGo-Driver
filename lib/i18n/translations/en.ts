@@ -1440,6 +1440,11 @@ export const en = {
   instapay_awaiting_confirmation: "Passenger says they've paid — verify in your banking app, then confirm below",
   instapay_confirm_payment_btn: 'Confirm Payment Received',
   instapay_payment_confirmed: 'Payment confirmed',
+  // ── InstaPay shuttle booking payment (per-passenger badge on the boarding sheet) ──
+  instapay_badge_awaiting_payment: 'InstaPay: awaiting payment',
+  instapay_badge_awaiting_confirmation: 'InstaPay: awaiting confirmation',
+  instapay_badge_confirmed: 'InstaPay: confirmed',
+  instapay_confirm_btn_short: 'Confirm',
 };
 
 export type Translations = typeof en;
