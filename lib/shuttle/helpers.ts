@@ -233,6 +233,20 @@ export function mapRoute(route: BackendRoute): ShuttleRoute {
   };
 }
 
+// Merges a passenger's InstaPay status: a fresh API value should win, but
+// never let a refresh regress a status we already know is 'confirmed'
+// locally (e.g. a race between a refetch and the driver's own confirm
+// action or the marked-paid socket event).
+type InstapayStatus = 'awaiting_payment' | 'awaiting_confirmation' | 'confirmed';
+
+export function mergeInstapayStatus(
+  existing: InstapayStatus | null | undefined,
+  incoming: InstapayStatus | null | undefined
+): InstapayStatus | undefined {
+  if (existing === 'confirmed') return 'confirmed';
+  return incoming ?? existing ?? undefined;
+}
+
 export function deriveVehicleType(totalSeats: number): VehicleType {
   if (totalSeats === 14) return 'HiAce';
   if (totalSeats === 28) return 'Mini Bus';

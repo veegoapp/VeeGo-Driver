@@ -22,6 +22,7 @@ import {
   extractTripStations,
   mapRoute,
   buildLine,
+  mergeInstapayStatus,
 } from './helpers';
 
 // ─── Context type ─────────────────────────────────────────────────────────────
@@ -354,10 +355,7 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
           // it, but never let a refresh regress a status we already know is
           // 'confirmed' locally (e.g. a race between this refetch and the
           // driver's own confirm action or the marked-paid socket event).
-          instapayStatus:
-            existing?.instapayStatus === 'confirmed'
-              ? 'confirmed'
-              : (sp.instapayStatus ?? existing?.instapayStatus),
+          instapayStatus: mergeInstapayStatus(existing?.instapayStatus, sp.instapayStatus),
         };
       });
     });
