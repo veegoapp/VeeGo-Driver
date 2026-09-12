@@ -317,9 +317,16 @@ export const MapBackdrop = React.memo(function MapBackdrop({
     setMapReady(true);
   }, []);
 
-  // ── Auto-fetch route for non-nav on-demand rides ─────────────────────────
+  // ── Auto-fetch fallback straight-line/road route ─────────────────────────
+  // Runs regardless of navigationMode. In non-nav mode it's the only route
+  // source. In nav mode it acts as a fallback: useNavigationRoute's road-
+  // snapped route (roadPolyline) needs a live driver GPS fix to even start
+  // its fetch, so if that fix is delayed/denied when a ride first opens, the
+  // driver used to see no line at all until a fix arrived — this fetch keys
+  // only on pickup/dropoff (available immediately) and fills that gap.
+  // baseRouteCoords below still prefers roadPolyline once it's ready.
   useEffect(() => {
-    if (navigationMode || !pickup || !dropoff) return;
+    if (!pickup || !dropoff) return;
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 5000);
     fetchDirectionsRaw(pickup, dropoff, { signal: ctrl.signal })
@@ -341,7 +348,7 @@ export const MapBackdrop = React.memo(function MapBackdrop({
       clearTimeout(timer);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pickup?.latitude, pickup?.longitude, dropoff?.latitude, dropoff?.longitude, navigationMode]);
+  }, [pickup?.latitude, pickup?.longitude, dropoff?.latitude, dropoff?.longitude]);
 
   // ── User pan detection + auto-recenter timer ─────────────────────────────
   const handlePanDrag = useCallback(() => {
