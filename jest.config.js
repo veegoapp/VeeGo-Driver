@@ -30,13 +30,16 @@ module.exports = {
     'lib/i18n/translations/ar.ts',
     'lib/shuttle/helpers.ts',
     'lib/serviceTypeBridge.ts',
+    'hooks/useServiceGuard.ts',
+    'hooks/useRoadEta.ts',
+    'hooks/useWaitingCharge.ts',
   ],
   coverageThreshold: {
     global: {
-      statements: 85,
-      branches: 80,
-      functions: 78,
-      lines: 85,
+      statements: 88,
+      branches: 85,
+      functions: 83,
+      lines: 88,
     },
   },
 };
