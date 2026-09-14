@@ -33,6 +33,7 @@ module.exports = {
     'hooks/useServiceGuard.ts',
     'hooks/useRoadEta.ts',
     'hooks/useWaitingCharge.ts',
+    'lib/activeSessionContext.tsx',
   ],
   coverageThreshold: {
     global: {
