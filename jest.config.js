@@ -34,6 +34,7 @@ module.exports = {
     'hooks/useRoadEta.ts',
     'hooks/useWaitingCharge.ts',
     'lib/activeSessionContext.tsx',
+    'lib/authContext.tsx',
   ],
   coverageThreshold: {
     global: {
