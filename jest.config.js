@@ -29,13 +29,14 @@ module.exports = {
     'lib/i18n/translations/en.ts',
     'lib/i18n/translations/ar.ts',
     'lib/shuttle/helpers.ts',
+    'lib/serviceTypeBridge.ts',
   ],
   coverageThreshold: {
     global: {
-      statements: 55,
-      branches: 40,
-      functions: 45,
-      lines: 55,
+      statements: 85,
+      branches: 80,
+      functions: 78,
+      lines: 85,
     },
   },
 };
