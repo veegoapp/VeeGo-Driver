@@ -158,3 +158,11 @@ overrides:
   # Expo CLI requests tar ^7.5.2; use a compatible patch release that is
   # available through the package firewall and past the release-age threshold.
   tar: "7.5.21"
+
+allowBuilds:
+  # dtrace-provider: optional native DTrace probes for bunyan (transitive,
+  # dev-only logging dep of the Expo/EAS CLIs). unrs-resolver: native
+  # module-resolution binding used by eslint-plugin-import at lint time.
+  # Neither ships in the app bundle; both are safe to build.
+  dtrace-provider: true
+  unrs-resolver: true
