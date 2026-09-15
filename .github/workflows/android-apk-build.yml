@@ -73,6 +73,12 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          # The default `tools` package was removed from Google's SDK
+          # repository manifest, which makes sdkmanager fail with
+          # "Failed to find package 'tools'". platform-tools is all
+          # Gradle/AGP need here; build-tools are resolved by AGP itself.
+          packages: "platform-tools"
 
       - name: Make gradlew executable
         run: chmod +x android/gradlew
