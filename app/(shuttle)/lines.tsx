@@ -777,10 +777,17 @@ function RouteCard({
   // NOTE: this flag is purely visual (badge color). It NEVER blocks the card.
   // Routes are globally public — all drivers can always open any route to
   // explore other weeks and slots.
+  // A booking's week can end without its status ever leaving "active" (e.g.
+  // confirmRenewal resets the current-week row back to "active" indefinitely,
+  // and a booking whose week simply lapsed with no renewal action is never
+  // flipped either) — so status alone isn't enough to know it's still current.
+  // Only count it if its week hasn't ended yet.
+  const todayStr = new Date().toISOString().split('T')[0]!;
   const hasActiveBooking = myBookings.some(b =>
     String(b.routeId) === String(route.id) &&
     b.status !== 'cancelled' &&
-    b.status !== 'completed'
+    b.status !== 'completed' &&
+    (!b.weekEnd || b.weekEnd >= todayStr)
   );
   const availableSlots = route.timeslots.filter(ts => !ts.isBooked).length;
   const totalSlots = route.timeslots.length;
