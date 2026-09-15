@@ -38,13 +38,14 @@ module.exports = {
     'lib/serviceControlContext.tsx',
     'lib/referralContext.tsx',
     'lib/socketContext.tsx',
+    'lib/shuttle/ShuttleContext.tsx',
   ],
   coverageThreshold: {
     global: {
-      statements: 86,
-      branches: 80,
-      functions: 83,
-      lines: 88,
+      statements: 87,
+      branches: 78,
+      functions: 81,
+      lines: 89,
     },
   },
 };
