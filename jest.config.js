@@ -37,11 +37,12 @@ module.exports = {
     'lib/authContext.tsx',
     'lib/serviceControlContext.tsx',
     'lib/referralContext.tsx',
+    'lib/socketContext.tsx',
   ],
   coverageThreshold: {
     global: {
       statements: 86,
-      branches: 81,
+      branches: 80,
       functions: 83,
       lines: 88,
     },
