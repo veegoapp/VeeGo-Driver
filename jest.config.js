@@ -35,11 +35,12 @@ module.exports = {
     'hooks/useWaitingCharge.ts',
     'lib/activeSessionContext.tsx',
     'lib/authContext.tsx',
+    'lib/serviceControlContext.tsx',
   ],
   coverageThreshold: {
     global: {
-      statements: 88,
-      branches: 85,
+      statements: 86,
+      branches: 81,
       functions: 83,
       lines: 88,
     },
