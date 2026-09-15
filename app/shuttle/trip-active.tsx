@@ -1,5 +1,6 @@
 import { showAlert } from '@/lib/alert';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { safeBack } from '@/lib/navUtils';
 import {
   AlertTriangle, ArrowRight, Banknote, Check, ChevronLeft, Clock, MapPin, Share2, Users, Wallet, X,
@@ -84,6 +85,7 @@ export default function ShuttleTripActiveScreen() {
   const { socket } = useSocket();
   const navigation = useNavigation();
   const shuttleCtx = useShuttle();
+  const queryClient = useQueryClient();
   const {
     activeLine, stops, currentStopIndex, passengers, nextStop, stationCoords,
     updatePassengerInstapayStatus,
@@ -507,6 +509,14 @@ export default function ShuttleTripActiveScreen() {
       const result = await endpoints.trips.complete(tripId) as ShuttleCompleteResponse;
       const earned = result?.earnedAmount ?? result?.data?.earnedAmount;
       const balance = result?.walletBalance ?? result?.data?.walletBalance;
+      // Don't rely solely on the backend's SHUTTLE_TRIP_STATUS socket
+      // broadcast to refresh these — on a dropped/reconnecting socket (common
+      // on cellular handoff right as a trip wraps up), the just-completed
+      // trip could still show as in-progress back on the home/lines screens
+      // until some unrelated event happened to invalidate them.
+      queryClient.invalidateQueries({ queryKey: ['shuttle-driver-trips'] });
+      queryClient.invalidateQueries({ queryKey: ['shuttle-lines'] });
+      queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
       router.replace({
         pathname: '/shuttle/trip-complete' as any,
         params: {
