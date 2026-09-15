@@ -165,7 +165,7 @@ export default function RatingsScreen() {
                   </View>
                   {r.comment ? (
                     <Text style={[styles.reviewText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>
-                      "{r.comment}"
+                      &ldquo;{r.comment}&rdquo;
                     </Text>
                   ) : null}
                   <Text style={[styles.reviewDate, { color: colors.mutedForeground + 'B3', fontFamily: 'Inter_700Bold', textAlign: TA }]}>

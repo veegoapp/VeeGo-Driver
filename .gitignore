@@ -39,5 +39,8 @@ yarn-error.*
 *.tsbuildinfo
 .vercel
 
+# test coverage
+coverage/
+
 .env
 .claude/worktrees/
