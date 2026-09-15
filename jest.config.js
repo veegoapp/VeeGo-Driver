@@ -36,6 +36,7 @@ module.exports = {
     'lib/activeSessionContext.tsx',
     'lib/authContext.tsx',
     'lib/serviceControlContext.tsx',
+    'lib/referralContext.tsx',
   ],
   coverageThreshold: {
     global: {
