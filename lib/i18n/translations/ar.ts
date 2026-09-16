@@ -379,6 +379,7 @@ export const ar: Translations = {
   nav_choice_app: 'كمّل على خريطة VeeGo',
   bg_loc_required_title: 'فعّل الموقع "طوال الوقت"',
   bg_loc_required_msg: 'عشان تبقى أونلاين وتستقبل رحلات، VeeGo محتاج إذن الموقع يكون "Allow all the time". ده بيخلّي الراكب يشوف مكانك حتى والتطبيق في الخلفية أو وانت بتمشي على Google Maps. افتح الإعدادات → Permissions → Location → Allow all the time، وبعدين دوس GO تاني.',
+  bg_loc_lost_during_trip: 'إذن الموقع في الخلفية متوقف — الركاب مش هيشوفوا مكانك لما التطبيق يكون في الخلفية.',
   battery_optim_title: 'متفوتش طلبات الرحلات',
   battery_optim_msg: 'بعض الموبايلات بتقفل التطبيقات اللي شغالة في الخلفية عشان توفر البطارية، وده ممكن يمنع وصول تنبيهات الرحلات الجديدة. عشان توصلك الطلبات بشكل موثوق، دوّر على VeeGo Driver في إعدادات تحسين البطارية واختار "عدم التحسين".',
   battery_optim_dont_ask: 'متسألنيش تاني',

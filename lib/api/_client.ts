@@ -57,6 +57,17 @@ export function setOnSessionCleared(cb: SessionClearedCallback) {
   _onSessionCleared = cb;
 }
 
+// L6: server - device clock offset, derived from every response's HTTP Date
+// header (second-precision, but good enough for a countdown display). Lets
+// UI-only countdowns (e.g. the shuttle renewal timer) stay close to the
+// server's clock even when the device clock is off, without the server ever
+// needing to trust anything the device reports — enforcement stays a
+// server-side deadline check regardless of what this display shows.
+let _clockOffsetMs = 0;
+export function getClockOffsetMs(): number {
+  return _clockOffsetMs;
+}
+
 // Single-flight refresh — only one refresh request may exist at a time.
 //
 // Return value distinguishes a genuine rejection from a transient failure:
@@ -158,6 +169,12 @@ export async function request<T>(
     throw new ApiError(0, isAbort ? 'Request timed out' : 'Network error', null);
   }
   clearTimeout(timeout);
+
+  const dateHeader = response.headers.get('date');
+  if (dateHeader) {
+    const serverMs = new Date(dateHeader).getTime();
+    if (!Number.isNaN(serverMs)) _clockOffsetMs = serverMs - Date.now();
+  }
 
   // ── DEBUG: log response ───────────────────────────────────────────────────
   if (isVehicleDebug && __DEV__) {

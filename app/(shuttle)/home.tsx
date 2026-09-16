@@ -19,7 +19,7 @@ import { useFocusEffect } from 'expo-router';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
-import { endpoints } from '@/lib/api';
+import { endpoints, getClockOffsetMs } from '@/lib/api';
 import { useShuttle } from '@/lib/shuttleContext';
 import { useReferral } from '@/lib/referralContext';
 import { useSocket } from '@/lib/socketContext';
@@ -222,7 +222,11 @@ export default function ShuttleHomeScreen() {
   useEffect(() => {
     if (!renewalBooking?.renewalDeadline) { setRenewalCountdown(''); return; }
     const tick = () => {
-      const ms = new Date(renewalBooking.renewalDeadline!).getTime() - Date.now();
+      // L6: Date.now() + getClockOffsetMs() approximates the server's clock
+      // (derived from recent response Date headers) instead of trusting the
+      // device clock outright — display-only; the deadline itself is still
+      // enforced authoritatively server-side regardless of what this shows.
+      const ms = new Date(renewalBooking.renewalDeadline!).getTime() - (Date.now() + getClockOffsetMs());
       if (ms <= 0) { setRenewalCountdown(''); return; }
       const h = Math.floor(ms / 3600000);
       const m = Math.floor((ms % 3600000) / 60000);

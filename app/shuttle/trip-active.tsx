@@ -7,9 +7,10 @@ import {
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Alert, Dimensions, Image, Linking, Platform, Pressable, ScrollView,
+  ActivityIndicator, Alert, AppState, Dimensions, Image, Linking, Platform, Pressable, ScrollView,
   Share, StyleSheet, Text, View,
 } from 'react-native';
+import * as Location from 'expo-location';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MapBackdrop } from '@/components/MapBackdrop';
 import { useNavigation } from 'expo-router';
@@ -152,6 +153,33 @@ export default function ShuttleTripActiveScreen() {
   const { position: gpsPos, permissionDenied: gpsPermissionDenied } = useDriverLocation(tripIsLive);
   const effectivePos = gpsPos;
   const recheckGpsPermission = useGPSPermissionRecheck();
+
+  // M19: foreground permission (above) only covers this screen being open —
+  // background location can still be revoked mid-trip via OS Settings while
+  // the app is backgrounded (screen locked, navigating in Google Maps), which
+  // silently stops the passenger-facing tracking task without the driver
+  // noticing. Recheck on mount and every foreground return while a trip is
+  // live, and surface a dismiss-free banner (not a hard block — foreground
+  // GPS/broadcast still work) so the driver can fix it without waiting for
+  // support to notice a stale trip.
+  const [bgPermissionLost, setBgPermissionLost] = useState(false);
+  useEffect(() => {
+    if (!tripIsLive) { setBgPermissionLost(false); return; }
+    let cancelled = false;
+    const check = async () => {
+      try {
+        const { status } = await Location.getBackgroundPermissionsAsync();
+        if (!cancelled) setBgPermissionLost(status !== 'granted');
+      } catch {
+        // expo-location unavailable — nothing to recover, leave as-is
+      }
+    };
+    check();
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') check();
+    });
+    return () => { cancelled = true; sub.remove(); };
+  }, [tripIsLive]);
 
   // Haversine used only for proximity-based phase transitions (fast, no network)
   const proximityM = useMemo(() => {
@@ -658,6 +686,23 @@ export default function ShuttleTripActiveScreen() {
         </View>
       )}
 
+      {/* Background-location-lost banner (M19): non-blocking — foreground GPS
+          still works, so the trip can continue — but the passenger-facing
+          broadcast goes stale the moment the app backgrounds until fixed. */}
+      {tripIsLive && !gpsPermissionDenied && bgPermissionLost && (
+        <View style={[styles.bgLostBanner, { top: topPad + 8 }]} pointerEvents="box-none">
+          <GlassView strong style={styles.bgLostBannerCard} borderRadius={16}>
+            <AlertTriangle size={18} color="#F5A623" strokeWidth={2} />
+            <Text style={[styles.bgLostBannerText, { color: colors.foreground, fontFamily: 'Inter_600SemiBold' }]} numberOfLines={2}>
+              {t.bg_loc_lost_during_trip}
+            </Text>
+            <Pressable onPress={() => Linking.openSettings().catch(() => {})}>
+              <Text style={[styles.bgLostBannerBtn, { fontFamily: 'Inter_700Bold' }]}>{t.open_settings}</Text>
+            </Pressable>
+          </GlassView>
+        </View>
+      )}
+
       {/* ── Map — fills full screen, both sheets overlay on top ──────────── */}
       <View style={StyleSheet.absoluteFill}>
         <MapBackdrop
@@ -1157,6 +1202,12 @@ function makeStyles(S: SplitColors) {
   gpsBlockBtnText: { color: '#fff', fontSize: 15 },
   gpsBlockRetryBtn: { paddingVertical: 10 },
   gpsBlockRetryText: { fontSize: 13 },
+
+  // Background-location-lost banner (M19)
+  bgLostBanner: { position: 'absolute', left: Spacing.lg, right: Spacing.lg, zIndex: 90, elevation: 90 },
+  bgLostBannerCard: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12 },
+  bgLostBannerText: { flex: 1, fontSize: 12.5, lineHeight: 17 },
+  bgLostBannerBtn: { fontSize: 12.5, color: '#3D52D5' },
 
   // Top bar
   topBar: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, paddingHorizontal: Spacing.lg },
