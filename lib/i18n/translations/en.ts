@@ -459,6 +459,7 @@ export const en = {
   station_action_error: 'Failed to update station status. Please try again.',
   boarding_partial_fail_title: 'Some updates failed',
   boarding_partial_fail_msg: 'Could not update status for: {names}. You can retry just these passengers.',
+  boarding_unpaid_fail_msg: '{names} could not be boarded — their electronic payment has not been confirmed yet. Ask them to complete payment, or collect cash and switch their payment method first.',
   station_timeout_msg: 'Time at this station has expired — please proceed to the next station',
   renewal_confirmed_toast: 'Your booking for next week has been confirmed',
   add_payout_method: 'Add payout method',

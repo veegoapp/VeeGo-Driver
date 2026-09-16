@@ -459,6 +459,7 @@ export const ar: Translations = {
   station_action_error: 'فشل تحديث حالة المحطة. حاول مجدداً.',
   boarding_partial_fail_title: 'فشل تحديث بعض الركاب',
   boarding_partial_fail_msg: 'تعذّر تحديث حالة: {names}. يمكنك إعادة المحاولة لهؤلاء الركاب فقط.',
+  boarding_unpaid_fail_msg: 'تعذّر صعود {names} — لم يتم تأكيد الدفع الإلكتروني بعد. اطلب منهم إتمام الدفع، أو حصّل المبلغ نقدًا وغيّر طريقة الدفع أولاً.',
   station_timeout_msg: 'انتهى وقت هذه المحطة — يرجى الانتقال إلى المحطة التالية',
   renewal_confirmed_toast: 'تم تأكيد حجزك للأسبوع القادم',
   add_payout_method: 'إضافة طريقة صرف',

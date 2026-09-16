@@ -183,7 +183,7 @@ export default function ShuttleTripActiveScreen() {
   const [passengerStatuses, setPassengerStatuses] = useState<Record<string, PassengerStatus>>({});
   const [isArrivingLoading, setIsArrivingLoading] = useState(false);
   const [isNextLoading, setIsNextLoading] = useState(false);
-  const [failedStationActions, setFailedStationActions] = useState<{ id: string; name: string; action: 'boarded' | 'no_show' }[]>([]);
+  const [failedStationActions, setFailedStationActions] = useState<{ id: string; name: string; action: 'boarded' | 'no_show'; unpaid?: boolean }[]>([]);
   const [focusTarget, setFocusTarget] = useState<{ latitude: number; longitude: number; zoom: number } | null>(null);
   const [shareBusy, setShareBusy] = useState(false);
   const [shareLink, setShareLink] = useState<{ id: number; url: string } | null>(null);
@@ -415,7 +415,7 @@ export default function ShuttleTripActiveScreen() {
     }
   }, [tripId, stationId, isArrivingLoading, nextCoords, t, fetchStationEtas]);
 
-  const handleNextStop = useCallback(async (retryOnly?: { id: string; action: 'boarded' | 'no_show' }[]) => {
+  const handleNextStop = useCallback(async (retryOnly?: { id: string; action: 'boarded' | 'no_show'; unpaid?: boolean }[]) => {
     if (isNextLoading) return;
     setIsNextLoading(true);
     try {
@@ -436,12 +436,18 @@ export default function ShuttleTripActiveScreen() {
         }));
         const absentResults = await Promise.allSettled(absentIds.map(id => endpoints.shuttle.noShowBooking(id)));
 
-        // Task: surface per-passenger failures instead of silently continuing
-        const failed: { id: string; name: string; action: 'boarded' | 'no_show' }[] = [];
+        // Task: surface per-passenger failures instead of silently continuing.
+        // C1 follow-up: the backend rejects boarding an electronic booking
+        // whose payment isn't confirmed yet with code PAYMENT_NOT_CONFIRMED
+        // (a real, expected outcome — not a network/server error) — called
+        // out separately so the driver knows to collect cash or wait for the
+        // payment instead of just retrying the same call again.
+        const failed: { id: string; name: string; action: 'boarded' | 'no_show'; unpaid?: boolean }[] = [];
         boardResults.forEach((r, i) => {
           if (r.status === 'rejected') {
             const id = boardedIds[i];
-            failed.push({ id, name: passengers.find(px => px.id === id)?.name ?? id, action: 'boarded' });
+            const code = (r.reason as { response?: { data?: { code?: string } } } | undefined)?.response?.data?.code;
+            failed.push({ id, name: passengers.find(px => px.id === id)?.name ?? id, action: 'boarded', unpaid: code === 'PAYMENT_NOT_CONFIRMED' });
           }
         });
         absentResults.forEach((r, i) => {
@@ -453,9 +459,15 @@ export default function ShuttleTripActiveScreen() {
 
         if (failed.length > 0) {
           setFailedStationActions(failed);
+          const unpaidNames = failed.filter(f => f.unpaid).map(f => f.name);
+          const otherNames = failed.filter(f => !f.unpaid).map(f => f.name);
+          const messageParts = [
+            unpaidNames.length > 0 ? t.boarding_unpaid_fail_msg.replace('{names}', unpaidNames.join(', ')) : null,
+            otherNames.length > 0 ? t.boarding_partial_fail_msg.replace('{names}', otherNames.join(', ')) : null,
+          ].filter(Boolean);
           showAlert(
             t.boarding_partial_fail_title,
-            t.boarding_partial_fail_msg.replace('{names}', failed.map(f => f.name).join(', ')),
+            messageParts.join('\n\n'),
             [
               { text: t.cancel, style: 'cancel' },
               { text: t.retry_label, onPress: () => { handleNextStop(failed); } },
@@ -919,10 +931,10 @@ type AtStopSheetProps = {
   onConfirmPassengerInstapay: (bookingId: string) => void;
   isLastStop: boolean;
   isNextLoading: boolean;
-  failedStationActions: { id: string; name: string; action: 'boarded' | 'no_show' }[];
+  failedStationActions: { id: string; name: string; action: 'boarded' | 'no_show'; unpaid?: boolean }[];
   lastStopProcessingRef: React.MutableRefObject<boolean>;
   onFinishRoute: () => void | Promise<void>;
-  onNextStop: (retryOnly?: { id: string; action: 'boarded' | 'no_show' }[]) => void | Promise<void>;
+  onNextStop: (retryOnly?: { id: string; action: 'boarded' | 'no_show'; unpaid?: boolean }[]) => void | Promise<void>;
 };
 
 const AtStopSheet = React.memo(function AtStopSheet({
