@@ -176,7 +176,7 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
     queryKey: ['shuttle-driver-trips'],
     queryFn: () => endpoints.trips.list() as Promise<unknown>,
     // No polling — invalidated by socket events (SLOT_TAKEN, SLOT_RELEASED,
-    // SHUTTLE_BOOKING_CANCELLED, NOTIFICATION_NEW). Manual refresh via refetch().
+    // SHUTTLE_BOOKING_CANCELLED, NOTIFICATION_NEW, TRIP_ACTIVATED). Manual refresh via refetch().
   });
 
   // ── Derived data ─────────────────────────────────────────────────────────
@@ -497,6 +497,11 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
     const handleTripActivated = () => {
       queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['shuttle-lines'] });
+      // Trip activation is exactly the status flip shuttle-driver-trips (the
+      // trip card/list query, see line ~176) needs to reflect — without this
+      // it stayed on its last-fetched (still-pending) snapshot until the
+      // next unrelated refetch/app restart (H20).
+      queryClient.invalidateQueries({ queryKey: ['shuttle-driver-trips'] });
     };
 
     // On socket reconnect after an outage, force-refresh all shuttle state.

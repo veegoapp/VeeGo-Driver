@@ -11,7 +11,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useI18n } from '@/lib/i18nContext';
 import { useShuttle, findLineForRoute } from '@/lib/shuttleContext';
 import { endpoints } from '@/lib/api';
@@ -69,6 +69,7 @@ export default function TripDetailsScreen() {
   } = useLocalSearchParams<Params>();
 
   const { myBookings, allLines, listLoading, setStartedTripId, refetch } = useShuttle();
+  const queryClient = useQueryClient();
   const [starting, setStarting] = useState(false);
   // Synchronous re-entrancy guard — `starting` state read inside the async
   // onPress handler is a stale render-closure value: two taps in the same
@@ -396,6 +397,14 @@ export default function TripDetailsScreen() {
               try {
                 await endpoints.trips.board(String(effectiveTripId));
                 refetch();
+                // refetch() (ShuttleContext) only refreshes shuttle-lines/
+                // shuttle-my-bookings — it never touches this screen's own
+                // ['trip-start-detail', tripId] query, which is what
+                // isBoardingStatus (and therefore this button) actually reads.
+                // Without this, the button kept showing "Arrived / Start
+                // Boarding" after a successful board() call until the driver
+                // left and re-entered the screen.
+                queryClient.invalidateQueries({ queryKey: ['trip-start-detail', effectiveTripId] });
               } catch {
                 showAlert('', t.arrived_failed);
               } finally {

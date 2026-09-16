@@ -1,9 +1,9 @@
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { ArrowDownLeft, ArrowUpRight, Wallet, Wrench } from 'lucide-react-native';
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AppLoader } from '@/components/ui/AppLoader';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
@@ -104,6 +104,35 @@ export function WalletContent() {
     queryFn: () => endpoints.earnings.summary(),
     enabled: walletLive,
   });
+
+  // M18: the balance/earnings queries above only ever refetched on mount, so
+  // a trip completing (or any other wallet-affecting change) while this
+  // screen wasn't the active tab left it showing a stale figure until the
+  // app was killed and reopened. Refetch on screen focus, and on the same
+  // "notification:new" socket event trip-completion already fires (mirrors
+  // the passenger app's H18 wallet fix) — no new backend event, no polling.
+  const queryClient = useQueryClient();
+  useFocusEffect(
+    useCallback(() => {
+      if (!walletLive) return;
+      refetchBalance();
+      refetchTx();
+      queryClient.invalidateQueries({ queryKey: ['earnings-weekly'] });
+      queryClient.invalidateQueries({ queryKey: ['earnings-summary'] });
+    }, [walletLive, refetchBalance, refetchTx, queryClient]),
+  );
+
+  useEffect(() => {
+    if (!socket || !walletLive) return;
+    const handler = () => {
+      refetchBalance();
+      refetchTx();
+      queryClient.invalidateQueries({ queryKey: ['earnings-weekly'] });
+      queryClient.invalidateQueries({ queryKey: ['earnings-summary'] });
+    };
+    socket.on(SOCKET_EVENTS.NOTIFICATION_NEW, handler);
+    return () => { socket.off(SOCKET_EVENTS.NOTIFICATION_NEW, handler); };
+  }, [socket, walletLive, refetchBalance, refetchTx, queryClient]);
   const { data: payoutHistoryRaw, isLoading: historyLoading, isError: historyError } = useQuery({
     queryKey: ['payout-history'],
     queryFn: endpoints.wallet.getPayoutHistory,

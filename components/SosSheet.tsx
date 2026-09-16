@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useMemo } from 'react';
+import { useCallback, useEffect, useState, useMemo, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, Modal,
   Linking, I18nManager,
@@ -54,11 +54,17 @@ export function SosSheet({
   const [alertState, setAlertState] = useState<AlertState>('idle');
   const [contact, setContact] = useState<EmergencyContact | null>(null);
 
+  // L3: guards against a panicked driver rapid-tapping the same SOS option —
+  // each action is only ever reported to the backend once per sheet open, no
+  // matter how many times it's tapped while in flight or after it succeeds.
+  const sentActionsRef = useRef<Set<SosAction>>(new Set());
+
   // Prefetch the saved emergency contact so the WhatsApp share opens
   // instantly on tap. Best-effort — no contact just means a generic share.
   useEffect(() => {
     if (!visible) return;
     setAlertState('idle');
+    sentActionsRef.current.clear();
     endpoints.emergencyContact.get()
       .then((data) => setContact((data ?? null) as EmergencyContact | null))
       .catch(() => setContact(null));
@@ -92,6 +98,8 @@ export function SosSheet({
   const sendSos = useCallback(async (action: SosAction) => {
     if (mode === 'ride' && rideId == null) return;
     if (mode === 'shuttle' && tripId == null) return;
+    if (sentActionsRef.current.has(action)) return;
+    sentActionsRef.current.add(action);
     setAlertState((s) => (s === 'sent' ? 'sent' : 'sending'));
     const { lat, lng } = await getCoords();
     try {
@@ -112,6 +120,7 @@ export function SosSheet({
       }
       setAlertState('sent');
     } catch {
+      sentActionsRef.current.delete(action);
       setAlertState((s) => (s === 'sent' ? 'sent' : 'failed'));
     }
   }, [mode, rideId, tripId, routeFrom, routeTo, getCoords]);

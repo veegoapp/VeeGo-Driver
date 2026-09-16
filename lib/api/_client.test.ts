@@ -20,18 +20,19 @@ jest.mock('../auth', () => ({
 import {
   api,
   ApiError,
+  getClockOffsetMs,
   refreshAccessToken,
   setOnAccountSuspended,
   setOnSessionCleared,
 } from './_client';
 
-function jsonResponse(status: number, body: unknown, ok = status >= 200 && status < 300) {
+function jsonResponse(status: number, body: unknown, ok = status >= 200 && status < 300, dateHeader: string | null = null) {
   return {
     ok,
     status,
     statusText: 'status',
-    headers: { get: () => null },
-    clone() { return jsonResponse(status, body, ok); },
+    headers: { get: (name: string) => (name === 'date' ? dateHeader : null) },
+    clone() { return jsonResponse(status, body, ok, dateHeader); },
     json: async () => body,
     text: async () => JSON.stringify(body),
   } as unknown as Response;
@@ -180,5 +181,39 @@ describe('api client — request()', () => {
 
     expect(onSuspended).not.toHaveBeenCalled();
     setOnAccountSuspended(undefined as any);
+  });
+});
+
+describe('api client — getClockOffsetMs()', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGetToken.mockResolvedValue('access-token');
+    globalThis.fetch = jest.fn();
+  });
+
+  it('derives a positive offset when the response Date header is ahead of the device clock', async () => {
+    const future = new Date(Date.now() + 5 * 60_000);
+    (globalThis.fetch as jest.Mock).mockResolvedValue(jsonResponse(200, {}, true, future.toUTCString()));
+
+    await api.get('/thing');
+
+    // Second-precision Date header — allow slack for the future.toUTCString() rounding.
+    expect(getClockOffsetMs()).toBeGreaterThan(4 * 60_000);
+    expect(getClockOffsetMs()).toBeLessThan(6 * 60_000);
+  });
+
+  it('ignores a missing or unparsable Date header and leaves the offset unchanged', async () => {
+    const future = new Date(Date.now() + 5 * 60_000);
+    (globalThis.fetch as jest.Mock).mockResolvedValueOnce(jsonResponse(200, {}, true, future.toUTCString()));
+    await api.get('/thing');
+    const establishedOffset = getClockOffsetMs();
+
+    (globalThis.fetch as jest.Mock).mockResolvedValueOnce(jsonResponse(200, {}, true, 'not-a-real-date'));
+    await api.get('/thing');
+    expect(getClockOffsetMs()).toBe(establishedOffset);
+
+    (globalThis.fetch as jest.Mock).mockResolvedValueOnce(jsonResponse(200, {}, true, null));
+    await api.get('/thing');
+    expect(getClockOffsetMs()).toBe(establishedOffset);
   });
 });

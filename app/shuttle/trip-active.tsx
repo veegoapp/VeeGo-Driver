@@ -1,14 +1,16 @@
 import { showAlert } from '@/lib/alert';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { safeBack } from '@/lib/navUtils';
 import {
   AlertTriangle, ArrowRight, Banknote, Check, ChevronLeft, Clock, MapPin, Share2, Users, Wallet, X,
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Alert, Dimensions, Image, Linking, Platform, Pressable, ScrollView,
+  ActivityIndicator, Alert, AppState, Dimensions, Image, Linking, Platform, Pressable, ScrollView,
   Share, StyleSheet, Text, View,
 } from 'react-native';
+import * as Location from 'expo-location';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MapBackdrop } from '@/components/MapBackdrop';
 import { useNavigation } from 'expo-router';
@@ -84,6 +86,7 @@ export default function ShuttleTripActiveScreen() {
   const { socket } = useSocket();
   const navigation = useNavigation();
   const shuttleCtx = useShuttle();
+  const queryClient = useQueryClient();
   const {
     activeLine, stops, currentStopIndex, passengers, nextStop, stationCoords,
     updatePassengerInstapayStatus,
@@ -151,6 +154,33 @@ export default function ShuttleTripActiveScreen() {
   const effectivePos = gpsPos;
   const recheckGpsPermission = useGPSPermissionRecheck();
 
+  // M19: foreground permission (above) only covers this screen being open —
+  // background location can still be revoked mid-trip via OS Settings while
+  // the app is backgrounded (screen locked, navigating in Google Maps), which
+  // silently stops the passenger-facing tracking task without the driver
+  // noticing. Recheck on mount and every foreground return while a trip is
+  // live, and surface a dismiss-free banner (not a hard block — foreground
+  // GPS/broadcast still work) so the driver can fix it without waiting for
+  // support to notice a stale trip.
+  const [bgPermissionLost, setBgPermissionLost] = useState(false);
+  useEffect(() => {
+    if (!tripIsLive) { setBgPermissionLost(false); return; }
+    let cancelled = false;
+    const check = async () => {
+      try {
+        const { status } = await Location.getBackgroundPermissionsAsync();
+        if (!cancelled) setBgPermissionLost(status !== 'granted');
+      } catch {
+        // expo-location unavailable — nothing to recover, leave as-is
+      }
+    };
+    check();
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') check();
+    });
+    return () => { cancelled = true; sub.remove(); };
+  }, [tripIsLive]);
+
   // Haversine used only for proximity-based phase transitions (fast, no network)
   const proximityM = useMemo(() => {
     if (!effectivePos || !nextCoords) return null;
@@ -181,7 +211,7 @@ export default function ShuttleTripActiveScreen() {
   const [passengerStatuses, setPassengerStatuses] = useState<Record<string, PassengerStatus>>({});
   const [isArrivingLoading, setIsArrivingLoading] = useState(false);
   const [isNextLoading, setIsNextLoading] = useState(false);
-  const [failedStationActions, setFailedStationActions] = useState<{ id: string; name: string; action: 'boarded' | 'no_show' }[]>([]);
+  const [failedStationActions, setFailedStationActions] = useState<{ id: string; name: string; action: 'boarded' | 'no_show'; unpaid?: boolean }[]>([]);
   const [focusTarget, setFocusTarget] = useState<{ latitude: number; longitude: number; zoom: number } | null>(null);
   const [shareBusy, setShareBusy] = useState(false);
   const [shareLink, setShareLink] = useState<{ id: number; url: string } | null>(null);
@@ -413,7 +443,7 @@ export default function ShuttleTripActiveScreen() {
     }
   }, [tripId, stationId, isArrivingLoading, nextCoords, t, fetchStationEtas]);
 
-  const handleNextStop = useCallback(async (retryOnly?: { id: string; action: 'boarded' | 'no_show' }[]) => {
+  const handleNextStop = useCallback(async (retryOnly?: { id: string; action: 'boarded' | 'no_show'; unpaid?: boolean }[]) => {
     if (isNextLoading) return;
     setIsNextLoading(true);
     try {
@@ -434,12 +464,18 @@ export default function ShuttleTripActiveScreen() {
         }));
         const absentResults = await Promise.allSettled(absentIds.map(id => endpoints.shuttle.noShowBooking(id)));
 
-        // Task: surface per-passenger failures instead of silently continuing
-        const failed: { id: string; name: string; action: 'boarded' | 'no_show' }[] = [];
+        // Task: surface per-passenger failures instead of silently continuing.
+        // C1 follow-up: the backend rejects boarding an electronic booking
+        // whose payment isn't confirmed yet with code PAYMENT_NOT_CONFIRMED
+        // (a real, expected outcome — not a network/server error) — called
+        // out separately so the driver knows to collect cash or wait for the
+        // payment instead of just retrying the same call again.
+        const failed: { id: string; name: string; action: 'boarded' | 'no_show'; unpaid?: boolean }[] = [];
         boardResults.forEach((r, i) => {
           if (r.status === 'rejected') {
             const id = boardedIds[i];
-            failed.push({ id, name: passengers.find(px => px.id === id)?.name ?? id, action: 'boarded' });
+            const code = (r.reason as { response?: { data?: { code?: string } } } | undefined)?.response?.data?.code;
+            failed.push({ id, name: passengers.find(px => px.id === id)?.name ?? id, action: 'boarded', unpaid: code === 'PAYMENT_NOT_CONFIRMED' });
           }
         });
         absentResults.forEach((r, i) => {
@@ -451,9 +487,15 @@ export default function ShuttleTripActiveScreen() {
 
         if (failed.length > 0) {
           setFailedStationActions(failed);
+          const unpaidNames = failed.filter(f => f.unpaid).map(f => f.name);
+          const otherNames = failed.filter(f => !f.unpaid).map(f => f.name);
+          const messageParts = [
+            unpaidNames.length > 0 ? t.boarding_unpaid_fail_msg.replace('{names}', unpaidNames.join(', ')) : null,
+            otherNames.length > 0 ? t.boarding_partial_fail_msg.replace('{names}', otherNames.join(', ')) : null,
+          ].filter(Boolean);
           showAlert(
             t.boarding_partial_fail_title,
-            t.boarding_partial_fail_msg.replace('{names}', failed.map(f => f.name).join(', ')),
+            messageParts.join('\n\n'),
             [
               { text: t.cancel, style: 'cancel' },
               { text: t.retry_label, onPress: () => { handleNextStop(failed); } },
@@ -507,6 +549,14 @@ export default function ShuttleTripActiveScreen() {
       const result = await endpoints.trips.complete(tripId) as ShuttleCompleteResponse;
       const earned = result?.earnedAmount ?? result?.data?.earnedAmount;
       const balance = result?.walletBalance ?? result?.data?.walletBalance;
+      // Don't rely solely on the backend's SHUTTLE_TRIP_STATUS socket
+      // broadcast to refresh these — on a dropped/reconnecting socket (common
+      // on cellular handoff right as a trip wraps up), the just-completed
+      // trip could still show as in-progress back on the home/lines screens
+      // until some unrelated event happened to invalidate them.
+      queryClient.invalidateQueries({ queryKey: ['shuttle-driver-trips'] });
+      queryClient.invalidateQueries({ queryKey: ['shuttle-lines'] });
+      queryClient.invalidateQueries({ queryKey: ['shuttle-my-bookings'] });
       router.replace({
         pathname: '/shuttle/trip-complete' as any,
         params: {
@@ -631,6 +681,23 @@ export default function ShuttleTripActiveScreen() {
               <Text style={[styles.gpsBlockRetryText, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>
                 {t.ive_enabled_it}
               </Text>
+            </Pressable>
+          </GlassView>
+        </View>
+      )}
+
+      {/* Background-location-lost banner (M19): non-blocking — foreground GPS
+          still works, so the trip can continue — but the passenger-facing
+          broadcast goes stale the moment the app backgrounds until fixed. */}
+      {tripIsLive && !gpsPermissionDenied && bgPermissionLost && (
+        <View style={[styles.bgLostBanner, { top: topPad + 8 }]} pointerEvents="box-none">
+          <GlassView strong style={styles.bgLostBannerCard} borderRadius={16}>
+            <AlertTriangle size={18} color="#F5A623" strokeWidth={2} />
+            <Text style={[styles.bgLostBannerText, { color: colors.foreground, fontFamily: 'Inter_600SemiBold' }]} numberOfLines={2}>
+              {t.bg_loc_lost_during_trip}
+            </Text>
+            <Pressable onPress={() => Linking.openSettings().catch(() => {})}>
+              <Text style={[styles.bgLostBannerBtn, { fontFamily: 'Inter_700Bold' }]}>{t.open_settings}</Text>
             </Pressable>
           </GlassView>
         </View>
@@ -909,10 +976,10 @@ type AtStopSheetProps = {
   onConfirmPassengerInstapay: (bookingId: string) => void;
   isLastStop: boolean;
   isNextLoading: boolean;
-  failedStationActions: { id: string; name: string; action: 'boarded' | 'no_show' }[];
+  failedStationActions: { id: string; name: string; action: 'boarded' | 'no_show'; unpaid?: boolean }[];
   lastStopProcessingRef: React.MutableRefObject<boolean>;
   onFinishRoute: () => void | Promise<void>;
-  onNextStop: (retryOnly?: { id: string; action: 'boarded' | 'no_show' }[]) => void | Promise<void>;
+  onNextStop: (retryOnly?: { id: string; action: 'boarded' | 'no_show'; unpaid?: boolean }[]) => void | Promise<void>;
 };
 
 const AtStopSheet = React.memo(function AtStopSheet({
@@ -1135,6 +1202,12 @@ function makeStyles(S: SplitColors) {
   gpsBlockBtnText: { color: '#fff', fontSize: 15 },
   gpsBlockRetryBtn: { paddingVertical: 10 },
   gpsBlockRetryText: { fontSize: 13 },
+
+  // Background-location-lost banner (M19)
+  bgLostBanner: { position: 'absolute', left: Spacing.lg, right: Spacing.lg, zIndex: 90, elevation: 90 },
+  bgLostBannerCard: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12 },
+  bgLostBannerText: { flex: 1, fontSize: 12.5, lineHeight: 17 },
+  bgLostBannerBtn: { fontSize: 12.5, color: '#3D52D5' },
 
   // Top bar
   topBar: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, paddingHorizontal: Spacing.lg },
