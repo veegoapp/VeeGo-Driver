@@ -50,6 +50,9 @@ export default function ShuttleHomeScreen() {
   const [online, setOnline] = useState(false);
   const [onlineLoading, setOnlineLoading] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  // Session-dismissible, like the other Home banners below — comes back next
+  // app open as long as driver.lowRatingWarningSent is still true server-side.
+  const [ratingWarningDismissed, setRatingWarningDismissed] = useState(false);
 
   // Fix 2: shuttle check-in state
   const [shuttleCheckinRequired, setShuttleCheckinRequired] = useState<{ tripId: string; deadlineMinutes: number } | null>(null);
@@ -406,6 +409,26 @@ export default function ShuttleHomeScreen() {
               <Text style={[styles.statCap, { fontFamily: 'Inter_700Bold' }]}>{t.active}</Text>
             </View>
           </View>
+
+          {/* Low-rating warning banner — set by driver-rating-suspension.ts on
+              the backend once the driver's rolling rating (shuttle ratings
+              included, see shuttleService.ts submitShuttleRating) drifts into
+              the warning band, before it reaches the auto-suspend threshold. */}
+          {!ratingWarningDismissed && driverData?.lowRatingWarningSent === true && (
+            <View style={[styles.banner, { backgroundColor: '#FEF2F2', borderColor: '#FCA5A5' }]}>
+              <Pressable onPress={() => router.push('/ratings')} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+                <AlertTriangle size={16} color={C_RED} strokeWidth={2} />
+                <Text style={[styles.bannerText, { color: '#B91C1C', fontFamily: 'Inter_600SemiBold', flex: 1 }]}>
+                  {t.rating_warning_banner_body
+                    .replace('{rating}', driverData?.rating != null ? parseFloat(String(driverData.rating)).toFixed(2) : '—')
+                    .replace('{threshold}', '4.0')}
+                </Text>
+              </Pressable>
+              <Pressable onPress={() => setRatingWarningDismissed(true)} hitSlop={8}>
+                <X size={16} color={C_RED} strokeWidth={2} />
+              </Pressable>
+            </View>
+          )}
 
           {/* Fix 2: check-in pending banner */}
           {!!shuttleCheckinRequired && (
