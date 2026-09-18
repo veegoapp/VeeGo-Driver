@@ -1,12 +1,21 @@
+import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { AlertOctagon, HeadphonesIcon } from 'lucide-react-native';
+import { AlertOctagon, HeadphonesIcon, Star } from 'lucide-react-native';
 import React from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '@/lib/i18nContext';
+import { endpoints } from '@/lib/api';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 import { Shadows } from '@/constants/shadows';
+
+// Rating-triggered suspensions (driver.suspensionReason === 'low_rating_threshold',
+// set by driver-rating-suspension.ts on the backend) get their own title/body
+// with the actual rating value — everything else (admin/no-show) falls back to
+// the generic "contact support" copy this screen always showed.
+const LOW_RATING_REASON = 'low_rating_threshold';
+const LOW_RATING_BAN_THRESHOLD = '3.0';
 
 export default function SuspendedScreen() {
   const insets = useSafeAreaInsets();
@@ -14,13 +23,29 @@ export default function SuspendedScreen() {
   const botPad = insets.bottom;
   const { t } = useI18n();
 
+  const { data: me } = useQuery<any>({
+    queryKey: ['driver', 'me'],
+    queryFn: endpoints.driver.me,
+    retry: 1,
+  });
+
+  const isLowRating = me?.suspensionReason === LOW_RATING_REASON;
+  const title = isLowRating ? t.low_rating_suspended_title : t.account_suspended_title;
+  const body = isLowRating
+    ? t.low_rating_suspended_body
+        .replace('{rating}', typeof me?.rating === 'number' ? me.rating.toFixed(2) : '—')
+        .replace('{threshold}', LOW_RATING_BAN_THRESHOLD)
+    : t.account_suspended_body;
+
   return (
     <View style={[s.root, { paddingTop: topPad, paddingBottom: botPad + 24 }]}>
       <View style={s.iconWrap}>
-        <AlertOctagon size={64} color="#ef4444" strokeWidth={1.5} />
+        {isLowRating
+          ? <Star size={64} color="#ef4444" strokeWidth={1.5} />
+          : <AlertOctagon size={64} color="#ef4444" strokeWidth={1.5} />}
       </View>
-      <Text style={s.title}>{t.account_suspended_title}</Text>
-      <Text style={s.body}>{t.account_suspended_body}</Text>
+      <Text style={s.title}>{title}</Text>
+      <Text style={s.body}>{body}</Text>
       <Pressable
         style={s.btn}
         onPress={() => router.push('/support')}
