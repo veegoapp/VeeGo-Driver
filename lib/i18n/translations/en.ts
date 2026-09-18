@@ -697,6 +697,9 @@ export const en = {
   account_suspended_body: 'Your account has been suspended due to repeated absences. Contact support to reactivate.',
   low_rating_suspended_title: 'Account Suspended – Low Rating',
   low_rating_suspended_body: 'Your rating has dropped to {rating}, below the platform minimum of {threshold}. Your account has been suspended. Contact support to review.',
+  // ── Home screen: low-rating warning banner ──────────────────────────────────
+  rating_warning_banner_title: 'Your rating is at risk',
+  rating_warning_banner_body: 'Your current rating is {rating}. If it drops below {threshold}, your account will be suspended.',
   // ── Criminal record required screen ─────────────────────────────────────────
   criminal_record_required_title: 'Criminal Record Certificate Required',
   criminal_record_required_body: 'You have completed {trips} trips. To keep driving with VeeGo, you must upload a valid criminal record certificate. Your account will stay offline until you upload it and it is approved.',
