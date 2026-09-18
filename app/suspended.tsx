@@ -15,7 +15,7 @@ import { Shadows } from '@/constants/shadows';
 // with the actual rating value — everything else (admin/no-show) falls back to
 // the generic "contact support" copy this screen always showed.
 const LOW_RATING_REASON = 'low_rating_threshold';
-const LOW_RATING_BAN_THRESHOLD = '3.0';
+const LOW_RATING_BAN_THRESHOLD = '4.0';
 
 export default function SuspendedScreen() {
   const insets = useSafeAreaInsets();
