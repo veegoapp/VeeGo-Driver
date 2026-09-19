@@ -697,6 +697,9 @@ export const ar: Translations = {
   account_suspended_body: 'تم إيقاف حسابك بسبب تكرار الغياب. تواصل مع الدعم لإعادة التفعيل.',
   low_rating_suspended_title: 'تم إيقاف حسابك بسبب انخفاض التقييم',
   low_rating_suspended_body: 'انخفض تقييمك إلى {rating}، وهو أقل من الحد الأدنى المسموح به ({threshold}). تم إيقاف حسابك مؤقتًا. تواصل مع الدعم لمراجعة الأمر.',
+  driver_restricted_toast: 'اتقيدت مؤقتًا من الاتصال بسبب كثرة الإلغاء بعد القبول. حاول تاني بعد حوالي {hours} ساعة.',
+  driver_excessive_cancellations_title: 'تم إيقاف حسابك بسبب كثرة الإلغاء',
+  driver_excessive_cancellations_body: 'تم إيقاف حسابك بسبب تكرار إلغاء الرحلات بعد قبولها. تواصل مع الدعم لمراجعة الأمر.',
   // ── Home screen: low-rating warning banner ──────────────────────────────────
   rating_warning_banner_title: 'تقييمك في خطر',
   rating_warning_banner_body: 'تقييمك الحالي {rating}. لو نزل تحت {threshold} هيتم إيقاف حسابك.',

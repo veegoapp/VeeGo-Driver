@@ -19,7 +19,7 @@ import { useFocusEffect } from 'expo-router';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
-import { endpoints, getClockOffsetMs } from '@/lib/api';
+import { endpoints, getClockOffsetMs, ApiError } from '@/lib/api';
 import { useShuttle } from '@/lib/shuttleContext';
 import { useReferral } from '@/lib/referralContext';
 import { useSocket } from '@/lib/socketContext';
@@ -308,7 +308,13 @@ export default function ShuttleHomeScreen() {
     } catch (err) {
       // API failed — keep current state so UI stays in sync with backend
       console.error('[StatusToggle] Failed to update driver status:', err);
-      showAlert(t.error, 'Failed to update status. Please try again.');
+      const body = err instanceof ApiError ? (err.body as { code?: string; restrictedUntil?: string } | null) : null;
+      if (body?.code === 'TEMPORARILY_RESTRICTED' && body.restrictedUntil) {
+        const hoursLeft = Math.max(1, Math.ceil((new Date(body.restrictedUntil).getTime() - Date.now()) / 3_600_000));
+        showAlert(t.error, t.driver_restricted_toast.replace('{hours}', String(hoursLeft)));
+      } else {
+        showAlert(t.error, 'Failed to update status. Please try again.');
+      }
     } finally {
       setOnlineLoading(false);
     }

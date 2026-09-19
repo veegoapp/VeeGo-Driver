@@ -697,6 +697,9 @@ export const en = {
   account_suspended_body: 'Your account has been suspended due to repeated absences. Contact support to reactivate.',
   low_rating_suspended_title: 'Account Suspended – Low Rating',
   low_rating_suspended_body: 'Your rating has dropped to {rating}, below the platform minimum of {threshold}. Your account has been suspended. Contact support to review.',
+  driver_restricted_toast: 'You\'re temporarily restricted from going online due to repeated cancellations after accepting. Try again in about {hours} hour(s).',
+  driver_excessive_cancellations_title: 'Account Suspended – Excessive Cancellations',
+  driver_excessive_cancellations_body: 'Your account has been suspended for repeatedly cancelling rides after accepting them. Please contact support.',
   // ── Home screen: low-rating warning banner ──────────────────────────────────
   rating_warning_banner_title: 'Your rating is at risk',
   rating_warning_banner_body: 'Your current rating is {rating}. If it drops below {threshold}, your account will be suspended.',

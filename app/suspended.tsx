@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { AlertOctagon, HeadphonesIcon, Star } from 'lucide-react-native';
+import { AlertOctagon, HeadphonesIcon, Star, Ban } from 'lucide-react-native';
 import React from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,6 +16,7 @@ import { Shadows } from '@/constants/shadows';
 // the generic "contact support" copy this screen always showed.
 const LOW_RATING_REASON = 'low_rating_threshold';
 const LOW_RATING_BAN_THRESHOLD = '4.0';
+const EXCESSIVE_CANCELLATIONS_REASON = 'excessive_cancellations';
 
 export default function SuspendedScreen() {
   const insets = useSafeAreaInsets();
@@ -30,19 +31,28 @@ export default function SuspendedScreen() {
   });
 
   const isLowRating = me?.suspensionReason === LOW_RATING_REASON;
-  const title = isLowRating ? t.low_rating_suspended_title : t.account_suspended_title;
+  const isExcessiveCancellations = me?.suspensionReason === EXCESSIVE_CANCELLATIONS_REASON;
+  const title = isLowRating
+    ? t.low_rating_suspended_title
+    : isExcessiveCancellations
+      ? t.driver_excessive_cancellations_title
+      : t.account_suspended_title;
   const body = isLowRating
     ? t.low_rating_suspended_body
         .replace('{rating}', typeof me?.rating === 'number' ? me.rating.toFixed(2) : '—')
         .replace('{threshold}', LOW_RATING_BAN_THRESHOLD)
-    : t.account_suspended_body;
+    : isExcessiveCancellations
+      ? t.driver_excessive_cancellations_body
+      : t.account_suspended_body;
 
   return (
     <View style={[s.root, { paddingTop: topPad, paddingBottom: botPad + 24 }]}>
       <View style={s.iconWrap}>
         {isLowRating
           ? <Star size={64} color="#ef4444" strokeWidth={1.5} />
-          : <AlertOctagon size={64} color="#ef4444" strokeWidth={1.5} />}
+          : isExcessiveCancellations
+            ? <Ban size={64} color="#ef4444" strokeWidth={1.5} />
+            : <AlertOctagon size={64} color="#ef4444" strokeWidth={1.5} />}
       </View>
       <Text style={s.title}>{title}</Text>
       <Text style={s.body}>{body}</Text>

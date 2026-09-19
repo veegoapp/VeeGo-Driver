@@ -37,7 +37,7 @@ import { maybePromptBatteryOptimization } from '@/lib/batteryOptimization';
 import { useRideSocket, type RideRequest } from '@/hooks/useRideSocket';
 import { useI18n } from '@/lib/i18nContext';
 import { useActiveSession } from '@/lib/activeSessionContext';
-import { endpoints } from '@/lib/api';
+import { endpoints, ApiError } from '@/lib/api';
 import { computeDeadlineMinutes, type CheckinRequiredPayload } from '@/lib/checkinDeadline';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
@@ -798,7 +798,13 @@ export default function HomeScreen() {
     } catch (err) {
       // API failed — revert to previous state and notify driver
       console.error('[StatusToggle] Failed to update driver status:', err);
-      showToastRef.current?.('Failed to update status. Please try again.', 'warning');
+      const body = err instanceof ApiError ? (err.body as { code?: string; restrictedUntil?: string } | null) : null;
+      if (body?.code === 'TEMPORARILY_RESTRICTED' && body.restrictedUntil) {
+        const hoursLeft = Math.max(1, Math.ceil((new Date(body.restrictedUntil).getTime() - Date.now()) / 3_600_000));
+        showToastRef.current?.(t.driver_restricted_toast.replace('{hours}', String(hoursLeft)), 'warning');
+      } else {
+        showToastRef.current?.('Failed to update status. Please try again.', 'warning');
+      }
     } finally {
       setTogglingOnline(false);
     }
