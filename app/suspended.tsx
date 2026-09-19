@@ -58,7 +58,10 @@ export default function SuspendedScreen() {
       <Text style={s.body}>{body}</Text>
       <Pressable
         style={s.btn}
-        onPress={() => router.push('/support')}
+        onPress={() => router.push({
+          pathname: '/support',
+          params: { category: 'suspension_appeal', prefill: t.suspension_appeal_prefill.replace('{title}', title) },
+        })}
         accessibilityRole="button"
       >
         <HeadphonesIcon size={18} color="#fff" strokeWidth={2} />

@@ -700,6 +700,7 @@ export const ar: Translations = {
   driver_restricted_toast: 'اتقيدت مؤقتًا من الاتصال بسبب كثرة الإلغاء بعد القبول. حاول تاني بعد حوالي {hours} ساعة.',
   driver_excessive_cancellations_title: 'تم إيقاف حسابك بسبب كثرة الإلغاء',
   driver_excessive_cancellations_body: 'تم إيقاف حسابك بسبب تكرار إلغاء الرحلات بعد قبولها. تواصل مع الدعم لمراجعة الأمر.',
+  suspension_appeal_prefill: 'أنا حسابي متوقف ({title}) وعايز أتظلم من القرار ده. السبب: ',
   // ── Home screen: low-rating warning banner ──────────────────────────────────
   rating_warning_banner_title: 'تقييمك في خطر',
   rating_warning_banner_body: 'تقييمك الحالي {rating}. لو نزل تحت {threshold} هيتم إيقاف حسابك.',
@@ -1303,6 +1304,7 @@ export const ar: Translations = {
   support_cat_quality: 'جودة الرحلة',
   support_cat_refund: 'طلب استرداد',
   support_cat_lost_found: 'مفقودات ومعثورات',
+  support_cat_suspension_appeal: 'تظلم من إيقاف الحساب',
   support_cat_other: 'أخرى',
   // ── i18n audit additions (2026-08-15) ─────────────────────────────────────────
   cancel_trip_title: 'إلغاء الرحلة',

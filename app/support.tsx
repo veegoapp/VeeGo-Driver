@@ -1,11 +1,11 @@
 import { showAlert } from '@/lib/alert';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import {
   ArrowLeft, Camera, Check, ChevronDown, ChevronUp,
   MapPin, Send, X,
 } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator, Image, Pressable, ScrollView,
   StyleSheet, Text, TextInput, View,
@@ -23,7 +23,7 @@ import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
 import type { RideHistoryItem } from '@/lib/api/types';
 
-type SupportCategory = 'payment' | 'safety' | 'quality' | 'refund' | 'lost_found' | 'other';
+type SupportCategory = 'payment' | 'safety' | 'quality' | 'refund' | 'lost_found' | 'suspension_appeal' | 'other';
 type TopicKey = 'payments' | 'account' | 'trip' | 'vehicle' | 'safety' | 'app';
 type TicketStep = 0 | 1 | 2 | 3;
 
@@ -39,6 +39,13 @@ export default function SupportScreen() {
   const R  = 'row' as const;
   const TA = isRTL ? 'right' as const      : 'left' as const;
 
+  // /suspended's "Contact Support" button deep-links here with
+  // category=suspension_appeal so a driver appealing an automated
+  // rating/cancellation suspension lands straight on the description step,
+  // pre-filled and already categorized, instead of clicking through FAQ ->
+  // trip select -> category picker for something that isn't trip-related.
+  const { category: deepLinkCategory, prefill: deepLinkPrefill } = useLocalSearchParams<{ category?: string; prefill?: string }>();
+
   // ── FAQ accordion ──────────────────────────────────────────────
   const [expandedFaq, setExpandedFaq] = useState<TopicKey | null>(null);
 
@@ -51,6 +58,14 @@ export default function SupportScreen() {
   const [failedCount,      setFailedCount]      = useState(0);
   const [isSubmitting,     setIsSubmitting]     = useState(false);
   const [submitted,        setSubmitted]        = useState(false);
+
+  useEffect(() => {
+    if (deepLinkCategory !== 'suspension_appeal') return;
+    setSelectedCategory('suspension_appeal');
+    setSelectedTripId('none');
+    if (deepLinkPrefill) setDescription(deepLinkPrefill);
+    setTicketStep(3);
+  }, [deepLinkCategory, deepLinkPrefill]);
 
   // ── Recent rides for trip-selection step ──────────────────────
   const { data: ridesRaw, isLoading: ridesLoading } = useQuery({
@@ -79,6 +94,7 @@ export default function SupportScreen() {
     { key: 'quality',   label: t.support_cat_quality   },
     { key: 'refund',    label: t.support_cat_refund    },
     { key: 'lost_found',label: t.support_cat_lost_found},
+    { key: 'suspension_appeal', label: t.support_cat_suspension_appeal },
     { key: 'other',     label: t.support_cat_other     },
   ];
 
@@ -117,7 +133,7 @@ export default function SupportScreen() {
         subject:  catLabel,
         message:  description.trim(),
         type:     'driver',
-        priority: 'medium',
+        priority: selectedCategory === 'suspension_appeal' ? 'high' : 'medium',
         category: selectedCategory,
         driverId: driverId ?? '',
         ...(tripRef ? { rideId: tripRef } : {}),
