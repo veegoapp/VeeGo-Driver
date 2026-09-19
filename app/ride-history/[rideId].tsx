@@ -44,7 +44,13 @@ export default function RideHistoryDetailScreen() {
   // GET /rides/:id endpoint app/trips/[tripId].tsx uses for its live map.
   const { data: fullRide, isLoading: mapLoading } = useQuery<any>({
     queryKey: ['ride-detail-coords', rideId],
-    queryFn: () => endpoints.rides.getById(rideId),
+    // GET /rides/:id wraps its payload as { data: {...} } — unwrap here so
+    // the mapCoords lookup below can read pickupLatitude/etc. straight off
+    // fullRide.
+    queryFn: async () => {
+      const res = await endpoints.rides.getById(rideId);
+      return (res as { data: unknown })?.data;
+    },
     enabled: !!rideId,
   });
 

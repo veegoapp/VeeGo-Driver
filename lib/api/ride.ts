@@ -187,7 +187,7 @@ export const supportEndpoints = {
     message: string;
     type: 'driver';
     priority: 'low' | 'medium' | 'high';
-    category: 'payment' | 'safety' | 'quality' | 'refund' | 'lost_found' | 'other';
+    category: 'payment' | 'safety' | 'quality' | 'refund' | 'lost_found' | 'suspension_appeal' | 'other';
     driverId: string | number;
   }) => api.post<{ id: number | string }>('/support/tickets', data),
 

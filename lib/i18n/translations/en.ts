@@ -695,6 +695,15 @@ export const en = {
   // ── Suspended screen ──────────────────────────────────────────────────────────
   account_suspended_title: 'Your Account is Suspended',
   account_suspended_body: 'Your account has been suspended due to repeated absences. Contact support to reactivate.',
+  low_rating_suspended_title: 'Account Suspended – Low Rating',
+  low_rating_suspended_body: 'Your rating has dropped to {rating}, below the platform minimum of {threshold}. Your account has been suspended. Contact support to review.',
+  driver_restricted_toast: 'You\'re temporarily restricted from going online due to repeated cancellations after accepting. Try again in about {hours} hour(s).',
+  driver_excessive_cancellations_title: 'Account Suspended – Excessive Cancellations',
+  driver_excessive_cancellations_body: 'Your account has been suspended for repeatedly cancelling rides after accepting them. Please contact support.',
+  suspension_appeal_prefill: 'My account has been suspended ({title}) and I would like to appeal this decision. Reason: ',
+  // ── Home screen: low-rating warning banner ──────────────────────────────────
+  rating_warning_banner_title: 'Your rating is at risk',
+  rating_warning_banner_body: 'Your current rating is {rating}. If it drops below {threshold}, your account will be suspended.',
   // ── Criminal record required screen ─────────────────────────────────────────
   criminal_record_required_title: 'Criminal Record Certificate Required',
   criminal_record_required_body: 'You have completed {trips} trips. To keep driving with VeeGo, you must upload a valid criminal record certificate. Your account will stay offline until you upload it and it is approved.',
@@ -1294,6 +1303,7 @@ export const en = {
   support_cat_quality: 'Trip Quality',
   support_cat_refund: 'Refund Request',
   support_cat_lost_found: 'Lost & Found',
+  support_cat_suspension_appeal: 'Suspension Appeal',
   support_cat_other: 'Other',
   // ── i18n audit additions (2026-08-15) ─────────────────────────────────────────
   cancel_trip_title: 'Cancel trip',

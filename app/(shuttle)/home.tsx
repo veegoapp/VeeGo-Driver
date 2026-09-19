@@ -19,7 +19,7 @@ import { useFocusEffect } from 'expo-router';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
-import { endpoints, getClockOffsetMs } from '@/lib/api';
+import { endpoints, getClockOffsetMs, ApiError } from '@/lib/api';
 import { useShuttle } from '@/lib/shuttleContext';
 import { useReferral } from '@/lib/referralContext';
 import { useSocket } from '@/lib/socketContext';
@@ -50,6 +50,9 @@ export default function ShuttleHomeScreen() {
   const [online, setOnline] = useState(false);
   const [onlineLoading, setOnlineLoading] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  // Session-dismissible, like the other Home banners below — comes back next
+  // app open as long as driver.lowRatingWarningSent is still true server-side.
+  const [ratingWarningDismissed, setRatingWarningDismissed] = useState(false);
 
   // Fix 2: shuttle check-in state
   const [shuttleCheckinRequired, setShuttleCheckinRequired] = useState<{ tripId: string; deadlineMinutes: number } | null>(null);
@@ -305,7 +308,13 @@ export default function ShuttleHomeScreen() {
     } catch (err) {
       // API failed — keep current state so UI stays in sync with backend
       console.error('[StatusToggle] Failed to update driver status:', err);
-      showAlert(t.error, 'Failed to update status. Please try again.');
+      const body = err instanceof ApiError ? (err.body as { code?: string; restrictedUntil?: string } | null) : null;
+      if (body?.code === 'TEMPORARILY_RESTRICTED' && body.restrictedUntil) {
+        const hoursLeft = Math.max(1, Math.ceil((new Date(body.restrictedUntil).getTime() - Date.now()) / 3_600_000));
+        showAlert(t.error, t.driver_restricted_toast.replace('{hours}', String(hoursLeft)));
+      } else {
+        showAlert(t.error, 'Failed to update status. Please try again.');
+      }
     } finally {
       setOnlineLoading(false);
     }
@@ -406,6 +415,26 @@ export default function ShuttleHomeScreen() {
               <Text style={[styles.statCap, { fontFamily: 'Inter_700Bold' }]}>{t.active}</Text>
             </View>
           </View>
+
+          {/* Low-rating warning banner — set by driver-rating-suspension.ts on
+              the backend once the driver's rolling rating (shuttle ratings
+              included, see shuttleService.ts submitShuttleRating) drifts into
+              the warning band, before it reaches the auto-suspend threshold. */}
+          {!ratingWarningDismissed && driverData?.lowRatingWarningSent === true && (
+            <View style={[styles.banner, { backgroundColor: '#FEF2F2', borderColor: '#FCA5A5' }]}>
+              <Pressable onPress={() => router.push('/ratings')} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+                <AlertTriangle size={16} color={C_RED} strokeWidth={2} />
+                <Text style={[styles.bannerText, { color: '#B91C1C', fontFamily: 'Inter_600SemiBold', flex: 1 }]}>
+                  {t.rating_warning_banner_body
+                    .replace('{rating}', driverData?.rating != null ? parseFloat(String(driverData.rating)).toFixed(2) : '—')
+                    .replace('{threshold}', '4.0')}
+                </Text>
+              </Pressable>
+              <Pressable onPress={() => setRatingWarningDismissed(true)} hitSlop={8}>
+                <X size={16} color={C_RED} strokeWidth={2} />
+              </Pressable>
+            </View>
+          )}
 
           {/* Fix 2: check-in pending banner */}
           {!!shuttleCheckinRequired && (

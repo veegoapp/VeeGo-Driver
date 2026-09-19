@@ -37,7 +37,7 @@ import { maybePromptBatteryOptimization } from '@/lib/batteryOptimization';
 import { useRideSocket, type RideRequest } from '@/hooks/useRideSocket';
 import { useI18n } from '@/lib/i18nContext';
 import { useActiveSession } from '@/lib/activeSessionContext';
-import { endpoints } from '@/lib/api';
+import { endpoints, ApiError } from '@/lib/api';
 import { computeDeadlineMinutes, type CheckinRequiredPayload } from '@/lib/checkinDeadline';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
@@ -118,6 +118,7 @@ export default function HomeScreen() {
   const [surgeZones, setSurgeZones] = useState<SurgeZone[]>([]);
   const [countdown, setCountdown] = useState(12);
   const [promoDismissed, setPromoDismissed] = useState(false);
+  const [ratingWarningDismissed, setRatingWarningDismissed] = useState(false);
   const topPad = insets.top;
   // Issue B: realtime socket location while Online and idle (no active ride).
   // Reuses the existing driver:location:update channel via useLocationBroadcast
@@ -797,7 +798,13 @@ export default function HomeScreen() {
     } catch (err) {
       // API failed — revert to previous state and notify driver
       console.error('[StatusToggle] Failed to update driver status:', err);
-      showToastRef.current?.('Failed to update status. Please try again.', 'warning');
+      const body = err instanceof ApiError ? (err.body as { code?: string; restrictedUntil?: string } | null) : null;
+      if (body?.code === 'TEMPORARILY_RESTRICTED' && body.restrictedUntil) {
+        const hoursLeft = Math.max(1, Math.ceil((new Date(body.restrictedUntil).getTime() - Date.now()) / 3_600_000));
+        showToastRef.current?.(t.driver_restricted_toast.replace('{hours}', String(hoursLeft)), 'warning');
+      } else {
+        showToastRef.current?.('Failed to update status. Please try again.', 'warning');
+      }
     } finally {
       setTogglingOnline(false);
     }
@@ -1014,6 +1021,39 @@ export default function HomeScreen() {
             )}
           </GlassView>
         </View>
+
+        {/* ── Low-rating warning banner — set by driver-rating-suspension.ts on
+            the backend once the driver's rolling rating drifts into the
+            warning band, before it reaches the auto-suspend threshold.
+            Session-dismissible like the promo card below, not persisted —
+            it comes back next app open as long as lowRatingWarningSent is
+            still true server-side. */}
+        {!ratingWarningDismissed && driverData?.lowRatingWarningSent === true && (
+          <View style={{ paddingHorizontal: Spacing.lg, marginTop: Spacing.sm }}>
+            <Pressable onPress={() => router.push('/ratings')}>
+              <GlassView strong style={styles.promoHomeInner} borderRadius={16}>
+                <View style={[styles.promoHomeBody, { flexDirection: R }]}>
+                  <View style={[styles.promoHomeIcon, { backgroundColor: '#ef444426' }]}>
+                    <Star size={16} color="#ef4444" strokeWidth={2} />
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={[styles.promoHomeTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', textAlign: TA }]} numberOfLines={1}>
+                      {t.rating_warning_banner_title}
+                    </Text>
+                    <Text style={[styles.promoHomeExpiry, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>
+                      {t.rating_warning_banner_body
+                        .replace('{rating}', driverData?.rating != null ? parseFloat(String(driverData.rating)).toFixed(2) : '—')
+                        .replace('{threshold}', '4.0')}
+                    </Text>
+                  </View>
+                  <Pressable onPress={() => setRatingWarningDismissed(true)} style={styles.promoHomeClose} hitSlop={8}>
+                    <X size={14} color={colors.mutedForeground} strokeWidth={2} />
+                  </Pressable>
+                </View>
+              </GlassView>
+            </Pressable>
+          </View>
+        )}
 
         {/* ── Active Promotions card — session-dismissible ─────────────── */}
         {!promoDismissed && activePromo !== null && (
