@@ -141,7 +141,7 @@ export default function RatePassengersScreen() {
     <View style={s.root}>
       <View style={[s.headerC, { paddingTop: topPad + 12 }]}>
         <Pressable onPress={() => router.back()} style={s.backBtnC}>
-          <ChevronLeft size={20} color="#ffffff" strokeWidth={2} />
+          <ChevronLeft size={20} color={S.ink} strokeWidth={2} />
         </Pressable>
         <Text style={s.headerCapC}>{t.trip_completed_title}</Text>
         <Text style={s.pageTitleC}>{t.rate_passengers_title}</Text>
@@ -222,12 +222,11 @@ function makeStyles(S: SplitColors) {
   root: { flex: 1, backgroundColor: S.bg },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.md, backgroundColor: S.bg },
 
-  // Dark header band
-  headerC: { backgroundColor: S.panel, paddingHorizontal: Spacing.lg, paddingBottom: 22, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
-  backBtnC: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.1)', marginBottom: 14 },
-  headerCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.4, color: S.capOnDark, textTransform: 'uppercase' },
-  pageTitleC: { fontSize: 22, fontFamily: 'Inter_700Bold', color: '#ffffff', marginTop: 6 },
-  pageSubC: { fontSize: Typography.size.sm, fontFamily: 'Inter_600SemiBold', color: '#B7BBC2', marginTop: 3 },
+  headerC: { paddingHorizontal: Spacing.lg, paddingBottom: 22 },
+  backBtnC: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: S.surfaceMuted, marginBottom: 14 },
+  headerCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.4, color: S.cap, textTransform: 'uppercase' },
+  pageTitleC: { fontSize: 22, fontFamily: 'Inter_700Bold', color: S.ink, marginTop: 6 },
+  pageSubC: { fontSize: Typography.size.sm, fontFamily: 'Inter_600SemiBold', color: S.cap, marginTop: 3 },
 
   // Passenger cards
   cardC: { backgroundColor: S.card, borderRadius: 18, padding: Spacing.lg, gap: 14 },

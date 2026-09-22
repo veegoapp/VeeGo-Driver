@@ -85,23 +85,25 @@ export default function TripCompleteScreen() {
     <View style={[styles.container, { paddingTop: topPad }]}>
       <ScrollView contentContainerStyle={styles.inner} showsVerticalScrollIndicator={false}>
 
-        {/* ── Dark hero band ────────────────────────────────────────────── */}
-        <Animated.View style={[styles.heroC, { opacity: fadeAnim }]}>
-          <Animated.View style={[styles.checkCircleC, { transform: [{ scale: scaleAnim }] }]}>
-            <Check size={28} color="#ffffff" strokeWidth={3} />
-          </Animated.View>
-          <Animated.View style={{ transform: [{ translateY: slideAnim }], alignItems: 'center' }}>
-            <Text style={styles.titleC}>{t.trip_completed_title}</Text>
-            <Text style={styles.subtitleC}>{t.trip_completed_sub}</Text>
+        {/* ── Ticket-stub card, on the page's normal background ──────────── */}
+        <Animated.View style={{ opacity: fadeAnim, paddingHorizontal: 20, paddingTop: 20 }}>
+          <View style={[styles.ticketCardC, { borderColor: S.hair, backgroundColor: S.card }]}>
+            <Animated.View style={[styles.checkCircleC, { transform: [{ scale: scaleAnim }] }]}>
+              <Check size={28} color="#ffffff" strokeWidth={3} />
+            </Animated.View>
+            <Animated.View style={{ transform: [{ translateY: slideAnim }], alignItems: 'center' }}>
+              <Text style={[styles.titleC, { color: S.ink }]}>{t.trip_completed_title}</Text>
+              <Text style={[styles.subtitleC, { color: S.cap }]}>{t.trip_completed_sub}</Text>
 
-            <Text style={styles.heroCapC}>{t.trip_earnings_label}</Text>
-            <View style={styles.heroRowC}>
-              <Text style={styles.heroAmountC}>
-                {earned != null ? earned.toLocaleString('ar-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
-              </Text>
-              <Text style={styles.heroCurC}>{t.egp}</Text>
-            </View>
-          </Animated.View>
+              <Text style={[styles.heroCapC, { color: S.cap }]}>{t.trip_earnings_label}</Text>
+              <View style={styles.heroRowC}>
+                <Text style={styles.heroAmountC}>
+                  {earned != null ? earned.toLocaleString('ar-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
+                </Text>
+                <Text style={styles.heroCurC}>{t.egp}</Text>
+              </View>
+            </Animated.View>
+          </View>
         </Animated.View>
 
         {/* ── White body ────────────────────────────────────────────────── */}
@@ -220,11 +222,13 @@ function makeStyles(S: SplitColors) {
   inner: { paddingBottom: Spacing.xl },
 
   // ── Dark hero band ──────────────────────────────────────────────────
-  heroC: { backgroundColor: S.panel, alignItems: 'center', paddingHorizontal: 28, paddingTop: 36, paddingBottom: 26, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
+  // Ticket-stub family: bordered, sharper-cornered card on the page's
+  // normal background, matching the Wallet/Earnings tabs' balance card.
+  ticketCardC: { borderWidth: 1, borderRadius: 10, alignItems: 'center', paddingHorizontal: 28, paddingVertical: 26 },
   checkCircleC: { width: 60, height: 60, borderRadius: 30, backgroundColor: S.teal, alignItems: 'center', justifyContent: 'center' },
-  titleC: { fontSize: 22, fontFamily: 'Inter_700Bold', color: '#ffffff', textAlign: 'center', marginTop: 16 },
-  subtitleC: { fontSize: Typography.size.sm, fontFamily: 'Inter_400Regular', color: '#B7BBC2', textAlign: 'center', marginTop: 4 },
-  heroCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.4, color: S.capOnDark, textAlign: 'center', marginTop: 22, textTransform: 'uppercase' },
+  titleC: { fontSize: 22, fontFamily: 'Inter_700Bold', textAlign: 'center', marginTop: 16 },
+  subtitleC: { fontSize: Typography.size.sm, fontFamily: 'Inter_400Regular', textAlign: 'center', marginTop: 4 },
+  heroCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.4, textAlign: 'center', marginTop: 22, textTransform: 'uppercase' },
   heroRowC: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', gap: 8, marginTop: 6 },
   heroAmountC: { fontSize: 42, fontFamily: 'Inter_700Bold', color: C_MINT, lineHeight: 44 },
   heroCurC: { fontSize: 16, fontFamily: 'Inter_700Bold', color: C_MINT },

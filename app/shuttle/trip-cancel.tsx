@@ -65,52 +65,55 @@ export default function TripCancelScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Dark hero: back button + cancel headline + penalty readout */}
-      <View style={[styles.heroC, { paddingTop: topPad + 8 }]}>
+      {/* Back button + route/time, then a ticket-stub card for the cancel
+          headline + penalty readout — on the page's normal background. */}
+      <View style={[styles.headerBarC, { paddingTop: topPad + 8 }]}>
         <View style={{ flexDirection: R, alignItems: 'center', justifyContent: 'space-between' }}>
-          <Pressable onPress={() => router.back()} style={styles.backBtnC} hitSlop={8}>
-            <ChevronLeft size={22} color="#ffffff" strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
+          <Pressable onPress={() => router.back()} style={[styles.backBtnC, { backgroundColor: S.surfaceMuted }]} hitSlop={8}>
+            <ChevronLeft size={22} color={S.ink} strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
           </Pressable>
-          <Text style={styles.heroCapC}>
+          <Text style={[styles.heroCapC, { color: S.cap }]}>
             {routeName ?? '—'} · {departureTime ?? '—'}
           </Text>
           <View style={{ width: 36 }} />
         </View>
 
-        <Text style={[styles.heroTitleC, { textAlign: TA }]}>{t.cancel_trip_action}?</Text>
-        <Text style={[styles.heroSubC, { textAlign: TA }]}>{fromStation ?? '—'} → {toStation ?? '—'}</Text>
+        <View style={[styles.ticketCardC, { borderColor: S.hair, backgroundColor: S.card }]}>
+          <Text style={[styles.heroTitleC, { color: S.ink, textAlign: TA }]}>{t.cancel_trip_action}?</Text>
+          <Text style={[styles.heroSubC, { color: S.cap, textAlign: TA }]}>{fromStation ?? '—'} → {toStation ?? '—'}</Text>
 
-        {/* Penalty readout — receipt style, right in the hero */}
-        {previewError ? (
-          <Pressable onPress={() => refetchPreview()} style={styles.heroReadoutC}>
-            <View style={{ flexDirection: R, alignItems: 'center', gap: 10 }}>
-              <AlertCircle size={16} color="#F3C6C2" strokeWidth={2} />
-              <Text style={[styles.heroReadoutTextC, { textAlign: TA, flex: 1 }]}>{t.cancel_penalty_check_failed}</Text>
+          {/* Penalty readout — receipt style, right in the card */}
+          {previewError ? (
+            <Pressable onPress={() => refetchPreview()} style={[styles.heroReadoutC, { backgroundColor: '#FEF2F2', borderColor: '#FCA5A5' }]}>
+              <View style={{ flexDirection: R, alignItems: 'center', gap: 10 }}>
+                <AlertCircle size={16} color="#DC2626" strokeWidth={2} />
+                <Text style={[styles.heroReadoutTextC, { color: '#DC2626', textAlign: TA, flex: 1 }]}>{t.cancel_penalty_check_failed}</Text>
+              </View>
+            </Pressable>
+          ) : previewLoading ? (
+            <View style={[styles.heroReadoutC, { backgroundColor: S.surfaceMuted, borderColor: 'transparent', flexDirection: R, alignItems: 'center', gap: 10 }]}>
+              <ActivityIndicator size="small" color={S.cap} />
+              <Text style={[styles.heroReadoutTextC, { color: S.cap }]}>{t.checking_penalty}</Text>
             </View>
-          </Pressable>
-        ) : previewLoading ? (
-          <View style={[styles.heroReadoutC, { flexDirection: R, alignItems: 'center', gap: 10 }]}>
-            <ActivityIndicator size="small" color="#B7BBC2" />
-            <Text style={styles.heroReadoutTextC}>{t.checking_penalty}</Text>
-          </View>
-        ) : previewData != null && (
-          <View style={[
-            styles.heroReadoutC,
-            { flexDirection: R, alignItems: 'center', justifyContent: 'space-between', backgroundColor: hasPenalty ? 'rgba(217,45,32,.16)' : 'rgba(61,220,151,.12)', borderColor: hasPenalty ? 'rgba(217,45,32,.35)' : 'rgba(61,220,151,.35)' },
-          ]}>
-            <View>
-              <Text style={[styles.heroReadoutCapC, { color: hasPenalty ? '#F3C6C2' : '#3DDC97', textAlign: TA }]}>
-                {t.cancellation_penalty_label}
+          ) : previewData != null && (
+            <View style={[
+              styles.heroReadoutC,
+              { flexDirection: R, alignItems: 'center', justifyContent: 'space-between', backgroundColor: hasPenalty ? '#FEF2F2' : '#EAFBF3', borderColor: hasPenalty ? '#FCA5A5' : '#BDF0D8' },
+            ]}>
+              <View>
+                <Text style={[styles.heroReadoutCapC, { color: hasPenalty ? '#DC2626' : S.teal, textAlign: TA }]}>
+                  {t.cancellation_penalty_label}
+                </Text>
+                {previewData.minutesUntilDeparture != null && (
+                  <Text style={[styles.heroReadoutSubC, { color: hasPenalty ? '#DC2626' : S.teal, textAlign: TA }]}>{previewData.minutesUntilDeparture}m left</Text>
+                )}
+              </View>
+              <Text style={[styles.heroReadoutValC, { color: hasPenalty ? '#DC2626' : S.teal }]}>
+                {hasPenalty ? previewData.penaltyAmount : 0} {t.egp}
               </Text>
-              {previewData.minutesUntilDeparture != null && (
-                <Text style={[styles.heroReadoutSubC, { textAlign: TA }]}>{previewData.minutesUntilDeparture}m left</Text>
-              )}
             </View>
-            <Text style={[styles.heroReadoutValC, { color: hasPenalty ? '#F3C6C2' : '#3DDC97' }]}>
-              {hasPenalty ? previewData.penaltyAmount : 0} {t.egp}
-            </Text>
-          </View>
-        )}
+          )}
+        </View>
       </View>
 
       <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 22 }}>
@@ -165,29 +168,24 @@ export default function TripCancelScreen() {
 function makeStyles(S: SplitColors) {
   return StyleSheet.create({
   container: { flex: 1, backgroundColor: S.bg },
-  heroC: {
-    backgroundColor: S.panel,
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: 22,
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
-  },
-  backBtnC: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.1)' },
-  heroCapC: { fontSize: 13, fontFamily: 'Inter_700Bold', color: '#ffffff' },
-  heroTitleC: { fontSize: 22, fontFamily: 'Inter_700Bold', color: '#ffffff', marginTop: 22 },
-  heroSubC: { fontSize: 13, fontFamily: 'Inter_600SemiBold', color: '#B7BBC2', marginTop: 4 },
+  headerBarC: { paddingHorizontal: Spacing.lg, paddingBottom: 22 },
+  // Ticket-stub family: bordered, sharper-cornered card on the page's
+  // normal background, matching the Wallet/Earnings tabs' balance card.
+  ticketCardC: { borderWidth: 1, borderRadius: 10, padding: 18, marginTop: 14 },
+  backBtnC: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  heroCapC: { fontSize: 13, fontFamily: 'Inter_700Bold' },
+  heroTitleC: { fontSize: 22, fontFamily: 'Inter_700Bold' },
+  heroSubC: { fontSize: 13, fontFamily: 'Inter_600SemiBold', marginTop: 4 },
   heroReadoutC: {
-    borderRadius: 16,
+    borderRadius: 12,
     borderWidth: 1,
     padding: 14,
     marginTop: 20,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderColor: 'transparent',
   },
   heroReadoutCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.2, textTransform: 'uppercase' },
-  heroReadoutSubC: { fontSize: 12, fontFamily: 'Inter_600SemiBold', color: '#B7BBC2', marginTop: 2 },
+  heroReadoutSubC: { fontSize: 12, fontFamily: 'Inter_600SemiBold', marginTop: 2 },
   heroReadoutValC: { fontSize: 22, fontFamily: 'Inter_700Bold' },
-  heroReadoutTextC: { fontSize: 13, fontFamily: 'Inter_700Bold', color: '#F3C6C2' },
+  heroReadoutTextC: { fontSize: 13, fontFamily: 'Inter_700Bold' },
   choiceTitleC: { fontSize: Typography.size.lg, fontFamily: 'Inter_700Bold', color: S.ink },
   optionCardC: {
     alignItems: 'center',

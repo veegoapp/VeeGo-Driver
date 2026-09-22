@@ -912,33 +912,35 @@ export default function RideScreen() {
           {completedStep === 'fare' ? (
             /* ── STEP 1 · Fare page (C) — dark hero band + white body ── */
             <View style={{ flex: 1 }}>
-              <View style={[styles.heroC, { paddingTop: insets.top + 24 }]}>
-                <Animated.View style={[styles.checkCircleC, { transform: [{ scale: checkScale }] }]}>
-                  <Check size={32} color="#ffffff" strokeWidth={3} />
-                </Animated.View>
-                <Text style={styles.pageTitleC}>{t.trip_done_title}</Text>
+              <View style={{ paddingTop: insets.top + 24, paddingHorizontal: 20 }}>
+                <View style={[styles.ticketCardC, { borderColor: S.hair, backgroundColor: S.card }]}>
+                  <Animated.View style={[styles.checkCircleC, { transform: [{ scale: checkScale }] }]}>
+                    <Check size={32} color="#ffffff" strokeWidth={3} />
+                  </Animated.View>
+                  <Text style={[styles.pageTitleC, { color: S.ink }]}>{t.trip_done_title}</Text>
 
-                {completionResult != null && (
-                  <>
-                    <Text style={styles.heroCapC}>
-                      {completionResult.netCashPayable > 0 ? t.cash_to_collect : t.added_to_earnings}
-                    </Text>
-                    <View style={styles.heroRowC}>
-                      <Text style={styles.heroAmountC}>
-                        {(completionResult.netCashPayable > 0 ? completionResult.netCashPayable : completionResult.driverCut).toFixed(2)}
+                  {completionResult != null && (
+                    <>
+                      <Text style={[styles.heroCapC, { color: S.cap }]}>
+                        {completionResult.netCashPayable > 0 ? t.cash_to_collect : t.added_to_earnings}
                       </Text>
-                      <Text style={styles.heroCurC}>{t.egp}</Text>
-                    </View>
-                    {completionResult.netCashPayable > 0 && (
-                      <Text style={styles.heroNoteC}>
-                        {t.added_to_earnings} · {completionResult.driverCut.toFixed(2)} {t.egp}
-                      </Text>
-                    )}
-                    <Pressable onPress={() => setViewDetailsOpen(true)} style={styles.viewDetailsBtnC} accessibilityLabel={t.view_details}>
-                      <Text style={styles.viewDetailsTxtC}>{t.view_details}</Text>
-                    </Pressable>
-                  </>
-                )}
+                      <View style={styles.heroRowC}>
+                        <Text style={styles.heroAmountC}>
+                          {(completionResult.netCashPayable > 0 ? completionResult.netCashPayable : completionResult.driverCut).toFixed(2)}
+                        </Text>
+                        <Text style={styles.heroCurC}>{t.egp}</Text>
+                      </View>
+                      {completionResult.netCashPayable > 0 && (
+                        <Text style={[styles.heroNoteC, { color: S.cap }]}>
+                          {t.added_to_earnings} · {completionResult.driverCut.toFixed(2)} {t.egp}
+                        </Text>
+                      )}
+                      <Pressable onPress={() => setViewDetailsOpen(true)} style={styles.viewDetailsBtnC} accessibilityLabel={t.view_details}>
+                        <Text style={styles.viewDetailsTxtC}>{t.view_details}</Text>
+                      </Pressable>
+                    </>
+                  )}
+                </View>
               </View>
 
               <ScrollView
@@ -1006,17 +1008,17 @@ export default function RideScreen() {
             /* ── STEP 2 · Rating card (C) — dark header row + white body ── */
             <View style={styles.ratingWrapC}>
               <View style={styles.ratingCardC}>
-                <View style={styles.ratingHeaderC}>
+                <View style={[styles.ratingHeaderC, { backgroundColor: S.card, borderBottomColor: S.hair }]}>
                   {passengerAvatar && !riderAvatarFailed ? (
                     <Image source={{ uri: passengerAvatar }} style={styles.ratingAvatarC} resizeMode="cover" />
                   ) : (
-                    <View style={[styles.ratingAvatarC, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#26272E' }]}>
-                      <Text style={{ color: '#ffffff', fontSize: 18, fontFamily: 'Inter_700Bold' }}>{passengerInitials}</Text>
+                    <View style={[styles.ratingAvatarC, { justifyContent: 'center', alignItems: 'center', backgroundColor: S.surfaceMuted }]}>
+                      <Text style={{ color: S.ink, fontSize: 18, fontFamily: 'Inter_700Bold' }}>{passengerInitials}</Text>
                     </View>
                   )}
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={styles.ratingCapC}>{t.trip_done_title}</Text>
-                    <Text style={styles.ratingTitleC} numberOfLines={1}>
+                    <Text style={[styles.ratingCapC, { color: S.cap }]}>{t.trip_done_title}</Text>
+                    <Text style={[styles.ratingTitleC, { color: S.ink }]} numberOfLines={1}>
                       {t.rate_rider_label.replace('{name}', passengerName ?? '—')}
                     </Text>
                   </View>
@@ -1272,7 +1274,7 @@ export default function RideScreen() {
       <Modal visible={confirmChangeOpen} transparent animationType="fade" onRequestClose={handleCancelConfirmChange}>
         <View style={styles.modalBackdrop}>
           <View style={styles.changeCardC}>
-            <View style={styles.changeHeroC}>
+            <View style={[styles.changeHeroC, { borderBottomColor: S.hair }]}>
               <Text style={styles.changeCapC}>{t.change_to_wallet_label}</Text>
               <View style={styles.changeHeroRow}>
                 <Text style={styles.changeHeroAmt}>{Math.max(0, computedChange).toFixed(2)}</Text>
@@ -1460,14 +1462,16 @@ function makeStyles(S: SplitColors) {
 
   /* ── "C" post-trip fare page + rating card — dark panel/band + white body ── */
   completedOverlayC: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: S.bg, zIndex: 1000 },
-  heroC: { backgroundColor: '#14151A', paddingHorizontal: 26, paddingBottom: 22, alignItems: 'center', borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
+  // Ticket-stub family: bordered, sharper-cornered card on the page's
+  // normal background, matching the Wallet/Earnings tabs' balance card.
+  ticketCardC: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 26, paddingVertical: 26, alignItems: 'center' },
   checkCircleC: { width: 60, height: 60, borderRadius: 30, backgroundColor: S.teal, alignItems: 'center', justifyContent: 'center', alignSelf: 'center' },
-  pageTitleC: { fontSize: 22, fontFamily: 'Inter_700Bold', color: '#ffffff', textAlign: 'center', marginTop: 16 },
-  heroCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.4, color: S.capOnDark, textAlign: 'center', marginTop: 22, textTransform: 'uppercase' },
+  pageTitleC: { fontSize: 22, fontFamily: 'Inter_700Bold', textAlign: 'center', marginTop: 16 },
+  heroCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.4, textAlign: 'center', marginTop: 22, textTransform: 'uppercase' },
   heroRowC: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', gap: 8, marginTop: 6 },
   heroAmountC: { fontSize: 48, fontFamily: 'Inter_700Bold', color: S.teal, lineHeight: 50 },
   heroCurC: { fontSize: 18, fontFamily: 'Inter_700Bold', color: S.teal },
-  heroNoteC: { fontSize: 13, fontFamily: 'Inter_600SemiBold', color: '#B7BBC2', textAlign: 'center', marginTop: 8 },
+  heroNoteC: { fontSize: 13, fontFamily: 'Inter_600SemiBold', textAlign: 'center', marginTop: 8 },
   viewDetailsBtnC: { alignSelf: 'center', marginTop: 6, paddingVertical: 4, paddingHorizontal: 8 },
   viewDetailsTxtC: { fontSize: 13, fontFamily: 'Inter_700Bold', color: S.teal, textDecorationLine: 'underline' },
   bodyNoteC: { fontSize: 13, fontFamily: 'Inter_600SemiBold', color: S.inkSoft, textAlign: 'center', marginTop: 4 },
@@ -1478,10 +1482,10 @@ function makeStyles(S: SplitColors) {
   primaryBtnTxtC: { color: '#ffffff', fontSize: 15, fontFamily: 'Inter_700Bold', letterSpacing: 0.3 },
   ratingWrapC: { flex: 1, justifyContent: 'flex-end' },
   ratingCardC: { borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: 'hidden' },
-  ratingHeaderC: { backgroundColor: '#14151A', flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 24, paddingVertical: 24 },
+  ratingHeaderC: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 24, paddingVertical: 24, borderBottomWidth: 1, borderStyle: 'dashed' },
   ratingAvatarC: { width: 52, height: 52, borderRadius: 26 },
-  ratingCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.4, color: S.capOnDark, textTransform: 'uppercase' },
-  ratingTitleC: { fontSize: 18, fontFamily: 'Inter_700Bold', color: '#ffffff', marginTop: 4 },
+  ratingCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.4, textTransform: 'uppercase' },
+  ratingTitleC: { fontSize: 18, fontFamily: 'Inter_700Bold', marginTop: 4 },
   ratingBodyC: { backgroundColor: S.card, padding: 24 },
   starsRowC: { flexDirection: 'row', justifyContent: 'center', gap: 14 },
   commentInputC: { alignSelf: 'stretch', borderWidth: 1, borderColor: S.hair, borderRadius: 14, backgroundColor: S.surfaceMuted, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, fontFamily: 'Inter_400Regular', marginTop: 22, minHeight: 60, textAlignVertical: 'top', color: S.ink },
@@ -1490,11 +1494,11 @@ function makeStyles(S: SplitColors) {
 
   /* ── "D" change-confirm card ── */
   changeCardC: { width: '100%', borderRadius: 24, overflow: 'hidden', backgroundColor: S.card },
-  changeHeroC: { backgroundColor: '#14151A', paddingVertical: 22, alignItems: 'center' },
+  changeHeroC: { paddingVertical: 22, alignItems: 'center', borderBottomWidth: 1, borderStyle: 'dashed' },
   changeCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.4, color: S.cap, textTransform: 'uppercase' },
   changeHeroRow: { flexDirection: 'row', alignItems: 'baseline', gap: 7, marginTop: 8 },
   changeHeroAmt: { fontSize: 44, fontFamily: 'Inter_700Bold', color: C_MINT, lineHeight: 46 },
-  changeHeroCur: { fontSize: 16, fontFamily: 'Inter_700Bold', color: '#8A9096' },
+  changeHeroCur: { fontSize: 16, fontFamily: 'Inter_700Bold', color: S.cap },
   changeBodyC: { padding: 20 },
   cRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 13 },
   cLabel: { fontSize: 14, fontFamily: 'Inter_600SemiBold', color: S.inkSoft },
