@@ -67,7 +67,14 @@ export default function RideHistoryTabScreen() {
     if (page === 1) {
       setAllRides(newRides);
     } else {
-      setAllRides(prev => [...prev, ...newRides]);
+      // Dedupe by id: a background refetch of an already-loaded page (e.g.
+      // returning to this screen after the 30s staleTime elapses) re-fires
+      // this effect with `rawData` for the same `page`, which would
+      // otherwise append the same rides a second time.
+      setAllRides(prev => {
+        const seen = new Set(prev.map(r => r.id));
+        return [...prev, ...newRides.filter(r => !seen.has(r.id))];
+      });
     }
   }, [rawData, page]);
 
