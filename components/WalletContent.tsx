@@ -231,11 +231,6 @@ export function WalletContent() {
               <Text style={[styles.heroStatValue, { color: C_MINT, fontFamily: 'Inter_800ExtraBold' }]}>{balanceData.totalPaid.toFixed(0)}</Text>
               <Text style={[styles.heroStatCap, { fontFamily: 'Inter_700Bold' }]}>{t.status_paid_out}</Text>
             </View>
-            <View style={styles.heroDivider} />
-            <View style={styles.heroStatCell}>
-              <Text style={[styles.heroStatValue, { fontFamily: 'Inter_800ExtraBold' }]}>{balanceData.totalPending.toFixed(0)}</Text>
-              <Text style={[styles.heroStatCap, { fontFamily: 'Inter_700Bold' }]}>{t.status_pending}</Text>
-            </View>
           </View>
 
           <View style={[styles.actionRow, { flexDirection: 'row' }]}>
@@ -298,7 +293,6 @@ export function WalletContent() {
           ) : (
             <View style={styles.listCard}>
               <SummaryRow label={t.status_confirmed} value={`+${parseFloat(summary?.summary?.totalConfirmed ?? '0').toFixed(2)} ${t.egp}`} color={S.teal} S={S} />
-              <SummaryRow label={t.status_pending} value={`+${parseFloat(summary?.summary?.totalPending ?? '0').toFixed(2)} ${t.egp}`} color={S.teal} S={S} />
               <SummaryRow label={t.status_paid_out} value={`${parseFloat(summary?.summary?.totalPaid ?? '0').toFixed(2)} ${t.egp}`} color={S.ink} S={S} />
               <SummaryRow label={t.net_earnings} value={`${parseFloat(summary?.summary?.totalEarnings ?? '0').toFixed(2)} ${t.egp}`} color={S.ink} bold S={S} last />
             </View>
@@ -413,7 +407,6 @@ function makeStyles(S: SplitColors) {
   heroStatCell: { flex: 1, alignItems: 'center' },
   heroStatValue: { fontSize: 15, color: '#fff' },
   heroStatCap: { fontSize: 9, letterSpacing: 1, textTransform: 'uppercase', color: S.capOnDark, marginTop: 2 },
-  heroDivider: { width: 1, backgroundColor: 'rgba(255,255,255,.12)' },
   actionRow: { gap: 10, marginTop: 20 },
   // Fixed (not theme-adaptive): this pill sits on the always-dark hero above,
   // same as the hero itself — S.card/S.ink would flip to a near-black pill on
