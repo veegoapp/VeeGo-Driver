@@ -147,13 +147,10 @@ export function WalletContent() {
   );
   const payoutHistory = extractList<PayoutHistoryItem>(payoutHistoryRaw as PayoutHistoryItem[] | { data?: PayoutHistoryItem[] } | undefined);
 
-  // Bug fix: the backend's /earnings/weekly returns { week_start, trip_count,
-  // total_earned } — the previous shuttle screen read d.day/d.amount (fields
-  // that don't exist in that response), so every bar rendered as "undefined"
-  // at 0 height. It's also a per-WEEK breakdown, not per-day, so the chart
-  // is labeled and animated as weeks (e.g. "Jun 21"), not weekday names.
+  // The backend's /earnings/weekly returns { week_start, trip_count,
+  // total_earned } — a per-WEEK breakdown, listed newest-last (so the most
+  // recent week is highlighted below).
   const weeklyRows: WeeklyRow[] = ((weeklyRaw as { weeklyBreakdown?: WeeklyRow[] } | undefined)?.weeklyBreakdown ?? []);
-  const maxEarning = weeklyRows.length ? Math.max(...weeklyRows.map(w => parseFloat(String(w.total_earned)) || 0), 1) : 1;
   const summary = summaryRaw as EarningsSummary | undefined;
 
   const isLoading = walletLive && (balanceLoading || txLoading);
@@ -255,40 +252,42 @@ export function WalletContent() {
 
         {/* White body */}
         <View style={{ paddingHorizontal: Spacing.lg }}>
-          {/* Weekly earnings chart */}
+          {/* Weekly earnings */}
           <Text style={[styles.sectionTitle, { color: S.ink, fontFamily: 'Inter_800ExtraBold', textAlign: TA, marginTop: Spacing.xl }]}>{t.this_week}</Text>
-          <View style={styles.chartCard}>
-            {weeklyLoading ? (
-              <View style={{ height: 100, alignItems: 'center', justifyContent: 'center' }}>
-                <ActivityIndicator color={S.ink} />
-              </View>
-            ) : weeklyRows.length === 0 ? (
-              <View style={{ height: 100, alignItems: 'center', justifyContent: 'center' }}>
-                <Text style={{ color: S.cap, fontFamily: 'Inter_400Regular', fontSize: 13 }}>{t.no_data_yet}</Text>
-              </View>
-            ) : (
-              <View style={styles.chartBars}>
-                {weeklyRows.map((w, i) => {
-                  const amount = parseFloat(String(w.total_earned)) || 0;
-                  const isCurrent = i === weeklyRows.length - 1;
-                  const heightPct = Math.max(4, Math.round((amount / maxEarning) * 100));
-                  return (
-                    <View key={w.week_start} style={styles.barCol}>
-                      <Text style={[styles.barAmount, { color: S.cap, fontFamily: 'Inter_700Bold' }]} numberOfLines={1}>
-                        {amount > 0 ? amount.toFixed(0) : ''}
-                      </Text>
-                      <View style={[styles.barTrack, { backgroundColor: S.surfaceMuted }]}>
-                        <View style={[styles.barFill, { height: `${heightPct}%`, backgroundColor: isCurrent ? S.ink : S.hair }]} />
-                      </View>
-                      <Text style={[styles.barLabel, { color: isCurrent ? S.ink : S.cap, fontFamily: isCurrent ? 'Inter_800ExtraBold' : 'Inter_600SemiBold' }]}>
+          {weeklyLoading ? (
+            <View style={[styles.emptyCard, { alignItems: 'center' }]}>
+              <ActivityIndicator color={S.ink} />
+            </View>
+          ) : weeklyRows.length === 0 ? (
+            <View style={[styles.emptyCard, { alignItems: 'center' }]}>
+              <Text style={{ color: S.cap, fontFamily: 'Inter_400Regular', fontSize: 13 }}>{t.no_data_yet}</Text>
+            </View>
+          ) : (
+            <View style={styles.listCard}>
+              {weeklyRows.map((w, i) => {
+                const amount = parseFloat(String(w.total_earned)) || 0;
+                const isCurrent = i === weeklyRows.length - 1;
+                return (
+                  <View key={w.week_start} style={[styles.txItem, { flexDirection: 'row' }, i > 0 && styles.txItemBorder]}>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text
+                        style={[styles.txTitle, { color: S.ink, fontFamily: isCurrent ? 'Inter_800ExtraBold' : 'Inter_700Bold', textAlign: TA }]}
+                        numberOfLines={1}
+                      >
                         {formatWeekLabel(w.week_start, locale)}
                       </Text>
+                      <Text style={[styles.txSub, { color: S.cap, fontFamily: 'Inter_400Regular', textAlign: TA }]} numberOfLines={1}>
+                        {w.trip_count} {t.trips}
+                      </Text>
                     </View>
-                  );
-                })}
-              </View>
-            )}
-          </View>
+                    <Text style={[styles.txAmount, { color: S.ink, fontFamily: 'Inter_800ExtraBold' }]}>
+                      {amount.toFixed(2)} {t.egp}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+          )}
 
           {/* Net earnings breakdown */}
           <Text style={[styles.sectionTitle, { color: S.ink, fontFamily: 'Inter_800ExtraBold', textAlign: TA, marginTop: Spacing.xl }]}>{t.net_earnings}</Text>
@@ -426,13 +425,6 @@ function makeStyles(S: SplitColors) {
   sectionTitle: { fontSize: 15, marginBottom: Spacing.md },
   emptyCard: { padding: Spacing.xl, borderRadius: 16, backgroundColor: S.card },
   listCard: { backgroundColor: S.card, borderRadius: 16, overflow: 'hidden' },
-  chartCard: { backgroundColor: S.card, borderRadius: 16, padding: Spacing.lg },
-  chartBars: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, height: 120 },
-  barCol: { flex: 1, alignItems: 'center' },
-  barAmount: { fontSize: 10, marginBottom: 4, height: 12 },
-  barTrack: { flex: 1, width: '100%', borderRadius: 6, overflow: 'hidden', justifyContent: 'flex-end' },
-  barFill: { width: '100%', borderRadius: 6 },
-  barLabel: { fontSize: 10, marginTop: 6 },
   txItem: { alignItems: 'center', gap: Spacing.md, padding: Spacing.lg },
   txItemBorder: { borderTopWidth: 1, borderTopColor: S.hair },
   txIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: S.hair },
