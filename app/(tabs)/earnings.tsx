@@ -31,6 +31,10 @@ type EarningsSummary = {
     // rides and peak bonuses in one place) — see GET /earnings/summary.
     driverShare: string;
     companyShare: string;
+    // Trip count for the selected period, reconciled server-side alongside
+    // driverShare/companyShare (same financial_snapshots query) — see
+    // GET /earnings/summary.
+    tripCount: number;
   };
   recentEarnings: { amount: string; [key: string]: unknown }[];
 };
@@ -266,7 +270,9 @@ export default function EarningsScreen() {
             </View>
             <View style={styles.heroDivider} />
             <View style={styles.heroStatCell}>
-              <Text style={[styles.heroStatValue, { fontFamily: 'Inter_800ExtraBold' }]}>{rides.length}</Text>
+              <Text style={[styles.heroStatValue, { fontFamily: 'Inter_800ExtraBold' }]}>
+                {typeof summary?.summary?.tripCount === 'number' ? summary.summary.tripCount : rides.length}
+              </Text>
               <Text style={[styles.heroStatCap, { fontFamily: 'Inter_700Bold' }]}>{t.trips}</Text>
             </View>
           </View>
