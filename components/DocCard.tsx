@@ -24,8 +24,6 @@ export type DocRecord = {
   uploadedAt: string;
 };
 
-const CRIMINAL_REQUIRED_AT = 30;
-
 function getBorderColor(
   status: 'pending' | 'approved' | 'rejected' | null,
   urgent: boolean,
@@ -72,12 +70,18 @@ export function StatusBadge({
 }
 
 export function DocCard({
-  docType, label, record, trips, isUploading, onUpload, colors, t, isRTL, R, TA,
+  docType, label, record, trips, criminalRecordTripThreshold, isUploading, onUpload, colors, t, isRTL, R, TA,
 }: {
   docType: string;
   label: string;
   record: DocRecord | null;
   trips: number;
+  // Admin-configurable trip count before the criminal-record grace period
+  // suspends the account (settingsTable key "criminal_record_trip_threshold",
+  // GET /driver/me/onboarding's criminalRecordTripThreshold) — never a
+  // client-side constant, since the real suspension check reads this same
+  // setting and can diverge from a hardcoded assumption.
+  criminalRecordTripThreshold: number;
   isUploading: boolean;
   onUpload: () => void;
   colors: ReturnType<typeof useColors>;
@@ -94,8 +98,8 @@ export function DocCard({
   const isNotUploaded = record === null;
   const canUpload = !isLocked && (isRejected || isNotUploaded);
 
-  // Criminal urgent: no record + trips >= CRIMINAL_REQUIRED_AT
-  const isCriminalUrgent = isCriminal && isNotUploaded && trips >= CRIMINAL_REQUIRED_AT;
+  // Criminal urgent: no record + trips >= threshold
+  const isCriminalUrgent = isCriminal && isNotUploaded && trips >= criminalRecordTripThreshold;
 
   return (
     <View style={[styles.card, { backgroundColor: colors.card, borderColor: getBorderColor(status, isCriminalUrgent, colors) }]}>
@@ -186,14 +190,14 @@ export function DocCard({
               style={[
                 styles.graceFill,
                 {
-                  width: `${Math.min((trips / CRIMINAL_REQUIRED_AT) * 100, 100)}%` as `${number}%`,
-                  backgroundColor: trips >= CRIMINAL_REQUIRED_AT ? '#dc2626' : colors.primary,
+                  width: `${Math.min((trips / criminalRecordTripThreshold) * 100, 100)}%` as `${number}%`,
+                  backgroundColor: trips >= criminalRecordTripThreshold ? '#dc2626' : colors.primary,
                 },
               ]}
             />
           </View>
           <Text style={[styles.graceText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>
-            {t.doc_criminal_grace.replace('{current}', String(trips))}
+            {t.doc_criminal_grace.replace('{current}', String(trips)).replace('{required}', String(criminalRecordTripThreshold))}
           </Text>
         </View>
       )}

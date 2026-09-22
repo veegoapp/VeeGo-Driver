@@ -73,6 +73,7 @@ export const driverEndpoints = {
     requiredDocuments: string[];
     missingDocuments: string[];
     documentProgress: { type: string; uploaded: boolean; verificationStatus: string | null; uploadedAt: string | null }[];
+    criminalRecordTripThreshold: number;
     totalRequired: number;
     totalUploaded: number;
     totalApproved: number;
