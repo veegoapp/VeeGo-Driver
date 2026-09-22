@@ -32,7 +32,6 @@ import { UpcomingTripCard } from '@/components/UpcomingTripCard';
 import { useActiveSession } from '@/lib/activeSessionContext';
 import { useSplitColors, type SplitColors } from '@/lib/splitTheme';
 
-const C_MINT = '#3DDC97';
 const C_AMBER = '#F5A623';
 const C_RED = '#D92D20';
 const C_TRACK = '#F0F2F3';
@@ -327,29 +326,30 @@ export default function ShuttleHomeScreen() {
         showsVerticalScrollIndicator={false}
         style={{ flex: 1 }}
       >
-        {/* Dark hero — greeting + online toggle + stats, one persistent panel */}
-        <View style={[styles.hero, { paddingTop: topPad + 14 }]}>
+        {/* Greeting + online toggle — on the page's normal background, no
+            full-bleed dark panel. */}
+        <View style={{ paddingTop: topPad + 14, paddingHorizontal: Spacing.lg }}>
           <View style={styles.heroTop}>
             <View>
-              <Text style={[styles.greeting, { color: S.capOnDark, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
+              <Text style={[styles.greeting, { color: S.cap, fontFamily: 'Inter_700Bold', textAlign: TA }]}>
                 {t.good_morning},
               </Text>
-              <Text style={[styles.driverName, { fontFamily: 'Inter_800ExtraBold', textAlign: TA }]}>
+              <Text style={[styles.driverName, { color: S.ink, fontFamily: 'Inter_800ExtraBold', textAlign: TA }]}>
                 {(driverData?.name ?? '—').split(' ')[0]}
               </Text>
             </View>
             <View style={styles.headerRight}>
-              <Pressable style={styles.iconBtn} onPress={() => router.push('/messages')}>
-                <Bell size={16} color="#fff" strokeWidth={2} />
+              <Pressable style={[styles.iconBtn, { backgroundColor: S.surfaceMuted }]} onPress={() => router.push('/messages')}>
+                <Bell size={16} color={S.ink} strokeWidth={2} />
                 {unreadCount > 0 && (
                   <View style={[styles.notifDot, { backgroundColor: C_RED }]}>
                     <Text style={styles.notifDotText}>{unreadCount > 9 ? '9+' : String(unreadCount)}</Text>
                   </View>
                 )}
               </Pressable>
-              <View style={styles.serviceChip}>
-                <View style={[styles.serviceChipDot, { backgroundColor: C_MINT }]} />
-                <Text style={[styles.serviceChipText, { fontFamily: 'Inter_800ExtraBold' }]}>{t.shuttle.toUpperCase()}</Text>
+              <View style={[styles.serviceChip, { backgroundColor: S.surfaceMuted }]}>
+                <View style={[styles.serviceChipDot, { backgroundColor: S.teal }]} />
+                <Text style={[styles.serviceChipText, { color: S.ink, fontFamily: 'Inter_800ExtraBold' }]}>{t.shuttle.toUpperCase()}</Text>
               </View>
             </View>
           </View>
@@ -358,39 +358,38 @@ export default function ShuttleHomeScreen() {
           <Pressable
             onPress={toggleOnline}
             disabled={onlineLoading}
-            style={({ pressed }) => [styles.togglePill, { opacity: pressed ? 0.9 : 1 }]}
+            style={({ pressed }) => [styles.togglePill, { borderColor: S.hair, backgroundColor: S.card, opacity: pressed ? 0.9 : 1 }]}
           >
-            <View style={[styles.toggleIconWrap, { backgroundColor: online ? C_MINT : 'rgba(255,255,255,.12)' }]}>
+            <View style={[styles.toggleIconWrap, { backgroundColor: online ? S.teal : S.surfaceMuted }]}>
               {onlineLoading ? (
-                <ActivityIndicator size="small" color={online ? S.ink : '#fff'} />
+                <ActivityIndicator size="small" color={online ? '#fff' : S.cap} />
               ) : online ? (
-                <Wifi size={17} color={S.ink} strokeWidth={2.2} />
+                <Wifi size={17} color="#fff" strokeWidth={2.2} />
               ) : (
-                <WifiOff size={17} color="#fff" strokeWidth={2.2} />
+                <WifiOff size={17} color={S.cap} strokeWidth={2.2} />
               )}
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.toggleTitle, { fontFamily: 'Inter_800ExtraBold', textAlign: TA }]}>
+              <Text style={[styles.toggleTitle, { color: S.ink, fontFamily: 'Inter_800ExtraBold', textAlign: TA }]}>
                 {online ? t.youre_online.split('·')[0].trim() : t.youre_offline}
               </Text>
-              <Text style={[styles.toggleSub, { color: S.capOnDark, fontFamily: 'Inter_600SemiBold', textAlign: TA }]}>
+              <Text style={[styles.toggleSub, { color: S.cap, fontFamily: 'Inter_600SemiBold', textAlign: TA }]}>
                 {online ? t.receiving_assignments : t.not_receiving_assignments}
               </Text>
             </View>
-            <View style={[styles.switchTrack, { backgroundColor: online ? C_MINT : 'rgba(255,255,255,.14)' }]}>
+            <View style={[styles.switchTrack, { backgroundColor: online ? S.teal : S.surfaceMuted }]}>
               <View style={[styles.switchThumb, {
-                backgroundColor: online ? S.ink : '#fff',
+                backgroundColor: '#fff',
                 alignSelf: online ? 'flex-end' : 'flex-start',
               }]} />
             </View>
           </Pressable>
         </View>
 
-        {/* White body */}
+        {/* Body */}
         <View style={{ paddingHorizontal: Spacing.lg }}>
-          {/* Stats strip — no longer part of the dark hero, so it stays a
-              plain card and doesn't get boxed in with the online toggle. */}
-          <View style={styles.statsCard}>
+          {/* Stats strip — a plain card, matching the rest of the page. */}
+          <View style={[styles.statsCard, { borderWidth: 1, borderColor: S.hair }]}>
             <View style={styles.heroStatCell}>
               <Text style={[styles.statValue, { fontFamily: 'Inter_800ExtraBold' }]}>{completedCount}</Text>
               <Text style={[styles.statCap, { fontFamily: 'Inter_700Bold' }]}>{t.trips_stat}</Text>
@@ -749,24 +748,25 @@ export default function ShuttleHomeScreen() {
 function makeStyles(S: SplitColors) {
   return StyleSheet.create({
   container: { flex: 1 },
-  hero: { backgroundColor: S.panel, paddingHorizontal: 22, paddingBottom: 22, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 },
   heroTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   greeting: { fontSize: 11, letterSpacing: 1 },
-  driverName: { fontSize: 22, color: '#fff', marginTop: 2 },
+  driverName: { fontSize: 22, marginTop: 2 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  iconBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,.1)', alignItems: 'center', justifyContent: 'center', position: 'relative' },
+  iconBtn: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', position: 'relative' },
   notifDot: { position: 'absolute', top: -2, right: -2, minWidth: 14, height: 14, borderRadius: 7, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 2 },
   notifDotText: { fontSize: 7, color: '#fff', fontFamily: 'Inter_700Bold' },
-  serviceChip: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(255,255,255,.1)', borderRadius: 99, paddingHorizontal: 12, paddingVertical: 6 },
+  serviceChip: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 99, paddingHorizontal: 12, paddingVertical: 6 },
   serviceChipDot: { width: 6, height: 6, borderRadius: 3 },
-  serviceChipText: { fontSize: 9, color: '#fff', letterSpacing: 1 },
-  togglePill: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,.08)', borderRadius: 18, padding: 14, marginTop: 18 },
+  serviceChipText: { fontSize: 9, letterSpacing: 1 },
+  // Ticket-stub family: bordered, sharper-cornered card on the page's
+  // normal background, matching the Wallet/Earnings tabs' balance card.
+  togglePill: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 10, padding: 14, marginTop: 18 },
   toggleIconWrap: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  toggleTitle: { fontSize: 13.5, color: '#fff' },
+  toggleTitle: { fontSize: 13.5 },
   toggleSub: { fontSize: 11, marginTop: 1 },
   switchTrack: { width: 44, height: 26, borderRadius: 13, padding: 3 },
   switchThumb: { width: 20, height: 20, borderRadius: 10 },
-  statsCard: { flexDirection: 'row', marginTop: Spacing.lg, backgroundColor: S.card, borderRadius: 18, paddingVertical: Spacing.lg, paddingHorizontal: Spacing.sm },
+  statsCard: { flexDirection: 'row', marginTop: Spacing.lg, backgroundColor: S.card, borderRadius: 10, paddingVertical: Spacing.lg, paddingHorizontal: Spacing.sm },
   heroStatCell: { flex: 1, alignItems: 'center' },
   statValue: { fontSize: 17, color: S.ink },
   statCap: { fontSize: 10, letterSpacing: 1, textTransform: 'uppercase', color: S.cap, marginTop: 2 },
