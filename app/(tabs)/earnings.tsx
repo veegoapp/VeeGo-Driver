@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { ChevronRight } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -17,8 +18,10 @@ import { Spacing } from '@/constants/spacing';
 import { TAB_BAR_HEIGHT_BASE } from '@/constants/tabBar';
 import { useSplitColors, type SplitColors } from '@/lib/splitTheme';
 
-const C_MINT = '#3DDC97';
-const C_TRACK = '#F0F2F3';
+// Ticket-stub styling (matches the Wallet tab): money figures render in a
+// monospace face — a system font, not a bundled one, since the app only
+// loads the Inter family today.
+const MONO = Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' });
 
 type EarningsSummary = {
   driverId: string;
@@ -229,56 +232,70 @@ export default function EarningsScreen() {
         contentContainerStyle={{ paddingBottom: tabBarHeight + 24 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Dark hero — period switch, total, driver/company split, all embedded */}
-        <View style={[styles.hero, { paddingTop: topPad + 14 }]}>
-          <Text style={[styles.heroCap, { textAlign: TA, fontFamily: 'Inter_700Bold' }]}>{t.earnings}</Text>
+        {/* Period switch + ticket-stub total card — on the page's normal
+            background, replacing the old full-bleed dark hero block. */}
+        <View style={{ paddingTop: topPad + 14, paddingHorizontal: Spacing.lg }}>
+          <Text style={[styles.pageCap, { color: S.cap, textAlign: TA, fontFamily: 'Inter_700Bold' }]}>{t.earnings}</Text>
 
           {/* Period segmented control */}
-          <View style={styles.segment}>
+          <View style={[styles.segment, { backgroundColor: S.surfaceMuted }]}>
             {PERIOD_KEYS.map(key => (
-              <Pressable key={key} onPress={() => setPeriod(key)} style={[styles.segmentItem, key === period && styles.segmentItemActive]}>
-                <Text style={[styles.segmentText, key === period && styles.segmentTextActive, { fontFamily: 'Inter_800ExtraBold' }]} numberOfLines={1}>
+              <Pressable key={key} onPress={() => setPeriod(key)} style={[styles.segmentItem, key === period && { backgroundColor: S.ink }]}>
+                <Text
+                  style={[styles.segmentText, { color: key === period ? S.bg : S.cap, fontFamily: 'Inter_800ExtraBold' }]}
+                  numberOfLines={1}
+                >
                   {PERIOD_LABELS[key]}
                 </Text>
               </Pressable>
             ))}
           </View>
 
-          <Text style={[styles.heroAmountCap, { textAlign: TA, fontFamily: 'Inter_700Bold' }]}>{PERIOD_HERO_LABELS[period]}</Text>
-          <View style={[styles.heroAmountRow, { flexDirection: 'row' }]}>
-            <Text style={[styles.heroAmount, { fontFamily: 'Inter_800ExtraBold' }]}>{driverTotal.toFixed(0)}</Text>
-            <Text style={[styles.heroCurrency, { fontFamily: 'Inter_700Bold' }]}>{t.egp}</Text>
-          </View>
-
-          <View style={styles.splitTrack}>
-            <View style={[styles.splitFill, { width: `${grossTotal > 0 ? driverPct : 50}%` as any }]} />
-          </View>
-
-          <View style={styles.heroStatsRow}>
-            <View style={styles.heroStatCell}>
-              <Text style={[styles.heroStatValue, { color: C_MINT, fontFamily: 'Inter_800ExtraBold' }]}>
-                {grossTotal > 0 ? `${driverPct.toFixed(0)}%` : '—'}
-              </Text>
-              <Text style={[styles.heroStatCap, { fontFamily: 'Inter_700Bold' }]}>{t.your_share_label}</Text>
+          <View style={[styles.ticketCard, { borderColor: S.hair, backgroundColor: S.card }]}>
+            <Text style={[styles.heroAmountCap, { color: S.cap, textAlign: TA, fontFamily: 'Inter_700Bold' }]}>{PERIOD_HERO_LABELS[period]}</Text>
+            <View style={[styles.heroAmountRow, { flexDirection: 'row' }]}>
+              <Text style={[styles.heroAmount, { color: S.ink }]}>{driverTotal.toFixed(2)}</Text>
+              <Text style={[styles.heroCurrency, { color: S.cap }]}>{t.egp}</Text>
             </View>
-            <View style={styles.heroDivider} />
-            <View style={styles.heroStatCell}>
-              <Text style={[styles.heroStatValue, { fontFamily: 'Inter_800ExtraBold' }]}>
-                {grossTotal > 0 ? `${companyPct.toFixed(0)}%` : '—'}
-              </Text>
-              <Text style={[styles.heroStatCap, { fontFamily: 'Inter_700Bold' }]}>{t.company_share_label}</Text>
+
+            <View style={[styles.splitTrack, { backgroundColor: S.surfaceMuted }]}>
+              <View style={[styles.splitFill, { width: `${grossTotal > 0 ? driverPct : 50}%` as any, backgroundColor: S.teal }]} />
             </View>
-            <View style={styles.heroDivider} />
-            <View style={styles.heroStatCell}>
-              <Text style={[styles.heroStatValue, { fontFamily: 'Inter_800ExtraBold' }]}>
-                {typeof summary?.summary?.tripCount === 'number' ? summary.summary.tripCount : rides.length}
-              </Text>
-              <Text style={[styles.heroStatCap, { fontFamily: 'Inter_700Bold' }]}>{t.trips}</Text>
+
+            {/* Perforated divider with punch-out notches, matching the
+                Wallet tab's ticket card. */}
+            <View style={styles.perfRow}>
+              <View style={[styles.perfLine, { borderTopColor: S.hair }]} />
+              <View style={[styles.notch, styles.notchLeft, { backgroundColor: S.bg, borderColor: S.hair }]} />
+              <View style={[styles.notch, styles.notchRight, { backgroundColor: S.bg, borderColor: S.hair }]} />
+            </View>
+
+            <View style={styles.heroStatsRow}>
+              <View style={styles.heroStatCell}>
+                <Text style={[styles.heroStatValue, { color: S.teal }]}>
+                  {grossTotal > 0 ? `${driverPct.toFixed(0)}%` : '—'}
+                </Text>
+                <Text style={[styles.heroStatCap, { color: S.cap, fontFamily: 'Inter_700Bold' }]}>{t.your_share_label}</Text>
+              </View>
+              <View style={[styles.heroDivider, { borderLeftColor: S.hair }]} />
+              <View style={styles.heroStatCell}>
+                <Text style={[styles.heroStatValue, { color: S.ink }]}>
+                  {grossTotal > 0 ? `${companyPct.toFixed(0)}%` : '—'}
+                </Text>
+                <Text style={[styles.heroStatCap, { color: S.cap, fontFamily: 'Inter_700Bold' }]}>{t.company_share_label}</Text>
+              </View>
+              <View style={[styles.heroDivider, { borderLeftColor: S.hair }]} />
+              <View style={styles.heroStatCell}>
+                <Text style={[styles.heroStatValue, { color: S.ink }]}>
+                  {typeof summary?.summary?.tripCount === 'number' ? summary.summary.tripCount : rides.length}
+                </Text>
+                <Text style={[styles.heroStatCap, { color: S.cap, fontFamily: 'Inter_700Bold' }]}>{t.trips}</Text>
+              </View>
             </View>
           </View>
         </View>
 
-        {/* White body — trip ledger for the selected period */}
+        {/* Body — trip ledger for the selected period */}
         <View style={{ paddingHorizontal: Spacing.lg }}>
           <Text style={[styles.sectionTitle, { color: S.ink, fontFamily: 'Inter_800ExtraBold', textAlign: TA, marginTop: Spacing.xl }]}>{t.trips}</Text>
           {ridesLoading ? (
@@ -290,10 +307,10 @@ export default function EarningsScreen() {
               <Text style={{ color: S.cap, fontFamily: 'Inter_400Regular', fontSize: 13 }}>{t.no_trips_period}</Text>
             </View>
           ) : (
-            <View style={{ gap: 10 }}>
-              {rides.map(ride => (
+            <View style={[styles.listCard, { borderColor: S.hair }]}>
+              {rides.map((ride, i) => (
                 <Pressable key={ride.id} onPress={() => handleTripPress(ride)}>
-                  <View style={[styles.tripCard, { flexDirection: 'row' }]}>
+                  <View style={[styles.tripCard, { flexDirection: 'row' }, i > 0 && styles.tripCardBorder]}>
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.tripDate, { color: S.cap, fontFamily: 'Inter_600SemiBold', textAlign: TA }]}>
                         {new Date(ride.completedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
@@ -302,7 +319,7 @@ export default function EarningsScreen() {
                         {ride.pickupAddress ?? '—'}
                       </Text>
                     </View>
-                    <Text style={[styles.tripFare, { color: S.ink, fontFamily: 'Inter_800ExtraBold' }]}>
+                    <Text style={[styles.tripFare, { color: S.ink }]}>
                       {toNum(ride.fare).toFixed(2)} {t.egp}
                     </Text>
                     <ChevronRight size={16} color={S.cap} strokeWidth={2} style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined} />
@@ -320,32 +337,40 @@ export default function EarningsScreen() {
 function makeStyles(S: SplitColors) {
   return StyleSheet.create({
   container: { flex: 1 },
-  hero: { backgroundColor: S.panel, paddingHorizontal: 22, paddingBottom: 22, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 },
-  heroCap: { fontSize: 10, letterSpacing: 1.6, textTransform: 'uppercase', color: S.capOnDark },
-  segment: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,.08)', borderRadius: 14, padding: 4, marginTop: 12 },
+  pageCap: { fontSize: 10, letterSpacing: 1.6, textTransform: 'uppercase' },
+  segment: { flexDirection: 'row', borderRadius: 14, padding: 4, marginTop: 12 },
   segmentItem: { flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: 10 },
-  // Fixed (not theme-adaptive): this pill sits on the always-dark hero above,
-  // same as the hero itself — S.card/S.ink would flip to a near-black pill on
-  // dark mode and disappear against the panel.
-  segmentItemActive: { backgroundColor: '#FFFFFF' },
-  segmentText: { fontSize: 10.5, color: S.capOnDark },
-  segmentTextActive: { color: '#14151A' },
-  heroAmountCap: { fontSize: 10, letterSpacing: 1.6, textTransform: 'uppercase', color: S.capOnDark, marginTop: 20 },
-  heroAmountRow: { alignItems: 'flex-end', gap: 8, marginTop: 2 },
-  heroAmount: { fontSize: 44, lineHeight: 48, color: '#fff' },
-  heroCurrency: { fontSize: 18, color: S.capOnDark, marginBottom: 4 },
-  splitTrack: { height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,.12)', overflow: 'hidden', marginTop: 16 },
-  splitFill: { height: '100%', borderRadius: 3, backgroundColor: C_MINT },
-  heroStatsRow: { flexDirection: 'row', marginTop: 16 },
+  segmentText: { fontSize: 10.5 },
+  // Ticket-stub total card — sits on the page's normal background (no
+  // full-bleed colored hero block), bordered and sharper-cornered than the
+  // app's usual 16-20px cards to read as a receipt/boarding-pass, matching
+  // the Wallet tab's balance card.
+  ticketCard: { borderWidth: 1, borderRadius: 10, padding: 20, marginTop: 16 },
+  heroAmountCap: { fontSize: 10, letterSpacing: 1.6, textTransform: 'uppercase' },
+  heroAmountRow: { alignItems: 'flex-end', gap: 8, marginTop: 4 },
+  heroAmount: { fontSize: 38, lineHeight: 42, fontFamily: MONO, fontWeight: '700' },
+  heroCurrency: { fontSize: 14, fontWeight: '700', marginBottom: 4, fontFamily: MONO },
+  splitTrack: { height: 6, borderRadius: 3, overflow: 'hidden', marginTop: 16 },
+  splitFill: { height: '100%', borderRadius: 3 },
+  // Perforation: a dashed line with a punch-out circle on each edge, colored
+  // to match the page background so they read as a cut-out, not a dot.
+  perfRow: { height: 1, marginTop: 18, marginBottom: 4, position: 'relative' },
+  perfLine: { flex: 1, borderTopWidth: 1, borderStyle: 'dashed' },
+  notch: { position: 'absolute', top: -9, width: 18, height: 18, borderRadius: 9, borderWidth: 1 },
+  notchLeft: { left: -29 },
+  notchRight: { right: -29 },
+  heroStatsRow: { flexDirection: 'row', marginTop: 14 },
   heroStatCell: { flex: 1, alignItems: 'center' },
-  heroStatValue: { fontSize: 16, color: '#fff' },
-  heroStatCap: { fontSize: 9, letterSpacing: 1, textTransform: 'uppercase', color: S.capOnDark, marginTop: 2 },
-  heroDivider: { width: 1, backgroundColor: 'rgba(255,255,255,.12)' },
-  sectionTitle: { fontSize: 15, marginBottom: Spacing.md },
-  emptyCard: { padding: Spacing.lg, borderRadius: 20, backgroundColor: S.card },
-  tripCard: { padding: Spacing.md, alignItems: 'center', gap: Spacing.sm, backgroundColor: S.card, borderRadius: 16 },
+  heroStatValue: { fontSize: 15, fontWeight: '700', fontFamily: MONO },
+  heroStatCap: { fontSize: 9, letterSpacing: 1, textTransform: 'uppercase', marginTop: 2 },
+  heroDivider: { width: 1, borderLeftWidth: 1, borderStyle: 'dashed' },
+  sectionTitle: { fontSize: 12.5, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: Spacing.md },
+  emptyCard: { padding: Spacing.lg, borderRadius: 10, backgroundColor: S.card, borderWidth: 1, borderColor: S.hair },
+  listCard: { backgroundColor: S.card, borderRadius: 10, borderWidth: 1, overflow: 'hidden' },
+  tripCard: { padding: Spacing.md, alignItems: 'center', gap: Spacing.sm },
+  tripCardBorder: { borderTopWidth: 1, borderStyle: 'dashed', borderTopColor: S.hair },
   tripDate: { fontSize: 11 },
   tripAddress: { fontSize: 13.5, marginTop: 2 },
-  tripFare: { fontSize: 13.5 },
+  tripFare: { fontSize: 13.5, fontFamily: MONO, fontWeight: '700' },
   });
 }
