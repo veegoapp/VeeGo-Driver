@@ -42,8 +42,13 @@ async function flush() {
 describe('AuthContext — full session lifecycle', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.useFakeTimers();
     mockGetToken.mockResolvedValue(null);
     mockLogout.mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it('starts loading, resolves to an unauthenticated state when no token is stored, then logs in and out', async () => {
@@ -74,12 +79,40 @@ describe('AuthContext — full session lifecycle', () => {
     expect(result.current.isLoading).toBe(false);
   });
 
-  it('treats a SecureStore read failure on startup as unauthenticated instead of hanging', async () => {
+  it('retries a SecureStore read failure before treating it as unauthenticated, instead of hanging', async () => {
     mockGetToken.mockRejectedValue(new Error('keychain locked'));
     const { result } = await setupHook();
     await flush();
+    // Still retrying — a single rejection must not immediately log the
+    // driver out, since a real token may exist and this may just be a
+    // transient keychain read failure.
+    expect(result.current.isLoading).toBe(true);
 
+    // 3 retries, 400ms apart — advance past all of them.
+    await act(async () => { jest.advanceTimersByTime(400); });
+    await flush();
+    await act(async () => { jest.advanceTimersByTime(400); });
+    await flush();
+    await act(async () => { jest.advanceTimersByTime(400); });
+    await flush();
+
+    expect(mockGetToken).toHaveBeenCalledTimes(3);
     expect(result.current.token).toBeNull();
+    expect(result.current.isLoading).toBe(false);
+  });
+
+  it('recovers from a transient SecureStore failure on retry instead of logging out a valid session', async () => {
+    mockGetToken
+      .mockRejectedValueOnce(new Error('keychain still waking up'))
+      .mockResolvedValueOnce('stored-access-token');
+    const { result } = await setupHook();
+    await flush();
+    expect(result.current.isLoading).toBe(true);
+
+    await act(async () => { jest.advanceTimersByTime(400); });
+    await flush();
+
+    expect(result.current.token).toBe('stored-access-token');
     expect(result.current.isLoading).toBe(false);
   });
 
