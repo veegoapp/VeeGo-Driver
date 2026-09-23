@@ -30,24 +30,13 @@ type RatingsResponse = {
   tripCount: number;
   totalEarned: number;
   ratingsCount: number;
+  // Real per-star counts over ALL of the driver's ratings — not derived from
+  // `ratings` below, which the backend caps at the 50 most recent (for the
+  // reviews list only) and would otherwise silently understate both this and
+  // ratingsCount for any driver with more than 50 ratings.
+  breakdown: { stars: number; count: number }[];
   ratings: RatingEntry[];
 };
-
-type BreakdownItem = { stars: number; count: number; pct: number };
-
-function buildBreakdown(ratings: RatingEntry[]): BreakdownItem[] {
-  const counts: Record<number, number> = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
-  for (const r of ratings) {
-    const s = Math.round(r.score);
-    if (s >= 1 && s <= 5) counts[s]++;
-  }
-  const total = ratings.length || 1;
-  return [5, 4, 3, 2, 1].map(stars => ({
-    stars,
-    count: counts[stars],
-    pct: Math.round((counts[stars] / total) * 100),
-  }));
-}
 
 export default function RatingsScreen() {
   const colors = useColors();
@@ -69,15 +58,17 @@ export default function RatingsScreen() {
   };
 
   const ratings = rawData?.ratings ?? [];
-  const breakdown = buildBreakdown(ratings);
+  const ratingsCount = rawData?.ratingsCount ?? 0;
+  const breakdown = rawData?.breakdown ?? [];
   const barAnims = useRef(Array.from({ length: 5 }, () => new Animated.Value(0))).current;
 
   useEffect(() => {
     if (!breakdown.length) return;
+    const total = ratingsCount || 1;
     Animated.stagger(80, breakdown.map((r, i) =>
-      Animated.timing(barAnims[i], { toValue: r.pct / 100, duration: Animation.duration.slower, useNativeDriver: false })
+      Animated.timing(barAnims[i], { toValue: r.count / total, duration: Animation.duration.slower, useNativeDriver: false })
     )).start();
-  }, [ratings.length]);
+  }, [ratingsCount, breakdown.length]);
 
   if (isLoading) {
     return (
@@ -96,7 +87,6 @@ export default function RatingsScreen() {
   }
 
   const avgRating = rawData?.rating ?? 0;
-  const ratingsCount = rawData?.ratingsCount ?? 0;
   const tripCount = rawData?.tripCount ?? 0;
 
   return (

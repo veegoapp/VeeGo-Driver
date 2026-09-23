@@ -5,7 +5,8 @@ import { Audio } from 'expo-av';
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import { DRIVER_LOCATION_TASK } from '@/lib/backgroundLocationTask';
-import { AlertCircle, Bell, Check, CheckCircle, Star, Tag, TrendingUp, X } from 'lucide-react-native';
+import { AlertCircle, Bell, Check, CheckCircle, Eye, EyeOff, Star, Tag, TrendingUp, X } from 'lucide-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSocket } from '@/lib/socketContext';
@@ -98,6 +99,10 @@ const DriverMapLayer = React.memo(function DriverMapLayer({ surgeZones, focused 
 // driver doesn't have to re-tap GO after every trip.
 let _persistedOnline: boolean | null = null;
 
+// Persists across app restarts — a driver who hides the stats pill amounts
+// (e.g. to keep them private around passengers) expects that choice to stick.
+const AMOUNTS_HIDDEN_KEY = 'home:statsPill:amountsHidden';
+
 export default function HomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -119,6 +124,17 @@ export default function HomeScreen() {
   const [countdown, setCountdown] = useState(12);
   const [promoDismissed, setPromoDismissed] = useState(false);
   const [ratingWarningDismissed, setRatingWarningDismissed] = useState(false);
+  const [amountsHidden, setAmountsHidden] = useState(false);
+  useEffect(() => {
+    AsyncStorage.getItem(AMOUNTS_HIDDEN_KEY).then((v) => { if (v === '1') setAmountsHidden(true); }).catch(() => {});
+  }, []);
+  const toggleAmountsHidden = useCallback(() => {
+    setAmountsHidden((prev) => {
+      const next = !prev;
+      AsyncStorage.setItem(AMOUNTS_HIDDEN_KEY, next ? '1' : '0').catch(() => {});
+      return next;
+    });
+  }, []);
   const topPad = insets.top;
   // Issue B: realtime socket location while Online and idle (no active ride).
   // Reuses the existing driver:location:update channel via useLocationBroadcast
@@ -199,7 +215,7 @@ export default function HomeScreen() {
       console.log('[Home:earnings] → GET /earnings/summary?period=today');
       try {
         const result = await endpoints.earnings.summary('today');
-        console.log('[Home:earnings] ✓ success:', { totalEarnings: (result as any)?.summary?.totalEarnings, online: (result as any)?.summary?.online });
+        console.log('[Home:earnings] ✓ success:', { grossAmount: (result as any)?.summary?.grossAmount, driverShare: (result as any)?.summary?.driverShare, tripCount: (result as any)?.summary?.tripCount });
         return result;
       } catch (err: unknown) {
         const e = err as any;
@@ -208,28 +224,6 @@ export default function HomeScreen() {
       }
     },
   });
-  // The earnings-summary response has no trips count (only totalEarnings/
-  // totalPaid/etc — see EarningsSummary type in earnings.tsx), so the Home
-  // stats pill's TRIPS figure is derived here instead: fetch completed ride
-  // history and count entries whose completedAt falls on today's local date.
-  const { data: tripHistoryRaw } = useQuery({
-    queryKey: ['today-trips-history'],
-    queryFn: () => endpoints.rides.history(1, 100, 'completed'),
-    staleTime: 30000,
-  });
-  const todayTripsCount = useMemo(() => {
-    const items = (tripHistoryRaw as { data?: { completedAt: string }[] } | undefined)?.data;
-    if (!Array.isArray(items)) return null;
-    const now = new Date();
-    return items.filter((r) => {
-      const d = new Date(r.completedAt);
-      return (
-        d.getFullYear() === now.getFullYear() &&
-        d.getMonth() === now.getMonth() &&
-        d.getDate() === now.getDate()
-      );
-    }).length;
-  }, [tripHistoryRaw]);
   const { data: promotionsRaw } = useQuery({
     queryKey: ['driver-promotions'],
     queryFn: () => endpoints.driver.promotions(),
@@ -259,6 +253,8 @@ export default function HomeScreen() {
   const earningsData = earningsRaw as any;
   const statsLoading = driverLoading || earningsLoading;
   const statsError = driverError || earningsError;
+  const todayTripsCount: number | null =
+    typeof earningsData?.summary?.tripCount === 'number' ? earningsData.summary.tripCount : null;
 
   // Header avatar: falls back to initials-on-tint when there's no photo yet
   // or the signed URL fails to load (e.g. expired) — never a blank/broken
@@ -997,26 +993,47 @@ export default function HomeScreen() {
                 <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 12 }}>{t.stats_load_fail}</Text>
               </Pressable>
             ) : (
-              <View style={[styles.statsPillInner, { flexDirection: R }]}>
-                {/* driverShare (financial_snapshots-derived), NOT totalEarnings — that
-                    field sums driver_wallet_ledger credits only, which deliberately
-                    excludes cash-ride earnings (the driver already holds that cash),
-                    so it under-reports for anyone who takes cash rides. Same fix
-                    already applied on the Earnings tab (see app/(tabs)/earnings.tsx). */}
-                <StatItem label={t.today} value={`${parseFloat(String(earningsData?.summary?.driverShare ?? 0)).toFixed(2)} ${t.egp}`} highlight colors={colors} isRTL={isRTL} />
-                <View style={[styles.divider, { backgroundColor: colors.border }]} />
-                <StatItem label={t.trips} value={todayTripsCount != null ? String(todayTripsCount) : '—'} colors={colors} isRTL={isRTL} />
-                <View style={[styles.divider, { backgroundColor: colors.border }]} />
-                <StatItem
-                  label={t.online_status}
-                  value={
-                    typeof earningsData?.summary?.online === 'number'
-                      ? `${Math.floor(Math.round(earningsData.summary.online * 60) / 60)}h ${Math.round(earningsData.summary.online * 60) % 60}m`
-                      : '—'
-                  }
-                  colors={colors}
-                  isRTL={isRTL}
-                />
+              <View>
+                <View style={[styles.statsPillEyeRow, { alignItems: isRTL ? 'flex-start' : 'flex-end' }]}>
+                  <Pressable
+                    onPress={toggleAmountsHidden}
+                    hitSlop={10}
+                    accessibilityLabel={amountsHidden ? t.show_amounts : t.hide_amounts}
+                  >
+                    {amountsHidden ? (
+                      <EyeOff size={16} color={colors.mutedForeground} />
+                    ) : (
+                      <Eye size={16} color={colors.mutedForeground} />
+                    )}
+                  </Pressable>
+                </View>
+                <View style={[styles.statsPillInner, { flexDirection: R }]}>
+                  {/* grossAmount (financial_snapshots.finalPrice-derived): the
+                      total value of every ride completed today, driver share
+                      plus company share combined — not just what the driver
+                      keeps (that's netRevenue below). */}
+                  <StatItem
+                    label={t.today}
+                    value={amountsHidden ? '••••' : `${parseFloat(String(earningsData?.summary?.grossAmount ?? 0)).toFixed(2)} ${t.egp}`}
+                    highlight
+                    colors={colors}
+                    isRTL={isRTL}
+                  />
+                  <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                  <StatItem label={t.trips} value={todayTripsCount != null ? String(todayTripsCount) : '—'} colors={colors} isRTL={isRTL} />
+                  <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                  {/* driverShare (financial_snapshots-derived), NOT totalEarnings — that
+                      field sums driver_wallet_ledger credits only, which deliberately
+                      excludes cash-ride earnings (the driver already holds that cash),
+                      so it under-reports for anyone who takes cash rides. Same fix
+                      already applied on the Earnings tab (see app/(tabs)/earnings.tsx). */}
+                  <StatItem
+                    label={t.net_revenue}
+                    value={amountsHidden ? '••••' : `${parseFloat(String(earningsData?.summary?.driverShare ?? 0)).toFixed(2)} ${t.egp}`}
+                    colors={colors}
+                    isRTL={isRTL}
+                  />
+                </View>
               </View>
             )}
           </GlassView>
@@ -1325,7 +1342,8 @@ function makeStyles(S: SplitColors) {
   notifDotText: { fontSize: 7, color: '#fff', fontFamily: 'Inter_700Bold' },
   statsPillWrap: { paddingHorizontal: Spacing.lg, marginTop: Spacing.lg },
   statsPill: {},
-  statsPillInner: { alignItems: 'center', justifyContent: 'space-between', padding: Spacing.md },
+  statsPillEyeRow: { paddingHorizontal: Spacing.md, paddingTop: Spacing.xs },
+  statsPillInner: { alignItems: 'center', justifyContent: 'space-between', padding: Spacing.md, paddingTop: Spacing.xs },
   statItem: { flex: 1, alignItems: 'center', paddingHorizontal: Spacing.sm },
   statLabel: { fontSize: 10, letterSpacing: 1, textTransform: 'uppercase' },
   statValue: { fontSize: Typography.size.md, marginTop: 2 },

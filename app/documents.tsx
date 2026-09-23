@@ -6,7 +6,6 @@ import {
 } from 'lucide-react-native';
 import React, { useMemo, useRef, useState } from 'react';
 import {
-  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -23,7 +22,6 @@ import { rtlIconStyle } from '@/lib/rtlUtils';
 import { endpoints } from '@/lib/api';
 import type { DriverProfileEnriched } from '@/lib/api';
 import { compressImage } from '@/lib/imageCompression';
-import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
 import { DocCard, type DocRecord } from '@/components/DocCard';
@@ -32,20 +30,13 @@ import { DocCard, type DocRecord } from '@/components/DocCard';
 
 const HIDDEN_TYPES = new Set(['trip_selfie']);
 
-const SECTIONS: { sectionKey: 'identity' | 'vehicle' | 'other'; types: string[] }[] = [
-  {
-    sectionKey: 'identity',
-    types: ['national_id_front', 'national_id_back', 'driving_license_front', 'driving_license_back'],
-  },
-  {
-    sectionKey: 'vehicle',
-    types: ['vehicle_license_front', 'vehicle_license_back', 'vehicle_photo'],
-  },
-  {
-    sectionKey: 'other',
-    types: ['profile_photo', 'criminal_record'],
-  },
-];
+// criminal_record is intentionally never part of GET /driver/me/onboarding's
+// requiredDocuments — it's not required to finish onboarding, only to avoid
+// the grace-period suspension (see DocCard's criminal-record bar) — so it's
+// always shown here regardless of what the backend lists as required.
+const IDENTITY_TYPES = new Set(['national_id_front', 'national_id_back', 'driving_license_front', 'driving_license_back']);
+const VEHICLE_TYPES = new Set(['vehicle_license_front', 'vehicle_license_back', 'vehicle_photo']);
+const ALWAYS_SHOWN_OTHER = ['criminal_record'];
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
@@ -88,6 +79,29 @@ export default function DocumentsScreen() {
     retry: 1,
   });
   const trips = profile?.trips ?? 0;
+
+  const { data: onboarding, isLoading: onboardingLoading } = useQuery({
+    queryKey: ['driver', 'onboarding'],
+    queryFn: endpoints.driver.onboarding,
+    retry: 1,
+  });
+  const requiredTypes = onboarding?.requiredDocuments ?? [];
+  const criminalRecordTripThreshold = onboarding?.criminalRecordTripThreshold ?? 30;
+
+  // Sections built from the driver's actual per-service-type requirements
+  // (a scooter/delivery driver has no vehicle_license_front/back, for
+  // example) instead of one fixed list shown to every driver regardless of
+  // service type.
+  const sections = useMemo(() => {
+    const identity = requiredTypes.filter(docType => IDENTITY_TYPES.has(docType));
+    const vehicle = requiredTypes.filter(docType => VEHICLE_TYPES.has(docType));
+    const other = [...requiredTypes.filter(docType => !IDENTITY_TYPES.has(docType) && !VEHICLE_TYPES.has(docType)), ...ALWAYS_SHOWN_OTHER];
+    return [
+      { sectionKey: 'identity' as const, types: identity },
+      { sectionKey: 'vehicle' as const, types: vehicle },
+      { sectionKey: 'other' as const, types: other },
+    ].filter(s => s.types.length > 0);
+  }, [requiredTypes]);
 
   // ── Normalize API response (may be bare array or { data: [...] }) ────────
   const allDocs: DocRecord[] = useMemo(() => {
@@ -135,16 +149,24 @@ export default function DocumentsScreen() {
   // Camera-only — sensitive documents (ID, license, criminal record, etc.)
   // must not be pickable from the gallery, only captured live.
   const pickAndUpload = async (docType: string) => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      showAlert(t.doc_permission_title, t.doc_permission_msg);
-      return;
-    }
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ['images'], quality: 0.85, allowsEditing: true, aspect: [4, 3],
-    });
-    if (!result.canceled && result.assets[0]) {
-      await uploadDoc(docType, result.assets[0]);
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        showAlert(t.doc_permission_title, t.doc_permission_msg);
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'], quality: 0.85, allowsEditing: true, aspect: [4, 3],
+      });
+      if (!result.canceled && result.assets[0]) {
+        await uploadDoc(docType, result.assets[0]);
+      }
+    } catch {
+      // Permission request or camera launch itself threw (native module
+      // error, camera busy, OS interruption) — before uploadDoc's own
+      // try/catch ever runs, so this is the only place that failure is
+      // ever surfaced to the driver.
+      showToast(t.doc_upload_error, false);
     }
   };
 
@@ -214,7 +236,7 @@ export default function DocumentsScreen() {
         </Text>
 
         {/* Loading */}
-        {docsLoading && (
+        {(docsLoading || onboardingLoading) && (
           <View style={styles.center}>
             <AppLoader />
           </View>
@@ -229,9 +251,9 @@ export default function DocumentsScreen() {
         )}
 
         {/* Sections */}
-        {!docsLoading && (
+        {!docsLoading && !onboardingLoading && (
           <View style={styles.sections}>
-            {SECTIONS.map(({ sectionKey, types }) => (
+            {sections.map(({ sectionKey, types }) => (
               <View key={sectionKey} style={styles.section}>
                 <Text style={[styles.sectionHeader, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold', textAlign: TA }]}>
                   {sectionLabel(sectionKey)}
@@ -244,6 +266,7 @@ export default function DocumentsScreen() {
                       label={typeLabel(docType)}
                       record={latestByType.get(docType) ?? null}
                       trips={trips}
+                      criminalRecordTripThreshold={criminalRecordTripThreshold}
                       isUploading={!!uploading[docType]}
                       onUpload={() => handleUploadPress(docType)}
                       colors={colors}

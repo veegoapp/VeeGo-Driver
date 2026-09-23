@@ -193,12 +193,12 @@ export default function TripDetailsScreen() {
   if (listLoading && !effectiveBooking && !line) {
     return (
       <View style={styles.container}>
-        <View style={[styles.heroC, { paddingTop: topPad + 8, paddingBottom: Spacing.md }]}>
+        <View style={[styles.headerBarC, { paddingTop: topPad + 8, paddingBottom: Spacing.md }]}>
           <View style={{ flexDirection: R, alignItems: 'center', justifyContent: 'space-between' }}>
-            <Pressable onPress={() => router.back()} style={styles.backBtnC} hitSlop={8}>
-              <ChevronLeft size={22} color="#ffffff" strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
+            <Pressable onPress={() => router.back()} style={[styles.backBtnC, { backgroundColor: S.surfaceMuted }]} hitSlop={8}>
+              <ChevronLeft size={22} color={S.ink} strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
             </Pressable>
-            <Text style={styles.heroCapC}>{t.trip_details_title}</Text>
+            <Text style={[styles.heroCapC, { color: S.cap }]}>{t.trip_details_title}</Text>
             <View style={{ width: 36 }} />
           </View>
         </View>
@@ -212,12 +212,12 @@ export default function TripDetailsScreen() {
   if (!effectiveBooking && !line) {
     return (
       <View style={styles.container}>
-        <View style={[styles.heroC, { paddingTop: topPad + 8, paddingBottom: Spacing.md }]}>
+        <View style={[styles.headerBarC, { paddingTop: topPad + 8, paddingBottom: Spacing.md }]}>
           <View style={{ flexDirection: R, alignItems: 'center', justifyContent: 'space-between' }}>
-            <Pressable onPress={() => router.back()} style={styles.backBtnC} hitSlop={8}>
-              <ChevronLeft size={22} color="#ffffff" strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
+            <Pressable onPress={() => router.back()} style={[styles.backBtnC, { backgroundColor: S.surfaceMuted }]} hitSlop={8}>
+              <ChevronLeft size={22} color={S.ink} strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
             </Pressable>
-            <Text style={styles.heroCapC}>{t.trip_details_title}</Text>
+            <Text style={[styles.heroCapC, { color: S.cap }]}>{t.trip_details_title}</Text>
             <View style={{ width: 36 }} />
           </View>
         </View>
@@ -254,58 +254,68 @@ export default function TripDetailsScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Dark hero: back button + route diagram + departure countdown */}
-      <View style={[styles.heroC, { paddingTop: topPad + 8 }]}>
+      {/* Back button + status, then a ticket-stub card for the route
+          diagram + departure countdown — on the page's normal background. */}
+      <View style={[styles.headerBarC, { paddingTop: topPad + 8 }]}>
         <View style={{ flexDirection: R, alignItems: 'center', justifyContent: 'space-between' }}>
-          <Pressable onPress={() => router.back()} style={styles.backBtnC} hitSlop={8}>
-            <ChevronLeft size={22} color="#ffffff" strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
+          <Pressable onPress={() => router.back()} style={[styles.backBtnC, { backgroundColor: S.surfaceMuted }]} hitSlop={8}>
+            <ChevronLeft size={22} color={S.ink} strokeWidth={2} style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }} />
           </Pressable>
-          <Text style={styles.heroCapC}>{t.trip_details_title}</Text>
-          <View style={styles.statusBadgeC}>
+          <Text style={[styles.heroCapC, { color: S.cap }]}>{t.trip_details_title}</Text>
+          <View style={[styles.statusBadgeC, { backgroundColor: S.surfaceMuted }]}>
             <View style={styles.statusDotC} />
-            <Text style={styles.statusTextC}>
+            <Text style={[styles.statusTextC, { color: S.ink }]}>
               {effectiveBooking?.status === 'active' ? t.active : t.status_booked}
             </Text>
           </View>
         </View>
 
-        <Text style={[styles.routeNameC, { textAlign: TA }]} numberOfLines={1}>
-          {routeName}{!!directionLabel && ` · ${directionLabel}`}
-        </Text>
+        <View style={[styles.ticketCardC, { borderColor: S.hair, backgroundColor: S.card }]}>
+          <Text style={[styles.routeNameC, { color: S.ink, textAlign: TA }]} numberOfLines={1}>
+            {routeName}{!!directionLabel && ` · ${directionLabel}`}
+          </Text>
 
-        {/* Route diagram: From --route--> To */}
-        <View style={{ flexDirection: R, alignItems: 'center', gap: 10, marginTop: 18 }}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.heroCapC}>{t.from}</Text>
-            <Text style={[styles.routeStopC, { textAlign: TA }]} numberOfLines={1}>{from}</Text>
-          </View>
-          <View style={styles.routeLineWrapC}>
-            <View style={styles.routeDotStartC} />
-            <View style={styles.routeDashC} />
-            <View style={styles.routeVehicleIconC}>
-              <MapPin size={13} color={S.ink} strokeWidth={2.4} />
+          {/* Route diagram: From --route--> To */}
+          <View style={{ flexDirection: R, alignItems: 'center', gap: 10, marginTop: 18 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.heroCapC, { color: S.cap }]}>{t.from}</Text>
+              <Text style={[styles.routeStopC, { color: S.ink, textAlign: TA }]} numberOfLines={1}>{from}</Text>
             </View>
-            <View style={styles.routeDashC} />
-            <View style={styles.routeDotEndC} />
+            <View style={styles.routeLineWrapC}>
+              <View style={styles.routeDotStartC} />
+              <View style={[styles.routeDashC, { backgroundColor: S.hair }]} />
+              <View style={styles.routeVehicleIconC}>
+                <MapPin size={13} color={S.ink} strokeWidth={2.4} />
+              </View>
+              <View style={[styles.routeDashC, { backgroundColor: S.hair }]} />
+              <View style={[styles.routeDotEndC, { borderColor: S.hair, backgroundColor: S.card }]} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.heroCapC, { color: S.cap, textAlign: isRTL ? 'left' : 'right' }]}>{t.to}</Text>
+              <Text style={[styles.routeStopC, { color: S.ink, textAlign: isRTL ? 'left' : 'right' }]} numberOfLines={1}>{to}</Text>
+            </View>
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.heroCapC, { textAlign: isRTL ? 'left' : 'right' }]}>{t.to}</Text>
-            <Text style={[styles.routeStopC, { textAlign: isRTL ? 'left' : 'right' }]} numberOfLines={1}>{to}</Text>
+
+          {/* Perforated divider, matching the Wallet tab's ticket card. */}
+          <View style={styles.perfRow}>
+            <View style={[styles.perfLine, { borderTopColor: S.hair }]} />
+            <View style={[styles.notch, styles.notchLeft, { backgroundColor: S.bg, borderColor: S.hair }]} />
+            <View style={[styles.notch, styles.notchRight, { backgroundColor: S.bg, borderColor: S.hair }]} />
           </View>
+
+          {/* Countdown readout */}
+          {minutesUntilDeparture != null ? (
+            <View>
+              <View style={{ flexDirection: R, alignItems: 'baseline', gap: 8 }}>
+                <Text style={styles.countdownValC}>{Math.max(0, minutesUntilDeparture)}</Text>
+                <Text style={styles.countdownLabelC}>min until departure</Text>
+              </View>
+              <Text style={[styles.heroDateC, { color: S.cap }]}>{tripDate} · {departureTime}</Text>
+            </View>
+          ) : (
+            <Text style={[styles.heroDateC, { color: S.cap }]}>{tripDate} · {departureTime}</Text>
+          )}
         </View>
-
-        {/* Countdown readout */}
-        {minutesUntilDeparture != null ? (
-          <View style={{ marginTop: 20 }}>
-            <View style={{ flexDirection: R, alignItems: 'baseline', gap: 8 }}>
-              <Text style={styles.countdownValC}>{Math.max(0, minutesUntilDeparture)}</Text>
-              <Text style={styles.countdownLabelC}>min until departure</Text>
-            </View>
-            <Text style={styles.heroDateC}>{tripDate} · {departureTime}</Text>
-          </View>
-        ) : (
-          <Text style={[styles.heroDateC, { marginTop: 18 }]}>{tripDate} · {departureTime}</Text>
-        )}
       </View>
 
       <ScrollView
@@ -492,20 +502,23 @@ function makeStyles(S: SplitColors) {
   container: { flex: 1, backgroundColor: S.bg },
 
   // Dark hero: back button + route diagram + countdown
-  backBtnC: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.1)' },
+  backBtnC: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  heroC: { backgroundColor: S.panel, paddingHorizontal: Spacing.lg, paddingBottom: 22, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 },
-  heroCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.2, color: '#8A9096', textTransform: 'uppercase' },
-  routeNameC: { fontSize: 20, lineHeight: 26, fontFamily: 'Inter_700Bold', color: '#ffffff', marginTop: 22 },
-  routeStopC: { fontSize: 14, fontFamily: 'Inter_700Bold', color: '#ffffff', marginTop: 3 },
+  headerBarC: { paddingHorizontal: Spacing.lg, paddingBottom: 22 },
+  // Ticket-stub family: bordered, sharper-cornered card on the page's
+  // normal background, matching the Wallet/Earnings tabs' balance card.
+  ticketCardC: { borderWidth: 1, borderRadius: 10, padding: 18, marginTop: 14 },
+  heroCapC: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.2, textTransform: 'uppercase' },
+  routeNameC: { fontSize: 20, lineHeight: 26, fontFamily: 'Inter_700Bold' },
+  routeStopC: { fontSize: 14, fontFamily: 'Inter_700Bold', marginTop: 3 },
   routeLineWrapC: { flex: 1.4, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 4 },
   routeDotStartC: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: C_MINT },
-  routeDotEndC: { width: 7, height: 7, borderRadius: 2, backgroundColor: '#ffffff', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.5)' },
-  routeDashC: { flex: 1, height: 2, backgroundColor: 'rgba(255,255,255,0.28)' },
+  routeDotEndC: { width: 7, height: 7, borderRadius: 2, borderWidth: 1.5 },
+  routeDashC: { flex: 1, height: 2 },
   routeVehicleIconC: { width: 26, height: 26, borderRadius: 8, backgroundColor: C_MINT, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   countdownValC: { fontSize: 36, lineHeight: 38, fontFamily: 'Inter_700Bold', color: C_MINT },
   countdownLabelC: { fontSize: 14, fontFamily: 'Inter_700Bold', color: C_MINT },
-  heroDateC: { fontSize: 12, fontFamily: 'Inter_700Bold', color: '#8A9096', letterSpacing: 0.4, textTransform: 'uppercase', marginTop: 2 },
+  heroDateC: { fontSize: 12, fontFamily: 'Inter_700Bold', letterSpacing: 0.4, textTransform: 'uppercase', marginTop: 2 },
   statusBadgeC: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -513,10 +526,16 @@ function makeStyles(S: SplitColors) {
     paddingHorizontal: Spacing.md,
     paddingVertical: 5,
     borderRadius: 99,
-    backgroundColor: 'rgba(255,255,255,0.1)',
   },
   statusDotC: { width: 7, height: 7, borderRadius: 4, backgroundColor: C_MINT },
-  statusTextC: { fontSize: Typography.size.xs, fontFamily: 'Inter_700Bold', color: '#ffffff' },
+  statusTextC: { fontSize: Typography.size.xs, fontFamily: 'Inter_700Bold' },
+  // Perforation: a dashed line with a punch-out circle on each edge, colored
+  // to match the page background so they read as a cut-out, not a dot.
+  perfRow: { height: 1, marginVertical: 18, position: 'relative' },
+  perfLine: { flex: 1, borderTopWidth: 1, borderStyle: 'dashed' },
+  notch: { position: 'absolute', top: -9, width: 18, height: 18, borderRadius: 9, borderWidth: 1 },
+  notchLeft: { left: -27 },
+  notchRight: { right: -27 },
   cancelledBannerC: {
     alignItems: 'center',
     gap: 8,

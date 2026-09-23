@@ -210,6 +210,11 @@ export default function MessagesScreen() {
         )}
 
         {/* ── Support Messages Tab ────────────────────────────────────── */}
+        {/* The backend has no driver-facing "list my support tickets"
+            endpoint yet (GET /support/tickets is admin-only) — until one
+            exists, this stays a static state instead of pretending to be a
+            live ticket-history feed. It at least routes to the real,
+            working ticket-creation flow instead of being a pure dead end. */}
         {activeTab === 'support' && (
           <GlassView style={styles.centeredState} borderRadius={20}>
             <MessageSquare size={32} color={colors.mutedForeground} strokeWidth={1.5} />
@@ -219,6 +224,14 @@ export default function MessagesScreen() {
             <Text style={[styles.stateSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
               {t.support_msgs_empty_sub}
             </Text>
+            <Pressable
+              onPress={() => router.push('/support')}
+              style={({ pressed }) => [styles.contactSupportBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
+            >
+              <Text style={[styles.contactSupportText, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>
+                {t.contact_support}
+              </Text>
+            </Pressable>
           </GlassView>
         )}
       </ScrollView>
@@ -239,6 +252,8 @@ const styles = StyleSheet.create({
   centeredState:{ marginTop: 40, alignItems: 'center', padding: Spacing.xxl, gap: Spacing.md },
   stateTitle:   { fontSize: Typography.size.md, textAlign: 'center' },
   stateSub:     { fontSize: 13, textAlign: 'center', lineHeight: 20 },
+  contactSupportBtn: { marginTop: Spacing.sm, paddingHorizontal: Spacing.xl, paddingVertical: 12, borderRadius: Radius.md },
+  contactSupportText: { fontSize: Typography.size.sm },
   msgRow:       { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.md, padding: Spacing.lg },
   avatarCircle: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   avatarLetter: { fontSize: Typography.size.sm },

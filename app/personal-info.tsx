@@ -14,7 +14,7 @@ import { useQuery } from '@tanstack/react-query';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { AppLoader } from '@/components/ui/AppLoader';
-import { endpoints } from '@/lib/api';
+import { endpoints, type DriverProfileEnriched } from '@/lib/api';
 import { useI18n } from '@/lib/i18nContext';
 import { rtlIconStyle } from '@/lib/rtlUtils';
 import { Typography } from '@/constants/typography';
@@ -47,10 +47,19 @@ export default function PersonalInfoScreen() {
     queryKey: ['driver'],
     queryFn: endpoints.driver.me as () => Promise<DriverMe>,
   });
+  // GET /driver/me (above) reads straight off the drivers table, which has
+  // no email column — email only exists on the joined users table, which
+  // GET /driver/profile returns instead. Same query key the Profile tab
+  // already fetches under, so this is usually served from cache rather than
+  // a second network round trip.
+  const { data: profileRaw, refetch: refetchProfile } = useQuery<DriverProfileEnriched>({
+    queryKey: ['driver-profile'],
+    queryFn: endpoints.driver.profile,
+  });
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await refetch();
+    await Promise.all([refetch(), refetchProfile()]);
     setRefreshing(false);
   };
 
@@ -93,7 +102,7 @@ export default function PersonalInfoScreen() {
         ) : (
           <GlassView style={{ marginTop: Spacing.xl }} borderRadius={20}>
             {FIELDS.map((field, i) => {
-              const value = raw?.[field.key] ?? '';
+              const value = field.key === 'email' ? (profileRaw?.email ?? '') : (raw?.[field.key] ?? '');
               const display =
                 field.key === 'gender'
                   ? value === 'male'

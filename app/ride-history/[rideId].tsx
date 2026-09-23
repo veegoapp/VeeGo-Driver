@@ -239,9 +239,15 @@ export default function RideHistoryDetailScreen() {
                 </View>
               </View>
 
-              {/* Price breakdown */}
+              {/* Price breakdown. Trip fare shows the gross, pre-discount
+                  price (originalPrice) — driverEarningsAmount/
+                  platformCommissionAmount below are computed by the backend
+                  on this same gross figure, so Trip fare minus Promo
+                  discount minus Company share equals Your share, and this
+                  row plus the split below reconcile instead of silently
+                  double-subtracting the discount. */}
               <View style={[styles.divider, { backgroundColor: colors.divider }]} />
-              <FinRow label={t.trip_fare_label} value={`${(financial.finalPrice ?? 0).toFixed(2)} ${t.egp}`} colors={colors} isRTL={isRTL} />
+              <FinRow label={t.trip_fare_label} value={`${(financial.originalPrice ?? financial.finalPrice ?? 0).toFixed(2)} ${t.egp}`} colors={colors} isRTL={isRTL} />
               {(financial.discountAmount ?? 0) > 0 && (
                 <FinRow label={t.promo_discount_label} value={`-${(financial.discountAmount ?? 0).toFixed(2)} ${t.egp}`} negative colors={colors} isRTL={isRTL} />
               )}

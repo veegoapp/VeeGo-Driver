@@ -35,7 +35,10 @@ type VehicleEndpointData = {
   colorAr?: string | null;
   type?: string | null;
   vehicleType?: string | null;
-  // Backend wraps vehicle details inside a nested key
+  // Backend wraps vehicle details inside a nested key. For a shuttle driver
+  // with an assigned bus, this is a raw `buses` table row instead of a
+  // `vehicles` table row — it has no make/color/year, and its plate field is
+  // named `plateNumber`, not `plate`.
   vehicle?: {
     make?: string | null;
     model?: string | null;
@@ -43,6 +46,7 @@ type VehicleEndpointData = {
     color?: string | null;
     colorAr?: string | null;
     plate?: string | null;
+    plateNumber?: string | null;
   } | null;
 };
 
@@ -89,7 +93,7 @@ export default function VehicleScreen() {
       return `${vehicleData.plateLetters} ${vehicleData.plateNumbers}`;
     }
     if (vehicleData?.plateNumber) return vehicleData.plateNumber;
-    return nestedVehicle?.plate ?? profileVehicle?.plate ?? null;
+    return nestedVehicle?.plate ?? nestedVehicle?.plateNumber ?? profileVehicle?.plate ?? null;
   })();
 
   const displayColor = isRTL && colorAr ? colorAr : (color ?? null);

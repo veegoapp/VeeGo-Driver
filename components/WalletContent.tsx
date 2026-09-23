@@ -1,7 +1,7 @@
 import { router, useFocusEffect } from 'expo-router';
 import { ArrowDownLeft, ArrowUpRight, Wallet, Wrench } from 'lucide-react-native';
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AppLoader } from '@/components/ui/AppLoader';
@@ -28,8 +28,11 @@ import { useSplitColors, type SplitColors } from '@/lib/splitTheme';
 // chart + earnings breakdown, the ride screen's cleaner C-styled hero —
 // plus two real bugs fixed along the way (see below).
 
-const C_MINT = '#3DDC97';
 const C_AMBER = '#F5A623';
+// Ticket-stub styling: money figures render in a monospace face (tabular
+// numerals, receipt/boarding-pass feel) — a system font, not a bundled one,
+// since the app only loads the Inter family today.
+const MONO = Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' });
 
 type WalletFeature = {
   isEnabled: boolean;
@@ -147,13 +150,10 @@ export function WalletContent() {
   );
   const payoutHistory = extractList<PayoutHistoryItem>(payoutHistoryRaw as PayoutHistoryItem[] | { data?: PayoutHistoryItem[] } | undefined);
 
-  // Bug fix: the backend's /earnings/weekly returns { week_start, trip_count,
-  // total_earned } — the previous shuttle screen read d.day/d.amount (fields
-  // that don't exist in that response), so every bar rendered as "undefined"
-  // at 0 height. It's also a per-WEEK breakdown, not per-day, so the chart
-  // is labeled and animated as weeks (e.g. "Jun 21"), not weekday names.
+  // The backend's /earnings/weekly returns { week_start, trip_count,
+  // total_earned } — a per-WEEK breakdown, listed newest-last (so the most
+  // recent week is highlighted below).
   const weeklyRows: WeeklyRow[] = ((weeklyRaw as { weeklyBreakdown?: WeeklyRow[] } | undefined)?.weeklyBreakdown ?? []);
-  const maxEarning = weeklyRows.length ? Math.max(...weeklyRows.map(w => parseFloat(String(w.total_earned)) || 0), 1) : 1;
   const summary = summaryRaw as EarningsSummary | undefined;
 
   const isLoading = walletLive && (balanceLoading || txLoading);
@@ -221,74 +221,81 @@ export function WalletContent() {
         keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
       >
-        {/* Dark hero — balance + paid/pending + cash-out/deposit */}
-        <View style={[styles.hero, { paddingTop: topPad + 14 }]}>
-          <Text style={[styles.heroCap, { textAlign: TA, fontFamily: 'Inter_700Bold' }]}>{t.available}</Text>
-          <View style={[styles.balanceRow, { flexDirection: 'row' }]}>
-            <Text style={[styles.balanceAmount, { fontFamily: 'Inter_800ExtraBold' }]}>{balanceData.balance.toFixed(0)}</Text>
-            <Text style={[styles.balanceCurrency, { fontFamily: 'Inter_700Bold' }]}>{t.egp}</Text>
-          </View>
-
-          <View style={styles.heroStatsRow}>
-            <View style={styles.heroStatCell}>
-              <Text style={[styles.heroStatValue, { color: C_MINT, fontFamily: 'Inter_800ExtraBold' }]}>{balanceData.totalPaid.toFixed(0)}</Text>
-              <Text style={[styles.heroStatCap, { fontFamily: 'Inter_700Bold' }]}>{t.status_paid_out}</Text>
+        {/* Balance — a ticket-stub card on the page's normal background,
+            replacing the old full-bleed dark hero block. */}
+        <View style={{ paddingTop: topPad + 14, paddingHorizontal: Spacing.lg }}>
+          <View style={[styles.ticketCard, { borderColor: S.hair, backgroundColor: S.card }]}>
+            <Text style={[styles.ticketCap, { color: S.cap, textAlign: TA, fontFamily: 'Inter_700Bold' }]}>{t.available}</Text>
+            <View style={[styles.balanceRow, { flexDirection: 'row' }]}>
+              <Text style={[styles.balanceAmount, { color: S.ink }]}>{balanceData.balance.toFixed(2)}</Text>
+              <Text style={[styles.balanceCurrency, { color: S.cap }]}>{t.egp}</Text>
             </View>
-            <View style={styles.heroDivider} />
-            <View style={styles.heroStatCell}>
-              <Text style={[styles.heroStatValue, { fontFamily: 'Inter_800ExtraBold' }]}>{balanceData.totalPending.toFixed(0)}</Text>
-              <Text style={[styles.heroStatCap, { fontFamily: 'Inter_700Bold' }]}>{t.status_pending}</Text>
+
+            {/* Perforated divider with punch-out notches on both edges —
+                notches are colored to match the page background (S.bg), not
+                the card, so they read as a cut-out rather than a dot. */}
+            <View style={styles.perfRow}>
+              <View style={[styles.perfLine, { borderTopColor: S.hair }]} />
+              <View style={[styles.notch, styles.notchLeft, { backgroundColor: S.bg, borderColor: S.hair }]} />
+              <View style={[styles.notch, styles.notchRight, { backgroundColor: S.bg, borderColor: S.hair }]} />
+            </View>
+
+            <View style={[styles.ticketStatRow, { flexDirection: 'row' }]}>
+              <Text style={[styles.ticketStatValue, { color: S.teal }]}>{balanceData.totalPaid.toFixed(2)} {t.egp}</Text>
+              <Text style={[styles.ticketStatLabel, { color: S.cap }]}>{t.status_paid_out}</Text>
             </View>
           </View>
 
           <View style={[styles.actionRow, { flexDirection: 'row' }]}>
-            <Pressable onPress={() => router.push('/wallet-withdraw')} style={({ pressed }) => [styles.primaryAction, { opacity: pressed ? 0.9 : 1 }]}>
-              <ArrowDownLeft size={16} color="#14151A" strokeWidth={2} />
-              <Text style={[styles.primaryActionText, { fontFamily: 'Inter_800ExtraBold' }]}>{t.cash_out}</Text>
+            <Pressable onPress={() => router.push('/wallet-withdraw')} style={({ pressed }) => [styles.primaryAction, { backgroundColor: S.ink, opacity: pressed ? 0.9 : 1 }]}>
+              <ArrowDownLeft size={16} color={S.bg} strokeWidth={2} />
+              <Text style={[styles.primaryActionText, { color: S.bg, fontFamily: 'Inter_800ExtraBold' }]}>{t.cash_out}</Text>
             </Pressable>
-            <Pressable onPress={() => router.push('/wallet-deposit')} style={({ pressed }) => [styles.secondaryAction, { opacity: pressed ? 0.8 : 1 }]}>
-              <ArrowUpRight size={16} color="#fff" strokeWidth={2} />
-              <Text style={[styles.secondaryActionText, { fontFamily: 'Inter_800ExtraBold' }]}>{t.deposit_label}</Text>
+            <Pressable onPress={() => router.push('/wallet-deposit')} style={({ pressed }) => [styles.secondaryAction, { backgroundColor: S.card, borderColor: S.hair, opacity: pressed ? 0.8 : 1 }]}>
+              <ArrowUpRight size={16} color={S.ink} strokeWidth={2} />
+              <Text style={[styles.secondaryActionText, { color: S.ink, fontFamily: 'Inter_800ExtraBold' }]}>{t.deposit_label}</Text>
             </Pressable>
           </View>
         </View>
 
-        {/* White body */}
+        {/* Body */}
         <View style={{ paddingHorizontal: Spacing.lg }}>
-          {/* Weekly earnings chart */}
+          {/* Weekly earnings */}
           <Text style={[styles.sectionTitle, { color: S.ink, fontFamily: 'Inter_800ExtraBold', textAlign: TA, marginTop: Spacing.xl }]}>{t.this_week}</Text>
-          <View style={styles.chartCard}>
-            {weeklyLoading ? (
-              <View style={{ height: 100, alignItems: 'center', justifyContent: 'center' }}>
-                <ActivityIndicator color={S.ink} />
-              </View>
-            ) : weeklyRows.length === 0 ? (
-              <View style={{ height: 100, alignItems: 'center', justifyContent: 'center' }}>
-                <Text style={{ color: S.cap, fontFamily: 'Inter_400Regular', fontSize: 13 }}>{t.no_data_yet}</Text>
-              </View>
-            ) : (
-              <View style={styles.chartBars}>
-                {weeklyRows.map((w, i) => {
-                  const amount = parseFloat(String(w.total_earned)) || 0;
-                  const isCurrent = i === weeklyRows.length - 1;
-                  const heightPct = Math.max(4, Math.round((amount / maxEarning) * 100));
-                  return (
-                    <View key={w.week_start} style={styles.barCol}>
-                      <Text style={[styles.barAmount, { color: S.cap, fontFamily: 'Inter_700Bold' }]} numberOfLines={1}>
-                        {amount > 0 ? amount.toFixed(0) : ''}
-                      </Text>
-                      <View style={[styles.barTrack, { backgroundColor: S.surfaceMuted }]}>
-                        <View style={[styles.barFill, { height: `${heightPct}%`, backgroundColor: isCurrent ? S.ink : S.hair }]} />
-                      </View>
-                      <Text style={[styles.barLabel, { color: isCurrent ? S.ink : S.cap, fontFamily: isCurrent ? 'Inter_800ExtraBold' : 'Inter_600SemiBold' }]}>
+          {weeklyLoading ? (
+            <View style={[styles.emptyCard, { alignItems: 'center' }]}>
+              <ActivityIndicator color={S.ink} />
+            </View>
+          ) : weeklyRows.length === 0 ? (
+            <View style={[styles.emptyCard, { alignItems: 'center' }]}>
+              <Text style={{ color: S.cap, fontFamily: 'Inter_400Regular', fontSize: 13 }}>{t.no_data_yet}</Text>
+            </View>
+          ) : (
+            <View style={styles.listCard}>
+              {weeklyRows.map((w, i) => {
+                const amount = parseFloat(String(w.total_earned)) || 0;
+                const isCurrent = i === weeklyRows.length - 1;
+                return (
+                  <View key={w.week_start} style={[styles.txItem, { flexDirection: 'row' }, i > 0 && styles.txItemBorder]}>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text
+                        style={[styles.txTitle, { color: S.ink, fontFamily: isCurrent ? 'Inter_800ExtraBold' : 'Inter_700Bold', textAlign: TA }]}
+                        numberOfLines={1}
+                      >
                         {formatWeekLabel(w.week_start, locale)}
                       </Text>
+                      <Text style={[styles.txSub, { color: S.cap, fontFamily: 'Inter_400Regular', textAlign: TA }]} numberOfLines={1}>
+                        {w.trip_count} {t.trips}
+                      </Text>
                     </View>
-                  );
-                })}
-              </View>
-            )}
-          </View>
+                    <Text style={[styles.txAmount, { color: S.ink }]}>
+                      {amount.toFixed(2)} {t.egp}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+          )}
 
           {/* Net earnings breakdown */}
           <Text style={[styles.sectionTitle, { color: S.ink, fontFamily: 'Inter_800ExtraBold', textAlign: TA, marginTop: Spacing.xl }]}>{t.net_earnings}</Text>
@@ -299,7 +306,6 @@ export function WalletContent() {
           ) : (
             <View style={styles.listCard}>
               <SummaryRow label={t.status_confirmed} value={`+${parseFloat(summary?.summary?.totalConfirmed ?? '0').toFixed(2)} ${t.egp}`} color={S.teal} S={S} />
-              <SummaryRow label={t.status_pending} value={`+${parseFloat(summary?.summary?.totalPending ?? '0').toFixed(2)} ${t.egp}`} color={S.teal} S={S} />
               <SummaryRow label={t.status_paid_out} value={`${parseFloat(summary?.summary?.totalPaid ?? '0').toFixed(2)} ${t.egp}`} color={S.ink} S={S} />
               <SummaryRow label={t.net_earnings} value={`${parseFloat(summary?.summary?.totalEarnings ?? '0').toFixed(2)} ${t.egp}`} color={S.ink} bold S={S} last />
             </View>
@@ -337,7 +343,7 @@ export function WalletContent() {
                       </Text>
                     </View>
                     <View style={{ alignItems: isRTL ? 'flex-start' : 'flex-end', gap: 4 }}>
-                      <Text style={[styles.txAmount, { color: S.ink, fontFamily: 'Inter_800ExtraBold' }]}>
+                      <Text style={[styles.txAmount, { color: S.ink }]}>
                         {item.amount.toFixed(2)} {t.egp}
                       </Text>
                       <Text style={[styles.statusText, { color: badge.color, fontFamily: 'Inter_800ExtraBold' }]}>{badge.label}</Text>
@@ -371,7 +377,7 @@ export function WalletContent() {
                       <Text style={[styles.txTitle, { color: S.ink, fontFamily: 'Inter_700Bold', textAlign: TA }]} numberOfLines={1}>{tx.title}</Text>
                       <Text style={[styles.txSub, { color: S.cap, fontFamily: 'Inter_400Regular', textAlign: TA }]} numberOfLines={1}>{tx.subtitle}</Text>
                     </View>
-                    <Text style={[styles.txAmount, { color: txColor, fontFamily: 'Inter_800ExtraBold' }]}>
+                    <Text style={[styles.txAmount, { color: txColor }]}>
                       {tx.isCredit ? '+' : '−'}{tx.amount.toFixed(2)} {t.egp}
                     </Text>
                   </View>
@@ -389,9 +395,9 @@ function SummaryRow({ label, value, color, bold, last, S }: {
   label: string; value: string; color: string; bold?: boolean; last?: boolean; S: SplitColors;
 }) {
   return (
-    <View style={[styles2.summaryRow, { flexDirection: 'row' }, !last && { borderBottomWidth: 1, borderBottomColor: S.hair }]}>
+    <View style={[styles2.summaryRow, { flexDirection: 'row' }, !last && { borderBottomWidth: 1, borderStyle: 'dashed', borderBottomColor: S.hair }]}>
       <Text style={[styles2.summaryLabel, { color: S.cap, fontFamily: 'Inter_400Regular' }]}>{label}</Text>
-      <Text style={[styles2.summaryValue, { color, fontFamily: bold ? 'Inter_800ExtraBold' : 'Inter_700Bold' }]}>{value}</Text>
+      <Text style={[styles2.summaryValue, { color, fontWeight: bold ? '800' : '700' }]}>{value}</Text>
     </View>
   );
 }
@@ -399,46 +405,44 @@ function SummaryRow({ label, value, color, bold, last, S }: {
 const styles2 = StyleSheet.create({
   summaryRow: { alignItems: 'center', justifyContent: 'space-between', padding: 14 },
   summaryLabel: { fontSize: 13 },
-  summaryValue: { fontSize: 13.5 },
+  summaryValue: { fontSize: 13.5, fontFamily: MONO },
 });
 
 function makeStyles(S: SplitColors) {
   return StyleSheet.create({
   container: { flex: 1 },
-  hero: { backgroundColor: S.panel, paddingHorizontal: 22, paddingBottom: 22, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 },
-  heroCap: { fontSize: 10, letterSpacing: 1.6, textTransform: 'uppercase', color: S.capOnDark },
-  balanceRow: { alignItems: 'flex-end', gap: 8, marginTop: 2 },
-  balanceAmount: { fontSize: 44, lineHeight: 48, color: '#fff' },
-  balanceCurrency: { fontSize: 18, color: S.capOnDark, marginBottom: 4 },
-  heroStatsRow: { flexDirection: 'row', marginTop: 18 },
-  heroStatCell: { flex: 1, alignItems: 'center' },
-  heroStatValue: { fontSize: 15, color: '#fff' },
-  heroStatCap: { fontSize: 9, letterSpacing: 1, textTransform: 'uppercase', color: S.capOnDark, marginTop: 2 },
-  heroDivider: { width: 1, backgroundColor: 'rgba(255,255,255,.12)' },
-  actionRow: { gap: 10, marginTop: 20 },
-  // Fixed (not theme-adaptive): this pill sits on the always-dark hero above,
-  // same as the hero itself — S.card/S.ink would flip to a near-black pill on
-  // dark mode and disappear against the panel.
-  primaryAction: { flex: 1, height: 48, borderRadius: 14, backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  primaryActionText: { fontSize: 13.5, color: '#14151A' },
-  secondaryAction: { flex: 1, height: 48, borderRadius: 14, backgroundColor: 'rgba(255,255,255,.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,.16)', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  secondaryActionText: { fontSize: 13.5, color: '#fff' },
-  sectionTitle: { fontSize: 15, marginBottom: Spacing.md },
-  emptyCard: { padding: Spacing.xl, borderRadius: 16, backgroundColor: S.card },
-  listCard: { backgroundColor: S.card, borderRadius: 16, overflow: 'hidden' },
-  chartCard: { backgroundColor: S.card, borderRadius: 16, padding: Spacing.lg },
-  chartBars: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, height: 120 },
-  barCol: { flex: 1, alignItems: 'center' },
-  barAmount: { fontSize: 10, marginBottom: 4, height: 12 },
-  barTrack: { flex: 1, width: '100%', borderRadius: 6, overflow: 'hidden', justifyContent: 'flex-end' },
-  barFill: { width: '100%', borderRadius: 6 },
-  barLabel: { fontSize: 10, marginTop: 6 },
+  // Ticket-stub balance card — sits on the page's normal background (no
+  // full-bleed colored hero block), bordered and sharper-cornered than the
+  // app's usual 16-20px cards to read as a receipt/boarding-pass.
+  ticketCard: { borderWidth: 1, borderRadius: 10, padding: 20 },
+  ticketCap: { fontSize: 10, letterSpacing: 1.6, textTransform: 'uppercase' },
+  balanceRow: { alignItems: 'flex-end', gap: 8, marginTop: 4 },
+  balanceAmount: { fontSize: 40, lineHeight: 44, fontFamily: MONO, fontWeight: '700' },
+  balanceCurrency: { fontSize: 15, fontWeight: '700', marginBottom: 4, fontFamily: MONO },
+  // Perforation: a dashed line with a punch-out circle on each edge, colored
+  // to match the page background so they read as a cut-out, not a dot.
+  perfRow: { height: 1, marginVertical: 18, position: 'relative' },
+  perfLine: { flex: 1, borderTopWidth: 1, borderStyle: 'dashed' },
+  notch: { position: 'absolute', top: -9, width: 18, height: 18, borderRadius: 9, borderWidth: 1 },
+  notchLeft: { left: -29 },
+  notchRight: { right: -29 },
+  ticketStatRow: { alignItems: 'center', justifyContent: 'center', gap: 8 },
+  ticketStatValue: { fontSize: 15, fontWeight: '700', fontFamily: MONO },
+  ticketStatLabel: { fontSize: 11.5, fontWeight: '600' },
+  actionRow: { gap: 10, marginTop: 14 },
+  primaryAction: { flex: 1, height: 50, borderRadius: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  primaryActionText: { fontSize: 13, letterSpacing: 0.3, textTransform: 'uppercase' },
+  secondaryAction: { flex: 1, height: 50, borderRadius: 10, borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  secondaryActionText: { fontSize: 13, letterSpacing: 0.3, textTransform: 'uppercase' },
+  sectionTitle: { fontSize: 12.5, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: Spacing.md },
+  emptyCard: { padding: Spacing.xl, borderRadius: 10, backgroundColor: S.card, borderWidth: 1, borderColor: S.hair },
+  listCard: { backgroundColor: S.card, borderRadius: 10, borderWidth: 1, borderColor: S.hair, overflow: 'hidden' },
   txItem: { alignItems: 'center', gap: Spacing.md, padding: Spacing.lg },
-  txItemBorder: { borderTopWidth: 1, borderTopColor: S.hair },
+  txItemBorder: { borderTopWidth: 1, borderStyle: 'dashed', borderTopColor: S.hair },
   txIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: S.hair },
   txTitle: { fontSize: 13.5 },
   txSub: { fontSize: 11.5, marginTop: 2 },
-  txAmount: { fontSize: 13.5 },
+  txAmount: { fontSize: 13.5, fontFamily: MONO, fontWeight: '700' },
   statusText: { fontSize: 10, letterSpacing: 0.5, textTransform: 'uppercase' },
   comingSoonIcon: { width: 88, height: 88, borderRadius: Radius.xl, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   comingSoonTitle: { fontSize: 22 },
