@@ -18,19 +18,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    getToken()
-      .then((t) => {
-        setToken(t);
-        setIsLoading(false);
-      })
-      .catch(() => {
-        // SecureStore rejected (e.g. corrupted keychain entry, OS keychain
-        // locked during device startup, keychain unavailable after OS upgrade).
-        // Treat as unauthenticated so isLoading always clears and the driver
-        // reaches the login screen rather than freezing on the splash screen.
-        setToken(null);
-        setIsLoading(false);
-      });
+    let cancelled = false;
+
+    // getToken() rejecting (rather than resolving null) means SecureStore
+    // itself failed to answer — e.g. the OS keychain is still waking up
+    // after the device sat locked for hours — not that no token exists. A
+    // resolved `null` is a real, reliable "nothing stored" and is trusted
+    // immediately. A rejection gets a couple of quick retries before we
+    // conclude the driver is logged out, mirroring the retry app/_layout.tsx
+    // already applies to access-token refresh for the same class of
+    // transient failure — without this, a single slow keychain read on cold
+    // start could bounce a still-logged-in driver to the login screen.
+    const MAX_ATTEMPTS = 3;
+    const attempt = (n: number) => {
+      getToken()
+        .then((t) => {
+          if (cancelled) return;
+          setToken(t);
+          setIsLoading(false);
+        })
+        .catch(() => {
+          if (cancelled) return;
+          if (n < MAX_ATTEMPTS) {
+            setTimeout(() => attempt(n + 1), 400);
+          } else {
+            setToken(null);
+            setIsLoading(false);
+          }
+        });
+    };
+    attempt(1);
+
+    return () => { cancelled = true; };
   }, []);
 
   const login = useCallback(async (accessToken: string, refreshToken?: string) => {
