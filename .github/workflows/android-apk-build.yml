@@ -102,9 +102,19 @@ jobs:
           fi
           echo "apk_path=$APK_PATH" >> "$GITHUB_OUTPUT"
 
+      - name: Rename APK to app name
+        id: rename_apk
+        run: |
+          VERSION=$(node -p "require('./app.json').expo.version")
+          NEW_NAME="VeeGoDriver-${VERSION}-${{ inputs.build_variant }}.apk"
+          NEW_PATH="$(dirname "${{ steps.find_apk.outputs.apk_path }}")/$NEW_NAME"
+          mv "${{ steps.find_apk.outputs.apk_path }}" "$NEW_PATH"
+          echo "apk_path=$NEW_PATH" >> "$GITHUB_OUTPUT"
+          echo "apk_name=$NEW_NAME" >> "$GITHUB_OUTPUT"
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: veego-driver-${{ inputs.build_variant }}-apk
-          path: ${{ steps.find_apk.outputs.apk_path }}
+          name: ${{ steps.rename_apk.outputs.apk_name }}
+          path: ${{ steps.rename_apk.outputs.apk_path }}
           retention-days: 14
