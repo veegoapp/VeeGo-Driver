@@ -884,7 +884,7 @@ const styles = StyleSheet.create({
   // Theme toggle button — bottom right, above recenter
   themeToggleBtn: {
     position: 'absolute',
-    right: 16,
+    left: 16,
     width: 44,
     height: 44,
     borderRadius: 22,
@@ -895,10 +895,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   themeToggleIcon: { fontSize: 16, lineHeight: 20 },
-  // Recenter button — bottom LEFT (theme toggle is bottom right), always visible
+  // Recenter button — bottom RIGHT (theme toggle is bottom left), always visible
   recenterBtn: {
     position: 'absolute',
-    left: 16,
+    right: 16,
     width: 44,
     height: 44,
     borderRadius: 22,
