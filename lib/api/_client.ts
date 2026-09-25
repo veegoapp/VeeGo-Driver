@@ -161,6 +161,13 @@ export async function request<T>(
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
       signal: controller.signal,
+      // Every API response carries auth-scoped, possibly-changing data —
+      // never let the native HTTP layer serve a cached response or turn a
+      // repeat GET into a conditional request. Without this, the OS-level
+      // HTTP cache can return a bare 304 (no body) for an unchanged
+      // response, which fails JSON parsing below and surfaces as a load
+      // error even though nothing is actually wrong.
+      cache: 'no-store',
     });
   } catch (err: unknown) {
     clearTimeout(timeout);
