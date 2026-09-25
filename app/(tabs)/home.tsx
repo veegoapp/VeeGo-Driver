@@ -191,7 +191,7 @@ export default function HomeScreen() {
   const [unreadCount, setUnreadCount] = useState(0);
   const { socket } = useSocket();
 
-  const R = 'row' as const;
+  const R = isRTL ? 'row-reverse' as const : 'row' as const;
   const TA = isRTL ? 'right' as const : 'left' as const;
 
   const { data: driverRaw, isLoading: driverLoading, isError: driverError, refetch: refetchDriver } = useQuery({
@@ -1175,8 +1175,13 @@ export default function HomeScreen() {
                 <Text style={[styles.onlineBtnText, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>{t.online_status}</Text>
               </LinearGradient>
             ) : (
-              <View style={[styles.onlineBtnOff, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
-                <Text style={[styles.onlineBtnText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.go}</Text>
+              // Fixed light bg + dark text regardless of theme (mirrors the
+              // online state's fixed dark gradient + white text above) — in
+              // dark mode, colors.secondary/foreground rendered a dark-on-dark
+              // button that blended into the map background instead of
+              // reading as the primary CTA it is.
+              <View style={[styles.onlineBtnOff, { backgroundColor: '#FFFFFF', borderColor: 'rgba(0,0,0,0.08)' }]}>
+                <Text style={[styles.onlineBtnText, { color: '#0D1117', fontFamily: 'Inter_700Bold' }]}>{t.go}</Text>
               </View>
             )}
           </Pressable>
@@ -1233,7 +1238,7 @@ export default function HomeScreen() {
                     {request.rider.rating != null && (
                       <View style={[styles.riderRatingRowC, { flexDirection: R }]}>
                         <Star size={11} color={C_STARC} fill={C_STARC} strokeWidth={0} />
-                        <Text style={styles.riderRatingC}>{request.rider.rating}</Text>
+                        <Text style={styles.riderRatingC}>{request.rider.rating.toFixed(1)}</Text>
                       </View>
                     )}
                   </View>

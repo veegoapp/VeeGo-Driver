@@ -27,7 +27,7 @@ export default function RideHistoryDetailScreen() {
   const { t, isRTL } = useI18n();
   const insets = useSafeAreaInsets();
 
-  const R = 'row' as const;
+  const R = isRTL ? 'row-reverse' as const : 'row' as const;
   const TA = isRTL ? 'right' as const : 'left' as const;
 
   const ride: RideHistoryItem | null = useMemo(() => {
@@ -391,7 +391,7 @@ function FinRow({ label, value, negative, colors, isRTL }: {
   label: string; value: string; negative?: boolean;
   colors: ReturnType<typeof useColors>; isRTL: boolean;
 }) {
-  const R = 'row' as const;
+  const R = isRTL ? 'row-reverse' as const : 'row' as const;
   const TA = isRTL ? 'right' as const : 'left' as const;
   return (
     <View style={[{ flexDirection: R, alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6 }]}>

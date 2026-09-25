@@ -20,6 +20,7 @@ import { useAuth } from '@/lib/authContext';
 import { endpoints, ApiError } from '@/lib/api';
 import { navigateAfterOtp } from '@/lib/postAuthRouter';
 import { useI18n } from '@/lib/i18nContext';
+import { rtlIconStyle } from '@/lib/rtlUtils';
 import { useCodeLockout, formatLockoutCountdown } from '@/hooks/useCodeLockout';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
@@ -34,7 +35,7 @@ export default function VerifyOtpScreen() {
   const { phone: phoneParam, maskedPhone: maskedPhoneParam, retryAfter: retryAfterParam } = useLocalSearchParams<{ phone: string; maskedPhone?: string; retryAfter?: string }>();
   const phone = phoneParam ? decodeURIComponent(phoneParam) : '';
   const { login } = useAuth();
-  const { t } = useI18n();
+  const { t, isRTL } = useI18n();
 
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
@@ -169,9 +170,9 @@ export default function VerifyOtpScreen() {
           showsVerticalScrollIndicator={false}
         >
           {/* Header */}
-          <View style={s.topRow}>
+          <View style={[s.topRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
             <TouchableOpacity style={s.backBtn} onPress={() => router.replace('/login')} activeOpacity={0.7}>
-              <ArrowLeft size={18} color="#1e1e28" strokeWidth={2} />
+              <ArrowLeft size={18} color="#1e1e28" strokeWidth={2} style={rtlIconStyle(isRTL)} />
             </TouchableOpacity>
             <View style={s.logoRow}>
               <View style={s.logoIcon}><Navigation size={20} color="white" /></View>
@@ -224,14 +225,14 @@ export default function VerifyOtpScreen() {
             )}
 
             {loading && (
-              <View style={s.loadingRow}>
+              <View style={[s.loadingRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                 <ActivityIndicator size="small" color="#55c49a" />
                 <Text style={s.loadingText}>{t.verifying_msg}</Text>
               </View>
             )}
 
             {availableChannels.length > 1 && (
-              <View style={s.channelRow}>
+              <View style={[s.channelRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                 {availableChannels.map((ch) => (
                   <TouchableOpacity
                     key={ch}

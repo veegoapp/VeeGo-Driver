@@ -14,6 +14,7 @@ import {
   View,
 } from 'react-native';
 import { useColors } from '@/hooks/useColors';
+import { useI18n } from '@/lib/i18nContext';
 import { _registerAlertHandler, type AlertButton, type AlertConfig } from '@/lib/alert';
 import { Radius } from '@/constants/radius';
 import { Spacing } from '@/constants/spacing';
@@ -21,6 +22,7 @@ import { Typography } from '@/constants/typography';
 
 export function AppAlert() {
   const colors = useColors();
+  const { isRTL } = useI18n();
   const [config, setConfig] = useState<AlertConfig | null>(null);
   const scaleAnim = useRef(new Animated.Value(0.85)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -148,6 +150,7 @@ export function AppAlert() {
           <View
             style={[
               styles.buttonsRow,
+              { flexDirection: isRTL ? 'row-reverse' : 'row' },
               buttons.length === 1 && styles.buttonsRowSingle,
             ]}
           >

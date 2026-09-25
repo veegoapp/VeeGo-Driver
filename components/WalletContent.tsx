@@ -16,6 +16,7 @@ import {
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
 import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
+import { Shadows } from '@/constants/shadows';
 import { TAB_BAR_HEIGHT_BASE } from '@/constants/tabBar';
 import { useSplitColors, type SplitColors } from '@/lib/splitTheme';
 
@@ -226,7 +227,7 @@ export function WalletContent() {
         <View style={{ paddingTop: topPad + 14, paddingHorizontal: Spacing.lg }}>
           <View style={[styles.ticketCard, { borderColor: S.hair, backgroundColor: S.card }]}>
             <Text style={[styles.ticketCap, { color: S.cap, textAlign: TA, fontFamily: 'Inter_700Bold' }]}>{t.available}</Text>
-            <View style={[styles.balanceRow, { flexDirection: 'row' }]}>
+            <View style={[styles.balanceRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
               <Text style={[styles.balanceAmount, { color: S.ink }]}>{balanceData.balance.toFixed(2)}</Text>
               <Text style={[styles.balanceCurrency, { color: S.cap }]}>{t.egp}</Text>
             </View>
@@ -240,13 +241,13 @@ export function WalletContent() {
               <View style={[styles.notch, styles.notchRight, { backgroundColor: S.bg, borderColor: S.hair }]} />
             </View>
 
-            <View style={[styles.ticketStatRow, { flexDirection: 'row' }]}>
+            <View style={[styles.ticketStatRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
               <Text style={[styles.ticketStatValue, { color: S.teal }]}>{balanceData.totalPaid.toFixed(2)} {t.egp}</Text>
               <Text style={[styles.ticketStatLabel, { color: S.cap }]}>{t.status_paid_out}</Text>
             </View>
           </View>
 
-          <View style={[styles.actionRow, { flexDirection: 'row' }]}>
+          <View style={[styles.actionRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
             <Pressable onPress={() => router.push('/wallet-withdraw')} style={({ pressed }) => [styles.primaryAction, { backgroundColor: S.ink, opacity: pressed ? 0.9 : 1 }]}>
               <ArrowDownLeft size={16} color={S.bg} strokeWidth={2} />
               <Text style={[styles.primaryActionText, { color: S.bg, fontFamily: 'Inter_800ExtraBold' }]}>{t.cash_out}</Text>
@@ -276,7 +277,7 @@ export function WalletContent() {
                 const amount = parseFloat(String(w.total_earned)) || 0;
                 const isCurrent = i === weeklyRows.length - 1;
                 return (
-                  <View key={w.week_start} style={[styles.txItem, { flexDirection: 'row' }, i > 0 && styles.txItemBorder]}>
+                  <View key={w.week_start} style={[styles.txItem, { flexDirection: isRTL ? 'row-reverse' : 'row' }, i > 0 && styles.txItemBorder]}>
                     <View style={{ flex: 1, minWidth: 0 }}>
                       <Text
                         style={[styles.txTitle, { color: S.ink, fontFamily: isCurrent ? 'Inter_800ExtraBold' : 'Inter_700Bold', textAlign: TA }]}
@@ -305,9 +306,9 @@ export function WalletContent() {
             </View>
           ) : (
             <View style={styles.listCard}>
-              <SummaryRow label={t.status_confirmed} value={`+${parseFloat(summary?.summary?.totalConfirmed ?? '0').toFixed(2)} ${t.egp}`} color={S.teal} S={S} />
-              <SummaryRow label={t.status_paid_out} value={`${parseFloat(summary?.summary?.totalPaid ?? '0').toFixed(2)} ${t.egp}`} color={S.ink} S={S} />
-              <SummaryRow label={t.net_earnings} value={`${parseFloat(summary?.summary?.totalEarnings ?? '0').toFixed(2)} ${t.egp}`} color={S.ink} bold S={S} last />
+              <SummaryRow label={t.status_confirmed} value={`+${parseFloat(summary?.summary?.totalConfirmed ?? '0').toFixed(2)} ${t.egp}`} color={S.teal} S={S} isRTL={isRTL} />
+              <SummaryRow label={t.status_paid_out} value={`${parseFloat(summary?.summary?.totalPaid ?? '0').toFixed(2)} ${t.egp}`} color={S.ink} S={S} isRTL={isRTL} />
+              <SummaryRow label={t.net_earnings} value={`${parseFloat(summary?.summary?.totalEarnings ?? '0').toFixed(2)} ${t.egp}`} color={S.ink} bold S={S} last isRTL={isRTL} />
             </View>
           )}
 
@@ -330,7 +331,7 @@ export function WalletContent() {
               {payoutHistory.map((item, i) => {
                 const badge = payoutStatusBadge(item.status, colors, t);
                 return (
-                  <View key={item.id} style={[styles.txItem, { flexDirection: 'row' }, i > 0 && styles.txItemBorder]}>
+                  <View key={item.id} style={[styles.txItem, { flexDirection: isRTL ? 'row-reverse' : 'row' }, i > 0 && styles.txItemBorder]}>
                     <View style={styles.txIcon}>
                       <ArrowUpRight size={15} color={S.ink} strokeWidth={2} />
                     </View>
@@ -366,7 +367,7 @@ export function WalletContent() {
                 const txColor = tx.isCredit ? S.teal : C_AMBER;
                 const txBg = tx.isCredit ? '#DDF4EB' : '#FFF1DC';
                 return (
-                  <View key={tx.id} style={[styles.txItem, { flexDirection: 'row' }, i > 0 && styles.txItemBorder]}>
+                  <View key={tx.id} style={[styles.txItem, { flexDirection: isRTL ? 'row-reverse' : 'row' }, i > 0 && styles.txItemBorder]}>
                     <View style={[styles.txIcon, { backgroundColor: txBg }]}>
                       {tx.isCredit
                         ? <ArrowDownLeft size={15} color={txColor} strokeWidth={2} />
@@ -391,11 +392,11 @@ export function WalletContent() {
   );
 }
 
-function SummaryRow({ label, value, color, bold, last, S }: {
-  label: string; value: string; color: string; bold?: boolean; last?: boolean; S: SplitColors;
+function SummaryRow({ label, value, color, bold, last, S, isRTL }: {
+  label: string; value: string; color: string; bold?: boolean; last?: boolean; S: SplitColors; isRTL: boolean;
 }) {
   return (
-    <View style={[styles2.summaryRow, { flexDirection: 'row' }, !last && { borderBottomWidth: 1, borderStyle: 'dashed', borderBottomColor: S.hair }]}>
+    <View style={[styles2.summaryRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }, !last && { borderBottomWidth: 1, borderStyle: 'dashed', borderBottomColor: S.hair }]}>
       <Text style={[styles2.summaryLabel, { color: S.cap, fontFamily: 'Inter_400Regular' }]}>{label}</Text>
       <Text style={[styles2.summaryValue, { color, fontWeight: bold ? '800' : '700' }]}>{value}</Text>
     </View>
@@ -414,7 +415,7 @@ function makeStyles(S: SplitColors) {
   // Ticket-stub balance card — sits on the page's normal background (no
   // full-bleed colored hero block), bordered and sharper-cornered than the
   // app's usual 16-20px cards to read as a receipt/boarding-pass.
-  ticketCard: { borderWidth: 1, borderRadius: 10, padding: 20 },
+  ticketCard: { borderWidth: 1, borderRadius: 10, padding: 20, ...Shadows.small },
   ticketCap: { fontSize: 10, letterSpacing: 1.6, textTransform: 'uppercase' },
   balanceRow: { alignItems: 'flex-end', gap: 8, marginTop: 4 },
   balanceAmount: { fontSize: 40, lineHeight: 44, fontFamily: MONO, fontWeight: '700' },
@@ -435,7 +436,7 @@ function makeStyles(S: SplitColors) {
   secondaryAction: { flex: 1, height: 50, borderRadius: 10, borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   secondaryActionText: { fontSize: 13, letterSpacing: 0.3, textTransform: 'uppercase' },
   sectionTitle: { fontSize: 12.5, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: Spacing.md },
-  emptyCard: { padding: Spacing.xl, borderRadius: 10, backgroundColor: S.card, borderWidth: 1, borderColor: S.hair },
+  emptyCard: { padding: Spacing.xl, borderRadius: 10, backgroundColor: S.card, borderWidth: 1, borderColor: S.hair, ...Shadows.small },
   listCard: { backgroundColor: S.card, borderRadius: 10, borderWidth: 1, borderColor: S.hair, overflow: 'hidden' },
   txItem: { alignItems: 'center', gap: Spacing.md, padding: Spacing.lg },
   txItemBorder: { borderTopWidth: 1, borderStyle: 'dashed', borderTopColor: S.hair },

@@ -87,7 +87,7 @@ export default function ProfileScreen() {
     }
   }, [termsData, t]);
 
-  const R = 'row' as const;
+  const R = isRTL ? 'row-reverse' as const : 'row' as const;
   const TA = isRTL ? 'right' as const : 'left' as const;
 
   const [refreshing, setRefreshing] = useState(false);
@@ -316,7 +316,7 @@ function MiniStat({ label, value, icon, colors }: { label: string; value: string
 }
 
 function MenuItem({ icon, label, sub, highlight, onPress, colors, isRTL, last }: { icon: string; label: string; sub?: string; highlight?: boolean; onPress?: () => void; colors: ReturnType<typeof useColors>; isRTL: boolean; last?: boolean }) {
-  const R = 'row' as const;
+  const R = isRTL ? 'row-reverse' as const : 'row' as const;
   const TA = isRTL ? 'right' as const : 'left' as const;
   return (
     <Pressable

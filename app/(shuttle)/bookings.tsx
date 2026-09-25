@@ -297,13 +297,14 @@ export default function BookingsScreen() {
         )}
 
         {/* Main tabs */}
-        <View style={[styles.mainTabRow, { borderColor: colors.border }]}>
+        <View style={[styles.mainTabRow, { borderColor: colors.border, flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
           <MainTabBtn
             label={t.upcoming_trips}
             count={upcomingLines.length}
             active={mainTab === 'upcoming'}
             onPress={() => setMainTab('upcoming')}
             colors={colors}
+            isRTL={isRTL}
           />
           <MainTabBtn
             label={t.completed_trips_tab}
@@ -311,6 +312,7 @@ export default function BookingsScreen() {
             active={mainTab === 'completed'}
             onPress={() => setMainTab('completed')}
             colors={colors}
+            isRTL={isRTL}
           />
         </View>
 

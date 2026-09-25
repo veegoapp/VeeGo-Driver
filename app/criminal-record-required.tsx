@@ -23,7 +23,7 @@ export default function CriminalRecordRequiredScreen() {
   const insets = useSafeAreaInsets();
   const topPad = insets.top;
   const botPad = insets.bottom;
-  const { t } = useI18n();
+  const { t, isRTL } = useI18n();
 
   const { data: profile } = useQuery<DriverProfileEnriched>({
     queryKey: ['driver', 'profile'],
@@ -68,7 +68,7 @@ export default function CriminalRecordRequiredScreen() {
         <Text style={s.title}>{t.criminal_record_pending_title}</Text>
         <Text style={s.body}>{t.criminal_record_pending_body}</Text>
         <Pressable
-          style={[s.secondaryBtn, { marginTop: 8 }]}
+          style={[s.secondaryBtn, { marginTop: 8, flexDirection: isRTL ? 'row-reverse' : 'row' }]}
           onPress={() => router.push('/support')}
           accessibilityRole="button"
         >
@@ -87,7 +87,7 @@ export default function CriminalRecordRequiredScreen() {
       <Text style={s.title}>{t.criminal_record_required_title}</Text>
       <Text style={s.body}>{t.criminal_record_required_body.replace('{trips}', String(trips))}</Text>
       <Pressable
-        style={s.btn}
+        style={[s.btn, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}
         onPress={() => router.push('/documents')}
         accessibilityRole="button"
       >
@@ -95,7 +95,7 @@ export default function CriminalRecordRequiredScreen() {
         <Text style={s.btnText}>{t.criminal_record_required_upload_btn}</Text>
       </Pressable>
       <Pressable
-        style={s.secondaryBtn}
+        style={[s.secondaryBtn, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}
         onPress={() => router.push('/support')}
         accessibilityRole="button"
       >

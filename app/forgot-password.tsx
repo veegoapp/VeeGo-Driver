@@ -20,6 +20,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { endpoints, ApiError } from '@/lib/api';
 import { useI18n } from '@/lib/i18nContext';
+import { rtlIconStyle } from '@/lib/rtlUtils';
 import { useCodeLockout, formatLockoutCountdown } from '@/hooks/useCodeLockout';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
@@ -44,17 +45,18 @@ function getErrorMessage(err: unknown, t: TDict): string {
 
 export default function ForgotPasswordScreen() {
   const insets = useSafeAreaInsets();
+  const { isRTL } = useI18n();
   const [step, setStep] = useState<Step>('request');
   const [phone, setPhone] = useState('');
 
   return (
     <LinearGradient colors={['#f4f4fb', '#ededf4']} style={s.root}>
       <TouchableOpacity
-        style={[s.backBtn, { top: insets.top + 12 }]}
+        style={[s.backBtn, isRTL ? { right: 20 } : { left: 20 }, { top: insets.top + 12 }]}
         onPress={() => router.back()}
         activeOpacity={0.8}
       >
-        <ArrowLeft size={20} color="#1e1e28" />
+        <ArrowLeft size={20} color="#1e1e28" style={rtlIconStyle(isRTL)} />
       </TouchableOpacity>
 
       <KeyboardAvoidingView
@@ -103,7 +105,7 @@ export default function ForgotPasswordScreen() {
 }
 
 function RequestStep({ onSuccess, initialPhone }: { onSuccess: (phone: string) => void; initialPhone?: string }) {
-  const { t } = useI18n();
+  const { t, isRTL } = useI18n();
   const [phone, setPhone] = useState(initialPhone ?? '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -160,7 +162,7 @@ function RequestStep({ onSuccess, initialPhone }: { onSuccess: (phone: string) =
         <Text style={s.formSub}>{t.forgot_password_sub}</Text>
       </View>
 
-      <View style={s.inputWrap}>
+      <View style={[s.inputWrap, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
         <View style={s.inputIcon}><Phone size={16} color="#5e5e72" /></View>
         <TextInput
           style={s.inputField}
@@ -176,7 +178,7 @@ function RequestStep({ onSuccess, initialPhone }: { onSuccess: (phone: string) =
       </View>
 
       {availableChannels.length > 1 && (
-        <View style={s.channelRow}>
+        <View style={[s.channelRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
           {availableChannels.map((ch) => (
             <TouchableOpacity
               key={ch}
@@ -193,7 +195,7 @@ function RequestStep({ onSuccess, initialPhone }: { onSuccess: (phone: string) =
       )}
 
       {error && (
-        <View style={s.errorRow}>
+        <View style={[s.errorRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
           <AlertCircle size={14} color="#e53935" />
           <Text style={s.errorText}>{error}</Text>
         </View>
@@ -204,13 +206,13 @@ function RequestStep({ onSuccess, initialPhone }: { onSuccess: (phone: string) =
       )}
 
       <Pressable
-        style={[s.primaryBtn, (!canSubmit || loading) && { opacity: 0.6 }]}
+        style={[s.primaryBtn, { flexDirection: isRTL ? 'row-reverse' : 'row' }, (!canSubmit || loading) && { opacity: 0.6 }]}
         onPress={handle}
         disabled={!canSubmit || loading}
       >
         {loading
           ? <ActivityIndicator color="white" size="small" />
-          : <><Text style={s.primaryBtnText}>{t.send_reset_code}</Text><ArrowRight size={16} color="white" /></>
+          : <><Text style={s.primaryBtnText}>{t.send_reset_code}</Text><ArrowRight size={16} color="white" style={rtlIconStyle(isRTL)} /></>
         }
       </Pressable>
     </View>
@@ -235,7 +237,7 @@ function ResetStep({
   const [error, setError] = useState<string | null>(null);
   const { locked, lockoutRemaining, lock } = useCodeLockout();
 
-  const { t } = useI18n();
+  const { t, isRTL } = useI18n();
   const passwordRef = useRef<TextInput>(null);
   const confirmRef = useRef<TextInput>(null);
 
@@ -296,7 +298,7 @@ function ResetStep({
         </Text>
       </View>
 
-      <View style={[s.inputWrap, locked && s.inputWrapLocked]}>
+      <View style={[s.inputWrap, { flexDirection: isRTL ? 'row-reverse' : 'row' }, locked && s.inputWrapLocked]}>
         <View style={s.inputIcon}><Mail size={16} color="#5e5e72" /></View>
         <TextInput
           style={[s.inputField, { letterSpacing: 4, fontSize: Typography.size.md }]}
@@ -319,7 +321,7 @@ function ResetStep({
         <View style={s.dividerLine} />
       </View>
 
-      <View style={s.inputWrap}>
+      <View style={[s.inputWrap, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
         <View style={s.inputIcon}><Lock size={16} color="#5e5e72" /></View>
         <TextInput
           ref={passwordRef}
@@ -339,7 +341,7 @@ function ResetStep({
         </TouchableOpacity>
       </View>
 
-      <View style={[s.inputWrap, !passwordsMatch && confirmPassword.length > 0 && s.inputWrapError]}>
+      <View style={[s.inputWrap, { flexDirection: isRTL ? 'row-reverse' : 'row' }, !passwordsMatch && confirmPassword.length > 0 && s.inputWrapError]}>
         <View style={s.inputIcon}><Lock size={16} color="#5e5e72" /></View>
         <TextInput
           ref={confirmRef}
@@ -360,14 +362,14 @@ function ResetStep({
       </View>
 
       {!passwordsMatch && confirmPassword.length > 0 && (
-        <View style={s.errorRow}>
+        <View style={[s.errorRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
           <AlertCircle size={14} color="#e53935" />
           <Text style={s.errorText}>{t.passwords_dont_match}</Text>
         </View>
       )}
 
       {error && (
-        <View style={s.errorRow}>
+        <View style={[s.errorRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
           <AlertCircle size={14} color="#e53935" />
           <Text style={s.errorText}>{error}</Text>
         </View>
@@ -380,17 +382,17 @@ function ResetStep({
       )}
 
       <Pressable
-        style={[s.primaryBtn, (!canSubmit || loading) && { opacity: 0.6 }]}
+        style={[s.primaryBtn, { flexDirection: isRTL ? 'row-reverse' : 'row' }, (!canSubmit || loading) && { opacity: 0.6 }]}
         onPress={handle}
         disabled={!canSubmit || loading}
       >
         {loading
           ? <ActivityIndicator color="white" size="small" />
-          : <><Text style={s.primaryBtnText}>{t.reset_password_btn}</Text><ArrowRight size={16} color="white" /></>
+          : <><Text style={s.primaryBtnText}>{t.reset_password_btn}</Text><ArrowRight size={16} color="white" style={rtlIconStyle(isRTL)} /></>
         }
       </Pressable>
 
-      <TouchableOpacity style={s.resendRow} onPress={onResend} activeOpacity={0.7}>
+      <TouchableOpacity style={[s.resendRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]} onPress={onResend} activeOpacity={0.7}>
         <Text style={s.resendText}>{t.didnt_receive_code} </Text>
         <Text style={s.resendLink}>{t.resend_link}</Text>
       </TouchableOpacity>
@@ -399,7 +401,7 @@ function ResetStep({
 }
 
 function DoneStep({ onGoToLogin }: { onGoToLogin: () => void }) {
-  const { t } = useI18n();
+  const { t, isRTL } = useI18n();
   return (
     <View style={[s.form, s.doneForm]}>
       <View style={s.doneIcon}>
@@ -407,9 +409,9 @@ function DoneStep({ onGoToLogin }: { onGoToLogin: () => void }) {
       </View>
       <Text style={s.doneTitle}>{t.password_reset_title}</Text>
       <Text style={s.doneSub}>{t.password_reset_sub}</Text>
-      <Pressable style={s.primaryBtn} onPress={onGoToLogin}>
+      <Pressable style={[s.primaryBtn, { flexDirection: isRTL ? 'row-reverse' : 'row' }]} onPress={onGoToLogin}>
         <Text style={s.primaryBtnText}>{t.go_to_sign_in}</Text>
-        <ArrowRight size={16} color="white" />
+        <ArrowRight size={16} color="white" style={rtlIconStyle(isRTL)} />
       </Pressable>
     </View>
   );
@@ -419,7 +421,6 @@ const s = StyleSheet.create({
   root: { flex: 1 },
   backBtn: {
     position: 'absolute',
-    left: 20,
     zIndex: 20,
     width: 40,
     height: 40,

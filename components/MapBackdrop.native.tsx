@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Navigation } from 'lucide-react-native';
 import MapView, { AnimatedRegion, Circle, Marker, MarkerAnimated, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DARK_MAP_STYLE, LIGHT_MAP_STYLE } from '@/constants/mapStyles';
@@ -735,7 +736,11 @@ export const MapBackdrop = React.memo(function MapBackdrop({
       {/* ── Theme toggle button — bottom right ───────────────────────────── */}
       <Pressable
         onPress={handleThemeToggle}
-        style={[styles.themeToggleBtn, { bottom: insets.bottom + 162 }]}
+        style={[
+          styles.themeToggleBtn,
+          { bottom: insets.bottom + 110 },
+          effectiveTheme === 'light' && styles.mapBtnLight,
+        ]}
         accessibilityLabel={effectiveTheme === 'dark' ? 'Switch to light map' : 'Switch to dark map'}
       >
         <Text style={styles.themeToggleIcon}>
@@ -743,13 +748,23 @@ export const MapBackdrop = React.memo(function MapBackdrop({
         </Text>
       </Pressable>
 
-      {/* ── Recenter button — always visible, bottom right below theme toggle */}
+      {/* ── Recenter button — bottom left, away from the theme toggle so   */}
+      {/* the two don't stack in the same corner. Icon matches the         */}
+      {/* Passenger app's navigation-arrow "my location" button.           */}
       <Pressable
         onPress={handleRecenter}
-        style={[styles.recenterBtn, { bottom: insets.bottom + 110 }]}
+        style={[
+          styles.recenterBtn,
+          { bottom: insets.bottom + 110 },
+          effectiveTheme === 'light' && styles.mapBtnLight,
+        ]}
         accessibilityLabel={t.recenter_map_label}
       >
-        <Text style={styles.recenterIcon}>⊕</Text>
+        <Navigation
+          size={20}
+          color={effectiveTheme === 'light' ? '#1e1e28' : '#ffffff'}
+          fill={effectiveTheme === 'light' ? '#1e1e28' : '#ffffff'}
+        />
       </Pressable>
 
       {/* ── Orientation toggle — nav mode only, above theme/recenter. Lets   */}
@@ -762,7 +777,7 @@ export const MapBackdrop = React.memo(function MapBackdrop({
       {navigationMode && (
         <Pressable
           onPress={handleToggleOrientation}
-          style={[styles.orientationBtn, { bottom: insets.bottom + 214 }]}
+          style={[styles.orientationBtn, { bottom: insets.bottom + 162 }]}
           accessibilityLabel={northUp ? t.course_up_map_label : t.north_up_map_label}
         >
           <Text style={styles.orientationIcon}>{northUp ? '⬆︎N' : '🧭'}</Text>
@@ -869,7 +884,7 @@ const styles = StyleSheet.create({
   // Theme toggle button — bottom right, above recenter
   themeToggleBtn: {
     position: 'absolute',
-    right: 16,
+    left: 16,
     width: 44,
     height: 44,
     borderRadius: 22,
@@ -880,7 +895,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   themeToggleIcon: { fontSize: 16, lineHeight: 20 },
-  // Recenter button — bottom right, always visible
+  // Recenter button — bottom RIGHT (theme toggle is bottom left), always visible
   recenterBtn: {
     position: 'absolute',
     right: 16,
@@ -893,7 +908,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  recenterIcon: { color: '#3b82f6', fontSize: 20, lineHeight: 22 },
+  // Light-map variant of the theme-toggle/recenter bubbles — the fixed dark
+  // translucent bg read as a dark, out-of-place shape on the light map style.
+  mapBtnLight: {
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    borderColor: 'rgba(0,0,0,0.10)',
+  },
   // Orientation toggle button — bottom right, above theme/recenter, nav mode only
   orientationBtn: {
     position: 'absolute',

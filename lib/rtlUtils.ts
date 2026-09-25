@@ -2,53 +2,22 @@ import { I18nManager } from 'react-native';
 import type { Language } from './i18nContext';
 import { useI18n } from './i18nContext';
 
-// ── Apply I18nManager RTL engine state ────────────────────────────────────────
-// Must be called any time the language preference changes.
-// The OS layout engine caches the RTL flag at process start, so a full app
-// restart is required for the change to take effect across all native views.
+// ── RTL engine ─────────────────────────────────────────────────────────────────
+// React Native's native I18nManager.forceRTL() only takes visual effect after a
+// full OS-level app relaunch (killing and restarting the process) — a JS bundle
+// reload (expo-updates reloadAsync, DevSettings.reload) is NOT enough, so a
+// language switch inside a running app never actually mirrors any layout. That
+// made switching languages translate text but leave every row's element order
+// untouched.
 //
-// This IS the app's real RTL mechanism — plain `flexDirection: 'row'` mirrors
-// to right-to-left automatically once this is active. Do NOT also hand-flip
-// row layouts with `isRTL ? 'row-reverse' : 'row'` on top of this — that
-// double-reverses and lands back in left-to-right order (see the fix that
-// removed those redundant ternaries app-wide). Manual isRTL handling is still
-// correct and necessary for things native RTL does NOT auto-mirror: text
-// alignment (`textAlign: 'left'/'right'` are physical, not logical),
-// directional icons (see rtlIconStyle below), and any `left`/`right` (as
-// opposed to `start`/`end`) absolute positioning or margin/padding.
-export function applyRTLEngine(lang: Language): void {
-  const isArabic = lang === 'ar';
-  I18nManager.allowRTL(isArabic);
-  I18nManager.forceRTL(isArabic);
-}
-
-// ── Automatic app restart ─────────────────────────────────────────────────────
-// Uses expo-updates as the primary mechanism (works in Expo Go + standalone).
-// Falls back to RN's DevSettings.reload() in development if expo-updates throws.
-// Must only be called AFTER language is persisted to AsyncStorage.
-export function triggerAppRestart(): void {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const Updates = require('expo-updates');
-    // reloadAsync() is async — we fire-and-forget; the process will be killed
-    // by the OS before any subsequent JS runs.
-    (Updates.reloadAsync as () => Promise<void>)().catch(() => {
-      devSettingsReload();
-    });
-  } catch {
-    devSettingsReload();
-  }
-}
-
-export function devSettingsReload(): void {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { NativeModules } = require('react-native');
-    NativeModules.DevSettings?.reload?.();
-  } catch {
-    // No restart path available — user must restart manually.
-    // This should never be reached in a normal Expo Go / standalone build.
-  }
+// So this app does NOT use the native RTL engine at all: forceRTL/allowRTL are
+// kept permanently off, and direction is driven entirely by this app's own
+// `isRTL` checks — flip row layouts with `isRTL ? 'row-reverse' : 'row'`, and
+// use `TA`/`textAlign` + rtlIconStyle below for text alignment and directional
+// icons. This makes language switches apply instantly, with no restart needed.
+export function applyRTLEngine(_lang: Language): void {
+  I18nManager.allowRTL(false);
+  I18nManager.forceRTL(false);
 }
 
 // ── RTL Icon Utilities ─────────────────────────────────────────────────────────
