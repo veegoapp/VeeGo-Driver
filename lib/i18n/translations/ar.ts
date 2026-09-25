@@ -1157,7 +1157,8 @@ export const ar: Translations = {
   payout_pending_msg: 'تم إرسال طلب السحب وهو الآن بانتظار موافقة الإدارة.',
   manage: 'إدارة',
   pending_verification: 'بانتظار التحقق',
-  payment_info_label: 'معلومات الدفع',
+  payment_info_label: 'طرق صرف الأرباح',
+  payment_info_sub: 'فودافون كاش، إنستاباي، تحويل بنكي...',
   payout_history_label: 'سجل السحب',
   payout_history_empty: 'لا توجد طلبات سحب بعد',
   payout_history_load_err: 'تعذر تحميل سجل السحب',
@@ -1433,6 +1434,7 @@ export const ar: Translations = {
   reviews_count_label: '{count} تقييم',
   // ── InstaPay settings screen ──────────────────────────────────────────────
   instapay_settings_label: 'إعدادات إنستاباي',
+  instapay_settings_sub: 'خلّي الركاب يدفعولك بمسح كود',
   instapay_setup_title: 'إعداد إنستاباي',
   instapay_setup_desc: 'أضف رابط إنستاباي الرسمي الخاص بك ليتمكن الركاب من الدفع لك مباشرة.',
   instapay_link_label: 'رابط إنستاباي الرسمي الخاص بك',
