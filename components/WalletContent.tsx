@@ -226,7 +226,7 @@ export function WalletContent() {
         <View style={{ paddingTop: topPad + 14, paddingHorizontal: Spacing.lg }}>
           <View style={[styles.ticketCard, { borderColor: S.hair, backgroundColor: S.card }]}>
             <Text style={[styles.ticketCap, { color: S.cap, textAlign: TA, fontFamily: 'Inter_700Bold' }]}>{t.available}</Text>
-            <View style={[styles.balanceRow, { flexDirection: 'row' }]}>
+            <View style={[styles.balanceRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
               <Text style={[styles.balanceAmount, { color: S.ink }]}>{balanceData.balance.toFixed(2)}</Text>
               <Text style={[styles.balanceCurrency, { color: S.cap }]}>{t.egp}</Text>
             </View>
@@ -240,13 +240,13 @@ export function WalletContent() {
               <View style={[styles.notch, styles.notchRight, { backgroundColor: S.bg, borderColor: S.hair }]} />
             </View>
 
-            <View style={[styles.ticketStatRow, { flexDirection: 'row' }]}>
+            <View style={[styles.ticketStatRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
               <Text style={[styles.ticketStatValue, { color: S.teal }]}>{balanceData.totalPaid.toFixed(2)} {t.egp}</Text>
               <Text style={[styles.ticketStatLabel, { color: S.cap }]}>{t.status_paid_out}</Text>
             </View>
           </View>
 
-          <View style={[styles.actionRow, { flexDirection: 'row' }]}>
+          <View style={[styles.actionRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
             <Pressable onPress={() => router.push('/wallet-withdraw')} style={({ pressed }) => [styles.primaryAction, { backgroundColor: S.ink, opacity: pressed ? 0.9 : 1 }]}>
               <ArrowDownLeft size={16} color={S.bg} strokeWidth={2} />
               <Text style={[styles.primaryActionText, { color: S.bg, fontFamily: 'Inter_800ExtraBold' }]}>{t.cash_out}</Text>
@@ -276,7 +276,7 @@ export function WalletContent() {
                 const amount = parseFloat(String(w.total_earned)) || 0;
                 const isCurrent = i === weeklyRows.length - 1;
                 return (
-                  <View key={w.week_start} style={[styles.txItem, { flexDirection: 'row' }, i > 0 && styles.txItemBorder]}>
+                  <View key={w.week_start} style={[styles.txItem, { flexDirection: isRTL ? 'row-reverse' : 'row' }, i > 0 && styles.txItemBorder]}>
                     <View style={{ flex: 1, minWidth: 0 }}>
                       <Text
                         style={[styles.txTitle, { color: S.ink, fontFamily: isCurrent ? 'Inter_800ExtraBold' : 'Inter_700Bold', textAlign: TA }]}
@@ -305,9 +305,9 @@ export function WalletContent() {
             </View>
           ) : (
             <View style={styles.listCard}>
-              <SummaryRow label={t.status_confirmed} value={`+${parseFloat(summary?.summary?.totalConfirmed ?? '0').toFixed(2)} ${t.egp}`} color={S.teal} S={S} />
-              <SummaryRow label={t.status_paid_out} value={`${parseFloat(summary?.summary?.totalPaid ?? '0').toFixed(2)} ${t.egp}`} color={S.ink} S={S} />
-              <SummaryRow label={t.net_earnings} value={`${parseFloat(summary?.summary?.totalEarnings ?? '0').toFixed(2)} ${t.egp}`} color={S.ink} bold S={S} last />
+              <SummaryRow label={t.status_confirmed} value={`+${parseFloat(summary?.summary?.totalConfirmed ?? '0').toFixed(2)} ${t.egp}`} color={S.teal} S={S} isRTL={isRTL} />
+              <SummaryRow label={t.status_paid_out} value={`${parseFloat(summary?.summary?.totalPaid ?? '0').toFixed(2)} ${t.egp}`} color={S.ink} S={S} isRTL={isRTL} />
+              <SummaryRow label={t.net_earnings} value={`${parseFloat(summary?.summary?.totalEarnings ?? '0').toFixed(2)} ${t.egp}`} color={S.ink} bold S={S} last isRTL={isRTL} />
             </View>
           )}
 
@@ -330,7 +330,7 @@ export function WalletContent() {
               {payoutHistory.map((item, i) => {
                 const badge = payoutStatusBadge(item.status, colors, t);
                 return (
-                  <View key={item.id} style={[styles.txItem, { flexDirection: 'row' }, i > 0 && styles.txItemBorder]}>
+                  <View key={item.id} style={[styles.txItem, { flexDirection: isRTL ? 'row-reverse' : 'row' }, i > 0 && styles.txItemBorder]}>
                     <View style={styles.txIcon}>
                       <ArrowUpRight size={15} color={S.ink} strokeWidth={2} />
                     </View>
@@ -366,7 +366,7 @@ export function WalletContent() {
                 const txColor = tx.isCredit ? S.teal : C_AMBER;
                 const txBg = tx.isCredit ? '#DDF4EB' : '#FFF1DC';
                 return (
-                  <View key={tx.id} style={[styles.txItem, { flexDirection: 'row' }, i > 0 && styles.txItemBorder]}>
+                  <View key={tx.id} style={[styles.txItem, { flexDirection: isRTL ? 'row-reverse' : 'row' }, i > 0 && styles.txItemBorder]}>
                     <View style={[styles.txIcon, { backgroundColor: txBg }]}>
                       {tx.isCredit
                         ? <ArrowDownLeft size={15} color={txColor} strokeWidth={2} />
@@ -391,11 +391,11 @@ export function WalletContent() {
   );
 }
 
-function SummaryRow({ label, value, color, bold, last, S }: {
-  label: string; value: string; color: string; bold?: boolean; last?: boolean; S: SplitColors;
+function SummaryRow({ label, value, color, bold, last, S, isRTL }: {
+  label: string; value: string; color: string; bold?: boolean; last?: boolean; S: SplitColors; isRTL: boolean;
 }) {
   return (
-    <View style={[styles2.summaryRow, { flexDirection: 'row' }, !last && { borderBottomWidth: 1, borderStyle: 'dashed', borderBottomColor: S.hair }]}>
+    <View style={[styles2.summaryRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }, !last && { borderBottomWidth: 1, borderStyle: 'dashed', borderBottomColor: S.hair }]}>
       <Text style={[styles2.summaryLabel, { color: S.cap, fontFamily: 'Inter_400Regular' }]}>{label}</Text>
       <Text style={[styles2.summaryValue, { color, fontWeight: bold ? '800' : '700' }]}>{value}</Text>
     </View>

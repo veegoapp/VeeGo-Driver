@@ -83,7 +83,7 @@ export default function EarningsScreen() {
   }, [refetch]);
 
   const TA = isRTL ? 'right' : 'left';
-  const flex = 'row';
+  const flex = isRTL ? 'row-reverse' : 'row';
 
   // ── Summary values (defensive — fallback to 0) ────────────────────────────
   const totalCash    = data?.totalCash    ?? 0;

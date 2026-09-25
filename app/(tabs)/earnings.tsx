@@ -253,7 +253,7 @@ export default function EarningsScreen() {
 
           <View style={[styles.ticketCard, { borderColor: S.hair, backgroundColor: S.card }]}>
             <Text style={[styles.heroAmountCap, { color: S.cap, textAlign: TA, fontFamily: 'Inter_700Bold' }]}>{PERIOD_HERO_LABELS[period]}</Text>
-            <View style={[styles.heroAmountRow, { flexDirection: 'row' }]}>
+            <View style={[styles.heroAmountRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
               <Text style={[styles.heroAmount, { color: S.ink }]}>{driverTotal.toFixed(2)}</Text>
               <Text style={[styles.heroCurrency, { color: S.cap }]}>{t.egp}</Text>
             </View>
@@ -310,7 +310,7 @@ export default function EarningsScreen() {
             <View style={[styles.listCard, { borderColor: S.hair }]}>
               {rides.map((ride, i) => (
                 <Pressable key={ride.id} onPress={() => handleTripPress(ride)}>
-                  <View style={[styles.tripCard, { flexDirection: 'row' }, i > 0 && styles.tripCardBorder]}>
+                  <View style={[styles.tripCard, { flexDirection: isRTL ? 'row-reverse' : 'row' }, i > 0 && styles.tripCardBorder]}>
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.tripDate, { color: S.cap, fontFamily: 'Inter_600SemiBold', textAlign: TA }]}>
                         {new Date(ride.completedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}

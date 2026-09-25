@@ -22,7 +22,7 @@ export default function SuspendedScreen() {
   const insets = useSafeAreaInsets();
   const topPad = insets.top;
   const botPad = insets.bottom;
-  const { t } = useI18n();
+  const { t, isRTL } = useI18n();
 
   const { data: me } = useQuery<any>({
     queryKey: ['driver', 'me'],
@@ -57,7 +57,7 @@ export default function SuspendedScreen() {
       <Text style={s.title}>{title}</Text>
       <Text style={s.body}>{body}</Text>
       <Pressable
-        style={s.btn}
+        style={[s.btn, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}
         onPress={() => router.push({
           pathname: '/support',
           params: { category: 'suspension_appeal', prefill: t.suspension_appeal_prefill.replace('{title}', title) },

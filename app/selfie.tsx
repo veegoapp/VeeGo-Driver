@@ -19,6 +19,7 @@ import Svg, { Ellipse, Path } from 'react-native-svg';
 import { useService } from '@/lib/serviceContext';
 import { navigateToHome } from '@/lib/postAuthRouter';
 import { useI18n } from '@/lib/i18nContext';
+import { rtlIconStyle } from '@/lib/rtlUtils';
 import { endpoints } from '@/lib/api';
 import { compressImage } from '@/lib/imageCompression';
 import { useSocket } from '@/lib/socketContext';
@@ -33,7 +34,7 @@ export default function SelfieScreen() {
   const topPad = insets.top;
   const botPad = insets.bottom;
   const { serviceType } = useService();
-  const { t } = useI18n();
+  const { t, isRTL } = useI18n();
   const [photo, setPhoto] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -185,8 +186,8 @@ export default function SelfieScreen() {
   if (cameraBlocked) {
     return (
       <View style={[s.root, s.blockedRoot, { backgroundColor: '#fafafd' }]}>
-        <TouchableOpacity onPress={() => router.back()} style={[s.backBtn, { position: 'absolute', top: topPad + 16, left: 24 }]} activeOpacity={0.7}>
-          <ArrowLeft size={20} color="#1e1e28" strokeWidth={2} />
+        <TouchableOpacity onPress={() => router.back()} style={[s.backBtn, { position: 'absolute', top: topPad + 16 }, isRTL ? { right: 24 } : { left: 24 }]} activeOpacity={0.7}>
+          <ArrowLeft size={20} color="#1e1e28" strokeWidth={2} style={rtlIconStyle(isRTL)} />
         </TouchableOpacity>
         <View style={s.blockedCard}>
           <View style={s.blockedIconBox}>
@@ -194,7 +195,7 @@ export default function SelfieScreen() {
           </View>
           <Text style={s.blockedTitle}>{t.camera_required}</Text>
           <Text style={s.blockedSub}>{t.camera_required_sub}</Text>
-          <TouchableOpacity style={s.settingsBtn} onPress={() => Linking.openSettings()} activeOpacity={0.85}>
+          <TouchableOpacity style={[s.settingsBtn, { flexDirection: isRTL ? 'row-reverse' : 'row' }]} onPress={() => Linking.openSettings()} activeOpacity={0.85}>
             <Settings size={16} color="white" strokeWidth={2} />
             <Text style={s.settingsBtnText}>{t.open_settings}</Text>
           </TouchableOpacity>
@@ -237,7 +238,7 @@ export default function SelfieScreen() {
     <View style={[s.root, { backgroundColor: '#fafafd' }]}>
       <View style={{ paddingTop: topPad + 16, paddingHorizontal: Spacing.xl }}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn} activeOpacity={0.7}>
-          <ArrowLeft size={20} color="#1e1e28" strokeWidth={2} />
+          <ArrowLeft size={20} color="#1e1e28" strokeWidth={2} style={rtlIconStyle(isRTL)} />
         </TouchableOpacity>
 
         <View style={s.header}>
@@ -327,9 +328,9 @@ export default function SelfieScreen() {
 
       <View style={[s.footer, { paddingBottom: botPad + 28, paddingHorizontal: Spacing.xl }]}>
         {photo ? (
-          <View style={s.actionRow}>
+          <View style={[s.actionRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
             <TouchableOpacity
-              style={s.retakeBtn}
+              style={[s.retakeBtn, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}
               onPress={() => setPhoto(null)}
               activeOpacity={0.8}
               disabled={isUploading}
@@ -338,7 +339,7 @@ export default function SelfieScreen() {
               <Text style={s.retakeBtnText}>{t.retake_photo}</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[s.confirmBtn, { flex: 2, opacity: (isUploading || (checkinMode && timedOut)) ? 0.6 : 1 }]}
+              style={[s.confirmBtn, { flex: 2, flexDirection: isRTL ? 'row-reverse' : 'row', opacity: (isUploading || (checkinMode && timedOut)) ? 0.6 : 1 }]}
               onPress={handleConfirm}
               activeOpacity={0.9}
               disabled={isUploading || (checkinMode && timedOut)}
@@ -357,7 +358,7 @@ export default function SelfieScreen() {
           </View>
         ) : (
           <TouchableOpacity
-            style={[s.confirmBtn, { opacity: (checkinMode && timedOut) ? 0.5 : 1 }]}
+            style={[s.confirmBtn, { flexDirection: isRTL ? 'row-reverse' : 'row', opacity: (checkinMode && timedOut) ? 0.5 : 1 }]}
             onPress={takeSelfie}
             activeOpacity={0.9}
             disabled={checkinMode && timedOut}
@@ -370,7 +371,7 @@ export default function SelfieScreen() {
         {!checkinMode && (
           <View style={s.tipsRow}>
             {[t.tip_good_lighting, t.tip_face_centered, t.tip_no_glasses].map((tip) => (
-              <View key={tip} style={s.tip}>
+              <View key={tip} style={[s.tip, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                 <CheckCircle size={13} color="#5e5e72" />
                 <Text style={s.tipText}>{tip}</Text>
               </View>

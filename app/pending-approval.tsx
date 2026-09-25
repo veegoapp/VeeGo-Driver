@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/lib/authContext';
 import { AppLoader } from '@/components/ui/AppLoader';
 import { useI18n } from '@/lib/i18nContext';
+import { rtlIconStyle } from '@/lib/rtlUtils';
 import { useSocket } from '@/lib/socketContext';
 import { endpoints } from '@/lib/api';
 import { navigateToHome } from '@/lib/postAuthRouter';
@@ -41,7 +42,7 @@ export default function PendingApprovalScreen() {
   const botPad = insets.bottom;
   const { logout, token } = useAuth();
   const { socket } = useSocket();
-  const { t } = useI18n();
+  const { t, isRTL } = useI18n();
 
   const [data, setData] = useState<OnboardingData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -153,12 +154,12 @@ export default function PendingApprovalScreen() {
                   }
                 </Text>
                 <TouchableOpacity
-                  style={s.actionBtn}
+                  style={[s.actionBtn, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}
                   onPress={() => router.push('/register-documents')}
                   activeOpacity={0.85}
                 >
                   <Text style={s.actionBtnText}>{t.upload_documents_btn}</Text>
-                  <ArrowRight size={16} color="white" strokeWidth={2} />
+                  <ArrowRight size={16} color="white" strokeWidth={2} style={rtlIconStyle(isRTL)} />
                 </TouchableOpacity>
               </>
             )}
@@ -172,16 +173,16 @@ export default function PendingApprovalScreen() {
                   {t.under_review_sub}
                 </Text>
 
-                <View style={s.pollingRow}>
+                <View style={[s.pollingRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                   <Animated.View style={[s.pollingDot, { opacity: pulseAnim }]} />
                   <Text style={s.pollingText}>{t.checking_status_auto}</Text>
                 </View>
 
                 {/* Progress steps */}
-                <Steps active={1} t={t} />
+                <Steps active={1} t={t} isRTL={isRTL} />
 
                 <TouchableOpacity
-                  style={s.refreshBtn}
+                  style={[s.refreshBtn, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}
                   onPress={() => { setLoading(true); fetchStatus(); }}
                   activeOpacity={0.7}
                 >
@@ -206,12 +207,12 @@ export default function PendingApprovalScreen() {
                   {t.reupload_docs_sub}
                 </Text>
                 <TouchableOpacity
-                  style={s.actionBtn}
+                  style={[s.actionBtn, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}
                   onPress={() => router.push('/register-documents')}
                   activeOpacity={0.85}
                 >
                   <Text style={s.actionBtnText}>{t.reupload_documents_btn}</Text>
-                  <ArrowRight size={16} color="white" strokeWidth={2} />
+                  <ArrowRight size={16} color="white" strokeWidth={2} style={rtlIconStyle(isRTL)} />
                 </TouchableOpacity>
               </>
             )}
@@ -231,11 +232,11 @@ export default function PendingApprovalScreen() {
             {/* Contact */}
             <Text style={s.contactTitle}>{t.need_help_title}</Text>
             <View style={s.contactRow}>
-              <View style={s.contactChip}>
+              <View style={[s.contactChip, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                 <Mail size={14} color="#55c49a" />
                 <Text style={s.contactText}>drivers@veego.app</Text>
               </View>
-              <View style={s.contactChip}>
+              <View style={[s.contactChip, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                 <Phone size={14} color="#55c49a" />
                 <Text style={s.contactText}>+20 100 000 0000</Text>
               </View>
@@ -243,7 +244,7 @@ export default function PendingApprovalScreen() {
           </View>
         )}
 
-        <TouchableOpacity style={s.logoutBtn} onPress={handleLogout} activeOpacity={0.7}>
+        <TouchableOpacity style={[s.logoutBtn, { flexDirection: isRTL ? 'row-reverse' : 'row' }]} onPress={handleLogout} activeOpacity={0.7}>
           <LogOut size={15} color="#5e5e72" />
           <Text style={s.logoutText}>{t.sign_out}</Text>
         </TouchableOpacity>
@@ -274,12 +275,12 @@ function StatusIcon({ color, Icon, pulse, pulseAnim }: {
   );
 }
 
-function Steps({ active, t }: { active: number; t: ReturnType<typeof useI18n>['t'] }) {
+function Steps({ active, t, isRTL }: { active: number; t: ReturnType<typeof useI18n>['t']; isRTL: boolean }) {
   const STEP_LABELS = [t.onboarding_step_account_created, t.onboarding_step_docs_submitted, t.under_review_title, t.onboarding_step_approved];
   return (
     <View style={s.stepsBlock}>
       {STEP_LABELS.map((label, i) => (
-        <View key={i} style={s.stepRow}>
+        <View key={i} style={[s.stepRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
           <View style={s.stepLeft}>
             <View style={[s.stepDot, i < active && s.stepDotDone, i === active && s.stepDotActive]}>
               {i < active && <CheckCircle2 size={11} color="white" strokeWidth={2.5} />}

@@ -66,7 +66,7 @@ const KEYPAD_ROWS = [
 
 export default function RideScreen() {
   const colors = useColors();
-  const { t } = useI18n();
+  const { t, isRTL } = useI18n();
   const S = useSplitColors();
   const styles = useMemo(() => makeStyles(S), [S]);
   const { serviceType } = useService();
@@ -893,7 +893,7 @@ export default function RideScreen() {
 
       <View style={[styles.overlay, { paddingTop: topPad }]}>
         <View style={styles.topNav}>
-          <GlassView strong style={styles.navCard} borderRadius={20}>
+          <GlassView strong style={[styles.navCard, { flexDirection: isRTL ? 'row-reverse' : 'row' }]} borderRadius={20}>
             <LinearGradient colors={['#2d2d42', '#1e1e28']} style={styles.navIcon}>
               <Navigation size={20} color={colors.primaryForeground} strokeWidth={2} />
             </LinearGradient>
@@ -924,7 +924,7 @@ export default function RideScreen() {
                       <Text style={[styles.heroCapC, { color: S.cap }]}>
                         {completionResult.netCashPayable > 0 ? t.cash_to_collect : t.added_to_earnings}
                       </Text>
-                      <View style={styles.heroRowC}>
+                      <View style={[styles.heroRowC, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                         <Text style={styles.heroAmountC}>
                           {(completionResult.netCashPayable > 0 ? completionResult.netCashPayable : completionResult.driverCut).toFixed(2)}
                         </Text>
@@ -971,7 +971,7 @@ export default function RideScreen() {
                 {paymentMethod === 'instapay' && (
                   <View style={{ marginTop: 10 }}>
                     {instapayPaymentStatus === 'confirmed' ? (
-                      <View style={styles.instapayConfirmedRowC}>
+                      <View style={[styles.instapayConfirmedRowC, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                         <Check size={16} color={C_MINT} strokeWidth={2.5} />
                         <Text style={[styles.instapayStatusTextC, { color: C_MINT }]}>
                           {t.instapay_payment_confirmed}
@@ -1008,7 +1008,7 @@ export default function RideScreen() {
             /* ── STEP 2 · Rating card (C) — dark header row + white body ── */
             <View style={styles.ratingWrapC}>
               <View style={styles.ratingCardC}>
-                <View style={[styles.ratingHeaderC, { backgroundColor: S.card, borderBottomColor: S.hair }]}>
+                <View style={[styles.ratingHeaderC, { backgroundColor: S.card, borderBottomColor: S.hair, flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                   {passengerAvatar && !riderAvatarFailed ? (
                     <Image source={{ uri: passengerAvatar }} style={styles.ratingAvatarC} resizeMode="cover" />
                   ) : (
@@ -1091,7 +1091,7 @@ export default function RideScreen() {
             },
           ]}
         >
-          <View style={styles.splitCard}>
+          <View style={[styles.splitCard, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
             <View style={styles.leftPanelC}>
               <Pressable
                 onPress={toggleSheet}
@@ -1101,7 +1101,7 @@ export default function RideScreen() {
               >
                 <View style={styles.sheetHandleC} />
               </Pressable>
-              <View style={styles.statusRowC}>
+              <View style={[styles.statusRowC, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                 <View style={styles.statusDotC} />
                 <Text style={styles.leftLabelC} numberOfLines={2}>{p.label}</Text>
               </View>
@@ -1111,7 +1111,7 @@ export default function RideScreen() {
             </View>
 
             <View style={styles.rightPanelC}>
-              <View style={styles.riderRowC}>
+              <View style={[styles.riderRowC, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                 {passengerAvatar && !riderAvatarFailed ? (
                   <Image
                     source={{ uri: passengerAvatar }}
@@ -1155,6 +1155,7 @@ export default function RideScreen() {
                   style={[
                     styles.waitingTickerC,
                     {
+                      flexDirection: isRTL ? 'row-reverse' : 'row',
                       backgroundColor: waitingCharge.capped ? S.surfaceMuted : '#D5B23D18',
                       borderColor: waitingCharge.capped ? S.hair : '#D5B23D55',
                       opacity: waitingCharge.capped ? 1 : pulseAnim,
@@ -1173,7 +1174,7 @@ export default function RideScreen() {
                 </Animated.View>
               )}
 
-              <Pressable onPress={handleNext} disabled={busy} style={[styles.ctaBtnC, { opacity: busy ? 0.7 : 1 }]}>
+              <Pressable onPress={handleNext} disabled={busy} style={[styles.ctaBtnC, { opacity: busy ? 0.7 : 1, flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                 <ChevronUp size={16} color="#ffffff" strokeWidth={2.5} />
                 <Text style={styles.ctaBtnTextC}>{p.cta}</Text>
               </Pressable>
@@ -1195,15 +1196,15 @@ export default function RideScreen() {
 
               <View style={styles.hairC} />
 
-              <View style={styles.bottomRowC}>
-                <View style={styles.safetyRowC}>
+              <View style={[styles.bottomRowC, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                <View style={[styles.safetyRowC, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                   <Shield size={13} color={S.inkSoft} strokeWidth={2} />
                   <Text style={styles.safetyTextC} numberOfLines={1}>{t.safety_toolkit_trip}</Text>
                 </View>
-                <View style={styles.bottomActionsC}>
+                <View style={[styles.bottomActionsC, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                   <Pressable
                     onPress={handleOpenSafety}
-                    style={styles.shareBtnC}
+                    style={[styles.shareBtnC, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}
                     accessibilityLabel={t.need_help}
                   >
                     <Shield size={13} color={S.ink} strokeWidth={2} />
@@ -1211,7 +1212,7 @@ export default function RideScreen() {
                   </Pressable>
                   <Pressable
                     onPress={handleOpenSafety}
-                    style={styles.sosBtnC}
+                    style={[styles.sosBtnC, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}
                     accessibilityLabel={t.sos_label}
                   >
                     <AlertTriangle size={13} color={C_RED} strokeWidth={2} />
@@ -1254,7 +1255,7 @@ export default function RideScreen() {
               ))}
             </View>
 
-            <View style={styles.keypadActionsRowC}>
+            <View style={[styles.keypadActionsRowC, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
               <Pressable onPress={handleKeypadCancel} style={styles.keypadCancelBtnC}>
                 <Text style={styles.keypadCancelTxtC}>{t.cancel}</Text>
               </Pressable>
@@ -1276,22 +1277,22 @@ export default function RideScreen() {
           <View style={styles.changeCardC}>
             <View style={[styles.changeHeroC, { borderBottomColor: S.hair }]}>
               <Text style={styles.changeCapC}>{t.change_to_wallet_label}</Text>
-              <View style={styles.changeHeroRow}>
+              <View style={[styles.changeHeroRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                 <Text style={styles.changeHeroAmt}>{Math.max(0, computedChange).toFixed(2)}</Text>
                 <Text style={styles.changeHeroCur}>{t.egp}</Text>
               </View>
             </View>
             <View style={styles.changeBodyC}>
-              <View style={styles.cRow}>
+              <View style={[styles.cRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                 <Text style={styles.cLabel}>{t.amount_received_label}</Text>
                 <Text style={styles.cVal}>{parsedAmountReceived.toFixed(2)}</Text>
               </View>
               <View style={styles.cHair} />
-              <View style={styles.cRow}>
+              <View style={[styles.cRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                 <Text style={styles.cLabel}>{t.ride_amount_label}</Text>
                 <Text style={styles.cVal}>{fareAmount.toFixed(2)}</Text>
               </View>
-              <View style={styles.cActionsRow}>
+              <View style={[styles.cActionsRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                 <Pressable onPress={handleCancelConfirmChange} disabled={submittingChange} style={[styles.cCancelBtn, { opacity: submittingChange ? 0.6 : 1 }]}>
                   <Text style={styles.cCancelTxt}>{t.cancel}</Text>
                 </Pressable>
@@ -1327,23 +1328,23 @@ export default function RideScreen() {
 
             {completionResult != null && (
               <>
-                <View style={styles.summaryRow}>
+                <View style={[styles.summaryRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                   <Text style={[styles.summaryLabel, { color: '#B0B0B5', fontFamily: 'Inter_400Regular' }]}>{t.gross_fare_label}</Text>
                   <Text style={[styles.summaryValue, { color: '#ffffff', fontFamily: 'Inter_600SemiBold' }]}>{completionResult.grossFare.toFixed(2)} {t.egp}</Text>
                 </View>
                 {completionResult.promoDiscount > 0 && (
-                  <View style={styles.summaryRow}>
+                  <View style={[styles.summaryRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                     <Text style={[styles.summaryLabel, { color: '#B0B0B5', fontFamily: 'Inter_400Regular' }]}>{t.promo_discount_label}</Text>
                     <Text style={[styles.summaryValue, { color: '#22c55e', fontFamily: 'Inter_600SemiBold' }]}>-{completionResult.promoDiscount.toFixed(2)} {t.egp}</Text>
                   </View>
                 )}
                 {completionResult.walletDeduction > 0 && (
-                  <View style={styles.summaryRow}>
+                  <View style={[styles.summaryRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                     <Text style={[styles.summaryLabel, { color: '#B0B0B5', fontFamily: 'Inter_400Regular' }]}>{t.wallet_deduction_label}</Text>
                     <Text style={[styles.summaryValue, { color: '#ffffff', fontFamily: 'Inter_600SemiBold' }]}>-{completionResult.walletDeduction.toFixed(2)} {t.egp}</Text>
                   </View>
                 )}
-                <View style={[styles.summaryRow, styles.summaryRowTotal, { borderTopColor: CARD_BORDER }]}>
+                <View style={[styles.summaryRow, styles.summaryRowTotal, { borderTopColor: CARD_BORDER, flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                   <Text style={[styles.summaryLabel, { color: '#ffffff', fontFamily: 'Inter_700Bold' }]}>{t.net_cash_payable_label}</Text>
                   <Text style={[styles.summaryValueHighlight, { color: GOLD, fontFamily: 'Inter_700Bold' }]}>{completionResult.netCashPayable.toFixed(2)} {t.egp}</Text>
                 </View>

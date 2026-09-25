@@ -5,19 +5,21 @@ import { useColors } from '@/hooks/useColors';
 // Extracted verbatim from app/(shuttle)/bookings.tsx — pure presentational
 // tab button, no behavior change.
 export function MainTabBtn({
-  label, count, active, onPress, colors,
+  label, count, active, onPress, colors, isRTL,
 }: {
   label: string;
   count: number;
   active: boolean;
   onPress: () => void;
   colors: ReturnType<typeof useColors>;
+  isRTL?: boolean;
 }) {
   return (
     <Pressable
       onPress={onPress}
       style={[
         styles.mainTabBtn,
+        { flexDirection: isRTL ? 'row-reverse' : 'row' },
         active && [styles.mainTabBtnActive, { borderBottomColor: colors.primary }],
       ]}
     >
