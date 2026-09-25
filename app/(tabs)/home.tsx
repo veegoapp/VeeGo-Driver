@@ -1175,8 +1175,13 @@ export default function HomeScreen() {
                 <Text style={[styles.onlineBtnText, { color: colors.primaryForeground, fontFamily: 'Inter_700Bold' }]}>{t.online_status}</Text>
               </LinearGradient>
             ) : (
-              <View style={[styles.onlineBtnOff, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
-                <Text style={[styles.onlineBtnText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{t.go}</Text>
+              // Fixed light bg + dark text regardless of theme (mirrors the
+              // online state's fixed dark gradient + white text above) — in
+              // dark mode, colors.secondary/foreground rendered a dark-on-dark
+              // button that blended into the map background instead of
+              // reading as the primary CTA it is.
+              <View style={[styles.onlineBtnOff, { backgroundColor: '#FFFFFF', borderColor: 'rgba(0,0,0,0.08)' }]}>
+                <Text style={[styles.onlineBtnText, { color: '#0D1117', fontFamily: 'Inter_700Bold' }]}>{t.go}</Text>
               </View>
             )}
           </Pressable>
