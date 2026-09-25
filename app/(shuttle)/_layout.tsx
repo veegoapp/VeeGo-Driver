@@ -22,7 +22,7 @@ function SlotReleasedToast() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const topPad = insets.top;
-  const { t } = useI18n();
+  const { t, isRTL } = useI18n();
 
   const translateY = useRef(new Animated.Value(-120)).current;
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -90,7 +90,7 @@ function SlotReleasedToast() {
       ]}
       pointerEvents="box-none"
     >
-      <Pressable onPress={handlePress} style={styles.toastInner} android_ripple={{ color: '#e5e7eb' }}>
+      <Pressable onPress={handlePress} style={[styles.toastInner, { flexDirection: isRTL ? 'row-reverse' : 'row' }]} android_ripple={{ color: '#e5e7eb' }}>
         <View style={styles.dot} />
         <Text style={styles.toastText} numberOfLines={2}>
           {label}

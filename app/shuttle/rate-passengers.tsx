@@ -14,6 +14,7 @@ import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppLoader } from '@/components/ui/AppLoader';
 import { useI18n } from '@/lib/i18nContext';
+import { rtlIconStyle } from '@/lib/rtlUtils';
 import { endpoints, ApiError } from '@/lib/api';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
@@ -38,7 +39,7 @@ type BackendPassenger = {
 };
 
 export default function RatePassengersScreen() {
-  const { t } = useI18n();
+  const { t, isRTL } = useI18n();
   const S = useSplitColors();
   const s = useMemo(() => makeStyles(S), [S]);
   const insets = useSafeAreaInsets();
@@ -141,7 +142,7 @@ export default function RatePassengersScreen() {
     <View style={s.root}>
       <View style={[s.headerC, { paddingTop: topPad + 12 }]}>
         <Pressable onPress={() => router.back()} style={s.backBtnC}>
-          <ChevronLeft size={20} color={S.ink} strokeWidth={2} />
+          <ChevronLeft size={20} color={S.ink} strokeWidth={2} style={rtlIconStyle(isRTL)} />
         </Pressable>
         <Text style={s.headerCapC}>{t.trip_completed_title}</Text>
         <Text style={s.pageTitleC}>{t.rate_passengers_title}</Text>
@@ -162,7 +163,7 @@ export default function RatePassengersScreen() {
           <View style={{ gap: 10 }}>
             {passengers.map(p => (
               <View key={p.id} style={s.cardC}>
-                <View style={s.cardRow}>
+                <View style={[s.cardRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                   {p.avatar ? (
                     <Image source={{ uri: p.avatar }} style={s.avatarC} contentFit="cover" />
                   ) : (

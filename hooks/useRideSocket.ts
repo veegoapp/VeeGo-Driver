@@ -20,13 +20,16 @@ const RideOfferSchema = z.object({
   expiresInSeconds: z.number().optional(),
   riderName: z.string().optional(),
   riderAvatar: z.string().nullable().optional(),
+  riderRating: z.number().nullable().optional(),
 }).passthrough().transform((raw) => ({
   id: raw.rideId,
   type: raw.vehicleType,
   // Real passenger identity from the backend (routes/rides.ts, dispatch-manager.ts)
   // — never a fabricated placeholder. Falls back to a generic label only when
   // the backend genuinely omits the name (should not happen in practice).
-  rider: { name: raw.riderName ?? 'Passenger', avatar: raw.riderAvatar ?? undefined },
+  // riderRating is null (not a fabricated default) for a passenger with no
+  // ratings yet — undefined here so the offer card's `!= null` check hides it.
+  rider: { name: raw.riderName ?? 'Passenger', avatar: raw.riderAvatar ?? undefined, rating: raw.riderRating ?? undefined },
   pickup: {
     address: raw.pickupAddress,
     distance: raw.distanceKm != null ? `${raw.distanceKm.toFixed(1)} km` : undefined,

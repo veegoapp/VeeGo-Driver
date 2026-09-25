@@ -34,15 +34,23 @@ export type SplitColors = {
 export function makeSplitColors(isDark: boolean): SplitColors {
   return {
     isDark,
-    bg: isDark ? '#0F0F1E' : '#EEF0F2',
+    bg: isDark ? '#0F0F1E' : '#EAECEF',
     panel: '#14151A',
     card: isDark ? '#1C1C30' : '#FFFFFF',
-    surfaceMuted: isDark ? '#22233A' : '#F0F2F3',
+    // In light mode this sat 1-2 points off `bg` (#F0F2F3 vs #EEF0F2) — visually
+    // indistinguishable, so the period-pill track and card interiors read as
+    // flat with `bg`. Darkened enough to read as a distinct groove, matching
+    // how dark mode's surfaceMuted already clearly separates from its bg.
+    surfaceMuted: isDark ? '#22233A' : '#E1E4E8',
     ink: isDark ? '#FFFFFF' : '#14151A',
     inkSoft: isDark ? '#C7CBD3' : '#6B7178',
     cap: isDark ? '#8A9096' : '#9AA0A6',
     capOnDark: '#8A9096',
-    hair: isDark ? 'rgba(255,255,255,0.08)' : '#EEF0F1',
+    // Was '#EEF0F1' — nearly identical to `bg`, so card borders were
+    // effectively invisible in light mode. A translucent black hairline (same
+    // idea as dark mode's translucent white one) reads as a real edge against
+    // both `bg` and the white `card` regardless of the exact bg tone.
+    hair: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
     teal: '#0E9F8E',
   };
 }

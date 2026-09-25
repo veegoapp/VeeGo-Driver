@@ -35,7 +35,7 @@ export default function TripCancelScreen() {
   const S = useSplitColors();
   const styles = useMemo(() => makeStyles(S), [S]);
   const TA = isRTL ? 'right' as const : 'left' as const;
-  const R = 'row' as const;
+  const R = isRTL ? 'row-reverse' as const : 'row' as const;
 
   const { tripId, routeName, departureTime, fromStation, toStation } = useLocalSearchParams<Params>();
 
