@@ -1238,7 +1238,7 @@ export default function HomeScreen() {
                     {request.rider.rating != null && (
                       <View style={[styles.riderRatingRowC, { flexDirection: R }]}>
                         <Star size={11} color={C_STARC} fill={C_STARC} strokeWidth={0} />
-                        <Text style={styles.riderRatingC}>{request.rider.rating}</Text>
+                        <Text style={styles.riderRatingC}>{request.rider.rating.toFixed(1)}</Text>
                       </View>
                     )}
                   </View>
