@@ -15,6 +15,7 @@ import { AppLoader } from '@/components/ui/AppLoader';
 import { useI18n } from '@/lib/i18nContext';
 import { endpoints, type RideHistoryItem } from '@/lib/api';
 import { Spacing } from '@/constants/spacing';
+import { Shadows } from '@/constants/shadows';
 import { TAB_BAR_HEIGHT_BASE } from '@/constants/tabBar';
 import { useSplitColors, type SplitColors } from '@/lib/splitTheme';
 
@@ -345,7 +346,7 @@ function makeStyles(S: SplitColors) {
   // full-bleed colored hero block), bordered and sharper-cornered than the
   // app's usual 16-20px cards to read as a receipt/boarding-pass, matching
   // the Wallet tab's balance card.
-  ticketCard: { borderWidth: 1, borderRadius: 10, padding: 20, marginTop: 16 },
+  ticketCard: { borderWidth: 1, borderRadius: 10, padding: 20, marginTop: 16, ...Shadows.small },
   heroAmountCap: { fontSize: 10, letterSpacing: 1.6, textTransform: 'uppercase' },
   heroAmountRow: { alignItems: 'flex-end', gap: 8, marginTop: 4 },
   heroAmount: { fontSize: 38, lineHeight: 42, fontFamily: MONO, fontWeight: '700' },
@@ -365,7 +366,7 @@ function makeStyles(S: SplitColors) {
   heroStatCap: { fontSize: 9, letterSpacing: 1, textTransform: 'uppercase', marginTop: 2 },
   heroDivider: { width: 1, borderLeftWidth: 1, borderStyle: 'dashed' },
   sectionTitle: { fontSize: 12.5, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: Spacing.md },
-  emptyCard: { padding: Spacing.lg, borderRadius: 10, backgroundColor: S.card, borderWidth: 1, borderColor: S.hair },
+  emptyCard: { padding: Spacing.lg, borderRadius: 10, backgroundColor: S.card, borderWidth: 1, borderColor: S.hair, ...Shadows.small },
   listCard: { backgroundColor: S.card, borderRadius: 10, borderWidth: 1, overflow: 'hidden' },
   tripCard: { padding: Spacing.md, alignItems: 'center', gap: Spacing.sm },
   tripCardBorder: { borderTopWidth: 1, borderStyle: 'dashed', borderTopColor: S.hair },

@@ -16,6 +16,7 @@ import {
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
 import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
+import { Shadows } from '@/constants/shadows';
 import { TAB_BAR_HEIGHT_BASE } from '@/constants/tabBar';
 import { useSplitColors, type SplitColors } from '@/lib/splitTheme';
 
@@ -414,7 +415,7 @@ function makeStyles(S: SplitColors) {
   // Ticket-stub balance card — sits on the page's normal background (no
   // full-bleed colored hero block), bordered and sharper-cornered than the
   // app's usual 16-20px cards to read as a receipt/boarding-pass.
-  ticketCard: { borderWidth: 1, borderRadius: 10, padding: 20 },
+  ticketCard: { borderWidth: 1, borderRadius: 10, padding: 20, ...Shadows.small },
   ticketCap: { fontSize: 10, letterSpacing: 1.6, textTransform: 'uppercase' },
   balanceRow: { alignItems: 'flex-end', gap: 8, marginTop: 4 },
   balanceAmount: { fontSize: 40, lineHeight: 44, fontFamily: MONO, fontWeight: '700' },
@@ -435,7 +436,7 @@ function makeStyles(S: SplitColors) {
   secondaryAction: { flex: 1, height: 50, borderRadius: 10, borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   secondaryActionText: { fontSize: 13, letterSpacing: 0.3, textTransform: 'uppercase' },
   sectionTitle: { fontSize: 12.5, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: Spacing.md },
-  emptyCard: { padding: Spacing.xl, borderRadius: 10, backgroundColor: S.card, borderWidth: 1, borderColor: S.hair },
+  emptyCard: { padding: Spacing.xl, borderRadius: 10, backgroundColor: S.card, borderWidth: 1, borderColor: S.hair, ...Shadows.small },
   listCard: { backgroundColor: S.card, borderRadius: 10, borderWidth: 1, borderColor: S.hair, overflow: 'hidden' },
   txItem: { alignItems: 'center', gap: Spacing.md, padding: Spacing.lg },
   txItemBorder: { borderTopWidth: 1, borderStyle: 'dashed', borderTopColor: S.hair },
