@@ -1156,7 +1156,8 @@ export const en = {
   payout_pending_msg: 'Your payout request has been submitted and is waiting for approval.',
   manage: 'Manage',
   pending_verification: 'Pending verification',
-  payment_info_label: 'Payment Information',
+  payment_info_label: 'Payout Methods',
+  payment_info_sub: 'Vodafone Cash, InstaPay, bank transfer...',
   payout_history_label: 'Payout History',
   payout_history_empty: 'No payout requests yet',
   payout_history_load_err: 'Failed to load payout history',
@@ -1432,6 +1433,7 @@ export const en = {
   reviews_count_label: '{count} reviews',
   // ── InstaPay settings screen ──────────────────────────────────────────────
   instapay_settings_label: 'InstaPay Settings',
+  instapay_settings_sub: 'Let passengers pay you by scanning a code',
   instapay_setup_title: 'Set up InstaPay',
   instapay_setup_desc: 'Add your official InstaPay link so passengers can pay you directly.',
   instapay_link_label: 'Your official InstaPay link',

@@ -211,8 +211,8 @@ export default function ProfileScreen() {
             isRTL={isRTL}
           />
           <MenuItem icon="file-text" label={t.documents_label} onPress={() => router.push('/documents')} colors={colors} isRTL={isRTL} />
-          <MenuItem icon="credit-card" label={t.payment_info_label} onPress={() => router.push('/payout-accounts' as any)} colors={colors} isRTL={isRTL} />
-          <MenuItem icon="briefcase" label={t.instapay_settings_label} onPress={() => router.push('/instapay-settings' as any)} colors={colors} isRTL={isRTL} />
+          <MenuItem icon="credit-card" label={t.payment_info_label} sub={t.payment_info_sub} onPress={() => router.push('/payout-accounts' as any)} colors={colors} isRTL={isRTL} />
+          <MenuItem icon="briefcase" label={t.instapay_settings_label} sub={t.instapay_settings_sub} onPress={() => router.push('/instapay-settings' as any)} colors={colors} isRTL={isRTL} />
           <MenuItem icon="target" label={t.bonus_targets} onPress={() => router.push('/bonus-targets')} colors={colors} isRTL={isRTL} />
           {driverReferralInfo?.config.enabled && (
             <MenuItem icon="gift" label={t.driver_referral_menu_label} onPress={() => router.push('/driver-referral')} colors={colors} isRTL={isRTL} />
