@@ -1,4 +1,5 @@
 import { showAlert } from '@/lib/alert';
+import { ensureNativeRTLOff } from '@/lib/rtlUtils';
 // Register background location task before any React rendering
 import '@/lib/backgroundLocationTask';
 
@@ -32,6 +33,12 @@ import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { GPSProvider } from '@/hooks/useGPSProvider';
 import { ServerStatusBanner } from '@/components/ServerStatusBanner';
 import { AppAlert } from '@/components/ui';
+
+// If the native RTL flag was ever left on (an older build, a leftover value
+// from testing), self-heal it here before anything renders — see
+// ensureNativeRTLOff's comment in rtlUtils.ts for why this can't just be a
+// useEffect. Must run before any component mounts.
+ensureNativeRTLOff();
 
 // Keep the native splash screen up until fonts, the stored-token check, and
 // language init have all resolved (see the hideAsync() call in
