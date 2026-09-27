@@ -91,12 +91,18 @@ export default function BonusTargetsScreen() {
   const targets = extractTargets(raw);
 
   // ── Summary derivation (no extra endpoint needed) ─────────────────────
+  // The server only ever returns targets currently inside their active
+  // window (see GET /driver/bonus-targets), and a completed one is credited
+  // to the wallet atomically in the same transaction that flips
+  // isCompleted — so every row here is either "in progress" or "completed
+  // and already paid"; there is no separate expired/awaiting-payout state
+  // to derive from this list.
   const earnedTotal = targets
-    .filter((b) => b.completed && (b.paidOut !== false))
+    .filter((b) => b.isCompleted)
     .reduce((sum, b) => sum + b.bonusAmount, 0);
 
   const pendingTotal = targets
-    .filter((b) => !b.completed && b.isActive)
+    .filter((b) => !b.isCompleted)
     .reduce((sum, b) => sum + b.bonusAmount, 0);
 
   // ── Pull-to-refresh ───────────────────────────────────────────────────
@@ -111,10 +117,7 @@ export default function BonusTargetsScreen() {
 
   // ── Status helpers ────────────────────────────────────────────────────
   const getStatusConfig = (target: BonusTarget) => {
-    if (!target.isActive && !target.completed) {
-      return { label: t.bonus_expired, color: colors.mutedForeground, bg: colors.secondary };
-    }
-    if (target.completed) {
+    if (target.isCompleted) {
       return { label: t.bonus_completed, color: COLOR_COMPLETED, bg: COLOR_COMPLETED_BG };
     }
     return { label: t.bonus_in_progress, color: COLOR_PROGRESS, bg: COLOR_PROGRESS_BG };
@@ -255,7 +258,7 @@ export default function BonusTargetsScreen() {
               {/* ── Milestone timeline list ────────────────────────── */}
               {targets.map((target, idx) => {
                 const pct = target.targetValue > 0
-                  ? Math.min(1, target.progress / target.targetValue)
+                  ? Math.min(1, target.currentValue / target.targetValue)
                   : 0;
                 const status = getStatusConfig(target);
                 const isLast = idx === targets.length - 1;
@@ -267,19 +270,11 @@ export default function BonusTargetsScreen() {
                       <View style={[
                         styles.spineDot,
                         {
-                          backgroundColor: target.completed
-                            ? COLOR_COMPLETED
-                            : target.isActive
-                              ? COLOR_PROGRESS
-                              : colors.border,
-                          borderColor: target.completed
-                            ? COLOR_COMPLETED_BG
-                            : target.isActive
-                              ? COLOR_PROGRESS_BG
-                              : 'transparent',
+                          backgroundColor: target.isCompleted ? COLOR_COMPLETED : COLOR_PROGRESS,
+                          borderColor: target.isCompleted ? COLOR_COMPLETED_BG : COLOR_PROGRESS_BG,
                         },
                       ]}>
-                        {target.completed
+                        {target.isCompleted
                           ? <CheckCircle size={10} color="#fff" strokeWidth={2.5} />
                           : <TrendingUp size={10} color="#fff" strokeWidth={2.5} />
                         }
@@ -298,7 +293,7 @@ export default function BonusTargetsScreen() {
                             style={[styles.milestoneTitle, { color: colors.foreground, textAlign: TA }]}
                             numberOfLines={2}
                           >
-                            {isRTL && target.nameAr ? target.nameAr : target.title}
+                            {isRTL && target.nameAr ? target.nameAr : target.name}
                           </Text>
                           {!!(isRTL && target.descriptionAr ? target.descriptionAr : target.description) && (
                             <Text
@@ -320,10 +315,10 @@ export default function BonusTargetsScreen() {
                       <View style={styles.progressSection}>
                         <View style={[styles.progressMeta, { flexDirection: R }]}>
                           <Text style={[styles.progressFigures, { color: colors.mutedForeground }]}>
-                            {target.progress} / {target.targetValue}
+                            {target.currentValue} / {target.targetValue}
                           </Text>
                           <Text style={[styles.progressPct, {
-                            color: target.completed ? COLOR_COMPLETED : COLOR_PROGRESS,
+                            color: target.isCompleted ? COLOR_COMPLETED : COLOR_PROGRESS,
                           }]}>
                             {Math.round(pct * 100)}%
                           </Text>
@@ -333,7 +328,7 @@ export default function BonusTargetsScreen() {
                             styles.progressFill,
                             {
                               width: `${Math.round(pct * 100)}%` as `${number}%`,
-                              backgroundColor: target.completed ? COLOR_COMPLETED : COLOR_PROGRESS,
+                              backgroundColor: target.isCompleted ? COLOR_COMPLETED : COLOR_PROGRESS,
                             },
                           ]} />
                         </View>
@@ -342,23 +337,23 @@ export default function BonusTargetsScreen() {
                       {/* Footer row: payout pill + date */}
                       <View style={[styles.milestoneFooter, { flexDirection: R }]}>
                         <View style={[styles.payoutPill, {
-                          backgroundColor: target.completed ? COLOR_COMPLETED_BG : COLOR_PROGRESS_BG,
+                          backgroundColor: target.isCompleted ? COLOR_COMPLETED_BG : COLOR_PROGRESS_BG,
                           flexDirection: R,
                         }]}>
                           <Text style={[styles.payoutLabel, {
-                            color: target.completed ? COLOR_COMPLETED : COLOR_PROGRESS,
+                            color: target.isCompleted ? COLOR_COMPLETED : COLOR_PROGRESS,
                           }]}>
                             {t.bonus_amount}:{'  '}
                           </Text>
                           <Text style={[styles.payoutValue, {
-                            color: target.completed ? COLOR_COMPLETED : COLOR_PROGRESS,
+                            color: target.isCompleted ? COLOR_COMPLETED : COLOR_PROGRESS,
                           }]}>
                             {formatAmount(target.bonusAmount)} {t.egp}
                           </Text>
                         </View>
 
                         <View style={[styles.datePill, { flexDirection: R }]}>
-                          {target.completed ? (
+                          {target.isCompleted ? (
                             <>
                               <Text style={[styles.dateLabel, { color: colors.mutedForeground }]}>
                                 {t.completion_date}:{'  '}
@@ -380,20 +375,17 @@ export default function BonusTargetsScreen() {
                         </View>
                       </View>
 
-                      {/* Payout status row (only when relevant) */}
-                      {target.completed && (
+                      {/* Payout status row — a completed target is always
+                          already paid: the wallet credit and the isCompleted
+                          flag are written in the same DB transaction. */}
+                      {target.isCompleted && (
                         <View style={[styles.payoutStatusRow, {
                           flexDirection: R,
                           borderTopColor: BORDER_COLOR,
                         }]}>
-                          <View style={[styles.payoutStatusDot, {
-                            backgroundColor: target.paidOut !== false ? COLOR_COMPLETED : COLOR_PROGRESS,
-                          }]} />
-                          <Text style={[styles.payoutStatusText, {
-                            color: target.paidOut !== false ? COLOR_COMPLETED : COLOR_PROGRESS,
-                            textAlign: TA,
-                          }]}>
-                            {target.paidOut !== false ? t.bonus_paid_out : t.bonus_awaiting_payout}
+                          <View style={[styles.payoutStatusDot, { backgroundColor: COLOR_COMPLETED }]} />
+                          <Text style={[styles.payoutStatusText, { color: COLOR_COMPLETED, textAlign: TA }]}>
+                            {t.bonus_paid_out}
                           </Text>
                         </View>
                       )}
