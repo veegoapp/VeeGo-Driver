@@ -26,7 +26,7 @@ import {
 import { showAlert } from '@/lib/alert';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { SurgeZone } from '@/lib/types';
+import type { SurgeUpdate } from '@/lib/types';
 import { GlassView } from '@/components/GlassView';
 import { MapBackdrop } from '@/components/MapBackdrop';
 import { useColors } from '@/hooks/useColors';
@@ -80,7 +80,7 @@ const C_RED = '#D92D20';
 // racing GPSProvider's own permission check with no synchronization between
 // them; removed in favor of GPSProvider re-checking on its own (see
 // useGPSProvider.tsx) once startLocationTracking()'s request resolves.
-const DriverMapLayer = React.memo(function DriverMapLayer({ surgeZones, focused }: { surgeZones: SurgeZone[]; focused: boolean }) {
+const DriverMapLayer = React.memo(function DriverMapLayer({ focused }: { focused: boolean }) {
   const { position: driverPosition } = useDriverLocation(focused);
 
   if (!focused) return null;
@@ -88,7 +88,6 @@ const DriverMapLayer = React.memo(function DriverMapLayer({ surgeZones, focused 
   return (
     <MapBackdrop
       driverLocation={driverPosition ?? undefined}
-      surgeZones={surgeZones}
     />
   );
 });
@@ -120,7 +119,7 @@ export default function HomeScreen() {
   const [declining, setDeclining] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [request, setRequest] = useState<RideRequest | null>(null);
-  const [surgeZones, setSurgeZones] = useState<SurgeZone[]>([]);
+  const [activeSurge, setActiveSurge] = useState<SurgeUpdate | null>(null);
   const [countdown, setCountdown] = useState(12);
   const [promoDismissed, setPromoDismissed] = useState(false);
   const [ratingWarningDismissed, setRatingWarningDismissed] = useState(false);
@@ -558,8 +557,13 @@ export default function HomeScreen() {
     showToastRef.current?.('Your cooldown has been lifted, you can receive rides again', 'success');
   }, [queryClient]);
 
-  const handleSurgeUpdated = useCallback((zones: SurgeZone[]) => {
-    setSurgeZones(zones);
+  // The backend broadcasts one flat update per vehicle type (no geo/zone
+  // data — see SurgeUpdate's doc comment), so this just tracks the latest
+  // active surge seen; in practice all vehicle types move together (the
+  // auto multiplier is peak-hour-wide), a manual admin override on a
+  // specific vehicle type being the only case where they'd briefly differ.
+  const handleSurgeUpdated = useCallback((update: SurgeUpdate) => {
+    setActiveSurge(update.isActive && update.multiplier > 1 ? update : null);
   }, []);
 
   const { connected: socketConnected } = useRideSocket({
@@ -882,7 +886,7 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <DriverMapLayer surgeZones={surgeZones} focused={homeFocused} />
+      <DriverMapLayer focused={homeFocused} />
 
       {/* Reconnecting banner */}
       <Animated.View
@@ -1104,7 +1108,7 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {surgeZones.length > 0 && online && (
+        {activeSurge && online && (
           <Animated.View style={[styles.demandCard, { transform: [{ translateX: demandAnim }], opacity: demandOpacity }]}>
             <GlassView strong style={styles.demandCardInner} borderRadius={16}>
               <View style={[styles.demandHeader, { flexDirection: R }]}>
@@ -1112,23 +1116,19 @@ export default function HomeScreen() {
                 <Text style={[styles.demandTitle, { color: colors.accent, fontFamily: 'Inter_700Bold' }]}>{t.high_demand}</Text>
               </View>
               <Text style={[styles.demandText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: TA }]}>
-                {surgeZones.length === 1
-                  ? `${surgeZones[0].multiplier.toFixed(1)}× surge active nearby — head there for more trips.`
-                  : `${surgeZones.length} surge zones active in your area.`}
+                {activeSurge.multiplier.toFixed(1)}× surge active right now — more trips available.
               </Text>
             </GlassView>
           </Animated.View>
         )}
       </View>
 
-      {/* Surge zone badge */}
-      {surgeZones.length > 0 && (
+      {/* Surge badge */}
+      {activeSurge && (
         <View style={[styles.surgeBadge, { bottom: TAB_BAR_HEIGHT + (locationError ? 180 : 140) }]}>
           <Text style={{ fontSize: 13, color: '#D5B23D' }}>⚡</Text>
           <Text style={{ fontSize: Typography.size.xs, fontFamily: 'Inter_700Bold', color: '#D5B23D', letterSpacing: 0.3 }}>
-            {surgeZones.length === 1
-              ? `${surgeZones[0].multiplier.toFixed(1)}× surge zone`
-              : `${surgeZones.length} surge zones active`}
+            {activeSurge.multiplier.toFixed(1)}× surge active
           </Text>
         </View>
       )}

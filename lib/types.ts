@@ -9,13 +9,16 @@
 
 // ─── Ride / Map ───────────────────────────────────────────────────────────────
 
-/** A geographic surge pricing zone broadcast by the backend over the socket. */
-export interface SurgeZone {
-  id: string;
-  latitude: number;
-  longitude: number;
-  radius: number;
+/**
+ * Surge pricing update broadcast by the backend over the socket
+ * (surge:updated — see artifacts/api-server/src/lib/surge-pricing.ts).
+ * Not geo-located: the current system surges uniformly per vehicle type
+ * during peak hours, with no zone/location concept.
+ */
+export interface SurgeUpdate {
+  vehicleType: string;
   multiplier: number;
+  isActive: boolean;
 }
 
 /** A live waiting-charge update pushed via socket during an active ride. */
