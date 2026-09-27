@@ -3,8 +3,8 @@ import { z } from 'zod';
 import { useSocket } from '@/lib/socketContext';
 import { SOCKET_EVENTS } from '../constants/socketEvents';
 import type { CheckinRequiredPayload } from '@/lib/checkinDeadline';
-import type { SurgeZone } from '@/lib/types';
-export type { SurgeZone } from '@/lib/types';
+import type { SurgeUpdate } from '@/lib/types';
+export type { SurgeUpdate } from '@/lib/types';
 
 // Backend's real ride:offer payload (dispatch-manager.ts) is flat — no `id`,
 // no `rider`, no nested pickup/dropoff objects. Parse that actual shape and
@@ -44,14 +44,14 @@ const OfferExpiredSchema = z.union([
   z.object({ rideId: z.string().optional() }).passthrough(),
 ]);
 
-const SurgeSchema = z.union([
-  z.array(z.object({
-    id: z.string(), latitude: z.number(), longitude: z.number(),
-    radius: z.number(), multiplier: z.number(),
-  }).passthrough()),
-  z.object({ zones: z.array(z.any()).optional() }).passthrough(),
-  z.object({ latitude: z.number(), longitude: z.number(), radius: z.number(), multiplier: z.number() }).passthrough(),
-]);
+// Real backend payload (routes/surge.ts / lib/surge-pricing.ts) — flat, per
+// vehicle type, no geo/zone data. isActive defaults to (multiplier > 1) for
+// callers that predate the field, but the backend always sends it.
+const SurgeSchema = z.object({
+  vehicleType: z.string(),
+  multiplier: z.number(),
+  isActive: z.boolean().optional(),
+}).passthrough();
 
 export type RideRequest = {
   id: string;
@@ -74,7 +74,7 @@ type UseRideSocketOptions = {
   onCheckinApproved?: () => void;
   onCooldownCleared?: () => void;
   onSosTriggered?: (data: unknown) => void;
-  onSurgeUpdated?: (zones: SurgeZone[]) => void;
+  onSurgeUpdated?: (update: SurgeUpdate) => void;
 };
 
 type UseRideSocketResult = {
@@ -183,18 +183,8 @@ export function useRideSocket({
         console.warn(`[Socket] Invalid ${SOCKET_EVENTS.SURGE_UPDATED} payload`, parsed.error.issues);
         return;
       }
-      const data = parsed.data;
-      let zones: SurgeZone[];
-      if (Array.isArray(data)) {
-        zones = data as SurgeZone[];
-      } else if (data && typeof data === 'object' && 'zones' in data) {
-        zones = ((data as { zones?: SurgeZone[] }).zones) ?? [];
-      } else if (data && typeof data === 'object' && 'latitude' in data) {
-        zones = [data as unknown as SurgeZone];
-      } else {
-        zones = [];
-      }
-      surgeUpdatedRef.current?.(zones);
+      const { vehicleType, multiplier, isActive } = parsed.data;
+      surgeUpdatedRef.current?.({ vehicleType, multiplier, isActive: isActive ?? multiplier > 1 });
     };
 
     const handleSosTriggered = (data: unknown) => {
