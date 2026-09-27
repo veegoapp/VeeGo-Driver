@@ -32,14 +32,10 @@ const TRIM_THROTTLE_MS = 300;
 const TRIM_MIN_MOVE_M = 3;
 
 
-import type { SurgeZone } from '@/lib/types';
-export type { SurgeZone } from '@/lib/types';
-
 export interface MapBackdropProps {
   pickup?: { latitude: number; longitude: number };
   dropoff?: { latitude: number; longitude: number };
   driverLocation?: { latitude: number; longitude: number; heading?: number | null; speed?: number | null; accuracy?: number | null };
-  surgeZones?: SurgeZone[];
   routePolyline?: Array<{ latitude: number; longitude: number }>;
   roadPolyline?: Array<{ latitude: number; longitude: number }>;
   stationStatuses?: ('pending' | 'current' | 'completed')[];
@@ -79,18 +75,6 @@ function offsetCoord(
       Math.cos(d) - Math.sin(lat1) * Math.sin(lat2),
     );
   return { latitude: (lat2 * 180) / Math.PI, longitude: (lng2 * 180) / Math.PI };
-}
-
-function surgeColor(multiplier: number): string {
-  if (multiplier >= 2.0) return 'rgba(239,68,68,0.14)';
-  if (multiplier >= 1.5) return 'rgba(249,115,22,0.14)';
-  return 'rgba(213,178,61,0.13)';
-}
-
-function surgeStrokeColor(multiplier: number): string {
-  if (multiplier >= 2.0) return 'rgba(239,68,68,0.6)';
-  if (multiplier >= 1.5) return 'rgba(249,115,22,0.6)';
-  return 'rgba(213,178,61,0.6)';
 }
 
 // Generates lat/lng ring for a dashed approach circle (Polyline-based, works on both platforms).
@@ -168,7 +152,6 @@ export const MapBackdrop = React.memo(function MapBackdrop({
   pickup,
   dropoff,
   driverLocation,
-  surgeZones = [],
   routePolyline,
   roadPolyline,
   stationStatuses,
@@ -642,30 +625,6 @@ export const MapBackdrop = React.memo(function MapBackdrop({
           </>
         )}
 
-        {/* ── Surge zones ──────────────────────────────────────────────── */}
-        {surgeZones.map(z => (
-          <React.Fragment key={z.id}>
-            <Circle
-              center={{ latitude: z.latitude, longitude: z.longitude }}
-              radius={z.radius}
-              fillColor={surgeColor(z.multiplier)}
-              strokeColor={surgeStrokeColor(z.multiplier)}
-              strokeWidth={1.5}
-            />
-            <Marker
-              coordinate={{ latitude: z.latitude, longitude: z.longitude }}
-              anchor={{ x: 0.5, y: 0.5 }}
-              tracksViewChanges={false}
-              flat
-            >
-              <View style={styles.surgeLabel}>
-                <Text style={styles.surgeLabelFlash}>⚡</Text>
-                <Text style={styles.surgeLabelText}>{z.multiplier.toFixed(1)}×</Text>
-              </View>
-            </Marker>
-          </React.Fragment>
-        ))}
-
         {/* ── Shuttle station markers ───────────────────────────────────── */}
         {hasStations &&
           routePolyline!.map((pt, idx) => {
@@ -867,20 +826,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   stationPendingText: { color: 'white', fontSize: 11, fontWeight: 'bold' },
-  // Surge zone label
-  surgeLabel: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    backgroundColor: 'rgba(20,20,30,0.82)',
-    borderRadius: 20,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderWidth: 1.5,
-    borderColor: 'rgba(213,178,61,0.6)',
-  },
-  surgeLabelFlash: { fontSize: 11, color: '#D5B23D' },
-  surgeLabelText: { fontSize: 11, fontWeight: 'bold', color: 'white' },
   // Theme toggle button — bottom right, above recenter
   themeToggleBtn: {
     position: 'absolute',
