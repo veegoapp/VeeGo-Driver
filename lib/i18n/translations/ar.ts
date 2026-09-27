@@ -564,8 +564,6 @@ export const ar: Translations = {
   pending_bonuses: 'المكافآت المعلقة',
   completion_date: 'تاريخ الإكمال',
   bonus_paid_out: 'تم الصرف',
-  bonus_awaiting_payout: 'في انتظار الصرف',
-  bonus_expired: 'منتهية',
   bonus_failed_load: 'تعذّر تحميل أهداف المكافآت',
   bonus_retry: 'إعادة المحاولة',
   bonus_targets_empty_sub: 'ستظهر أهداف المكافآت الجديدة هنا عند تعيينها',

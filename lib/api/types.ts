@@ -113,22 +113,20 @@ export interface DriverReferralInfo {
 
 // Exported bonus target shape — used by both the profile summary and the dedicated screen
 export interface BonusTarget {
-  id: string;
-  title: string;
+  id: number;
+  name: string;
   nameAr?: string | null;
-  description?: string;
+  description?: string | null;
   descriptionAr?: string | null;
+  serviceType: string;
   targetType: string;
   targetValue: number;
-  progress: number;
+  currentValue: number;
   bonusAmount: number;
-  completed: boolean;
-  completedAt?: string;
-  startsAt?: string;
-  endsAt?: string;
-  vehicleType?: string;
-  isActive: boolean;
-  paidOut?: boolean;
+  isCompleted: boolean;
+  completedAt?: string | null;
+  startsAt: string;
+  endsAt: string;
 }
 
 export interface DriverPromotion {

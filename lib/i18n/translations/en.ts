@@ -564,8 +564,6 @@ export const en = {
   pending_bonuses: 'Pending Bonuses',
   completion_date: 'Completion date',
   bonus_paid_out: 'Paid out',
-  bonus_awaiting_payout: 'Awaiting payout',
-  bonus_expired: 'Expired',
   bonus_failed_load: 'Could not load bonus targets',
   bonus_retry: 'Retry',
   bonus_targets_empty_sub: 'New bonus milestones will appear here once assigned',
