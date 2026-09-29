@@ -1,18 +1,3 @@
-jest.mock('@/lib/api', () => {
-  class ApiError extends Error {
-    status: number;
-    statusText: string;
-    body: unknown;
-    constructor(status: number, statusText: string, body: unknown) {
-      super(`API ${status}`);
-      this.status = status;
-      this.statusText = statusText;
-      this.body = body;
-    }
-  }
-  return { ApiError, endpoints: { wallet: { payout: jest.fn() } } };
-});
-
 import {
   parsePayoutAmount,
   parseDepositAmount,
@@ -34,6 +19,21 @@ import {
   type PayoutHistoryItem,
 } from './walletHelpers';
 import { ApiError, endpoints } from '@/lib/api';
+
+jest.mock('@/lib/api', () => {
+  class ApiError extends Error {
+    status: number;
+    statusText: string;
+    body: unknown;
+    constructor(status: number, statusText: string, body: unknown) {
+      super(`API ${status}`);
+      this.status = status;
+      this.statusText = statusText;
+      this.body = body;
+    }
+  }
+  return { ApiError, endpoints: { wallet: { payout: jest.fn() } } };
+});
 
 // Minimal stand-ins for the translation/colors objects these UI-facing
 // helpers take — only the keys each function actually reads need real

@@ -10,8 +10,8 @@ export interface MapBackdropProps {
   pickup?: { latitude: number; longitude: number };
   dropoff?: { latitude: number; longitude: number };
   driverLocation?: { latitude: number; longitude: number; heading?: number | null; speed?: number | null; accuracy?: number | null };
-  routePolyline?: Array<{ latitude: number; longitude: number }>;
-  roadPolyline?: Array<{ latitude: number; longitude: number }>;
+  routePolyline?: { latitude: number; longitude: number }[];
+  roadPolyline?: { latitude: number; longitude: number }[];
   stationStatuses?: ('pending' | 'current' | 'completed')[];
   approachCircle?: { latitude: number; longitude: number; radius: number } | null;
   focusTarget?: { latitude: number; longitude: number; zoom?: number } | null;

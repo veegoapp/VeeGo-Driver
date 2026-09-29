@@ -112,7 +112,7 @@ export async function fetchGoogleRoute(
 
     if (Array.isArray(typed?.polyline) && typed.polyline.length > 0) {
       return {
-        coords: (typed.polyline as Array<{ latitude: number; longitude: number }>).map(pt => ({
+        coords: (typed.polyline as { latitude: number; longitude: number }[]).map(pt => ({
           latitude: pt.latitude,
           longitude: pt.longitude,
         })),

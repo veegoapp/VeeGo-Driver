@@ -429,7 +429,7 @@ export default function RideScreen() {
   // silentExitRide is stable within the component lifecycle and intentionally
   // omitted from deps — consistent with the existing useEffect at line ~177
   // that calls exitRide(t.*) with only [rideRaw] in its dependency array.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [initialized, session, phase]);
 
   // ── Navigation route ─────────────────────────────────────────────────────
@@ -817,7 +817,7 @@ export default function RideScreen() {
         )
         .catch(() => Linking.openURL(webFallback).catch(() => {}));
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [phase, pickupLat, pickupLng, dropoffLat, dropoffLng]);
 
   // ── Navigation-choice prompt ─────────────────────────────────────────────
@@ -875,7 +875,7 @@ export default function RideScreen() {
     () => (phase === 'arrived' && pickupLat != null && pickupLng != null
       ? { latitude: Number(pickupLat), longitude: Number(pickupLng), zoom: 17 }
       : null),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
     [phase, pickupLat, pickupLng],
   );
 

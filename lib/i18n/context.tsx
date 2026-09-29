@@ -72,7 +72,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
       if (switchTimerRef.current) clearTimeout(switchTimerRef.current);
       switchTimerRef.current = setTimeout(() => setIsSwitchingLanguage(false), 1400);
     })();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [language]);
 
   // Memoized: makeSafeTranslations builds a fresh Proxy on every call for

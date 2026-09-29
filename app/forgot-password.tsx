@@ -110,7 +110,7 @@ function RequestStep({ onSuccess, initialPhone }: { onSuccess: (phone: string) =
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
-  const [availableChannels, setAvailableChannels] = useState<Array<'whatsapp' | 'sms'>>(['whatsapp']);
+  const [availableChannels, setAvailableChannels] = useState<('whatsapp' | 'sms')[]>(['whatsapp']);
   const [channel, setChannel] = useState<'whatsapp' | 'sms'>('whatsapp');
 
   const canSubmit = phone.trim().length > 7 && cooldown <= 0;
@@ -118,7 +118,7 @@ function RequestStep({ onSuccess, initialPhone }: { onSuccess: (phone: string) =
   useEffect(() => {
     endpoints.auth.otpChannels()
       .then((res) => {
-        const channels: Array<'whatsapp' | 'sms'> = [];
+        const channels: ('whatsapp' | 'sms')[] = [];
         if (res.whatsappEnabled) channels.push('whatsapp');
         if (res.smsEnabled) channels.push('sms');
         if (channels.length > 0) setAvailableChannels(channels);

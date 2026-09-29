@@ -28,7 +28,7 @@ function safeSetNotificationHandler() {
     _origError.apply(console, args as Parameters<typeof console.error>);
   };
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+     
     const Notifications = require('expo-notifications');
     Notifications.setNotificationHandler({
       handleNotification: async (notification: any) => {
@@ -115,7 +115,7 @@ export function usePushNotifications(onRideRequest?: () => void) {
     });
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
+       
       const Notifications = require('expo-notifications');
 
       // Fired while the app is FOREGROUNDED — update in-app state / badges
@@ -249,7 +249,7 @@ export function usePushNotifications(onRideRequest?: () => void) {
 
 async function registerForPushNotifications(): Promise<{ expoToken?: string; fcmToken?: string | null }> {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+     
     const Notifications = require('expo-notifications');
 
     const { status: existingStatus } = await Notifications.getPermissionsAsync();

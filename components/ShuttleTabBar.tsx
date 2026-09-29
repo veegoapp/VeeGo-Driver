@@ -10,7 +10,7 @@ import { Animation } from '@/constants/animations';
 import { CONTAINER_PX, PILL_PX } from '@/constants/tabBar';
 
 type TabBarProps = {
-  state: { index: number; routes: Array<{ key: string; name: string }> };
+  state: { index: number; routes: { key: string; name: string }[] };
   descriptors: Record<string, { options: { title?: string } }>;
   navigation: { emit: (args: any) => { defaultPrevented: boolean }; navigate: (name: string) => void };
 };

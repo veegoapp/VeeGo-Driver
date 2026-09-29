@@ -53,7 +53,7 @@ type ShuttleContextType = {
   startedTripId: string | null;
   setStartedTripId: (id: string | null) => void;
   // Gap C: ordered lat/lng of each station for the map route polyline
-  stationCoords: Array<{ latitude: number; longitude: number }>;
+  stationCoords: { latitude: number; longitude: number }[];
   // Resets all in-trip state (stop index, passengers, startedTripId) after trip completion
   resetTrip: () => void;
   // Real-time slot-released toast (populated by socket event, consumed by layout)
@@ -266,7 +266,7 @@ export function ShuttleProvider({ children }: { children: React.ReactNode }) {
   }
 
   // Gap C: ordered lat/lng coordinates for each active route station
-  const stationCoords: Array<{ latitude: number; longitude: number }> = tripStations.map(st => ({
+  const stationCoords: { latitude: number; longitude: number }[] = tripStations.map(st => ({
     latitude: st.latitude,
     longitude: st.longitude,
   }));

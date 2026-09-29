@@ -1,5 +1,5 @@
 import { showAlert } from '@/lib/alert';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams , useNavigation } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { safeBack } from '@/lib/navUtils';
 import {
@@ -13,7 +13,6 @@ import {
 import * as Location from 'expo-location';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MapBackdrop } from '@/components/MapBackdrop';
-import { useNavigation } from 'expo-router';
 import { GlassView } from '@/components/GlassView';
 import { useColors } from '@/hooks/useColors';
 import { useDriverLocation, haversineMeters } from '@/hooks/useDriverLocation';
@@ -201,7 +200,7 @@ export default function ShuttleTripActiveScreen() {
     const nxt = stationCoords[currentStopIndex + 1];
     if (!cur || !nxt) return null;
     return [cur, nxt];
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [currentStopIndex, stationCoords]);
 
   const { coords: roadPolylineCoords } = useRoadPolyline(segmentWaypoints);
@@ -316,7 +315,7 @@ export default function ShuttleTripActiveScreen() {
     sessionTerminatedNavRef.current = true;
     isFinishingRef.current = true; // bypass the exit guard alert
     router.replace('/(shuttle)' as any);
-  }, [shuttleSession]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [shuttleSession]);  
 
   // ── Socket: seat count ─────────────────────────────────────────────────────
   const [liveSeats, setLiveSeats] = useState<{ bookedSeats: number; totalSeats: number } | null>(null);

@@ -28,9 +28,9 @@ import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 import { Radius } from '@/constants/radius';
 import { Shadows } from '@/constants/shadows';
+import type { TermsData } from '@/lib/types';
 
 const TERMS_VERSION_KEY = 'driver_terms_accepted_version';
-import type { TermsData } from '@/lib/types';
 
 // level isn't a real backend concept (no driver tier/level is tracked
 // anywhere) — kept optional here so its lone reference below can stay a

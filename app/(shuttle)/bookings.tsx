@@ -25,11 +25,11 @@ import { CompletedTripCard } from '@/components/CompletedTripCard';
 import { MainTabBtn } from '@/components/MainTabBtn';
 import { RenewalBanner } from '@/components/RenewalBanner';
 
+import type { DriverTrip } from '@/lib/types';
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type MainTab = 'upcoming' | 'completed';
-
-import type { DriverTrip } from '@/lib/types';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

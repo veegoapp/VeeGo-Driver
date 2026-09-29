@@ -1,5 +1,5 @@
 import { showAlert } from '@/lib/alert';
-import { router } from 'expo-router';
+import { router , useFocusEffect } from 'expo-router';
 import { AlertTriangle, ArrowRight, Bell, Calendar, ChevronRight, Clock, Route, Navigation, RefreshCw, Users, Wifi, WifiOff, X } from 'lucide-react-native';
 import { useLocationBroadcast } from '@/hooks/useLocationBroadcast';
 import { setActiveShuttleTripId } from '@/lib/backgroundLocationTask';
@@ -15,7 +15,6 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useFocusEffect } from 'expo-router';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/lib/i18nContext';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
