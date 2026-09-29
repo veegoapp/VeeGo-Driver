@@ -311,6 +311,8 @@ export default function ShuttleHomeScreen() {
       if (body?.code === 'TEMPORARILY_RESTRICTED' && body.restrictedUntil) {
         const hoursLeft = Math.max(1, Math.ceil((new Date(body.restrictedUntil).getTime() - Date.now()) / 3_600_000));
         showAlert(t.error, t.driver_restricted_toast.replace('{hours}', String(hoursLeft)));
+      } else if (body?.code === 'DRIVER_NOT_APPROVED') {
+        showAlert(t.error, t.driver_not_approved_toast);
       } else {
         showAlert(t.error, 'Failed to update status. Please try again.');
       }
