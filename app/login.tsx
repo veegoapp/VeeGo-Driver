@@ -28,6 +28,8 @@ import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 import { Shadows } from '@/constants/shadows';
 
+import type { TermsData } from '@/lib/types';
+
 const TERMS_VERSION_KEY = 'driver_terms_accepted_version';
 
 type Tab = 'signin' | 'signup';
@@ -240,8 +242,6 @@ function SignInForm({ isRTL, onSuccess, onOtpRequired, initialCredential }: {
     </View>
   );
 }
-
-import type { TermsData } from '@/lib/types';
 
 function SignUpForm({ isRTL, onOtpRequired }: { isRTL: boolean; onOtpRequired: (phone: string, maskedPhone?: string, retryAfter?: number) => void }) {
   const { t } = useI18n();

@@ -802,6 +802,8 @@ export default function HomeScreen() {
       if (body?.code === 'TEMPORARILY_RESTRICTED' && body.restrictedUntil) {
         const hoursLeft = Math.max(1, Math.ceil((new Date(body.restrictedUntil).getTime() - Date.now()) / 3_600_000));
         showToastRef.current?.(t.driver_restricted_toast.replace('{hours}', String(hoursLeft)), 'warning');
+      } else if (body?.code === 'DRIVER_NOT_APPROVED') {
+        showToastRef.current?.(t.driver_not_approved_toast, 'warning');
       } else {
         showToastRef.current?.('Failed to update status. Please try again.', 'warning');
       }

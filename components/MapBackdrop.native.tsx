@@ -36,8 +36,8 @@ export interface MapBackdropProps {
   pickup?: { latitude: number; longitude: number };
   dropoff?: { latitude: number; longitude: number };
   driverLocation?: { latitude: number; longitude: number; heading?: number | null; speed?: number | null; accuracy?: number | null };
-  routePolyline?: Array<{ latitude: number; longitude: number }>;
-  roadPolyline?: Array<{ latitude: number; longitude: number }>;
+  routePolyline?: { latitude: number; longitude: number }[];
+  roadPolyline?: { latitude: number; longitude: number }[];
   stationStatuses?: ('pending' | 'current' | 'completed')[];
   approachCircle?: { latitude: number; longitude: number; radius: number } | null;
   focusTarget?: { latitude: number; longitude: number; zoom?: number } | null;
@@ -82,7 +82,7 @@ function circleCoords(
   center: { latitude: number; longitude: number },
   radiusM: number,
   steps = 64,
-): Array<{ latitude: number; longitude: number }> {
+): { latitude: number; longitude: number }[] {
   return Array.from({ length: steps + 1 }, (_, i) => {
     const angle = (i / steps) * 2 * Math.PI;
     const dx = radiusM * Math.cos(angle);
@@ -166,7 +166,7 @@ export const MapBackdrop = React.memo(function MapBackdrop({
   // rotating with the smoothed course. Lets the driver fix the view
   // themselves if the auto-rotated view is ever confusing.
   const [northUp, setNorthUp] = useState(false);
-  const [autoPolyline, setAutoPolyline] = useState<Array<{ latitude: number; longitude: number }> | null>(null);
+  const [autoPolyline, setAutoPolyline] = useState<{ latitude: number; longitude: number }[] | null>(null);
 
   const userPannedRef = useRef(false);
   const initialFitDoneRef = useRef(false);
@@ -427,7 +427,7 @@ export const MapBackdrop = React.memo(function MapBackdrop({
     lat: number;
     lng: number;
     ts: number;
-    result: Array<{ latitude: number; longitude: number }>;
+    result: { latitude: number; longitude: number }[];
   } | null>(null);
 
   const displayRouteCoords = useMemo(() => {
@@ -477,7 +477,7 @@ export const MapBackdrop = React.memo(function MapBackdrop({
         : undefined,
       pickup,
       dropoff,
-    ].filter(Boolean) as Array<{ latitude: number; longitude: number }>,
+    ].filter(Boolean) as { latitude: number; longitude: number }[],
     [
       displayRouteCoords,
       driverLocation?.latitude,

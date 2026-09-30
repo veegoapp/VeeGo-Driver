@@ -3,28 +3,6 @@
 // All existing imports (endpoints, api, ApiError, types) continue to work unchanged.
 
 // ── Core client ───────────────────────────────────────────────────────────────
-export { api, ApiError, API_BASE_URL, setApiLanguage, setOnAccountSuspended, refreshAccessToken, setOnSessionCleared, getClockOffsetMs } from './_client';
-
-// ── Shared types ──────────────────────────────────────────────────────────────
-export type {
-  ShuttleCompleteResponse,
-  TripRevenueSummary,
-  TripCashSummary,
-  FinancialTransaction,
-  FinancialAnalytics,
-  EmergencyContact,
-  DriverProfileEnriched,
-  DriverReferralInfo,
-  BonusTarget,
-  DriverPromotion,
-  RideMessage,
-  RideHistoryItem,
-  LocationSnapshot,
-  StationEtaResponse,
-} from './types';
-export type { RideFinancialDetail } from './ride';
-export type { InstapayStatus } from './driver';
-
 // ── Endpoint group imports ────────────────────────────────────────────────────
 import { authEndpoints } from './auth';
 import {
@@ -55,6 +33,28 @@ import {
 } from './shuttle';
 import { trackingEndpoints } from './tracking';
 import { sessionEndpoints } from './session';
+
+export { api, ApiError, API_BASE_URL, setApiLanguage, setOnAccountSuspended, refreshAccessToken, setOnSessionCleared, getClockOffsetMs } from './_client';
+
+// ── Shared types ──────────────────────────────────────────────────────────────
+export type {
+  ShuttleCompleteResponse,
+  TripRevenueSummary,
+  TripCashSummary,
+  FinancialTransaction,
+  FinancialAnalytics,
+  EmergencyContact,
+  DriverProfileEnriched,
+  DriverReferralInfo,
+  BonusTarget,
+  DriverPromotion,
+  RideMessage,
+  RideHistoryItem,
+  LocationSnapshot,
+  StationEtaResponse,
+} from './types';
+export type { RideFinancialDetail } from './ride';
+export type { InstapayStatus } from './driver';
 
 // ── Assembled endpoints object ────────────────────────────────────────────────
 // Shape is identical to the original endpoints object in lib/api.ts.

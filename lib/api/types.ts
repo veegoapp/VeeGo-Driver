@@ -32,13 +32,13 @@ export interface TripCashSummary {
   driverId: number;
   totalCashExpected: number;
   totalCashCollected: number;
-  passengers: Array<{
+  passengers: {
     bookingId: number;
     name: string;
     fareAmount: number;
     cashCollected: boolean;
     amountCollected: number;
-  }>;
+  }[];
 }
 
 // ─── Financial Analytics ───────────────────────────────────────────────────────
@@ -81,14 +81,14 @@ export interface DriverProfileEnriched {
   documentStatus: 'accepted' | 'pending' | 'rejected' | null;
   acceptanceRate: number | null;
   cancelRate: number | null;
-  bonusTargets: Array<{
+  bonusTargets: {
     id: string;
     title: string;
     targetTrips: number;
     currentTrips: number;
     bonusAmount: number;
     completed: boolean;
-  }>;
+  }[];
 }
 
 // Driver-invites-driver referral program (GET /driver/referral-code).
@@ -183,12 +183,12 @@ export interface StationEtaResponse {
     stationName: string;
     etaMinutes: number | null;
   } | null;
-  remainingStations: Array<{
+  remainingStations: {
     stationId: number;
     stationName: string;
     etaMinutes: number | null;
     order: number;
-  }>;
+  }[];
 }
 
 // ─── Tracking ─────────────────────────────────────────────────────────────────

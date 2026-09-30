@@ -199,7 +199,7 @@ export function getFallbackModels(brandId: number): FallbackModel[] {
 /**
  * Returns a generic year range as fallback (2005 → current year, newest first).
  */
-export function getFallbackYears(): Array<{ id: number | null; year: number; pricingCategory: string | null }> {
+export function getFallbackYears(): { id: number | null; year: number; pricingCategory: string | null }[] {
   const current = new Date().getFullYear();
   const years = [];
   for (let y = current; y >= 2005; y--) {

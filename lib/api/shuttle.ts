@@ -123,7 +123,7 @@ export const shuttleEndpoints = {
     api.get<TripRevenueSummary>(`/driver/trips/${tripId}/revenue-summary`),
 
   incomingReferrals: () =>
-    api.get<{ data: Array<Record<string, unknown>> }>('/shuttle/referrals/incoming'),
+    api.get<{ data: Record<string, unknown>[] }>('/shuttle/referrals/incoming'),
 
   acceptReferral: (referralId: string) =>
     api.post(`/shuttle/referrals/${referralId}/accept`),
@@ -134,7 +134,7 @@ export const shuttleEndpoints = {
   myReferralCode: () => api.get<{ code: string }>('/driver/me/referral-code'),
 
   cancellationReasons: () =>
-    api.get<Array<{ key: string; label: string; labelAr?: string }>>('/shuttle/cancellation-reasons'),
+    api.get<{ key: string; label: string; labelAr?: string }[]>('/shuttle/cancellation-reasons'),
 };
 
 export const tripsEndpoints = {
@@ -160,7 +160,7 @@ export const tripsEndpoints = {
       totalSeats: number;
       direction?: string;
       status: string;
-      stations: Array<{ id: number; name: string; order: number; eta: string | null; direction?: string }>;
+      stations: { id: number; name: string; order: number; eta: string | null; direction?: string }[];
     }>(`/driver/trips/${tripId}/detail`),
   accept: (tripId: string) => api.patch(`/driver/trips/${tripId}/accept`),
   reject: (tripId: string) => api.patch(`/driver/trips/${tripId}/reject`),

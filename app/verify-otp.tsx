@@ -43,7 +43,7 @@ export default function VerifyOtpScreen() {
   const { locked, lockoutRemaining, lock, clear: clearLockout } = useCodeLockout();
   const [resending, setResending] = useState(false);
   const [countdown, setCountdown] = useState(retryAfterParam ? Number(retryAfterParam) : RESEND_COOLDOWN);
-  const [availableChannels, setAvailableChannels] = useState<Array<'whatsapp' | 'sms'>>(['whatsapp']);
+  const [availableChannels, setAvailableChannels] = useState<('whatsapp' | 'sms')[]>(['whatsapp']);
   const [channel, setChannel] = useState<'whatsapp' | 'sms'>('whatsapp');
   const inputRef = useRef<TextInput>(null);
 
@@ -52,7 +52,7 @@ export default function VerifyOtpScreen() {
   useEffect(() => {
     endpoints.auth.otpChannels()
       .then((res) => {
-        const channels: Array<'whatsapp' | 'sms'> = [];
+        const channels: ('whatsapp' | 'sms')[] = [];
         if (res.whatsappEnabled) channels.push('whatsapp');
         if (res.smsEnabled) channels.push('sms');
         if (channels.length > 0) setAvailableChannels(channels);

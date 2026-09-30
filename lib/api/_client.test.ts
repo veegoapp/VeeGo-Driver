@@ -1,6 +1,15 @@
 // Mock the auth token store before importing the module under test so the
 // module-level `_rawApiUrl` guard (which reads EXPO_PUBLIC_API_URL) and every
 // getToken/getRefreshToken/saveToken call resolve to controllable fakes.
+import {
+  api,
+  ApiError,
+  getClockOffsetMs,
+  refreshAccessToken,
+  setOnAccountSuspended,
+  setOnSessionCleared,
+} from './_client';
+
 const mockGetToken = jest.fn();
 const mockGetRefreshToken = jest.fn();
 const mockSaveToken = jest.fn().mockResolvedValue(undefined);
@@ -16,15 +25,6 @@ jest.mock('../auth', () => ({
   deleteToken: () => mockDeleteToken(),
   deleteRefreshToken: () => mockDeleteRefreshToken(),
 }));
-
-import {
-  api,
-  ApiError,
-  getClockOffsetMs,
-  refreshAccessToken,
-  setOnAccountSuspended,
-  setOnSessionCleared,
-} from './_client';
 
 function jsonResponse(status: number, body: unknown, ok = status >= 200 && status < 300, dateHeader: string | null = null) {
   return {
