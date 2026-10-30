@@ -23,6 +23,7 @@ import {
   walletEndpoints,
   notificationsEndpoints,
   serviceControlEndpoints,
+  zonesEndpoints,
   supportEndpoints,
   termsEndpoints,
 } from './ride';
@@ -73,6 +74,7 @@ export const endpoints = {
   shuttle:            shuttleEndpoints,
   notifications:      notificationsEndpoints,
   serviceControl:     serviceControlEndpoints,
+  zones:              zonesEndpoints,
   support:            supportEndpoints,
   registration:       registrationEndpoints,
   vehicles:           vehiclesEndpoints,

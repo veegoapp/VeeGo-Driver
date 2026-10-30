@@ -181,6 +181,12 @@ export const serviceControlEndpoints = {
   fetch: () => api.get('/services/control'),
 };
 
+export const zonesEndpoints = {
+  // GET /zones/locate — { zone: { id, ... } | null, services }
+  locate: (lat: number, lng: number) =>
+    api.get<{ zone: { id: number } | null }>(`/zones/locate?lat=${lat}&lng=${lng}`),
+};
+
 export const supportEndpoints = {
   submitTicket: (data: {
     subject: string;

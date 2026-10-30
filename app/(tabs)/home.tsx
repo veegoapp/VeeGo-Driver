@@ -27,10 +27,11 @@ import { showAlert } from '@/lib/alert';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { SurgeUpdate } from '@/lib/types';
+import { recordSurge, surgeForZone, type SurgeByArea } from '@/lib/surgeArea';
 import { GlassView } from '@/components/GlassView';
 import { MapBackdrop } from '@/components/MapBackdrop';
 import { useColors } from '@/hooks/useColors';
-import { useDriverLocation } from '@/hooks/useDriverLocation';
+import { useDriverLocation, haversineMeters } from '@/hooks/useDriverLocation';
 import { useGPSPermissionRecheck } from '@/hooks/useGPSProvider';
 import { useLocationBroadcast } from '@/hooks/useLocationBroadcast';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
@@ -92,6 +93,27 @@ const DriverMapLayer = React.memo(function DriverMapLayer({ focused }: { focused
   );
 });
 
+// Zone the driver is currently in, for picking which zone's surge to show.
+// Headless and isolated like DriverMapLayer so the per-second GPS ticks only
+// re-render this component; it reports upward only when the zone changes.
+const ZONE_RELOOKUP_METERS = 500;
+const DriverZoneTracker = React.memo(function DriverZoneTracker({ onZoneChange }: { onZoneChange: (zoneId: number | null) => void }) {
+  const { position } = useDriverLocation(true);
+  const lastLookup = useRef<{ latitude: number; longitude: number } | null>(null);
+
+  useEffect(() => {
+    if (!position) return;
+    const last = lastLookup.current;
+    if (last && haversineMeters(last.latitude, last.longitude, position.latitude, position.longitude) < ZONE_RELOOKUP_METERS) return;
+    lastLookup.current = { latitude: position.latitude, longitude: position.longitude };
+    endpoints.zones.locate(position.latitude, position.longitude)
+      .then((res) => onZoneChange(res.zone?.id ?? null))
+      .catch(() => { lastLookup.current = last; });
+  }, [position, onZoneChange]);
+
+  return null;
+});
+
 // Module-level: survives HomeScreen remounts (e.g. returning from a completed
 // ride). React state resets to its initial value on every remount — this
 // variable lets the component start with the last known online state so the
@@ -119,7 +141,9 @@ export default function HomeScreen() {
   const [declining, setDeclining] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [request, setRequest] = useState<RideRequest | null>(null);
-  const [activeSurge, setActiveSurge] = useState<SurgeUpdate | null>(null);
+  const [surgeByArea, setSurgeByArea] = useState<SurgeByArea>({});
+  const [driverZoneId, setDriverZoneId] = useState<number | null>(null);
+  const activeSurge = useMemo(() => surgeForZone(surgeByArea, driverZoneId), [surgeByArea, driverZoneId]);
   const [countdown, setCountdown] = useState(12);
   const [promoDismissed, setPromoDismissed] = useState(false);
   const [ratingWarningDismissed, setRatingWarningDismissed] = useState(false);
@@ -557,13 +581,10 @@ export default function HomeScreen() {
     showToastRef.current?.('Your cooldown has been lifted, you can receive rides again', 'success');
   }, [queryClient]);
 
-  // The backend broadcasts one flat update per vehicle type (no geo/zone
-  // data — see SurgeUpdate's doc comment), so this just tracks the latest
-  // active surge seen; in practice all vehicle types move together (the
-  // auto multiplier is peak-hour-wide), a manual admin override on a
-  // specific vehicle type being the only case where they'd briefly differ.
+  // The backend broadcasts surge per vehicle type and zone (see SurgeUpdate);
+  // keep the latest of each and show the one for the driver's current zone.
   const handleSurgeUpdated = useCallback((update: SurgeUpdate) => {
-    setActiveSurge(update.isActive && update.multiplier > 1 ? update : null);
+    setSurgeByArea((prev) => recordSurge(prev, update));
   }, []);
 
   const { connected: socketConnected } = useRideSocket({
@@ -889,6 +910,7 @@ export default function HomeScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <DriverMapLayer focused={homeFocused} />
+      <DriverZoneTracker onZoneChange={setDriverZoneId} />
 
       {/* Reconnecting banner */}
       <Animated.View

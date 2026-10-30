@@ -44,11 +44,12 @@ const OfferExpiredSchema = z.union([
   z.object({ rideId: z.string().optional() }).passthrough(),
 ]);
 
-// Real backend payload (routes/surge.ts / lib/surge-pricing.ts) — flat, per
-// vehicle type, no geo/zone data. isActive defaults to (multiplier > 1) for
-// callers that predate the field, but the backend always sends it.
+// Real backend payload (routes/surge.ts / lib/surge-pricing.ts) — per vehicle
+// type and zone. isActive defaults to (multiplier > 1) for callers that
+// predate the field, but the backend always sends it.
 const SurgeSchema = z.object({
   vehicleType: z.string(),
+  zoneId: z.number().nullable().optional(),
   multiplier: z.number(),
   isActive: z.boolean().optional(),
 }).passthrough();
@@ -183,8 +184,8 @@ export function useRideSocket({
         console.warn(`[Socket] Invalid ${SOCKET_EVENTS.SURGE_UPDATED} payload`, parsed.error.issues);
         return;
       }
-      const { vehicleType, multiplier, isActive } = parsed.data;
-      surgeUpdatedRef.current?.({ vehicleType, multiplier, isActive: isActive ?? multiplier > 1 });
+      const { vehicleType, zoneId, multiplier, isActive } = parsed.data;
+      surgeUpdatedRef.current?.({ vehicleType, zoneId, multiplier, isActive: isActive ?? multiplier > 1 });
     };
 
     const handleSosTriggered = (data: unknown) => {

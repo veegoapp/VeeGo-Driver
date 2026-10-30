@@ -12,11 +12,13 @@
 /**
  * Surge pricing update broadcast by the backend over the socket
  * (surge:updated — see artifacts/api-server/src/lib/surge-pricing.ts).
- * Not geo-located: the current system surges uniformly per vehicle type
- * during peak hours, with no zone/location concept.
+ * Surge is demand-based per zone: `zoneId` is the zone it applies to, null for
+ * the area outside every zone, and absent for a manual override that applies
+ * everywhere.
  */
 export interface SurgeUpdate {
   vehicleType: string;
+  zoneId?: number | null;
   multiplier: number;
   isActive: boolean;
 }
